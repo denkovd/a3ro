@@ -61,12 +61,12 @@ function radialTexture(stops: [number, string][], size = 256): THREE.CanvasTextu
   return tex;
 }
 
-/* ─────────────────────────────────────────────────────────────────
-   GLASS ARC REACTOR  — photorealistic, scroll-driven, selective bloom
-─────────────────────────────────────────────────────────────────── */
 const BLOOM_LAYER = 1;
 
-function GlassReactor({ scrollRef }: { scrollRef: React.MutableRefObject<number> }) {
+/* ─────────────────────────────────────────────────────────────────
+   TRAVELER ORB — dark faceted sphere, void seams, scroll-driven charge
+─────────────────────────────────────────────────────────────────── */
+function TravelerOrb({ scrollRef }: { scrollRef: React.MutableRefObject<number> }) {
   const mountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -81,185 +81,204 @@ function GlassReactor({ scrollRef }: { scrollRef: React.MutableRefObject<number>
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(W(), H());
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.05;
+    renderer.toneMappingExposure = 1.1;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     el.appendChild(renderer.domElement);
 
     /* Scene + camera */
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(42, W() / H(), 0.1, 100);
-    camera.position.set(0, 0, 5.4);
+    camera.position.set(0, 0, 6.2);
 
-    /* Icy radial background (glass refracts this) */
+    /* Deep-space void background */
     const bg = radialTexture(
       [
-        [0, "#f6faff"],
-        [0.42, "#e7f0fc"],
-        [0.78, "#cfe0f4"],
-        [1, "#b7cdec"],
+        [0, "#160b2c"],
+        [0.4, "#0c0720"],
+        [0.75, "#070512"],
+        [1, "#04030a"],
       ],
       512
     );
     scene.background = bg;
 
-    /* Environment for reflections / transmission */
+    /* Environment for reflections */
     const pmrem = new THREE.PMREMGenerator(renderer);
     const envRT = pmrem.fromScene(new RoomEnvironment(), 0.04);
     scene.environment = envRT.texture;
 
-    /* Lights */
-    const hemi = new THREE.HemisphereLight(0xeaf3ff, 0x9fb4d6, 0.55);
+    /* Lights — violet key, magenta rim */
+    const hemi = new THREE.HemisphereLight(0x9d7bff, 0x140a26, 0.5);
     scene.add(hemi);
-    const key = new THREE.DirectionalLight(0xffffff, 2.4);
+    const key = new THREE.DirectionalLight(0xd8c4ff, 2.2);
     key.position.set(3, 4, 5);
     scene.add(key);
-    const rim = new THREE.DirectionalLight(0x6fa8ff, 1.8);
+    const rim = new THREE.DirectionalLight(0xd946ef, 2.6);
     rim.position.set(-4, -1, -4);
     scene.add(rim);
-    const fill = new THREE.DirectionalLight(0xbfe0ff, 0.9);
+    const fill = new THREE.DirectionalLight(0x7c3aed, 1.0);
     fill.position.set(0, -3, 2);
     scene.add(fill);
 
     /* Master group */
-    const reactor = new THREE.Group();
-    scene.add(reactor);
+    const traveler = new THREE.Group();
+    scene.add(traveler);
 
-    /* Glass material factory */
-    const glass = (color: number, o: Partial<THREE.MeshPhysicalMaterialParameters> = {}) =>
-      new THREE.MeshPhysicalMaterial({
-        color,
-        metalness: 0,
-        roughness: 0.05,
-        transmission: 1,
-        thickness: 0.9,
-        ior: 1.46,
-        attenuationColor: new THREE.Color(0x8fb6ff),
-        attenuationDistance: 2.4,
-        clearcoat: 1,
-        clearcoatRoughness: 0.06,
-        iridescence: 0.55,
-        iridescenceIOR: 1.32,
-        envMapIntensity: 1.5,
-        specularIntensity: 1,
-        transparent: true,
-        ...o,
-      });
-
-    /* Concentric glass rings */
-    const ringDefs = [
-      { r: 0.62, t: 0.10, col: 0xf2f7ff, rough: 0.05, sx: 0.0, sz: 0.0, spd: 0.010 },
-      { r: 0.95, t: 0.045, col: 0xdfeaff, rough: 0.08, sx: 0.9, sz: 0.3, spd: -0.014 },
-      { r: 1.32, t: 0.035, col: 0xcfe0ff, rough: 0.10, sx: -0.6, sz: 0.7, spd: 0.009 },
-      { r: 1.78, t: 0.026, col: 0xc2d7ff, rough: 0.12, sx: 0.25, sz: -0.5, spd: -0.007 },
-      { r: 2.3, t: 0.018, col: 0xb6ccff, rough: 0.16, sx: 0.1, sz: 1.0, spd: 0.005 },
-    ];
-    const rings = ringDefs.map((d) => {
-      const geo = new THREE.TorusGeometry(d.r, d.t, 28, 160);
-      const m = new THREE.Mesh(geo, glass(d.col, { roughness: d.rough, thickness: d.t * 6 }));
-      m.rotation.x = d.sx;
-      m.rotation.z = d.sz;
-      reactor.add(m);
-      return m;
+    /* Dark faceted body */
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: 0x1d1030,
+      metalness: 0.6,
+      roughness: 0.42,
+      flatShading: true,
+      emissive: new THREE.Color(0x3a1a63),
+      emissiveIntensity: 0.35,
+      envMapIntensity: 0.9,
     });
+    const body = new THREE.Mesh(new THREE.IcosahedronGeometry(1.5, 4), bodyMat);
+    traveler.add(body);
 
-    /* Coil ring — frosted chrome segments around the hub */
-    const coilMat = new THREE.MeshPhysicalMaterial({
-      color: 0xdbe8fb,
-      metalness: 0.85,
-      roughness: 0.28,
-      clearcoat: 0.6,
-      envMapIntensity: 1.6,
+    /* Big panel plates — subtle bloom */
+    const plateMat = new THREE.MeshBasicMaterial({
+      color: 0x8a3bff,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.22,
     });
-    const coilGroup = new THREE.Group();
-    const COILS = 9;
-    for (let i = 0; i < COILS; i++) {
-      const a = (i / COILS) * Math.PI * 2;
-      const c = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.34, 20, 1, false), coilMat);
-      c.position.set(Math.cos(a) * 0.66, Math.sin(a) * 0.66, 0);
-      c.rotation.z = a + Math.PI / 2;
-      coilGroup.add(c);
-      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 16), coilMat);
-      cap.position.copy(c.position);
-      coilGroup.add(cap);
-    }
-    reactor.add(coilGroup);
+    const plates = new THREE.Mesh(new THREE.IcosahedronGeometry(1.508, 2), plateMat);
+    plates.layers.enable(BLOOM_LAYER);
+    traveler.add(plates);
 
-    /* Hub triangle plate (frosted glass) */
-    const hub = new THREE.Mesh(
-      new THREE.TorusGeometry(0.46, 0.06, 24, 90),
-      glass(0xeaf2ff, { roughness: 0.12, thickness: 0.5 })
-    );
-    reactor.add(hub);
-
-    /* Glass shell around the core */
-    const shell = new THREE.Mesh(
-      new THREE.SphereGeometry(0.42, 48, 48),
-      glass(0xeef5ff, { roughness: 0.02, thickness: 0.6, transmission: 1, attenuationDistance: 1.6 })
-    );
-    reactor.add(shell);
-
-    /* GLOWING CORE — blooms */
-    const coreMat = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      emissive: new THREE.Color(0xbcd8ff),
-      emissiveIntensity: 4,
-      roughness: 0.25,
-      metalness: 0,
+    /* Fine energy seams — bloom */
+    const seamMat = new THREE.MeshBasicMaterial({
+      color: 0xc873ff,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.3,
     });
-    const core = new THREE.Mesh(new THREE.SphereGeometry(0.27, 40, 40), coreMat);
-    core.layers.enable(BLOOM_LAYER);
-    reactor.add(core);
+    const seams = new THREE.Mesh(new THREE.IcosahedronGeometry(1.514, 4), seamMat);
+    seams.layers.enable(BLOOM_LAYER);
+    traveler.add(seams);
 
-    /* Core glow sprite — blooms */
-    const glowMat = new THREE.SpriteMaterial({
+    /* Fresnel rim shell — energy silhouette */
+    const rimMat = new THREE.ShaderMaterial({
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      uniforms: {
+        uColor: { value: new THREE.Color(0xb06bff) },
+        uPower: { value: 2.7 },
+      },
+      vertexShader: `varying vec3 vN; varying vec3 vView;
+        void main(){
+          vN = normalize(normalMatrix * normal);
+          vec4 mv = modelViewMatrix * vec4(position,1.0);
+          vView = normalize(-mv.xyz);
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: `uniform vec3 uColor; uniform float uPower; varying vec3 vN; varying vec3 vView;
+        void main(){
+          float f = pow(1.0 - max(dot(vN, vView), 0.0), uPower);
+          gl_FragColor = vec4(uColor, f);
+        }`,
+    });
+    const rimShell = new THREE.Mesh(new THREE.SphereGeometry(1.64, 64, 64), rimMat);
+    traveler.add(rimShell);
+
+    /* Halo glow behind orb — blooms */
+    const haloMat = new THREE.SpriteMaterial({
       map: radialTexture([
-        [0, "rgba(255,255,255,1)"],
-        [0.35, "rgba(190,216,255,0.85)"],
-        [1, "rgba(120,160,255,0)"],
+        [0, "rgba(230,190,255,0.9)"],
+        [0.32, "rgba(168,85,247,0.55)"],
+        [1, "rgba(120,60,255,0)"],
       ]),
       transparent: true,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
-      opacity: 0.95,
+      opacity: 0.9,
     });
-    const glow = new THREE.Sprite(glowMat);
-    glow.scale.set(2.4, 2.4, 1);
-    glow.layers.enable(BLOOM_LAYER);
-    reactor.add(glow);
+    const halo = new THREE.Sprite(haloMat);
+    halo.position.set(0, 0, -0.4);
+    halo.scale.set(5, 5, 1);
+    halo.layers.enable(BLOOM_LAYER);
+    traveler.add(halo);
 
-    /* Ice dust particles */
-    const pN = 420;
-    const pPos = new Float32Array(pN * 3);
-    for (let i = 0; i < pN; i++) {
-      const r = 1.2 + Math.random() * 4;
+    /* Orbiting tech debris */
+    const debrisMat = new THREE.MeshStandardMaterial({
+      color: 0x241436,
+      metalness: 0.75,
+      roughness: 0.32,
+      emissive: new THREE.Color(0x5a1f9c),
+      emissiveIntensity: 0.55,
+      envMapIntensity: 1.2,
+    });
+    type Deb = { mesh: THREE.Mesh; a: number; r: number; incl: number; spd: number; spin: THREE.Vector3 };
+    const debris: Deb[] = [];
+    const DEB = 11;
+    for (let i = 0; i < DEB; i++) {
+      const k = Math.random();
+      const size = 0.12 + Math.random() * 0.2;
+      const geo =
+        k < 0.5
+          ? new THREE.OctahedronGeometry(size, 0)
+          : k < 0.8
+          ? new THREE.TetrahedronGeometry(size * 1.2, 0)
+          : new THREE.BoxGeometry(size, size * 1.6, size);
+      const m = new THREE.Mesh(geo, debrisMat);
+      const r = 2.4 + Math.random() * 1.5;
       const a = Math.random() * Math.PI * 2;
-      const z = (Math.random() - 0.5) * 4;
+      const incl = (Math.random() - 0.5) * 0.9;
+      m.position.set(Math.cos(a) * r, Math.sin(a) * r * Math.cos(incl), Math.sin(a) * r * Math.sin(incl));
+      traveler.add(m);
+      debris.push({
+        mesh: m,
+        a,
+        r,
+        incl,
+        spd: (0.002 + Math.random() * 0.004) * (Math.random() < 0.5 ? -1 : 1),
+        spin: new THREE.Vector3((Math.random() - 0.5) * 0.03, (Math.random() - 0.5) * 0.03, (Math.random() - 0.5) * 0.03),
+      });
+    }
+
+    /* Void dust particles */
+    const pN = 520;
+    const pPos = new Float32Array(pN * 3);
+    const pCol = new Float32Array(pN * 3);
+    const cA = new THREE.Color(0xa855f7);
+    const cB = new THREE.Color(0xe040fb);
+    for (let i = 0; i < pN; i++) {
+      const r = 2.0 + Math.random() * 5;
+      const a = Math.random() * Math.PI * 2;
+      const z = (Math.random() - 0.5) * 6;
       pPos[i * 3] = Math.cos(a) * r;
       pPos[i * 3 + 1] = Math.sin(a) * r;
       pPos[i * 3 + 2] = z;
+      const c = cA.clone().lerp(cB, Math.random());
+      pCol[i * 3] = c.r;
+      pCol[i * 3 + 1] = c.g;
+      pCol[i * 3 + 2] = c.b;
     }
     const pGeo = new THREE.BufferGeometry();
     pGeo.setAttribute("position", new THREE.BufferAttribute(pPos, 3));
+    pGeo.setAttribute("color", new THREE.BufferAttribute(pCol, 3));
     const points = new THREE.Points(
       pGeo,
       new THREE.PointsMaterial({
-        color: 0x9fc2ff,
-        size: 0.022,
+        size: 0.03,
+        vertexColors: true,
         transparent: true,
-        opacity: 0.55,
+        opacity: 0.7,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       })
     );
-    reactor.add(points);
+    scene.add(points);
 
-    /* ── Post-processing: selective bloom ── */
+    /* ── Selective bloom ── */
     const renderScene = new RenderPass(scene, camera);
-
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(W(), H()), 0.85, 0.62, 0.0);
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(W(), H()), 0.9, 0.6, 0.0);
     bloomPass.threshold = 0;
-    bloomPass.strength = 0.85;
-    bloomPass.radius = 0.65;
+    bloomPass.strength = 0.8;
+    bloomPass.radius = 0.7;
 
     const bloomComposer = new EffectComposer(renderer);
     bloomComposer.renderToScreen = false;
@@ -286,7 +305,7 @@ function GlassReactor({ scrollRef }: { scrollRef: React.MutableRefObject<number>
     finalComposer.addPass(mixPass);
     finalComposer.addPass(new OutputPass());
 
-    /* darken helpers for bloom pass */
+    /* darken helpers */
     const darkMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
     const matStore: Record<string, THREE.Material | THREE.Material[]> = {};
     const bloomLayer = new THREE.Layers();
@@ -324,42 +343,57 @@ function GlassReactor({ scrollRef }: { scrollRef: React.MutableRefObject<number>
 
     const clock = new THREE.Clock();
     let raf = 0;
-    const baseZ = 5.4;
+    const baseZ = 6.2;
 
     const animate = () => {
       raf = requestAnimationFrame(animate);
       const t = clock.getElapsedTime();
       const s = scrollRef.current;
-      const speed = 1 + s * 5;
 
-      rings.forEach((m, i) => {
-        m.rotation.y += ringDefs[i].spd * speed;
-        m.rotation.x += ringDefs[i].spd * 0.18 * speed;
-      });
-      coilGroup.rotation.z -= 0.004 * speed;
-      hub.rotation.z += 0.002 * speed;
+      /* charge with scroll */
+      const pulse = 0.9 + Math.sin(t * (1.6 + s * 3)) * 0.1;
+      bodyMat.emissiveIntensity = (0.35 + s * 1.7) * pulse;
+      plateMat.opacity = 0.22 + s * 0.4;
+      seamMat.opacity = 0.3 + s * 0.55;
+      rimMat.uniforms.uPower.value = 2.7 - s * 1.3;
+      const hScale = (4.4 + s * 3.2) * pulse;
+      halo.scale.set(hScale, hScale, 1);
+      bloomPass.strength = 0.7 + s * 1.1;
 
-      /* core pulse + charge with scroll */
-      const pulse = 0.9 + Math.sin(t * (2 + s * 4)) * 0.1;
-      coreMat.emissiveIntensity = (4 + s * 10) * pulse;
-      const gScale = (2.2 + s * 1.6) * pulse;
-      glow.scale.set(gScale, gScale, 1);
-      bloomPass.strength = 0.8 + s * 1.3;
+      /* rotation */
+      traveler.rotation.y += 0.0016 * (1 + s * 2);
+      seams.rotation.y -= 0.0008;
+      plates.rotation.x += 0.0006;
 
-      /* swallow dive */
-      const zoom = Math.max(0, Math.min(1, (s - 0.55) / 0.45));
-      camera.position.z = baseZ - zoom * (baseZ - 0.25);
-      reactor.scale.setScalar(1 + zoom * 0.35);
+      /* debris orbit — pulls slightly inward on scroll */
+      for (const d of debris) {
+        d.a += d.spd * (1 + s * 2);
+        const rr = d.r * (1 - s * 0.14);
+        d.mesh.position.set(
+          Math.cos(d.a) * rr,
+          Math.sin(d.a) * rr * Math.cos(d.incl),
+          Math.sin(d.a) * rr * Math.sin(d.incl)
+        );
+        d.mesh.rotation.x += d.spin.x;
+        d.mesh.rotation.y += d.spin.y;
+        d.mesh.rotation.z += d.spin.z;
+      }
+
+      /* gentle push-in (no swallow) */
+      const zoom = Math.max(0, Math.min(1, (s - 0.12) / 0.88));
+      const ez = zoom * zoom * (3 - 2 * zoom);
+      camera.position.z = baseZ - ez * (baseZ - 3.7);
+      traveler.scale.setScalar(1 + ez * 0.12);
 
       /* parallax + idle drift */
-      const tgtY = pointer.x * 0.35 + t * 0.04;
-      const tgtX = pointer.y * 0.22;
-      reactor.rotation.y += (tgtY - reactor.rotation.y) * 0.04;
-      reactor.rotation.x += (tgtX - reactor.rotation.x) * 0.04;
+      const tgtY = pointer.x * 0.3 + t * 0.03;
+      const tgtX = pointer.y * 0.2;
+      traveler.rotation.y += (tgtY - traveler.rotation.y) * 0.02;
+      traveler.rotation.x += (tgtX - traveler.rotation.x) * 0.04;
+      points.rotation.z = t * 0.015;
+      points.rotation.y = t * 0.01;
 
-      points.rotation.z = t * 0.02;
-
-      /* render: bloom pass (darkened) then final composite */
+      /* render */
       scene.background = null;
       scene.traverse(darken);
       bloomComposer.render();
@@ -386,7 +420,7 @@ function GlassReactor({ scrollRef }: { scrollRef: React.MutableRefObject<number>
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   HUD reactor (corner) — icy
+   HUD ring (corner) — void
 ─────────────────────────────────────────────────────────────────── */
 function HUDReactor({ show }: { show: boolean }) {
   return (
@@ -404,7 +438,7 @@ function HUDReactor({ show }: { show: boolean }) {
               width: r * 2,
               height: r * 2,
               borderRadius: "50%",
-              border: `1px solid rgba(47,107,255,${[0.45, 0.4, 0.35, 0.3][i]})`,
+              border: `1px solid rgba(168,85,247,${[0.5, 0.42, 0.36, 0.3][i]})`,
               animation: `hudSpin ${[4, 2.8, 2, 1.4][i]}s linear infinite ${i % 2 ? "reverse" : ""}`,
             }}
           />
@@ -416,8 +450,8 @@ function HUDReactor({ show }: { show: boolean }) {
             width: 7,
             height: 7,
             borderRadius: "50%",
-            background: "#cfe3ff",
-            boxShadow: "0 0 8px #5b8dff, 0 0 18px #2f6bff",
+            background: "#e9c6ff",
+            boxShadow: "0 0 8px #d946ef, 0 0 18px #a855f7",
           }}
         />
       </div>
@@ -426,12 +460,9 @@ function HUDReactor({ show }: { show: boolean }) {
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   DATA
+   WARP TUNNEL — hyperspace light streaks
 ─────────────────────────────────────────────────────────────────── */
-/* ─────────────────────────────────────────────────────────────────
-   VERTIGO STREAM — endless downward descent of icy glass
-─────────────────────────────────────────────────────────────────── */
-function VertigoStream() {
+function WarpTunnel() {
   const mountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -443,87 +474,73 @@ function VertigoStream() {
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(W(), H());
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.0;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     el.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(50, W() / H(), 0.1, 100);
-    camera.position.set(0, 0, 7);
+    scene.fog = new THREE.FogExp2(0x04030a, 0.02);
+    const camera = new THREE.PerspectiveCamera(62, W() / H(), 0.1, 200);
+    camera.position.set(0, 0, 0);
 
-    const bg = radialTexture(
-      [
-        [0, "#eef5fe"],
-        [0.5, "#d3e2f6"],
-        [1, "#a9c5ea"],
-      ],
-      512
-    );
-    scene.background = bg;
+    const DEPTH = 60;
+    const R = 15;
+    const COUNT = 280;
 
-    const pmrem = new THREE.PMREMGenerator(renderer);
-    const envRT = pmrem.fromScene(new RoomEnvironment(), 0.04);
-    scene.environment = envRT.texture;
+    const pos = new Float32Array(COUNT * 2 * 3);
+    const col = new Float32Array(COUNT * 2 * 3);
+    const z0 = new Float32Array(COUNT);
+    const spd = new Float32Array(COUNT);
+    const xs = new Float32Array(COUNT);
+    const ys = new Float32Array(COUNT);
 
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x9fb4d6, 0.6);
-    scene.add(hemi);
-    const key = new THREE.DirectionalLight(0xffffff, 2.0);
-    key.position.set(2, 3, 4);
-    scene.add(key);
-    const rim = new THREE.DirectionalLight(0x6fa8ff, 1.4);
-    rim.position.set(-3, -2, -3);
-    scene.add(rim);
+    const violet = new THREE.Color(0x9b4dff);
+    const magenta = new THREE.Color(0xe23bff);
+    const hot = new THREE.Color(0xf3d4ff);
 
-    const mat = new THREE.MeshPhysicalMaterial({
-      color: 0xe9f2ff,
-      metalness: 0,
-      roughness: 0.08,
-      transmission: 1,
-      thickness: 0.8,
-      ior: 1.45,
-      attenuationColor: new THREE.Color(0x8fb6ff),
-      attenuationDistance: 2.2,
-      clearcoat: 1,
-      clearcoatRoughness: 0.08,
-      iridescence: 0.5,
-      iridescenceIOR: 1.3,
-      envMapIntensity: 1.5,
-      transparent: true,
-    });
-
-    const yTop = 7.5;
-    const yBottom = -7.5;
-    const span = yTop - yBottom;
-
-    type Item = { mesh: THREE.Mesh; speed: number; rx: number; ry: number; rz: number };
-    const items: Item[] = [];
-    const COUNT = 15;
-
-    const randomGeo = () => {
-      const k = Math.random();
-      const size = 0.4 + Math.random() * 0.85;
-      if (k < 0.6) return new THREE.TorusGeometry(size, size * 0.24, 20, 90);
-      if (k < 0.85) return new THREE.OctahedronGeometry(size * 0.95, 0);
-      return new THREE.IcosahedronGeometry(size * 0.9, 0);
+    const seed = (i: number, spread: boolean) => {
+      const a = Math.random() * Math.PI * 2;
+      const r = 0.5 + Math.pow(Math.random(), 0.5) * R;
+      xs[i] = Math.cos(a) * r;
+      ys[i] = Math.sin(a) * r;
+      z0[i] = spread ? -DEPTH + Math.random() * (DEPTH + 8) : -DEPTH - Math.random() * 12;
+      spd[i] = 0.35 + Math.random() * 0.5;
+      const base = Math.random();
+      const c = (base < 0.5 ? violet.clone().lerp(magenta, Math.random()) : magenta.clone().lerp(hot, Math.random() * 0.6));
+      // head bright
+      col[i * 6] = c.r;
+      col[i * 6 + 1] = c.g;
+      col[i * 6 + 2] = c.b;
+      // tail fades to black (additive)
+      col[i * 6 + 3] = c.r * 0.04;
+      col[i * 6 + 4] = c.g * 0.04;
+      col[i * 6 + 5] = c.b * 0.04;
     };
+    for (let i = 0; i < COUNT; i++) seed(i, true);
 
-    for (let i = 0; i < COUNT; i++) {
-      const m = new THREE.Mesh(randomGeo(), mat);
-      const depth = -3 + Math.random() * 5;
-      m.position.set((Math.random() - 0.5) * 9, yBottom + Math.random() * span, depth);
-      m.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
-      scene.add(m);
-      const depthFactor = (depth + 3) / 5; // 0 far .. 1 near
-      const speed = 0.018 + Math.random() * 0.022 + depthFactor * 0.025;
-      items.push({
-        mesh: m,
-        speed,
-        rx: (Math.random() - 0.5) * 0.012,
-        ry: (Math.random() - 0.5) * 0.012,
-        rz: (Math.random() - 0.5) * 0.012,
-      });
-    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+    const mat = new THREE.LineBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      fog: true,
+    });
+    const lines = new THREE.LineSegments(geo, mat);
+    scene.add(lines);
+
+    const write = (i: number) => {
+      const z = z0[i];
+      const stretch = 1.6 + Math.max(0, (z + DEPTH) / DEPTH) * 5.0;
+      pos[i * 6] = xs[i];
+      pos[i * 6 + 1] = ys[i];
+      pos[i * 6 + 2] = z;
+      pos[i * 6 + 3] = xs[i];
+      pos[i * 6 + 4] = ys[i];
+      pos[i * 6 + 5] = z - stretch;
+    };
+    for (let i = 0; i < COUNT; i++) write(i);
 
     const pointer = { x: 0, y: 0 };
     const onPointer = (e: PointerEvent) => {
@@ -540,22 +557,21 @@ function VertigoStream() {
     window.addEventListener("resize", onResize);
 
     let raf = 0;
+    let roll = 0;
     const animate = () => {
       raf = requestAnimationFrame(animate);
-      for (const it of items) {
-        it.mesh.position.y -= it.speed;
-        it.mesh.rotation.x += it.rx;
-        it.mesh.rotation.y += it.ry;
-        it.mesh.rotation.z += it.rz;
-        if (it.mesh.position.y < yBottom - 1.2) {
-          it.mesh.position.y = yTop + Math.random() * 2.5;
-          it.mesh.position.x = (Math.random() - 0.5) * 9;
-          it.mesh.position.z = -3 + Math.random() * 5;
-        }
+      for (let i = 0; i < COUNT; i++) {
+        z0[i] += spd[i];
+        if (z0[i] > 8) seed(i, false);
+        write(i);
       }
-      camera.position.x += (pointer.x * 0.7 - camera.position.x) * 0.04;
-      camera.position.y += (-pointer.y * 0.45 - camera.position.y) * 0.04;
-      camera.lookAt(0, 0, 0);
+      geo.attributes.position.needsUpdate = true;
+
+      roll += 0.0006;
+      camera.rotation.z = roll;
+      camera.rotation.x += (pointer.y * 0.12 - camera.rotation.x) * 0.04;
+      camera.rotation.y += (-pointer.x * 0.12 - camera.rotation.y) * 0.04;
+
       renderer.render(scene, camera);
     };
     animate();
@@ -564,8 +580,8 @@ function VertigoStream() {
       cancelAnimationFrame(raf);
       window.removeEventListener("pointermove", onPointer);
       window.removeEventListener("resize", onResize);
-      pmrem.dispose();
-      envRT.dispose();
+      geo.dispose();
+      mat.dispose();
       renderer.dispose();
       if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
     };
@@ -574,6 +590,9 @@ function VertigoStream() {
   return <div ref={mountRef} className="absolute inset-0 h-full w-full" />;
 }
 
+/* ─────────────────────────────────────────────────────────────────
+   DATA
+─────────────────────────────────────────────────────────────────── */
 const SERVICES = [
   { id: "01", title: "Custom App Development", desc: "Web and mobile applications built from scratch — engineered around your exact workflow, never adapted from a template.", tags: ["Web Apps", "Mobile", "Full Stack"] },
   { id: "02", title: "AI Automation", desc: "Replace repetitive work with intelligent systems. We wire AI into your operations so you scale without adding headcount.", tags: ["Workflow", "AI Integration", "Efficiency"] },
@@ -641,10 +660,10 @@ export default function Home() {
 
   const heroOpacity = useTransform(scrollYProgress, [0, 0.32], [1, 0]);
   const heroY = useTransform(scrollYProgress, [0, 0.35], ["0%", "-14%"]);
-  const flashOpacity = useTransform(scrollYProgress, [0.82, 0.93, 0.99, 1], [0, 1, 1, 0]);
+  const flashOpacity = useTransform(scrollYProgress, [0.84, 0.94, 0.99, 1], [0, 0.55, 0.5, 0]);
 
   return (
-    <main className="relative" style={{ background: "var(--ice-1)", color: "var(--ink)" }}>
+    <main className="relative" style={{ background: "var(--void-0)", color: "var(--ink)" }}>
       {/* ── NAV ── */}
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
@@ -652,8 +671,15 @@ export default function Home() {
         }`}
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 md:px-10">
-          <Image src="/logo.svg" alt="A3RO" width={96} height={30} className="h-7 w-auto" style={{ filter: "brightness(0)" }} />
-          <div className="hidden gap-9 text-sm font-medium md:flex" style={{ color: "var(--ink-3)" }}>
+          <Image
+            src="/logo.svg"
+            alt="A3RO"
+            width={96}
+            height={30}
+            className="h-7 w-auto"
+            style={{ filter: "brightness(0) invert(1) drop-shadow(0 0 8px rgba(168,85,247,0.55))" }}
+          />
+          <div className="hidden gap-9 text-sm font-medium md:flex" style={{ color: "var(--ink-2)" }}>
             {["Services", "Process", "Contact"].map((l) => (
               <a key={l} href={`#${l.toLowerCase()}`} className="transition-colors hover:text-[var(--ink)]">
                 {l}
@@ -663,7 +689,7 @@ export default function Home() {
           <a
             href="#contact"
             className="rounded-full px-5 py-2.5 text-sm font-semibold text-white transition-all hover:brightness-110"
-            style={{ background: "linear-gradient(135deg,#2f6bff,#5b8dff)", boxShadow: "0 8px 20px -8px rgba(47,107,255,0.6)" }}
+            style={{ background: "linear-gradient(135deg,#7c3aed,#d946ef)", boxShadow: "0 8px 22px -8px rgba(168,85,247,0.7)" }}
           >
             Get Started →
           </a>
@@ -673,12 +699,12 @@ export default function Home() {
       {/* ── HERO (300vh scroll runway) ── */}
       <section ref={heroRef} style={{ height: "300vh" }}>
         <div className="sticky top-0 h-screen overflow-hidden">
-          <GlassReactor scrollRef={scrollRef} />
+          <TravelerOrb scrollRef={scrollRef} />
 
-          {/* soft frame vignette */}
+          {/* inner vignette frame */}
           <div
             className="pointer-events-none absolute inset-0"
-            style={{ boxShadow: "inset 0 0 220px 40px rgba(150,180,225,0.35)" }}
+            style={{ boxShadow: "inset 0 0 260px 60px rgba(6,3,16,0.85)" }}
           />
 
           {/* Hero copy */}
@@ -693,7 +719,7 @@ export default function Home() {
               className="glass pointer-events-auto mb-9 inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em]"
               style={{ color: "var(--ink-2)" }}
             >
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: "#2f6bff" }} />
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: "#d946ef", boxShadow: "0 0 8px #d946ef" }} />
               Tech &amp; Automation Studio — Sydney, AU
             </motion.div>
 
@@ -702,10 +728,10 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, delay: 0.42, ease: [0.16, 1, 0.3, 1] }}
               className="font-display font-black leading-[0.9] tracking-tighter"
-              style={{ fontSize: "clamp(3.2rem,10vw,8rem)", color: "var(--ink)" }}
+              style={{ fontSize: "clamp(3.2rem,10vw,8rem)", color: "var(--ink)", textShadow: "0 0 60px rgba(168,85,247,0.35)" }}
             >
               Built{" "}
-              <span className="font-serif-italic font-normal" style={{ color: "#2f6bff" }}>
+              <span className="font-serif-italic font-normal" style={{ color: "#e879f9" }}>
                 Different
               </span>
             </motion.h1>
@@ -718,7 +744,7 @@ export default function Home() {
               style={{ color: "var(--ink-2)" }}
             >
               We build custom software, automate what slows you down, and ship products
-              engineered like ice — clear, sharp, and built to last.
+              engineered to be sharp, fast, and built to last.
             </motion.p>
 
             <motion.div
@@ -730,24 +756,24 @@ export default function Home() {
               <a
                 href="#contact"
                 className="rounded-full px-8 py-4 text-sm font-bold uppercase tracking-widest text-white transition-all hover:brightness-110"
-                style={{ background: "linear-gradient(135deg,#2f6bff,#5b8dff)", boxShadow: "0 12px 30px -10px rgba(47,107,255,0.65)" }}
+                style={{ background: "linear-gradient(135deg,#7c3aed,#d946ef)", boxShadow: "0 12px 34px -10px rgba(168,85,247,0.75)" }}
               >
                 Start a Project
               </a>
               <a
                 href="#services"
                 className="glass rounded-full px-8 py-4 text-sm font-semibold uppercase tracking-widest transition-all"
-                style={{ color: "var(--ink-2)" }}
+                style={{ color: "var(--ink)" }}
               >
                 What We Do ↓
               </a>
             </motion.div>
           </motion.div>
 
-          {/* white flash on swallow */}
+          {/* void charge flash on approach */}
           <motion.div
             className="pointer-events-none absolute inset-0 z-20"
-            style={{ opacity: flashOpacity, background: "radial-gradient(circle at 50% 50%, #ffffff 0%, #eaf2ff 55%, #dbe7f7 100%)" }}
+            style={{ opacity: flashOpacity, background: "radial-gradient(circle at 50% 50%, rgba(233,196,255,0.9) 0%, rgba(168,85,247,0.55) 45%, rgba(8,4,18,0) 80%)" }}
           />
 
           {/* scroll hint */}
@@ -760,7 +786,7 @@ export default function Home() {
               className="h-10 w-px"
               animate={{ opacity: [0.25, 1, 0.25] }}
               transition={{ duration: 2, repeat: Infinity }}
-              style={{ background: "linear-gradient(to bottom, #2f6bff, transparent)" }}
+              style={{ background: "linear-gradient(to bottom, #a855f7, transparent)" }}
             />
           </div>
         </div>
@@ -769,17 +795,23 @@ export default function Home() {
       <HUDReactor show={showHUD} />
 
       {/* content surface */}
-      <div className="relative z-10" style={{ background: "linear-gradient(180deg,#eaf2ff 0%, #f4f8fe 26%, #eef4fc 100%)" }}>
+      <div
+        className="relative z-10"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 50% at 50% 0%, rgba(124,58,237,0.16), transparent 60%), radial-gradient(ellipse 55% 40% at 82% 22%, rgba(217,70,239,0.10), transparent 60%), linear-gradient(180deg,#07040f 0%, #0a0714 30%, #08040f 100%)",
+        }}
+      >
         {/* ── MARQUEE ── */}
-        <div className="overflow-hidden border-y py-4" style={{ borderColor: "rgba(47,107,255,0.14)", background: "rgba(255,255,255,0.4)" }}>
+        <div className="overflow-hidden border-y py-4" style={{ borderColor: "rgba(168,85,247,0.16)", background: "rgba(12,7,24,0.5)" }}>
           <div className="flex gap-10 whitespace-nowrap" style={{ animation: "marquee 24s linear infinite" }}>
             {Array(2)
               .fill(["Custom Apps", "AI Automation", "Software MVPs", "Website Dev", "Rapid Prototyping", "AI Integration", "Full Stack Builds"])
               .flat()
               .map((item, i) => (
-                <span key={i} className="text-xs font-semibold uppercase tracking-[0.24em]" style={{ color: "var(--ink-3)" }}>
+                <span key={i} className="text-xs font-semibold uppercase tracking-[0.24em]" style={{ color: "var(--ink-2)" }}>
                   {item}
-                  <span className="mx-5" style={{ color: "#2f6bff" }}>
+                  <span className="mx-5" style={{ color: "#d946ef" }}>
                     ✦
                   </span>
                 </span>
@@ -790,7 +822,7 @@ export default function Home() {
         {/* ── ABOUT ── */}
         <section className="mx-auto max-w-7xl px-6 py-32 md:px-10">
           <Reveal>
-            <p className="mb-10 text-xs font-semibold uppercase tracking-[0.3em]" style={{ color: "#2f6bff" }}>
+            <p className="mb-10 text-xs font-semibold uppercase tracking-[0.3em]" style={{ color: "#c084fc" }}>
               Our Studio
             </p>
           </Reveal>
@@ -798,7 +830,7 @@ export default function Home() {
             <Reveal>
               <h2 className="font-display text-4xl font-black leading-tight tracking-tighter md:text-5xl">
                 We make technology work for your business —{" "}
-                <span className="font-serif-italic font-normal" style={{ color: "#2f6bff" }}>
+                <span className="font-serif-italic font-normal" style={{ color: "#e879f9" }}>
                   not the other way around.
                 </span>
               </h2>
@@ -807,7 +839,7 @@ export default function Home() {
               <div className="space-y-5 text-lg leading-relaxed" style={{ color: "var(--ink-2)" }}>
                 <p>A3RO is a Sydney-based tech &amp; automation studio. We build custom software, integrate AI, and craft digital tools that give businesses a genuine edge.</p>
                 <p>No bloated agencies. No cookie-cutter solutions. Focused, intelligent builds that solve your actual problems — and look the part.</p>
-                <a href="#contact" className="inline-flex items-center gap-2 text-base font-semibold transition-colors" style={{ color: "#2f6bff" }}>
+                <a href="#contact" className="inline-flex items-center gap-2 text-base font-semibold transition-colors" style={{ color: "#c084fc" }}>
                   Work with us →
                 </a>
               </div>
@@ -820,7 +852,7 @@ export default function Home() {
           <Reveal>
             <div className="mb-16 flex flex-wrap items-end justify-between gap-6">
               <div>
-                <p className="mb-4 text-xs font-semibold uppercase tracking-[0.3em]" style={{ color: "#2f6bff" }}>
+                <p className="mb-4 text-xs font-semibold uppercase tracking-[0.3em]" style={{ color: "#c084fc" }}>
                   Services
                 </p>
                 <h2 className="font-display text-4xl font-black tracking-tighter md:text-5xl">What we build.</h2>
@@ -828,7 +860,7 @@ export default function Home() {
               <a
                 href="#contact"
                 className="whitespace-nowrap rounded-full px-6 py-3 text-sm font-semibold text-white transition-all hover:brightness-110"
-                style={{ background: "linear-gradient(135deg,#2f6bff,#5b8dff)", boxShadow: "0 10px 24px -10px rgba(47,107,255,0.6)" }}
+                style={{ background: "linear-gradient(135deg,#7c3aed,#d946ef)", boxShadow: "0 10px 26px -10px rgba(168,85,247,0.7)" }}
               >
                 Start a Project →
               </a>
@@ -843,13 +875,13 @@ export default function Home() {
                   animate={{ y: active === i ? -4 : 0 }}
                   transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                   className="glass h-full rounded-3xl p-8"
-                  style={{ boxShadow: active === i ? "0 24px 50px -18px rgba(47,107,255,0.4)" : undefined }}
+                  style={{ boxShadow: active === i ? "0 28px 60px -18px rgba(168,85,247,0.5)" : undefined }}
                 >
                   <div className="mb-6 flex items-start justify-between">
-                    <span className="font-mono text-xs" style={{ color: active === i ? "#2f6bff" : "var(--ink-3)" }}>
+                    <span className="font-mono text-xs" style={{ color: active === i ? "#e879f9" : "var(--ink-3)" }}>
                       {s.id}
                     </span>
-                    <motion.span animate={{ x: active === i ? 3 : 0, y: active === i ? -3 : 0 }} style={{ color: "#2f6bff" }}>
+                    <motion.span animate={{ x: active === i ? 3 : 0, y: active === i ? -3 : 0 }} style={{ color: "#d946ef" }}>
                       →
                     </motion.span>
                   </div>
@@ -862,7 +894,7 @@ export default function Home() {
                       <span
                         key={t}
                         className="rounded-full px-3 py-1 text-xs font-medium"
-                        style={{ border: "1px solid rgba(47,107,255,0.25)", color: "#2f6bff", background: "rgba(47,107,255,0.06)" }}
+                        style={{ border: "1px solid rgba(168,85,247,0.3)", color: "#d8b4fe", background: "rgba(168,85,247,0.1)" }}
                       >
                         {t}
                       </span>
@@ -877,12 +909,12 @@ export default function Home() {
         {/* ── PROCESS ── */}
         <section id="process" className="mx-auto max-w-7xl px-6 py-32 md:px-10">
           <Reveal>
-            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.3em]" style={{ color: "#2f6bff" }}>
+            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.3em]" style={{ color: "#c084fc" }}>
               Process
             </p>
             <h2 className="mb-20 font-display text-4xl font-black leading-tight tracking-tighter md:text-5xl">
               Simple process.{" "}
-              <span className="font-serif-italic font-normal" style={{ color: "#2f6bff" }}>
+              <span className="font-serif-italic font-normal" style={{ color: "#e879f9" }}>
                 Serious results.
               </span>
             </h2>
@@ -891,7 +923,7 @@ export default function Home() {
             {STEPS.map((step, i) => (
               <Reveal key={step.num} delay={i * 0.1}>
                 <div className="glass h-full rounded-3xl p-8">
-                  <span className="mb-6 block font-mono text-xs font-bold" style={{ color: "#2f6bff" }}>
+                  <span className="mb-6 block font-mono text-xs font-bold" style={{ color: "#d946ef" }}>
                     {step.num}
                   </span>
                   <h3 className="mb-4 font-display text-lg font-black tracking-tight">{step.title}</h3>
@@ -908,16 +940,16 @@ export default function Home() {
         <section id="contact" className="relative overflow-hidden px-6 py-40 text-center md:px-10">
           <div
             className="pointer-events-none absolute left-1/2 top-1/2 h-[420px] w-[720px] -translate-x-1/2 -translate-y-1/2"
-            style={{ background: "radial-gradient(ellipse, rgba(47,107,255,0.16) 0%, transparent 70%)", filter: "blur(50px)" }}
+            style={{ background: "radial-gradient(ellipse, rgba(168,85,247,0.22) 0%, transparent 70%)", filter: "blur(50px)" }}
           />
           <div className="relative z-10 mx-auto max-w-4xl">
             <Reveal>
-              <p className="mb-8 text-xs font-semibold uppercase tracking-[0.3em]" style={{ color: "#2f6bff" }}>
+              <p className="mb-8 text-xs font-semibold uppercase tracking-[0.3em]" style={{ color: "#c084fc" }}>
                 Let&apos;s Build
               </p>
               <h2 className="mb-8 font-display font-black leading-[0.92] tracking-tighter" style={{ fontSize: "clamp(2.4rem,7vw,5.5rem)" }}>
                 Ready to automate{" "}
-                <span className="font-serif-italic font-normal" style={{ color: "#2f6bff" }}>
+                <span className="font-serif-italic font-normal" style={{ color: "#e879f9" }}>
                   everything?
                 </span>
               </h2>
@@ -927,7 +959,7 @@ export default function Home() {
               <a
                 href="mailto:hello@a3ro.com.au"
                 className="inline-block rounded-full px-12 py-5 text-sm font-black uppercase tracking-widest text-white transition-all hover:brightness-110"
-                style={{ background: "linear-gradient(135deg,#2f6bff,#5b8dff)", boxShadow: "0 18px 40px -12px rgba(47,107,255,0.7)" }}
+                style={{ background: "linear-gradient(135deg,#7c3aed,#d946ef)", boxShadow: "0 18px 44px -12px rgba(168,85,247,0.8)" }}
               >
                 hello@a3ro.com.au
               </a>
@@ -935,41 +967,29 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── VERTIGO — endless descent ── */}
-        <section className="relative overflow-hidden" style={{ height: "100vh" }}>
-          <VertigoStream />
+        {/* ── WARP — hyperspace descent ── */}
+        <section className="relative overflow-hidden" style={{ height: "100vh", background: "#04030a" }}>
+          <WarpTunnel />
 
-          {/* downward outline-text walls */}
-          <div className="pointer-events-none absolute inset-0 z-10 flex items-start justify-between overflow-hidden px-2 md:px-6" style={{ opacity: 0.16 }}>
-            <div className="flex flex-col" style={{ animation: "marqueeDown 20s linear infinite" }}>
-              {Array(10).fill("A3RO").map((t, i) => (
-                <span key={i} className="font-display font-black leading-[0.82]" style={{ fontSize: "13vw", WebkitTextStroke: "1.5px #2f6bff", color: "transparent" }}>
-                  {t}
-                </span>
-              ))}
-            </div>
-            <div className="flex flex-col text-right" style={{ animation: "marqueeDown 30s linear infinite" }}>
-              {Array(10).fill("BUILT").map((t, i) => (
-                <span key={i} className="font-display font-black leading-[0.82]" style={{ fontSize: "13vw", WebkitTextStroke: "1.5px #5b8dff", color: "transparent" }}>
-                  {t}
-                </span>
-              ))}
-            </div>
-          </div>
+          {/* center convergence glow */}
+          <div
+            className="pointer-events-none absolute left-1/2 top-1/2 z-10 h-[380px] w-[380px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+            style={{ background: "radial-gradient(circle, rgba(217,70,239,0.28) 0%, transparent 65%)", filter: "blur(30px)" }}
+          />
 
           {/* top / bottom blend */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-40" style={{ background: "linear-gradient(to bottom, #eef4fc, transparent)" }} />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-40" style={{ background: "linear-gradient(to top, #eef4fc, transparent)" }} />
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-40" style={{ background: "linear-gradient(to bottom, #08040f, transparent)" }} />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-40" style={{ background: "linear-gradient(to top, #08040f, transparent)" }} />
 
           {/* centered tagline */}
           <div className="absolute inset-0 z-30 flex items-center justify-center px-6">
             <Reveal className="glass max-w-2xl rounded-3xl px-10 py-12 text-center">
-              <p className="mb-5 text-xs font-semibold uppercase tracking-[0.3em]" style={{ color: "#2f6bff" }}>
+              <p className="mb-5 text-xs font-semibold uppercase tracking-[0.3em]" style={{ color: "#c084fc" }}>
                 The A3RO Way
               </p>
               <h2 className="mb-5 font-display text-4xl font-black leading-[0.95] tracking-tighter md:text-6xl">
                 Always in{" "}
-                <span className="font-serif-italic font-normal" style={{ color: "#2f6bff" }}>
+                <span className="font-serif-italic font-normal" style={{ color: "#e879f9" }}>
                   motion.
                 </span>
               </h2>
@@ -981,17 +1001,24 @@ export default function Home() {
         </section>
 
         {/* ── FOOTER ── */}
-        <footer className="border-t px-6 py-14 md:px-10" style={{ borderColor: "rgba(47,107,255,0.14)" }}>
+        <footer className="border-t px-6 py-14 md:px-10" style={{ borderColor: "rgba(168,85,247,0.16)", background: "#06040d" }}>
           <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-10 md:flex-row md:items-center">
             <div>
-              <Image src="/logo.svg" alt="A3RO" width={88} height={28} className="mb-3 h-6 w-auto" style={{ filter: "brightness(0)" }} />
+              <Image
+                src="/logo.svg"
+                alt="A3RO"
+                width={88}
+                height={28}
+                className="mb-3 h-6 w-auto"
+                style={{ filter: "brightness(0) invert(1) drop-shadow(0 0 8px rgba(168,85,247,0.5))" }}
+              />
               <p className="text-sm" style={{ color: "var(--ink-3)" }}>
                 Tech &amp; Automation Studio — Sydney, AU
               </p>
             </div>
             <div className="flex gap-14 text-sm">
               <div className="space-y-3">
-                <p className="mb-4 text-xs font-semibold uppercase tracking-widest" style={{ color: "#2f6bff" }}>
+                <p className="mb-4 text-xs font-semibold uppercase tracking-widest" style={{ color: "#c084fc" }}>
                   Discover
                 </p>
                 {["Services", "Process", "Contact"].map((l) => (
@@ -1001,7 +1028,7 @@ export default function Home() {
                 ))}
               </div>
               <div className="space-y-3">
-                <p className="mb-4 text-xs font-semibold uppercase tracking-widest" style={{ color: "#2f6bff" }}>
+                <p className="mb-4 text-xs font-semibold uppercase tracking-widest" style={{ color: "#c084fc" }}>
                   Connect
                 </p>
                 {[
@@ -1009,7 +1036,7 @@ export default function Home() {
                   { l: "Instagram", h: "#" },
                   { l: "Email", h: "mailto:hello@a3ro.com.au" },
                 ].map(({ l, h }) => (
-                  <a key={l} href={h} className="block transition-colors hover:text-[var(--ink)]" style={{ color: "var(--ink-2)" }}>
+                         <a key={l} href={h} className="block transition-colors hover:text-[var(--ink)]" style={{ color: "var(--ink-2)" }}>
                     {l}
                   </a>
                 ))}
@@ -1018,7 +1045,7 @@ export default function Home() {
           </div>
           <div
             className="mx-auto mt-10 flex max-w-7xl flex-col items-center justify-between gap-4 border-t pt-8 text-xs md:flex-row"
-            style={{ borderColor: "rgba(47,107,255,0.12)", color: "var(--ink-3)" }}
+            style={{ borderColor: "rgba(168,85,247,0.14)", color: "var(--ink-3)" }}
           >
             <span>© {new Date().getFullYear()} A3RO. All rights reserved.</span>
             <span>a3ro.com.au</span>

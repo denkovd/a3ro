@@ -3,10 +3,10 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "A3RO — Built Different",
-  description: "A3RO is a Sydney tech & automation studio. Custom software, AI automation, and products engineered like ice — clear, sharp, built to last.",
+  description: "A3RO is a Sydney tech & automation studio. Custom software, AI automation, and products engineered to be sharp, fast, and built to last.",
   openGraph: {
     title: "A3RO — Built Different",
-    description: "Custom software, AI automation, and products engineered like ice.",
+    description: "Custom software, AI automation, and products engineered to be sharp, fast, and built to last.",
     url: "https://a3ro.com.au",
     siteName: "A3RO",
     type: "website",
