@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "A3RO — Built Different",
-  description: "A3RO is a Sydney tech & automation studio. Custom software, AI automation, and products engineered to be sharp, fast, and built to last.",
+  title: "A3RO — Quiet machines. Loud results.",
+  description: "A3RO is a Sydney software & automation studio. Custom software, AI automation, and rapid MVPs — systems that keep working long after launch.",
   openGraph: {
-    title: "A3RO — Built Different",
-    description: "Custom software, AI automation, and products engineered to be sharp, fast, and built to last.",
+    title: "A3RO — Quiet machines. Loud results.",
+    description: "Custom software, AI automation, and rapid MVPs — systems that keep working long after launch.",
     url: "https://a3ro.com.au",
     siteName: "A3RO",
     type: "website",
@@ -22,7 +22,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
           rel="stylesheet"
         />
       </head>
@@ -30,3 +30,4 @@ export default function RootLayout({
     </html>
   );
 }
+

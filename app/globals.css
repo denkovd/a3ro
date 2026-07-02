@@ -2,21 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ────────────────────────────────────────────────────────────────
+   A3RO — design tokens
+   Deep neutral layers. One vivid accent: acid green.
+   Green is reserved for focus, interaction, and motion cues only.
+──────────────────────────────────────────────────────────────── */
 :root {
-  /* Void / dark-tech palette */
-  --void-0:  #04030a;  /* deepest black-violet (page base) */
-  --void-1:  #0a0714;  /* base surface */
-  --void-2:  #120a22;  /* raised surface */
-  --void-3:  #1b0f31;  /* panel */
-  --ink:     #f3eefe;  /* near-white, violet tint */
-  --ink-2:   #b6a6d8;  /* muted lavender */
-  --ink-3:   #7c6ba0;  /* dim lavender */
-  --accent:  #a855f7;  /* void purple */
-  --accent-2:#d946ef;  /* magenta */
-  --accent-3:#7c3aed;  /* deep violet */
-  --glow:    #b06bff;  /* soft glow violet */
-  --glass:   rgba(30,16,54,0.5);
-  --glass-bd:rgba(168,85,247,0.22);
+  /* Surfaces — deep, neutral, layered (back → front) */
+  --depth-0: #060707;   /* page void */
+  --depth-1: #0b0d0d;   /* base surface */
+  --depth-2: #111414;   /* raised surface / cards */
+  --depth-3: #171b1a;   /* panel / hover surface */
+
+  /* Ink */
+  --ink:    #e8ebe8;    /* primary text */
+  --ink-2:  #9ba39e;    /* secondary text */
+  --ink-3:  #5c6560;    /* labels, dim meta */
+
+  /* Lines */
+  --line:   rgba(232, 235, 232, 0.08);
+  --line-2: rgba(232, 235, 232, 0.14);
+
+  /* The one vivid accent — acid green, used sparingly */
+  --acid:      #b8e62d;
+  --acid-dim:  rgba(184, 230, 45, 0.35);
+  --acid-soft: rgba(184, 230, 45, 0.10);
+
+  /* Motion tokens — single source of truth */
+  --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);   /* reveals, entrances */
+  --ease-inout:  cubic-bezier(0.65, 0, 0.35, 1);   /* section transitions */
+  --ease-snap:   cubic-bezier(0.3, 0.7, 0.4, 1);   /* micro interactions */
+  --dur-micro:   160ms;   /* hover, focus */
+  --dur-base:    320ms;   /* UI state changes */
+  --dur-reveal:  800ms;   /* scroll reveals */
+  --dur-scene:   1200ms;  /* entrance / scene shifts */
 }
 
 * { box-sizing: border-box; }
@@ -33,45 +52,86 @@ html.lenis, html.lenis body { height: auto; }
 .lenis.lenis-stopped { overflow: hidden; }
 
 body {
-  background: var(--void-0);
+  background: var(--depth-0);
   color: var(--ink);
   font-family: "Inter", system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
 }
 
-::selection { background: rgba(168,85,247,0.30); color: #ffffff; }
+.font-mono {
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+}
 
-::-webkit-scrollbar { width: 10px; }
-::-webkit-scrollbar-track { background: #06040d; }
+::selection { background: var(--acid-dim); color: #f2f5ee; }
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--depth-0); }
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #5b2a9e, #a855f7);
+  background: #2a302c;
   border-radius: 999px;
-  border: 2px solid #06040d;
+}
+::-webkit-scrollbar-thumb:hover { background: #3a423d; }
+
+/* Keyboard focus — the accent's primary job */
+:focus-visible {
+  outline: 1px solid var(--acid);
+  outline-offset: 3px;
 }
 
-.font-display { font-family: "Inter", system-ui, sans-serif; }
-.font-serif-italic { font-family: "Instrument Serif", Georgia, serif; font-style: italic; }
-
-.glass {
-  background: linear-gradient(135deg, rgba(38,20,66,0.62), rgba(12,7,24,0.42));
-  backdrop-filter: blur(22px) saturate(150%);
-  -webkit-backdrop-filter: blur(22px) saturate(150%);
-  border: 1px solid rgba(168,85,247,0.22);
-  box-shadow: 0 24px 60px -22px rgba(124,58,237,0.45),
-              inset 0 1px 0 0 rgba(168,85,247,0.14);
+/* ── Film grain (static tile, animated by CSS steps — cheap) ── */
+.grain::after {
+  content: "";
+  position: fixed;
+  inset: -100%;
+  z-index: 60;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.035;
+  animation: grainShift 900ms steps(6) infinite;
 }
-.glass-soft {
-  background: rgba(12,7,24,0.55);
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
-  border-bottom: 1px solid rgba(168,85,247,0.16);
+@keyframes grainShift {
+  0%   { transform: translate(0, 0); }
+  25%  { transform: translate(-2%, 1%); }
+  50%  { transform: translate(1%, -2%); }
+  75%  { transform: translate(-1%, 2%); }
+  100% { transform: translate(2%, -1%); }
 }
 
-@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-@keyframes marqueeDown { from { transform: translateY(-50%); } to { transform: translateY(0); } }
-@keyframes hudSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-@keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+/* ── Utility surfaces ── */
+.hairline    { border: 1px solid var(--line); }
+.hairline-t  { border-top: 1px solid var(--line); }
+.hairline-b  { border-bottom: 1px solid var(--line); }
+
+/* Link underline sweep — draws left→right on hover, exits right */
+.sweep {
+  position: relative;
+}
+.sweep::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -2px;
+  height: 1px;
+  background: var(--acid);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.sweep:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
 
 @layer utilities {
   .text-balance { text-wrap: balance; }
 }
+
+/* ── Reduced motion: everything settles instantly ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .grain::after { animation: none; }
+}
+
