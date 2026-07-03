@@ -1,8 +1,8 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
-   A3RO — landing page
-   A single vertical descent: arrival → position → craft → work →
-   process → resolution. One fixed atmosphere behind everything;
+   A3RO — Market Intelligence Platform, landing page
+   A single vertical descent: arrival → platform → intelligence →
+   modules → method → resolution. One fixed atmosphere behind everything;
    sections travel through it rather than stacking on top of it.
    Motion rules live in docs/MOTION.md.
 ──────────────────────────────────────────────────────────────── */

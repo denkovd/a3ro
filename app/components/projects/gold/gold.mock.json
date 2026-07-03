@@ -1,0 +1,13 @@
+{
+  "source": "mock",
+  "asOf": "2026-07-03T07:30:00Z",
+  "price": { "value": 3912.4, "currency": "USD", "unit": "troy oz" },
+  "changes": { "d1": 0.42, "w1": -1.18, "y1": 18.6, "y5": 96.4, "y10": 189.2 },
+  "indicators": {
+    "trend": { "state": "Rising", "score": 0.72, "bias": 1 },
+    "momentum": { "state": "Firm", "score": 0.61, "bias": 1 },
+    "volatility": { "state": "Compressed", "score": 0.34, "bias": 0 },
+    "usdPressure": { "state": "Easing", "score": 0.44, "bias": 1 },
+    "realYieldPressure": { "state": "Neutral", "score": 0.5, "bias": 0 }
+  }
+}

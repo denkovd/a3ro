@@ -16,8 +16,8 @@ import {
 } from "framer-motion";
 import { DUR, EASE_OUT, useMounted, useFinePointer } from "../motion";
 
-const LINE_1 = "Quiet machines.";
-const LINE_2 = "Loud results.";
+const LINE_1 = "Quiet signals.";
+const LINE_2 = "Hard markets.";
 
 function CharLine({
   text,
@@ -147,7 +147,7 @@ export default function Hero() {
               animate={mounted ? { opacity: 1, y: 0 } : undefined}
               transition={{ duration: DUR.reveal, delay: 0.5, ease: EASE_OUT }}
             >
-              Sydney · Software &amp; Automation
+              A3RO · Market Intelligence Platform
             </motion.span>
           </motion.p>
 
@@ -165,8 +165,8 @@ export default function Hero() {
             transition={{ duration: DUR.reveal, delay: 1.35, ease: EASE_OUT }}
             className="mt-8 max-w-md text-base leading-relaxed text-[var(--ink-2)]"
           >
-            We design and build the software that runs underneath a business —
-            then make it feel effortless.
+            Intelligence for oil, gold, and bitcoin — monitoring live pressure
+            across physical and digital markets. Visibility, not clutter.
           </motion.p>
         </motion.div>
 
@@ -182,7 +182,7 @@ export default function Hero() {
               transition={{ duration: DUR.reveal, delay: 1.6, ease: EASE_OUT }}
               className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]"
             >
-              EST. Sydney — building since day one
+              Oil · Gold · BTC — one intelligence layer
             </motion.p>
             <div className="flex flex-col items-center gap-3">
               <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--ink-3)]">

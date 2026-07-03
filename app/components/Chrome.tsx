@@ -7,9 +7,9 @@ import { motion, useScroll, useSpring, useReducedMotion } from "framer-motion";
 import { DUR, EASE_INOUT, EASE_OUT, useMounted } from "./motion";
 
 const LINKS = [
-  { label: "Craft", href: "#craft" },
-  { label: "Work", href: "#work" },
-  { label: "Process", href: "#process" },
+  { label: "Platform", href: "#platform" },
+  { label: "Modules", href: "#modules" },
+  { label: "Method", href: "#method" },
   { label: "Contact", href: "#contact" },
 ];
 

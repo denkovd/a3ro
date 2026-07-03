@@ -14,7 +14,7 @@ import {
 } from "framer-motion";
 
 const STATEMENT =
-  "Most software is noise. Ours is signal — small teams, exact scope, systems that keep working long after launch.";
+  "Most market data is noise. Ours is signal — three markets, one intelligence layer, built to read price pressure, corridor risk, and structural change.";
 
 function Word({
   word,
@@ -50,7 +50,7 @@ export default function Manifesto() {
   const words = STATEMENT.split(" ");
 
   return (
-    <section ref={ref} className="relative z-10 h-[220vh]">
+    <section ref={ref} id="platform" className="relative z-10 h-[220vh]">
       <motion.div
         style={reduced ? undefined : { opacity: sceneIn }}
         className="sticky top-0 flex h-[100svh] items-center"
@@ -58,7 +58,7 @@ export default function Manifesto() {
         <div className="mx-auto w-full max-w-4xl px-6 md:px-10">
           <div className="mb-10 flex items-center justify-between">
             <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-              01 / Position
+              01 / Platform
             </p>
             {/* Micro progress: this scene's own read-through */}
             <div className="relative h-px w-24 bg-[var(--line)]">

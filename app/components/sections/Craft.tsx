@@ -1,8 +1,9 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
-   Craft — capabilities ledger. Rows reveal in sequence. On desktop
-   a small preview plate trails the cursor across the list, showing
-   the hovered discipline's index — depth through motion, not decor.
+   Intelligence — capabilities ledger. Rows reveal in sequence. On
+   desktop a small preview plate trails the cursor across the list,
+   showing the hovered capability's index — depth through motion,
+   not decor.
 ──────────────────────────────────────────────────────────────── */
 import { useRef, useState } from "react";
 import { motion, useSpring } from "framer-motion";
@@ -11,23 +12,23 @@ import { StaggerGroup, StaggerItem, useFinePointer } from "../motion";
 const CAPABILITIES = [
   {
     id: "01",
-    title: "Custom software",
-    body: "Web and mobile applications shaped around how a business actually operates — not the other way around.",
+    title: "Live monitoring",
+    body: "Continuous signal capture across each market, structured into summaries that read in seconds.",
   },
   {
     id: "02",
-    title: "AI automation",
-    body: "Intelligent systems that absorb repetitive work, so a team of five can move like a team of fifteen.",
+    title: "Context layers",
+    body: "Macro, sentiment, geopolitical, and flow-based inputs — the forces behind a price, attached to the price.",
   },
   {
     id: "03",
-    title: "Rapid MVPs",
-    body: "A working product in weeks. Test the idea in the market before committing to the full build.",
+    title: "Asset-specific intelligence",
+    body: "A distinct signal stack per market. Oil reads corridors and flows. Gold reads rates and havens. Bitcoin reads liquidity and structure.",
   },
   {
     id: "04",
-    title: "High-performance web",
-    body: "Sites engineered for speed and built to convert — measured, not guessed.",
+    title: "Decision surfaces",
+    body: "Interfaces built for scanning, interpreting, and acting. Nothing on screen without a job.",
   },
 ];
 
@@ -43,7 +44,7 @@ export default function Craft() {
   return (
     <section
       ref={sectionRef}
-      id="craft"
+      id="intelligence"
       className="relative z-10 py-[18vh]"
       onMouseMove={(e) => {
         if (!fine) return;
@@ -55,10 +56,10 @@ export default function Craft() {
     >
       <div className="mx-auto max-w-6xl px-6 md:px-10">
         <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-          02 / Craft
+          02 / Intelligence
         </p>
         <h2 className="mb-16 max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
-          Four disciplines. One standard.
+          Four capabilities. One discipline.
         </h2>
 
         <StaggerGroup>
@@ -105,7 +106,7 @@ export default function Craft() {
             transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
           >
             <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
-              Discipline&nbsp;
+              Capability&nbsp;
             </span>
             <span className="font-mono text-[10px] tracking-[0.25em] text-[var(--acid)]">
               {active !== null ? CAPABILITIES[active].id : ""}

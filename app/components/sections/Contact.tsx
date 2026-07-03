@@ -45,11 +45,16 @@ export default function Contact() {
           05 / Contact
         </p>
         <h2 className="max-w-3xl text-balance text-4xl font-semibold leading-[1.08] tracking-tight text-[var(--ink)] md:text-6xl">
-          <MaskText>Tell us what keeps breaking.</MaskText>
-          <MaskText delay={0.12}>We&rsquo;ll build the thing that doesn&rsquo;t.</MaskText>
+          <MaskText>Three markets under watch.</MaskText>
+          <MaskText delay={0.12}>Access starts with a conversation.</MaskText>
         </h2>
+        <Reveal delay={0.24}>
+          <p className="mt-8 max-w-md text-sm leading-relaxed text-[var(--ink-2)]">
+            Partnerships, demos, and platform access — one address.
+          </p>
+        </Reveal>
         <Reveal delay={0.3}>
-          <Magnetic strength={0.3} className="mt-10">
+          <Magnetic strength={0.3} className="mt-8">
             <a
               href="mailto:hello@a3ro.com.au"
               className="sweep inline-block py-2 font-mono text-sm tracking-[0.15em] text-[var(--ink)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--acid)]"
@@ -63,7 +68,7 @@ export default function Contact() {
       <footer className="relative mt-[16vh] hairline-t">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-8 md:flex-row md:items-center md:justify-between md:px-10">
           <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
-            A3RO — Sydney, Australia
+            A3RO — Market Intelligence · Sydney
           </p>
           <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
             © {new Date().getFullYear()} A3RO. All rights reserved.

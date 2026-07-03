@@ -18,23 +18,23 @@ import { Reveal } from "../motion";
 const STEPS = [
   {
     num: "01",
-    title: "Listen",
-    body: "A short call. We map the real problem, not the assumed one.",
+    title: "Observe",
+    body: "Continuous capture across price, flows, positioning, and the headlines that move them.",
   },
   {
     num: "02",
-    title: "Scope",
-    body: "Fixed scope, honest timeline, one number. No moving targets.",
+    title: "Structure",
+    body: "Raw inputs are filtered, typed, and weighted. Noise stops at the gate.",
   },
   {
     num: "03",
-    title: "Build",
-    body: "Tight sprints with visible progress. You steer while we ship.",
+    title: "Interpret",
+    body: "Signals gain context — regime, pressure, precedent. Movement becomes meaning.",
   },
   {
     num: "04",
-    title: "Stay",
-    body: "Launch is the midpoint. We support, refine, and scale from there.",
+    title: "Monitor",
+    body: "Surfaces stay live as markets shift. Quiet until something matters.",
   },
 ];
 
@@ -76,13 +76,13 @@ export default function Process() {
   });
 
   return (
-    <section ref={ref} id="process" className="relative z-10 py-[18vh]">
+    <section ref={ref} id="method" className="relative z-10 py-[18vh]">
       <div className="mx-auto max-w-6xl px-6 md:px-10">
         <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-          04 / Process
+          04 / Method
         </p>
         <h2 className="mb-20 max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
-          A straight line from call to launch.
+          From raw feed to readable signal.
         </h2>
 
         <div className="relative pl-8 md:pl-12">

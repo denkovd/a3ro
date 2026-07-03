@@ -1,11 +1,17 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
-   Work — a pinned lateral traverse. On desktop the section pins
-   and vertical scroll drives horizontal travel across the slots,
-   like moving along a corridor of windows. On touch/mobile it
-   degrades to a vertical stack with inner parallax.
+   Modules — a pinned lateral traverse across the platform's three
+   intelligence surfaces. On desktop the section pins and vertical
+   scroll drives horizontal travel, like moving along a corridor
+   of monitors. On touch/mobile it degrades to a vertical stack
+   with inner parallax.
+
+   P·01 Oil Tracker and P·02 Gold Tracker are live surfaces (see
+   projects/OilTracker and projects/GoldTracker). P·03 BTC renders
+   as a module card in private preview — same card grammar,
+   asset-specific accent and signal trace.
 ──────────────────────────────────────────────────────────────── */
-import { useRef } from "react";
+import { useRef, type CSSProperties } from "react";
 import {
   motion,
   useScroll,
@@ -14,134 +20,279 @@ import {
   type MotionValue,
 } from "framer-motion";
 import { Reveal, useFinePointer } from "../motion";
+import OilTracker from "../projects/OilTracker";
+import GoldTracker from "../projects/GoldTracker";
 
-const SLOTS = [
-  {
-    id: "P·01",
-    title: "Project placeholder",
-    meta: "Operations platform — case study coming soon",
-  },
-  {
-    id: "P·02",
-    title: "Project placeholder",
-    meta: "AI workflow build — case study coming soon",
-  },
+/* ── deterministic signal trace — seeded, so SSR and client agree ── */
+function walk(seed: number, n: number, vol: number, drift: number): number[] {
+  let s = seed % 2147483647;
+  if (s <= 0) s += 2147483646;
+  const rnd = () => ((s = (s * 16807) % 2147483647), s / 2147483647);
+  const out: number[] = [];
+  let v = 0.5;
+  for (let i = 0; i < n; i++) {
+    v += (rnd() - 0.5) * vol + drift;
+    v = Math.max(0.08, Math.min(0.92, v));
+    out.push(v);
+  }
+  return out;
+}
+
+const toPath = (vals: number[]) =>
+  vals
+    .map(
+      (v, i) =>
+        `${i === 0 ? "M" : "L"}${((i / (vals.length - 1)) * 100).toFixed(2)},${((1 - v) * 100).toFixed(2)}`
+    )
+    .join(" ");
+
+/* ── preview modules rendered as cards; P·01 and P·02 are live ── */
+const MODULES = [
   {
     id: "P·03",
-    title: "Project placeholder",
-    meta: "Product MVP — case study coming soon",
+    name: "BTC Tracker",
+    accent: "#e0873a",
+    desc: "Digital asset intelligence — price action, liquidity, and structural signals.",
+    detail:
+      "Tracking momentum, sentiment, and structural risk across the bitcoin market.",
+    stack: "BTC/USD · Funding · Liquidity depth",
+    footerMeta: "Digital asset intelligence — private preview",
+    trace: walk(5, 56, 0.16, 0.003),
   },
 ];
+type Module = (typeof MODULES)[number];
+const TOTAL = MODULES.length + 2; /* + Oil (featured) + Gold (live card) */
 
-/* Shared inner surface: abstract environment, no fake screenshots */
-function SlotSurface({
+/* Shared inner surface: depth field, time ticks, one signal trace */
+function ModuleSurface({
+  module: m,
   index,
   innerY,
   innerX,
 }: {
+  module: Module;
   index: number;
   innerY?: MotionValue<number>;
   innerX?: MotionValue<number>;
 }) {
+  const last = m.trace[m.trace.length - 1];
   return (
-    <motion.div aria-hidden style={{ y: innerY, x: innerX }} className="absolute inset-[-40px] will-change-transform">
+    <motion.div
+      aria-hidden
+      style={{ y: innerY, x: innerX }}
+      className="absolute inset-[-40px] will-change-transform"
+    >
       <div
         className="absolute inset-0"
         style={{
           background: `radial-gradient(70% 90% at ${index % 2 === 0 ? "22%" : "78%"} 70%, var(--depth-3) 0%, var(--depth-1) 65%)`,
         }}
       />
+      {/* time ticks — map-like verticals */}
       <div
-        className="absolute inset-0 opacity-[0.25]"
+        className="absolute inset-0 opacity-[0.22]"
         style={{
           backgroundImage:
-            "repeating-linear-gradient(105deg, transparent 0px, transparent 22px, var(--line) 23px)",
+            "repeating-linear-gradient(90deg, transparent 0px, transparent 47px, var(--line) 48px)",
         }}
       />
+      {/* signal trace + watch level */}
+      <div className="absolute inset-x-12 bottom-12 top-[54%]">
+        <svg
+          className="h-full w-full"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+        >
+          <path
+            d={`${toPath(m.trace)} L100,100 L0,100 Z`}
+            fill={m.accent}
+            fillOpacity="0.05"
+            stroke="none"
+          />
+          <path
+            d={toPath(m.trace)}
+            fill="none"
+            stroke={m.accent}
+            strokeOpacity="0.55"
+            strokeWidth="1"
+            vectorEffect="non-scaling-stroke"
+          />
+          <line
+            x1="0"
+            x2="100"
+            y1={(1 - last) * 100}
+            y2={(1 - last) * 100}
+            stroke={m.accent}
+            strokeOpacity="0.18"
+            strokeWidth="1"
+            strokeDasharray="0.8 1.6"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+        {/* terminal marker — stays round while the svg stretches */}
+        <span
+          className="absolute h-[5px] w-[5px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+          style={{
+            left: "100%",
+            top: `${(1 - last) * 100}%`,
+            background: m.accent,
+            boxShadow: `0 0 12px ${m.accent}55`,
+          }}
+        />
+      </div>
     </motion.div>
   );
 }
 
-function SlotFrame({
-  slot,
+function ModuleFrame({
+  module: m,
   index,
   innerY,
   innerX,
   className = "",
 }: {
-  slot: (typeof SLOTS)[number];
+  module: Module;
   index: number;
   innerY?: MotionValue<number>;
   innerX?: MotionValue<number>;
   className?: string;
 }) {
+  const reduced = useReducedMotion();
   return (
-    <div className={`group relative overflow-hidden rounded-sm hairline bg-[var(--depth-1)] ${className}`}>
+    <a
+      href="#contact"
+      aria-label={`${m.name} — request platform access`}
+      style={{ "--mod": m.accent } as CSSProperties}
+      className={`group relative overflow-hidden rounded-sm hairline bg-[var(--depth-1)] transition-colors duration-[var(--dur-base)] hover:border-[var(--line-2)] ${className}`}
+    >
       <div className="relative flex-1 overflow-hidden">
-        <SlotSurface index={index} innerY={innerY} innerX={innerX} />
+        <ModuleSurface module={m} index={index} innerY={innerY} innerX={innerX} />
+
+        {/* ghost numeral — directory grammar */}
         <span className="pointer-events-none absolute bottom-3 left-4 select-none font-mono text-[clamp(4rem,10vw,8rem)] font-medium leading-none text-[var(--depth-3)]">
           {String(index + 1).padStart(2, "0")}
         </span>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--ink-3)] transition-colors duration-[var(--dur-base)] group-hover:text-[var(--ink-2)]">
-            {slot.id} — Reserved
-          </span>
-        </div>
+
+        {/* corner registration marks */}
         <span
           aria-hidden
-          className="absolute right-4 top-4 h-3 w-3 border-r border-t border-[var(--ink-3)] opacity-40 transition-all duration-[var(--dur-base)] ease-[var(--ease-out)] group-hover:border-[var(--acid)] group-hover:opacity-100"
+          className="absolute right-4 top-4 h-3 w-3 border-r border-t border-[var(--ink-3)] opacity-40 transition-all duration-[var(--dur-base)] ease-[var(--ease-out)] group-hover:border-[var(--mod)] group-hover:opacity-100"
         />
-      </div>
-      <div className="flex items-baseline justify-between px-5 py-4 hairline-t">
-        <h3 className="text-sm font-medium text-[var(--ink)]">{slot.title}</h3>
-        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-          {slot.meta}
+        <span
+          aria-hidden
+          className="absolute bottom-4 left-4 h-3 w-3 border-b border-l border-[var(--ink-3)] opacity-30"
+        />
+
+        {/* identity */}
+        <div className="pointer-events-none absolute left-5 top-5 max-w-[80%] md:left-7 md:top-7 md:max-w-[46%]">
+          <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
+            {m.id} — <span style={{ color: m.accent }}>Module</span>
+          </p>
+          <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--ink-2)]">
+            A3RO Intelligence
+          </p>
+          <h3 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--ink)] md:text-3xl">
+            {m.name}
+          </h3>
+          <p className="mt-3 text-[13px] leading-relaxed text-[var(--ink-2)]">
+            {m.desc}
+          </p>
+          <p className="mt-2 hidden text-xs leading-relaxed text-[var(--ink-3)] md:block">
+            {m.detail}
+          </p>
+          <p className="mt-4 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
+            {m.stack}
+          </p>
+        </div>
+
+        {/* feed status */}
+        <p className="pointer-events-none absolute right-5 top-5 flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)] md:right-7 md:top-7">
+          {!reduced ? (
+            <motion.span
+              aria-hidden
+              className="inline-block h-[5px] w-[5px] rounded-full"
+              style={{ background: m.accent }}
+              animate={{ opacity: [1, 0.25, 1] }}
+              transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+            />
+          ) : (
+            <span
+              aria-hidden
+              className="inline-block h-[5px] w-[5px] rounded-full"
+              style={{ background: m.accent }}
+            />
+          )}
+          Monitor · private preview
+        </p>
+
+        {/* the one affordance */}
+        <p className="pointer-events-none absolute bottom-5 right-5 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-2)] transition-colors duration-[var(--dur-base)] group-hover:text-[var(--ink)] md:bottom-6 md:right-7">
+          Request access
+          <span
+            aria-hidden
+            className="inline-block transition-transform duration-[var(--dur-base)] ease-[var(--ease-out)] group-hover:translate-x-1"
+            style={{ color: m.accent }}
+          >
+            →
+          </span>
         </p>
       </div>
-    </div>
+
+      {/* card footer — matches the directory grammar */}
+      <div className="flex items-baseline justify-between gap-4 px-5 py-4 hairline-t">
+        <h3 className="text-sm font-medium text-[var(--ink)]">
+          A3RO Intelligence — {m.name}
+        </h3>
+        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+          {m.footerMeta}
+        </p>
+      </div>
+    </a>
   );
 }
 
 /* Desktop: pinned corridor. Track shifts left as the reader scrolls. */
-function WorkTraverse() {
+function ModulesTraverse() {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start start", "end end"],
   });
-  // 3 panels × 62vw + gaps; travel ends with last panel in frame
-  const x = useTransform(scrollYProgress, [0.05, 0.95], ["0vw", "-102vw"]);
+  // 72vw featured + 2 × 62vw + gaps; travel ends with last panel in frame
+  const x = useTransform(scrollYProgress, [0.05, 0.95], ["0vw", "-112vw"]);
   const innerX = useTransform(scrollYProgress, [0, 1], [28, -28]);
-  const counter = useTransform(scrollYProgress, [0.1, 0.9], [1, SLOTS.length]);
+  const counter = useTransform(scrollYProgress, [0.1, 0.9], [1, TOTAL]);
   const counterText = useTransform(counter, (v) => String(Math.round(v)).padStart(2, "0"));
 
   return (
-    <div ref={ref} className="relative h-[320vh]">
+    <div ref={ref} className="relative h-[340vh]">
       <div className="sticky top-0 flex h-[100svh] flex-col justify-center overflow-hidden">
         <div className="mx-auto mb-10 flex w-full max-w-6xl items-end justify-between px-10">
           <div>
             <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-              03 / Work
+              03 / Modules
             </p>
             <h2 className="max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
-              Selected work, arriving quietly.
+              One platform. Three intelligence surfaces.
             </h2>
           </div>
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--ink-3)]">
             <motion.span className="text-[var(--acid)]">{counterText}</motion.span>
-            &nbsp;/&nbsp;{String(SLOTS.length).padStart(2, "0")}
+            &nbsp;/&nbsp;{String(TOTAL).padStart(2, "0")}
           </p>
         </div>
 
         <motion.div
           style={{ x }}
-          className="flex gap-[6vw] pl-[calc(max((100vw-72rem)/2,0px)+2.5rem)] will-change-transform"
+          className="flex items-center gap-[6vw] pl-[calc(max((100vw-72rem)/2,0px)+2.5rem)] will-change-transform"
         >
-          {SLOTS.map((s, i) => (
-            <SlotFrame
-              key={s.id}
-              slot={s}
-              index={i}
+          <OilTracker className="h-[62svh] w-[72vw] shrink-0" />
+          <GoldTracker className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
+          {MODULES.map((m, i) => (
+            <ModuleFrame
+              key={m.id}
+              module={m}
+              index={i + 2}
               innerX={innerX}
               className="flex h-[52svh] w-[62vw] shrink-0 flex-col"
             />
@@ -153,7 +304,7 @@ function WorkTraverse() {
 }
 
 /* Mobile / reduced motion: vertical stack, inner parallax per card */
-function StackedSlot({ slot, index }: { slot: (typeof SLOTS)[number]; index: number }) {
+function StackedModule({ module: m, index }: { module: Module; index: number }) {
   const ref = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
   const { scrollYProgress } = useScroll({
@@ -164,29 +315,35 @@ function StackedSlot({ slot, index }: { slot: (typeof SLOTS)[number]; index: num
   return (
     <Reveal delay={index * 0.05}>
       <div ref={ref}>
-        <SlotFrame
-          slot={slot}
+        <ModuleFrame
+          module={m}
           index={index}
           innerY={reduced ? undefined : innerY}
-          className="flex aspect-[16/11] flex-col"
+          className="flex min-h-[460px] flex-col"
         />
       </div>
     </Reveal>
   );
 }
 
-function WorkStack() {
+function ModulesStack() {
   return (
     <div className="mx-auto max-w-6xl px-6 md:px-10">
       <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-        03 / Work
+        03 / Modules
       </p>
       <h2 className="mb-16 max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)]">
-        Selected work, arriving quietly.
+        One platform. Three intelligence surfaces.
       </h2>
       <div className="flex flex-col gap-10">
-        {SLOTS.map((s, i) => (
-          <StackedSlot key={s.id} slot={s} index={i} />
+        <Reveal>
+          <OilTracker className="min-h-[560px] md:min-h-[620px]" />
+        </Reveal>
+        <Reveal delay={0.05}>
+          <GoldTracker className="flex min-h-[560px] flex-col" />
+        </Reveal>
+        {MODULES.map((m, i) => (
+          <StackedModule key={m.id} module={m} index={i + 2} />
         ))}
       </div>
     </div>
@@ -198,8 +355,8 @@ export default function Work() {
   const reduced = useReducedMotion();
   const traverse = fine && !reduced;
   return (
-    <section id="work" className="relative z-10 py-[10vh]">
-      {traverse ? <WorkTraverse /> : <WorkStack />}
+    <section id="modules" className="relative z-10 py-[10vh]">
+      {traverse ? <ModulesTraverse /> : <ModulesStack />}
     </section>
   );
 }

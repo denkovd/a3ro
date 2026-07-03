@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "A3RO — Quiet machines. Loud results.",
-  description: "A3RO is a Sydney software & automation studio. Custom software, AI automation, and rapid MVPs — systems that keep working long after launch.",
+  title: "A3RO — Market Intelligence Platform",
+  description: "A3RO builds focused intelligence platforms for oil, gold, and bitcoin — live signals, market context, and decision surfaces across physical and digital markets.",
   openGraph: {
-    title: "A3RO — Quiet machines. Loud results.",
-    description: "Custom software, AI automation, and rapid MVPs — systems that keep working long after launch.",
+    title: "A3RO — Market Intelligence Platform",
+    description: "Intelligence for oil, gold, and bitcoin — live signals, market context, and decision surfaces.",
     url: "https://a3ro.com.au",
     siteName: "A3RO",
     type: "website",
