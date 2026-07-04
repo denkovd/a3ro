@@ -1,0 +1,24 @@
+{
+  "chart": {
+    "result": [
+      {
+        "meta": {
+          "regularMarketPrice": 79.45,
+          "regularMarketTime": 1705357200,
+          "currency": "USD",
+          "symbol": "CL=F",
+          "exchangeName": "NYMEX"
+        },
+        "timestamp": [1705357200, 1705270800],
+        "indicators": {
+          "quote": [
+            {
+              "close": [79.45, 78.50]
+            }
+          ]
+        }
+      }
+    ],
+    "error": null
+  }
+}

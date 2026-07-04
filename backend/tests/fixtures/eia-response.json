@@ -1,0 +1,28 @@
+{
+  "response": {
+    "total": 3,
+    "data": [
+      {
+        "period": "2024-01-15",
+        "series": "RWTC",
+        "series-description": "Crude Oil Prices: West Texas Intermediate (WTI) - Cushing, OK Spot Price FOB",
+        "value": 78.50,
+        "units": "$/BBL"
+      },
+      {
+        "period": "2024-01-15",
+        "series": "RBRTE",
+        "series-description": "Crude Oil Prices: Brent Crude Oil - Europe Spot Price FOB",
+        "value": 82.25,
+        "units": "$/BBL"
+      },
+      {
+        "period": "2024-01-14",
+        "series": "RWTC",
+        "series-description": "Crude Oil Prices: West Texas Intermediate (WTI) - Cushing, OK Spot Price FOB",
+        "value": null,
+        "units": "$/BBL"
+      }
+    ]
+  }
+}

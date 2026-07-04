@@ -77,9 +77,13 @@ export class FredSource extends BaseSource {
     if (supported.length === 0) return [];
 
     // Request both series in parallel, sorted descending to get latest first.
+    // (Gate on whether the caller actually asked for that benchmark, not on
+    // the meaningless "series id string is a key of SERIES" check that was
+    // here before -- that always evaluated false and silently skipped every
+    // request.)
     const [wtiObservations, brentObservations] = await Promise.all([
-      SERIES["WTI"] in SERIES ? this.requestObservations(SERIES["WTI"]) : Promise.resolve([]),
-      SERIES["BRENT"] in SERIES ? this.requestObservations(SERIES["BRENT"]) : Promise.resolve([]),
+      supported.includes("WTI") ? this.requestObservations(SERIES["WTI"]) : Promise.resolve([]),
+      supported.includes("BRENT") ? this.requestObservations(SERIES["BRENT"]) : Promise.resolve([]),
     ]);
 
     const records: PriceRecord[] = [];

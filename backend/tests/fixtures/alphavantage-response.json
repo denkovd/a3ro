@@ -1,0 +1,19 @@
+{
+  "name": "Crude Oil Prices: West Texas Intermediate (WTI)",
+  "interval": "daily",
+  "unit": "dollars per barrel",
+  "data": [
+    {
+      "date": "2024-01-15",
+      "value": "78.50"
+    },
+    {
+      "date": "2024-01-14",
+      "value": "."
+    },
+    {
+      "date": "2024-01-12",
+      "value": "75.30"
+    }
+  ]
+}
