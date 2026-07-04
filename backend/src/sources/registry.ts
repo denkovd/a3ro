@@ -3,20 +3,7 @@
    Priority/role/limits live on each adapter's descriptor; this file
    just instantiates and orders them.
 
-   TODO (deferred, mechanical — copy sources/eia.ts):
-   ┌────────────────┬──────────┬────────────┬────────────┬─────────────────────────────┐
-   │ file           │ priority │ confidence │ role       │ notes                       │
-   ├────────────────┼──────────┼────────────┼────────────┼─────────────────────────────┤
-   │ yfinance.ts    │ 3        │ unofficial │ supplement │ CL=F, BZ=F front-month      │
-   │                │          │            │            │ futures; kind: live; NO KEY,│
-   │                │          │            │            │ breaks silently — expect    │
-   │                │          │            │            │ bad_payload often           │
-   │ alphavantage.ts│ 4        │ aggregator │ reserve    │ WTI/BRENT functions; free   │
-   │                │          │            │            │ tier 25 req/DAY + 5/min —   │
-   │                │          │            │            │ poll only when backbone is  │
-   │                │          │            │            │ stale (RULES.md §2.4)       │
-   └────────────────┴──────────┴────────────┴────────────┴─────────────────────────────┘
-
+   All deferred adapters (fred, yfinance, alphavantage) are now wired in.
    Paid upgrade path (later): oilpriceapi.ts / tradingeconomics.ts /
    bloomberg.ts drop in here exactly the same way — likely priority 1–2,
    kind: live, role: backbone. Nothing outside sources/ changes.
@@ -25,13 +12,15 @@
 import { OilPriceSource } from "./OilPriceSource";
 import { EiaSource } from "./eia";
 import { FredSource } from "./fred";
+import { YFinanceSource } from "./yfinance";
+import { AlphaVantageSource } from "./alphavantage";
 
 export function buildSources(): OilPriceSource[] {
   const sources: OilPriceSource[] = [
     new EiaSource(),
     new FredSource(),
-    // new YFinanceSource(),
-    // new AlphaVantageSource(),
+    new YFinanceSource(),
+    new AlphaVantageSource(),
   ];
   return sources.sort((a, b) => a.descriptor.priority - b.descriptor.priority);
 }
