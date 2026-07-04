@@ -1,0 +1,22 @@
+{
+  "name": "@a3ro/oil-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Oil price tracker backend: source adapters, ingestion, resolution, alert rules",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "ingest": "tsx scripts/run-ingest.ts",
+    "migrate": "psql \"$DATABASE_URL\" -f migrations/001_init.sql"
+  },
+  "dependencies": {
+    "pg": "^8.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/pg": "^8.11.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5"
+  }
+}
