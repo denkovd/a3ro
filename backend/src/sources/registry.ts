@@ -7,9 +7,6 @@
    ┌────────────────┬──────────┬────────────┬────────────┬─────────────────────────────┐
    │ file           │ priority │ confidence │ role       │ notes                       │
    ├────────────────┼──────────┼────────────┼────────────┼─────────────────────────────┤
-   │ fred.ts        │ 2        │ official   │ backbone   │ series DCOILWTICO /         │
-   │                │          │            │            │ DCOILBRENTEU; 120 req/min;  │
-   │                │          │            │            │ kind: settlement            │
    │ yfinance.ts    │ 3        │ unofficial │ supplement │ CL=F, BZ=F front-month      │
    │                │          │            │            │ futures; kind: live; NO KEY,│
    │                │          │            │            │ breaks silently — expect    │
@@ -27,11 +24,12 @@
 
 import { OilPriceSource } from "./OilPriceSource";
 import { EiaSource } from "./eia";
+import { FredSource } from "./fred";
 
 export function buildSources(): OilPriceSource[] {
   const sources: OilPriceSource[] = [
     new EiaSource(),
-    // new FredSource(),
+    new FredSource(),
     // new YFinanceSource(),
     // new AlphaVantageSource(),
   ];
