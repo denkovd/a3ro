@@ -6,6 +6,13 @@ import { Benchmark } from "../core/types";
 import { AlertRule, AlertState } from "../alerts/rules";
 import { Queryable } from "./db";
 
+export interface AlertEvent {
+  id: string;
+  ruleId: string;
+  firedAt: string; // ISO 8601
+  payload: Record<string, unknown>;
+}
+
 export async function getEnabledRules(db: Queryable): Promise<AlertRule[]> {
   const res = await db.query(
     `select id, benchmark, type, params from alert_rules where enabled`,
@@ -58,4 +65,34 @@ export async function insertAlertEvent(
     `insert into alert_events (rule_id, payload) values ($1, $2)`,
     [ruleId, JSON.stringify(payload)],
   );
+}
+
+export async function getUndeliveredAlertEvents(
+  db: Queryable,
+  limit = 50,
+): Promise<AlertEvent[]> {
+  const res = await db.query(
+    `select id, rule_id, fired_at, payload from alert_events
+     where delivered_at is null
+     order by fired_at asc
+     limit $1`,
+    [limit],
+  );
+  return res.rows.map((r) => ({
+    id: String(r.id),
+    ruleId: String(r.rule_id),
+    firedAt: toIso(r.fired_at),
+    payload: typeof r.payload === "string" ? JSON.parse(r.payload) : r.payload ?? {},
+  }));
+}
+
+export async function markAlertEventDelivered(db: Queryable, id: string): Promise<void> {
+  await db.query(
+    `update alert_events set delivered_at = now() where id = $1`,
+    [id],
+  );
+}
+
+function toIso(v: unknown): string {
+  return v instanceof Date ? v.toISOString() : new Date(String(v)).toISOString();
 }

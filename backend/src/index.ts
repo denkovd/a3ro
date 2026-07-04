@@ -19,9 +19,16 @@ export {
   getLatestQuotes, getDailySeries, getLatestDailyPrice,
   insertObservations,
 } from "./storage/priceRepo";
+export {
+  getUndeliveredAlertEvents, markAlertEventDelivered,
+} from "./storage/alertRepo";
+export type { AlertEvent } from "./storage/alertRepo";
 
 export { runIngestionCycle } from "./ingest/pipeline";
 export type { CycleReport } from "./ingest/pipeline";
 export { resolveLatestQuote, resolveDailyClose, DISAGREEMENT_TOLERANCE, SUSPECT_DEVIATION } from "./ingest/resolve";
 export { evaluateRule } from "./alerts/rules";
 export type { AlertRule, AlertState, EvalContext } from "./alerts/rules";
+
+export { deliverPendingAlerts, consoleAlertDelivery } from "./alerts/deliver";
+export type { AlertDeliveryFn, DeliveryReport } from "./alerts/deliver";
