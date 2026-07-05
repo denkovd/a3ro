@@ -18,6 +18,7 @@ export { getJsonForSource } from "./sources/http";
 export type { CorridorSource, CorridorSourceDescriptor } from "./sources/CorridorSource";
 export { CorridorBaseSource } from "./sources/CorridorSource";
 export { EiaUsGulfSource } from "./sources/eiaCorridor";
+export { PortWatchSource, tonsToMegatons } from "./sources/portwatch";
 export { buildCorridorSources, getCorridorSource } from "./sources/corridorRegistry";
 
 export { createDb } from "./storage/db";

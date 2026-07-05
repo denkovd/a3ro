@@ -1,0 +1,20 @@
+{
+  "objectIdFieldName": "OBJECTID",
+  "fields": [
+    { "name": "date", "type": "esriFieldTypeDateOnly" },
+    { "name": "n_tanker", "type": "esriFieldTypeInteger" },
+    { "name": "capacity_tanker", "type": "esriFieldTypeInteger" }
+  ],
+  "exceededTransferLimit": true,
+  "features": [
+    { "attributes": { "date": "2026-06-28", "n_tanker": 18, "capacity_tanker": 2400000 } },
+    { "attributes": { "date": "2026-06-27", "n_tanker": 12, "capacity_tanker": 1900000 } },
+    { "attributes": { "date": "2026-06-26", "n_tanker": 20, "capacity_tanker": 2600000 } },
+    { "attributes": { "date": "2026-06-25", "n_tanker": 10, "capacity_tanker": 1700000 } },
+    { "attributes": { "date": "2026-06-24", "n_tanker": null, "capacity_tanker": null } },
+    { "attributes": { "date": "2026-06-23", "n_tanker": 15, "capacity_tanker": 2100000 } },
+    { "attributes": { "date": "2026-06-22", "n_tanker": 14, "capacity_tanker": 2000000 } },
+    { "attributes": { "date": "2026-06-21", "n_tanker": 17, "capacity_tanker": 2300000 } },
+    { "attributes": { "date": "2026-06-20", "n_tanker": 13, "capacity_tanker": 1950000 } }
+  ]
+}

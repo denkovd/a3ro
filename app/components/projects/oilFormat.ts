@@ -22,3 +22,26 @@ export function formatUtcTime(iso: string): string {
   const mm = String(d.getUTCMinutes()).padStart(2, "0");
   return `${hh}:${mm} UTC`;
 }
+
+const SHORT_MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/** "Jun 29 · 18:30 UTC" — date-aware timestamp for non-today instants. */
+export function formatUtcDateTime(iso: string): string {
+  const d = new Date(iso);
+  const month = SHORT_MONTHS[d.getUTCMonth()];
+  const day = d.getUTCDate();
+  return `${month} ${day} · ${formatUtcTime(iso)}`;
+}
+
+/** True when the ISO instant falls on today's UTC calendar date. */
+export function isUtcToday(iso: string, now: Date = new Date()): boolean {
+  const d = new Date(iso);
+  return (
+    d.getUTCFullYear() === now.getUTCFullYear() &&
+    d.getUTCMonth() === now.getUTCMonth() &&
+    d.getUTCDate() === now.getUTCDate()
+  );
+}

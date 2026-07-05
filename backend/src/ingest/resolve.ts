@@ -6,6 +6,21 @@
                           (ticker/header display)
      resolveDailyClose  : one settlement value per market day
                           (canonical chart series)
+
+   Newest-market-truth rule (RULES.md §3.1, amended):
+   resolveLatestQuote no longer stops at "best usable record" — it
+   also considers the newest live/delayed market print regardless of
+   its staleness tier. A newer market print, however aged, is more
+   truthful for a ticker than an older settlement; the staleness
+   field carries the honesty (a "dead" quote is still labeled dead).
+   This matters over weekends and holiday closures: a Friday market
+   close ages past its live-cadence tiers by Sunday under wall-clock
+   rules, while an EIA settlement from days earlier can still read
+   "fresh" under its business-day publication-lag rules. Comparing
+   raw observedAt sidesteps that mismatch entirely — no market-
+   calendar math needed to know Thursday's trade is newer information
+   than Monday's settlement. Alerting is unaffected: isAlertGrade is
+   a separate, stricter gate applied downstream of this function.
 ──────────────────────────────────────────────────────────────── */
 
 import {
@@ -61,10 +76,31 @@ function classifyAll(
 }
 
 /**
- * Ticker resolution (RULES.md §3.1):
- * usable records only → best kind (live > delayed > settlement) →
- * within a kind, best staleness tier → then source priority.
- * Live quotes are sanity-checked against the reference settlement.
+ * Ticker resolution (RULES.md §3.1, amended — newest-market-truth rule):
+ *
+ * 1. `usableBest`: the current-behavior pick — usable records only
+ *    (fresh/aging/stale), best kind (live > delayed > settlement) →
+ *    within a kind, best staleness tier → then source priority.
+ * 2. `newestMarket`: among ALL classified records of kind live or
+ *    delayed — usable or not — the one with the max observedAt (tie-
+ *    break by staleness tier, then source priority). This is the
+ *    freshest actual market print we have, full stop.
+ * 3. Selection: `usableBest` wins UNLESS `newestMarket` carries a
+ *    strictly newer observedAt, in which case `newestMarket` wins —
+ *    returned with its honest (possibly stale/dead) staleness. A
+ *    newer market print, however aged, is more truthful for a ticker
+ *    than an older settlement; the staleness field carries the
+ *    honesty rather than the selection filtering it out. This is
+ *    what fixes the weekend/holiday case: a Thursday live quote can
+ *    classify "dead" by Sunday under wall-clock cadence rules while
+ *    an older EIA settlement still reads "fresh" under its business-
+ *    day publication-lag rules — no market-calendar math is needed
+ *    to know the live print is newer information.
+ *
+ * Live quotes are sanity-checked against the reference settlement
+ * either way. Alerting is unaffected — isAlertGrade gates separately,
+ * downstream, and still excludes stale/dead records regardless of
+ * what the ticker displays.
  */
 export function resolveLatestQuote(
   benchmark: Benchmark,
@@ -74,35 +110,61 @@ export function resolveLatestQuote(
   now: Date = new Date(),
 ): LatestQuote | null {
   const stalenessRank: Record<Staleness, number> = { fresh: 0, aging: 1, stale: 2, dead: 3 };
-  const usable = classifyAll(records, lookup, now)
-    .filter((c) => c.record.benchmark === benchmark && isUsable(c.staleness))
+  const classified = classifyAll(records, lookup, now).filter(
+    (c) => c.record.benchmark === benchmark,
+  );
+
+  const usableBest = classified
+    .filter((c) => isUsable(c.staleness))
     .sort(
       (a, b) =>
         KIND_RANK[a.record.kind] - KIND_RANK[b.record.kind] ||
         stalenessRank[a.staleness] - stalenessRank[b.staleness] ||
         a.priority - b.priority,
-    );
+    )[0];
 
-  const best = usable[0];
-  if (!best) return null;
+  const newestMarket = classified
+    .filter((c) => c.record.kind === "live" || c.record.kind === "delayed")
+    .sort(
+      (a, b) =>
+        b.record.observedAt.localeCompare(a.record.observedAt) ||
+        stalenessRank[a.staleness] - stalenessRank[b.staleness] ||
+        a.priority - b.priority,
+    )[0];
+
+  let chosen: Classified | undefined;
+  if (
+    usableBest &&
+    (!newestMarket || usableBest.record.observedAt >= newestMarket.record.observedAt)
+  ) {
+    chosen = usableBest;
+  } else if (
+    newestMarket &&
+    (!usableBest || newestMarket.record.observedAt > usableBest.record.observedAt)
+  ) {
+    chosen = newestMarket;
+  } else {
+    chosen = undefined;
+  }
+  if (!chosen) return null;
 
   let suspect = false;
   if (
-    (best.record.kind === "live" || best.record.kind === "delayed") &&
+    (chosen.record.kind === "live" || chosen.record.kind === "delayed") &&
     referenceSettlement !== null &&
     referenceSettlement !== 0
   ) {
-    const deviation = Math.abs(best.record.price - referenceSettlement) / Math.abs(referenceSettlement);
+    const deviation = Math.abs(chosen.record.price - referenceSettlement) / Math.abs(referenceSettlement);
     suspect = deviation > SUSPECT_DEVIATION;
   }
 
   return {
     benchmark,
-    price: best.record.price,
-    kind: best.record.kind,
-    source: best.record.source,
-    observedAt: best.record.observedAt,
-    staleness: best.staleness,
+    price: chosen.record.price,
+    kind: chosen.record.kind,
+    source: chosen.record.source,
+    observedAt: chosen.record.observedAt,
+    staleness: chosen.staleness,
     suspect,
     updatedAt: nowIso(),
   };

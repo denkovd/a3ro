@@ -20,8 +20,8 @@ import {
   type OTView, type Rot,
 } from "./oilTrackerShared";
 import useOilData from "./useOilData";
-import { formatPctSigned, formatUsdBbl, formatUtcTime } from "./oilFormat";
-import type { Benchmark, DailyPrice, LatestQuote } from "@a3ro/oil-backend";
+import { formatPctSigned, formatUsdBbl, formatUtcDateTime, formatUtcTime, isUtcToday } from "./oilFormat";
+import type { Benchmark, CorridorMetricLatest, DailyPrice, LatestQuote } from "@a3ro/oil-backend";
 
 /* ══ route-only content: hotspot hierarchy + signal copy ══ */
 type HotspotKind = "live" | "demand" | "watch" | "reserved";
@@ -163,6 +163,127 @@ type Sim = {
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const shortest = (from: number, to: number) => ((to - from + 540) % 360) - 180;
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
+
+/* ══ live-corridor signal panel — declarative content mechanism ══
+   ONE builder replaces the former one-off usgc/usgulf override: any
+   hotspot whose corridor has live metrics gets its signal-panel
+   content from here; hotspots with no live coverage yet (null
+   return) fall back to their modeled HOTSPOTS content unchanged. */
+type LiveRow = { k: string; v: string; bar: number; warm?: boolean };
+type CorridorPanelContent = {
+  statusText: string; // e.g. "Weekly · live"
+  railText: string; // e.g. "Weekly"
+  metric: string;
+  metricLabel: string;
+  rows: LiveRow[];
+  seriesNote: string; // replaces the spark block
+  note: string;
+  footerRight: string; // right side of "Corridor feed" row
+  footerLine: string; // fine-print line
+};
+
+function buildCorridorPanel(
+  hotspotId: string,
+  metrics: CorridorMetricLatest[],
+): CorridorPanelContent | null {
+  if (hotspotId === "usgc") {
+    const usgulfMetrics = metrics.filter((m) => m.corridor === "usgulf");
+    const exports = usgulfMetrics.find((m) => m.metric === "crude_exports");
+    const util = usgulfMetrics.find((m) => m.metric === "refinery_utilization");
+    if (!exports && !util) return null;
+
+    const metric = exports
+      ? `${exports.value.toFixed(2)} Mb/d`
+      : util
+        ? `${util.value.toFixed(1)}%`
+        : "";
+    const metricLabel = exports
+      ? `US crude exports · weekly EIA · as of ${exports.periodDate}`
+      : util
+        ? `PADD 3 refinery utilization · weekly EIA · as of ${util.periodDate}`
+        : "";
+    const rows: LiveRow[] = [];
+    if (exports) {
+      rows.push({
+        k: "US crude exports",
+        v: `${exports.value.toFixed(2)} Mb/d`,
+        bar: clamp(exports.value / 6, 0, 1),
+      });
+    }
+    if (util) {
+      rows.push({
+        k: "Refinery utilization · PADD 3",
+        v: `${util.value.toFixed(1)}%`,
+        bar: clamp(util.value / 100, 0, 1),
+        warm: util.value >= 95,
+      });
+    }
+
+    return {
+      statusText: "Weekly · live",
+      railText: "Weekly",
+      metric,
+      metricLabel,
+      rows,
+      seriesNote: "WEEKLY SERIES · CHART PENDING",
+      note:
+        "US Gulf export engine. Weekly EIA data — crude exports and Gulf Coast refinery utilization; more corridor metrics onboard as coverage expands.",
+      footerRight: "weekly",
+      footerLine: "Live weekly data · EIA · not investment advice",
+    };
+  }
+
+  if (hotspotId === "hormuz" || hotspotId === "sg") {
+    const corridor = hotspotId === "hormuz" ? "hormuz" : "singapore";
+    const corridorMetrics = metrics.filter((m) => m.corridor === corridor);
+    const transits7d = corridorMetrics.find((m) => m.metric === "tanker_transits_7d");
+    if (!transits7d) return null;
+    const volume7d = corridorMetrics.find((m) => m.metric === "tanker_volume_7d");
+
+    // Bar divisors are display scalers only (not physical limits) —
+    // chosen so typical values land mid-gauge for each corridor.
+    const transitsDivisor = hotspotId === "hormuz" ? 40 : 90;
+    const volumeDivisor = hotspotId === "hormuz" ? 3 : 5;
+
+    const rows: LiveRow[] = [
+      {
+        k: "Tanker transits · 7d avg",
+        v: `${transits7d.value.toFixed(1)} /day`,
+        bar: clamp(transits7d.value / transitsDivisor, 0, 1),
+      },
+    ];
+    if (volume7d) {
+      rows.push({
+        k: "Tanker volume · 7d avg",
+        v: `${volume7d.value.toFixed(2)} Mt/d`,
+        bar: clamp(volume7d.value / volumeDivisor, 0, 1),
+      });
+    }
+
+    const metricLabel =
+      hotspotId === "hormuz"
+        ? `Tanker transits · 7-day avg · IMF PortWatch · as of ${transits7d.periodDate}`
+        : `Tanker transits · 7-day avg · via Malacca Strait · as of ${transits7d.periodDate}`;
+    const note =
+      hotspotId === "hormuz"
+        ? "Live satellite AIS via IMF PortWatch (UN Global Platform; ~4-day lag, weekly publication). Regional GPS jamming and AIS spoofing can depress counts — read trends, not levels."
+        : "Malacca Strait tanker transits via IMF PortWatch satellite AIS — the primary gate for the Singapore corridor (~4-day lag, weekly publication).";
+
+    return {
+      statusText: "Satellite · weekly",
+      railText: "Satellite",
+      metric: `${transits7d.value.toFixed(1)} /day`,
+      metricLabel,
+      rows,
+      seriesNote: "SATELLITE SERIES · CHART PENDING",
+      note,
+      footerRight: "satellite",
+      footerLine: "Live AIS data · IMF PortWatch · not investment advice",
+    };
+  }
+
+  return null;
+}
 
 /* ══ component ══ */
 export default function OilTrackerCore({
@@ -742,13 +863,26 @@ export default function OilTrackerCore({
   const quoteFor = (b: Benchmark): LatestQuote | undefined =>
     feed.quotes?.find((q) => q.benchmark === b);
 
+  /* Kind-aware status: a settlement must NEVER show "Live" or the amber
+     color — only actual live/delayed market prints earn that label, and
+     only while fresh. Once a live/delayed print ages past "aging" it
+     reads as "Last trade" rather than falsely implying it's still live. */
   const benchStatus = (q: LatestQuote | undefined): { text: string; color: string } => {
     if (!q) return { text: "—", color: "var(--ink-3)" };
+    if (q.kind === "live" || q.kind === "delayed") {
+      switch (q.staleness) {
+        case "fresh": return { text: "Live", color: AMBER_CSS };
+        case "aging": return { text: "Live", color: "var(--ink-2)" };
+        case "stale":
+        case "dead": return { text: "Last trade", color: "var(--ink-3)" };
+      }
+    }
+    // settlement | historical
     switch (q.staleness) {
-      case "fresh": return { text: "Live", color: AMBER_CSS };
-      case "aging": return { text: "Aging", color: "var(--ink-2)" };
-      case "stale": return { text: "Stale", color: "var(--ink-3)" };
-      case "dead": return { text: "Offline", color: "var(--ink-3)" };
+      case "fresh":
+      case "aging": return { text: "Settled", color: "var(--ink-2)" };
+      case "stale":
+      case "dead": return { text: "Settled", color: "var(--ink-3)" };
     }
   };
 
@@ -795,42 +929,12 @@ export default function OilTrackerCore({
       }
     : null;
 
-  /* ── US Gulf corridor (usgc hotspot) live override ──
-     Weekly EIA data (crude exports + PADD 3 refinery utilization).
-     Computed as small locals rather than restructuring the signal
-     panel — when !usgulfLive every one of these is unused and the
-     "usgc" reserved-slot rendering below is untouched. */
-  const usgulfMetrics = feed.corridors?.filter((m) => m.corridor === "usgulf") ?? [];
-  const usgulfExports = usgulfMetrics.find((m) => m.metric === "crude_exports");
-  const usgulfUtil = usgulfMetrics.find((m) => m.metric === "refinery_utilization");
-  const usgulfLive = usgulfExports !== undefined || usgulfUtil !== undefined;
-
-  const usgcOverrideMetric = usgulfExports
-    ? `${usgulfExports.value.toFixed(2)} Mb/d`
-    : usgulfUtil
-      ? `${usgulfUtil.value.toFixed(1)}%`
-      : "";
-  const usgcOverrideMetricLabel = usgulfExports
-    ? `US crude exports · weekly EIA · as of ${usgulfExports.periodDate}`
-    : usgulfUtil
-      ? `PADD 3 refinery utilization · weekly EIA · as of ${usgulfUtil.periodDate}`
-      : "";
-  const usgcOverrideRows: { k: string; v: string; bar: number; warm?: boolean }[] = [];
-  if (usgulfExports) {
-    usgcOverrideRows.push({
-      k: "US crude exports",
-      v: `${usgulfExports.value.toFixed(2)} Mb/d`,
-      bar: clamp(usgulfExports.value / 6, 0, 1),
-    });
-  }
-  if (usgulfUtil) {
-    usgcOverrideRows.push({
-      k: "Refinery utilization · PADD 3",
-      v: `${usgulfUtil.value.toFixed(1)}%`,
-      bar: clamp(usgulfUtil.value / 100, 0, 1),
-      warm: usgulfUtil.value >= 95,
-    });
-  }
+  /* ── live corridor panel content — declarative, per hotspot ──
+     buildCorridorPanel returns null when a hotspot has no live
+     coverage yet, in which case the signal panel below falls back
+     to the hotspot's modeled HOTSPOTS content unchanged. */
+  const liveFor = (hid: string) => buildCorridorPanel(hid, feed.corridors ?? []);
+  const selLive = sel ? liveFor(sel.id) : null;
 
   return (
     <div ref={wrapRef} className={`relative overflow-hidden ${className}`} data-lenis-prevent="">
@@ -916,27 +1020,30 @@ export default function OilTrackerCore({
             <p className="mt-3 border-l border-[var(--line)] px-3 py-[7px] font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
               Corridors
             </p>
-            {HOTSPOTS.map((h) => (
-              <button
-                key={h.id}
-                onClick={() => (selected === h.id ? closePanel() : focusHotspot(h))}
-                className={`flex items-center justify-between gap-6 border-l px-3 py-[7px] text-left transition-colors duration-[var(--dur-micro)] ${
-                  selected === h.id
-                    ? "border-[#d4a157] bg-[rgba(212,161,87,0.08)]"
-                    : "border-[var(--line)] hover:border-[var(--line-2)] hover:bg-[rgba(232,235,232,0.03)]"
-                }`}
-              >
-                <span className={`font-mono text-[10px] uppercase tracking-[0.2em] ${selected === h.id ? "text-[var(--ink)]" : "text-[var(--ink-2)]"}`}>
-                  {h.title}
-                </span>
-                <span
-                  className="font-mono text-[9px] uppercase tracking-[0.2em]"
-                  style={{ color: h.id === "usgc" && usgulfLive ? AMBER_CSS : statusColor(h.kind) }}
+            {HOTSPOTS.map((h) => {
+              const hLive = liveFor(h.id);
+              return (
+                <button
+                  key={h.id}
+                  onClick={() => (selected === h.id ? closePanel() : focusHotspot(h))}
+                  className={`flex items-center justify-between gap-6 border-l px-3 py-[7px] text-left transition-colors duration-[var(--dur-micro)] ${
+                    selected === h.id
+                      ? "border-[#d4a157] bg-[rgba(212,161,87,0.08)]"
+                      : "border-[var(--line)] hover:border-[var(--line-2)] hover:bg-[rgba(232,235,232,0.03)]"
+                  }`}
                 >
-                  {h.id === "usgc" && usgulfLive ? "Weekly" : h.status}
-                </span>
-              </button>
-            ))}
+                  <span className={`font-mono text-[10px] uppercase tracking-[0.2em] ${selected === h.id ? "text-[var(--ink)]" : "text-[var(--ink-2)]"}`}>
+                    {h.title}
+                  </span>
+                  <span
+                    className="font-mono text-[9px] uppercase tracking-[0.2em]"
+                    style={{ color: hLive ? AMBER_CSS : statusColor(h.kind) }}
+                  >
+                    {hLive ? hLive.railText : h.status}
+                  </span>
+                </button>
+              );
+            })}
             <p className="border-l border-[var(--line)] px-3 py-[7px] font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
               + corridor slots reserved
             </p>
@@ -947,14 +1054,15 @@ export default function OilTrackerCore({
         <div className="pointer-events-none absolute bottom-16 left-6 flex gap-7 md:left-10 md:gap-10">
           {TRACKED.map((b) => {
             const q = quoteFor(b);
-            const dotColor: string | null =
-              q?.staleness === "fresh"
+            const isLiveKind = q?.kind === "live" || q?.kind === "delayed";
+            const dotColor: string | null = !q
+              ? null
+              : isLiveKind && q.staleness === "fresh"
                 ? AMBER_CSS
-                : q?.staleness === "aging"
+                : (isLiveKind && q.staleness === "aging") ||
+                    (!isLiveKind && (q.staleness === "fresh" || q.staleness === "aging"))
                   ? "var(--ink-2)"
-                  : q
-                    ? "var(--ink-3)"
-                    : null;
+                  : "var(--ink-3)";
             const valueColor =
               !q || q.staleness === "stale" || q.staleness === "dead" ? "var(--ink-3)" : "var(--ink)";
             const isSel = benchSel === b;
@@ -998,9 +1106,13 @@ export default function OilTrackerCore({
               {feed.status === "error"
                 ? "OFFLINE"
                 : feed.quotes && feed.quotes.length > 0
-                ? formatUtcTime(
-                    feed.quotes.reduce((latest, q) => (q.observedAt > latest ? q.observedAt : latest), feed.quotes[0].observedAt)
-                  )
+                ? (() => {
+                    const newest = feed.quotes.reduce(
+                      (latest, q) => (q.observedAt > latest ? q.observedAt : latest),
+                      feed.quotes[0].observedAt,
+                    );
+                    return isUtcToday(newest) ? formatUtcTime(newest) : formatUtcDateTime(newest);
+                  })()
                 : "—"}
             </p>
           </div>
@@ -1055,24 +1167,24 @@ export default function OilTrackerCore({
 
               <p
                 className="mt-2 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em]"
-                style={{ color: sel.id === "usgc" && usgulfLive ? AMBER_CSS : statusColor(sel.kind) }}
+                style={{ color: selLive ? AMBER_CSS : statusColor(sel.kind) }}
               >
                 <span aria-hidden className="inline-block h-1 w-1 rounded-full" style={{ background: "currentColor" }} />
-                {sel.id === "usgc" && usgulfLive ? "Weekly · live" : sel.status}
+                {selLive ? selLive.statusText : sel.status}
               </p>
 
               <div className="mt-5">
-                <p className={`font-mono ${sel.id === "usgc" && usgulfLive ? "text-3xl text-[var(--ink)]" : sel.kind === "reserved" ? "text-xl text-[var(--ink-3)]" : "text-3xl text-[var(--ink)]"}`}>
-                  {sel.id === "usgc" && usgulfLive ? usgcOverrideMetric : sel.metric}
+                <p className={`font-mono ${selLive ? "text-3xl text-[var(--ink)]" : sel.kind === "reserved" ? "text-xl text-[var(--ink-3)]" : "text-3xl text-[var(--ink)]"}`}>
+                  {selLive ? selLive.metric : sel.metric}
                 </p>
                 <p className="mt-1 text-[11px] leading-relaxed text-[var(--ink-3)]">
-                  {sel.id === "usgc" && usgulfLive ? usgcOverrideMetricLabel : sel.metricLabel}
+                  {selLive ? selLive.metricLabel : sel.metricLabel}
                 </p>
               </div>
 
-              {(sel.id === "usgc" && usgulfLive ? usgcOverrideRows : sel.rows).length > 0 && (
+              {(selLive ? selLive.rows : sel.rows).length > 0 && (
                 <div className="mt-5 flex flex-col gap-3">
-                  {(sel.id === "usgc" && usgulfLive ? usgcOverrideRows : sel.rows).map((r) => (
+                  {(selLive ? selLive.rows : sel.rows).map((r) => (
                     <div key={r.k}>
                       <div className="flex items-baseline justify-between">
                         <p className="text-[11px] text-[var(--ink-2)]">{r.k}</p>
@@ -1097,9 +1209,9 @@ export default function OilTrackerCore({
                 </div>
               )}
 
-              {sel.id === "usgc" && usgulfLive ? (
+              {selLive ? (
                 <p className="mt-6 font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-                  WEEKLY SERIES · CHART PENDING
+                  {selLive.seriesNote}
                 </p>
               ) : sel.spark.length > 0 && (
                 <div className="mt-6">
@@ -1111,17 +1223,15 @@ export default function OilTrackerCore({
               )}
 
               <p className="mt-5 text-[11px] leading-relaxed text-[var(--ink-2)]">
-                {sel.id === "usgc" && usgulfLive
-                  ? "US Gulf export engine. Weekly EIA data — crude exports and Gulf Coast refinery utilization; more corridor metrics onboard as coverage expands."
-                  : sel.note}
+                {selLive ? selLive.note : sel.note}
               </p>
               </div>
 
               <div className={narrow ? "mt-4" : "mt-4 shrink-0"}>
-                {sel.id === "usgc" && usgulfLive ? (
+                {selLive ? (
                   <p className="flex items-center justify-between border-t border-[var(--line)] pt-3 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
                     <span>Corridor feed</span>
-                    <span>weekly</span>
+                    <span>{selLive.footerRight}</span>
                   </p>
                 ) : (
                   <p className="flex items-center justify-between border-t border-[var(--line)] pt-3 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
@@ -1130,9 +1240,7 @@ export default function OilTrackerCore({
                   </p>
                 )}
                 <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.18em] text-[var(--ink-3)] opacity-70">
-                  {sel.id === "usgc" && usgulfLive
-                    ? "Live weekly data · EIA · not investment advice"
-                    : "Modeled estimates · illustrative · not investment advice"}
+                  {selLive ? selLive.footerLine : "Modeled estimates · illustrative · not investment advice"}
                 </p>
               </div>
             </motion.aside>
@@ -1192,7 +1300,9 @@ export default function OilTrackerCore({
                 </p>
                 <p className="mt-1 text-[11px] leading-relaxed text-[var(--ink-3)]">
                   {bq
-                    ? `USD per barrel · ${bq.source} · as of ${formatUtcTime(bq.observedAt)}`
+                    ? `USD per barrel · ${bq.source} · as of ${
+                        isUtcToday(bq.observedAt) ? formatUtcTime(bq.observedAt) : formatUtcDateTime(bq.observedAt)
+                      }`
                     : "Feed unavailable — retrying automatically"}
                 </p>
               </div>
