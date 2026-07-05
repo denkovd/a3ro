@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit",
     "ingest": "tsx scripts/run-ingest.ts",
     "migrate": "psql \"$DATABASE_URL\" -f migrations/001_init.sql",
+    "migrate:corridors": "psql \"$DATABASE_URL\" -f migrations/002_corridors.sql",
     "test": "tsx --test tests/**/*.test.ts"
   },
   "dependencies": {

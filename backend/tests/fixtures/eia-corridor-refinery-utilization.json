@@ -1,0 +1,21 @@
+{
+  "response": {
+    "data": [
+      {
+        "period": "2024-01-19",
+        "value": 93.4,
+        "units": "%"
+      },
+      {
+        "period": "2024-01-12",
+        "value": "91.8",
+        "units": "%"
+      },
+      {
+        "period": "2024-01-05",
+        "value": null,
+        "units": "%"
+      }
+    ]
+  }
+}

@@ -30,6 +30,11 @@ import {
 } from "../core/types";
 import { NormalizationError, RawPrice, toUsdPerBarrel } from "../core/units";
 import { marketCloseUtc, nowIso } from "../core/time";
+import { getJsonForSource, GetJsonOptions } from "./http";
+
+/** Re-exported for compatibility — GetJsonOptions now lives in ./http
+ *  alongside the getJson implementation it configures. */
+export type { GetJsonOptions };
 
 export interface OilPriceSource {
   readonly descriptor: SourceDescriptor;
@@ -49,13 +54,6 @@ export interface OilPriceSource {
 }
 
 /* ── shared plumbing every adapter inherits ───────────────────── */
-
-export interface GetJsonOptions {
-  timeoutMs?: number;
-  headers?: Record<string, string>;
-  /** Called on non-2xx to refine the error kind from the body. */
-  classifyHttpError?: (status: number, body: string) => SourceErrorKind | undefined;
-}
 
 export abstract class BaseSource implements OilPriceSource {
   abstract readonly descriptor: SourceDescriptor;
@@ -81,45 +79,12 @@ export abstract class BaseSource implements OilPriceSource {
    * status→SourceError mapping. Adapters may refine the mapping via
    * classifyHttpError (e.g. EIA returns 403 for BOTH bad keys and
    * throttled keys — the body tells them apart).
+   *
+   * Delegates to getJsonForSource (sources/http.ts) — the actual
+   * fetch/timeout/error-mapping logic is shared with CorridorBaseSource.
    */
-  protected async getJson<T = unknown>(url: string, opts: GetJsonOptions = {}): Promise<T> {
-    const timeoutMs = opts.timeoutMs ?? 15_000;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-    let res: Response;
-    try {
-      res = await fetch(url, { headers: opts.headers, signal: controller.signal });
-    } catch (cause) {
-      clearTimeout(timer);
-      const timedOut = cause instanceof Error && cause.name === "AbortError";
-      this.fail("network", timedOut ? `timeout after ${timeoutMs}ms` : String(cause), { cause });
-    } finally {
-      clearTimeout(timer);
-    }
-
-    const body = await res.text();
-
-    if (!res.ok) {
-      const refined = opts.classifyHttpError?.(res.status, body);
-      const kind: SourceErrorKind =
-        refined ??
-        (res.status === 401 || res.status === 403 ? "auth"
-          : res.status === 429 ? "rate_limited"
-          : res.status >= 500 ? "upstream_error"
-          : "bad_payload");
-      const retryAfterMs = parseRetryAfterMs(res.headers.get("retry-after"));
-      this.fail(kind, `HTTP ${res.status}: ${body.slice(0, 300)}`, {
-        status: res.status,
-        retryAfterMs,
-      });
-    }
-
-    try {
-      return JSON.parse(body) as T;
-    } catch (cause) {
-      this.fail("bad_payload", `response is not JSON: ${body.slice(0, 200)}`, { cause });
-    }
+  protected getJson<T = unknown>(url: string, opts: GetJsonOptions = {}): Promise<T> {
+    return getJsonForSource<T>(this.descriptor.id, url, opts);
   }
 
   /**
@@ -179,12 +144,4 @@ export abstract class BaseSource implements OilPriceSource {
       meta: input.meta,
     };
   }
-}
-
-function parseRetryAfterMs(header: string | null): number | undefined {
-  if (!header) return undefined;
-  const secs = Number(header);
-  if (Number.isFinite(secs)) return Math.max(0, secs * 1000);
-  const at = Date.parse(header);
-  return Number.isNaN(at) ? undefined : Math.max(0, at - Date.now());
 }

@@ -1,0 +1,21 @@
+{
+  "response": {
+    "data": [
+      {
+        "period": "2024-01-19",
+        "value": 4123.5,
+        "units": "MBBL/D"
+      },
+      {
+        "period": "2024-01-12",
+        "value": "4055.2",
+        "units": "MBBL/D"
+      },
+      {
+        "period": "2024-01-05",
+        "value": null,
+        "units": "MBBL/D"
+      }
+    ]
+  }
+}

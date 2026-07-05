@@ -292,6 +292,15 @@ function toIso(v: unknown): string {
 }
 
 function toDateStr(v: unknown): string {
-  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  // node-postgres parses `date` columns to a JS Date at LOCAL midnight,
+  // so toISOString() would shift the day back for any TZ ahead of UTC.
+  // Format from local components instead (live-caught: "as of" dates
+  // rendered one day early on a UTC+3 machine).
+  if (v instanceof Date) {
+    const y = v.getFullYear();
+    const m = String(v.getMonth() + 1).padStart(2, "0");
+    const d = String(v.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
   return String(v).slice(0, 10);
 }

@@ -19,6 +19,9 @@ import {
   bakeCorridor, getDots, rotator, vec,
   type OTView, type Rot,
 } from "./oilTrackerShared";
+import useOilData from "./useOilData";
+import { formatPctSigned, formatUsdBbl, formatUtcTime } from "./oilFormat";
+import type { Benchmark, DailyPrice, LatestQuote } from "@a3ro/oil-backend";
 
 /* ══ route-only content: hotspot hierarchy + signal copy ══ */
 type HotspotKind = "live" | "demand" | "watch" | "reserved";
@@ -46,7 +49,7 @@ const HOTSPOTS: Hotspot[] = [
   {
     id: "hormuz", label: "HORMUZ", sub: "EST. THROUGHPUT 80%", side: -1,
     glyph: "ring", lon: 56.5, lat: 26.6, kind: "live", zoom: 1.5,
-    corridor: "Corridor 01", title: "Strait of Hormuz", status: "Live",
+    corridor: "Corridor 01", title: "Strait of Hormuz", status: "Signal",
     metric: "80%", metricLabel: "Estimated throughput · modeled baseline",
     rows: [
       { k: "Outbound flow recovery", v: "Strong", bar: 0.78 },
@@ -105,6 +108,22 @@ const HOTSPOTS: Hotspot[] = [
     note: "Activation pending. Additional corridors onboard as coverage expands.",
   },
 ];
+
+/* ══ benchmarks: no globe location — a parallel DOM-only signal track ══
+   Local mirror of the backend's BENCHMARKS: a value import of BENCHMARKS
+   from "@a3ro/oil-backend" would pull the pg-backed index into this
+   client bundle, so the tracked list is hardcoded here (types only). */
+const TRACKED = ["WTI", "BRENT"] as const satisfies readonly Benchmark[];
+
+const BENCH_TITLE: Record<Benchmark, string> = {
+  WTI: "WTI Crude",
+  BRENT: "Brent Crude",
+};
+
+const BENCH_NOTE: Record<Benchmark, string> = {
+  WTI: "NYMEX WTI benchmark. Normalized to USD per barrel by the A3RO ingest pipeline; staleness and cross-source checks applied automatically.",
+  BRENT: "ICE Brent benchmark. Normalized to USD per barrel by the A3RO ingest pipeline; staleness and cross-source checks applied automatically.",
+};
 
 const TICKS = [
   { label: "BAB EL-MANDEB", lon: 43.4, lat: 12.6 },
@@ -210,6 +229,20 @@ export default function OilTrackerCore({
       { lon: h.lon, lat: clamp(h.lat, -48, 48), zoom: h.zoom, off: isNarrow ? 0 : -0.14 },
       1150
     );
+  }, [tweenTo]);
+
+  const feed = useOilData();
+
+  /* benchmarks reuse the existing `selected` state via "bench:WTI" / "bench:BRENT" ids */
+  const benchSel: Benchmark | null =
+    selected === "bench:WTI" ? "WTI" : selected === "bench:BRENT" ? "BRENT" : null;
+
+  const focusBenchmark = useCallback((b: Benchmark) => {
+    setSelected(`bench:${b}`);
+    setTouched(true);
+    sim.current.lastInteract = performance.now();
+    const isNarrow = size.current.w < 640;
+    tweenTo({ off: isNarrow ? 0 : -0.14 }, 900);
   }, [tweenTo]);
 
   const closePanel = useCallback(() => {
@@ -706,6 +739,99 @@ export default function OilTrackerCore({
   const statusColor = (k: HotspotKind) =>
     k === "live" || k === "demand" ? AMBER_CSS : k === "reserved" ? "var(--ink-3)" : "var(--ink-2)";
 
+  const quoteFor = (b: Benchmark): LatestQuote | undefined =>
+    feed.quotes?.find((q) => q.benchmark === b);
+
+  const benchStatus = (q: LatestQuote | undefined): { text: string; color: string } => {
+    if (!q) return { text: "—", color: "var(--ink-3)" };
+    switch (q.staleness) {
+      case "fresh": return { text: "Live", color: AMBER_CSS };
+      case "aging": return { text: "Aging", color: "var(--ink-2)" };
+      case "stale": return { text: "Stale", color: "var(--ink-3)" };
+      case "dead": return { text: "Offline", color: "var(--ink-3)" };
+    }
+  };
+
+  /* ── benchmark signal panel content (only computed rows/spark included) ── */
+  const bq: LatestQuote | undefined = benchSel ? quoteFor(benchSel) : undefined;
+  const bs: DailyPrice[] | undefined = benchSel ? feed.series[benchSel] : undefined;
+  const benchRows: { k: string; v: string; bar: number; warm?: boolean }[] = [];
+  if (bq && bs) {
+    const observedDate = bq.observedAt.slice(0, 10);
+    const prior = [...bs].reverse().find((p) => p.periodDate < observedDate);
+    if (prior && prior.price > 0) {
+      const ratio = (bq.price - prior.price) / prior.price;
+      benchRows.push({
+        k: "vs prior close",
+        v: formatPctSigned(ratio),
+        bar: clamp(Math.abs(ratio) / 0.05, 0.06, 1),
+        warm: ratio < 0,
+      });
+    }
+    if (bs.length >= 2) {
+      const prices = bs.map((p) => p.price);
+      const min = Math.min(...prices), max = Math.max(...prices);
+      benchRows.push({
+        k: "30d range",
+        v: `${formatUsdBbl(min)} – ${formatUsdBbl(max)}`,
+        bar: max === min ? 0 : clamp((bq.price - min) / (max - min), 0, 1),
+        warm: false,
+      });
+    }
+  }
+  if (bs && bs.length >= 1) {
+    const anyDisagreement = bs.some((p) => p.disagreement);
+    benchRows.push({
+      k: "Source agreement",
+      v: anyDisagreement ? "Mixed" : "Clean",
+      bar: anyDisagreement ? 0.45 : 0.85,
+      warm: anyDisagreement,
+    });
+  }
+  const benchStatusInfo: { text: string; color: string } | null = bq
+    ? {
+        text: `${bq.kind} · ${bq.staleness}`,
+        color: bq.staleness === "fresh" ? AMBER_CSS : bq.staleness === "aging" ? "var(--ink-2)" : "var(--ink-3)",
+      }
+    : null;
+
+  /* ── US Gulf corridor (usgc hotspot) live override ──
+     Weekly EIA data (crude exports + PADD 3 refinery utilization).
+     Computed as small locals rather than restructuring the signal
+     panel — when !usgulfLive every one of these is unused and the
+     "usgc" reserved-slot rendering below is untouched. */
+  const usgulfMetrics = feed.corridors?.filter((m) => m.corridor === "usgulf") ?? [];
+  const usgulfExports = usgulfMetrics.find((m) => m.metric === "crude_exports");
+  const usgulfUtil = usgulfMetrics.find((m) => m.metric === "refinery_utilization");
+  const usgulfLive = usgulfExports !== undefined || usgulfUtil !== undefined;
+
+  const usgcOverrideMetric = usgulfExports
+    ? `${usgulfExports.value.toFixed(2)} Mb/d`
+    : usgulfUtil
+      ? `${usgulfUtil.value.toFixed(1)}%`
+      : "";
+  const usgcOverrideMetricLabel = usgulfExports
+    ? `US crude exports · weekly EIA · as of ${usgulfExports.periodDate}`
+    : usgulfUtil
+      ? `PADD 3 refinery utilization · weekly EIA · as of ${usgulfUtil.periodDate}`
+      : "";
+  const usgcOverrideRows: { k: string; v: string; bar: number; warm?: boolean }[] = [];
+  if (usgulfExports) {
+    usgcOverrideRows.push({
+      k: "US crude exports",
+      v: `${usgulfExports.value.toFixed(2)} Mb/d`,
+      bar: clamp(usgulfExports.value / 6, 0, 1),
+    });
+  }
+  if (usgulfUtil) {
+    usgcOverrideRows.push({
+      k: "Refinery utilization · PADD 3",
+      v: `${usgulfUtil.value.toFixed(1)}%`,
+      bar: clamp(usgulfUtil.value / 100, 0, 1),
+      warm: usgulfUtil.value >= 95,
+    });
+  }
+
   return (
     <div ref={wrapRef} className={`relative overflow-hidden ${className}`} data-lenis-prevent="">
       {/* stage */}
@@ -746,8 +872,8 @@ export default function OilTrackerCore({
           </p>
           {!narrow && (
             <p className="mt-2 hidden text-xs leading-relaxed text-[var(--ink-3)] md:block">
-              Tracking strategic chokepoints, demand shifts, and price pressure
-              across the global oil system.
+              Benchmark prices stream live. Corridor signals are modeled
+              estimates while real feeds onboard.
             </p>
           )}
         </div>
@@ -755,6 +881,41 @@ export default function OilTrackerCore({
         {/* corridor index */}
         {!narrow && (
           <div className="absolute right-6 top-[4.5rem] hidden flex-col items-stretch md:right-10 md:top-[5.5rem] md:flex">
+            <p className="border-l border-[var(--line)] px-3 py-[7px] font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+              Benchmarks
+            </p>
+            {TRACKED.map((b) => {
+              const q = quoteFor(b);
+              const st = benchStatus(q);
+              const isSel = benchSel === b;
+              return (
+                <button
+                  key={b}
+                  onClick={() => (isSel ? closePanel() : focusBenchmark(b))}
+                  aria-label={`Open ${b} benchmark detail`}
+                  title={BENCH_TITLE[b]}
+                  className={`flex items-center justify-between gap-6 border-l px-3 py-[7px] text-left transition-colors duration-[var(--dur-micro)] ${
+                    isSel
+                      ? "border-[#d4a157] bg-[rgba(212,161,87,0.08)]"
+                      : "border-[var(--line)] hover:border-[var(--line-2)] hover:bg-[rgba(232,235,232,0.03)]"
+                  }`}
+                >
+                  <span className={`font-mono text-[10px] uppercase tracking-[0.2em] ${isSel ? "text-[var(--ink)]" : "text-[var(--ink-2)]"}`}>
+                    {BENCH_TITLE[b]}
+                  </span>
+                  <span
+                    className="font-mono text-[9px] uppercase tracking-[0.2em]"
+                    style={{ color: st.color }}
+                  >
+                    {st.text}
+                  </span>
+                </button>
+              );
+            })}
+
+            <p className="mt-3 border-l border-[var(--line)] px-3 py-[7px] font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+              Corridors
+            </p>
             {HOTSPOTS.map((h) => (
               <button
                 key={h.id}
@@ -770,9 +931,9 @@ export default function OilTrackerCore({
                 </span>
                 <span
                   className="font-mono text-[9px] uppercase tracking-[0.2em]"
-                  style={{ color: statusColor(h.kind) }}
+                  style={{ color: h.id === "usgc" && usgulfLive ? AMBER_CSS : statusColor(h.kind) }}
                 >
-                  {h.status}
+                  {h.id === "usgc" && usgulfLive ? "Weekly" : h.status}
                 </span>
               </button>
             ))}
@@ -782,18 +943,67 @@ export default function OilTrackerCore({
           </div>
         )}
 
-        {/* modeled metrics strip */}
+        {/* live benchmark ticker */}
         <div className="pointer-events-none absolute bottom-16 left-6 flex gap-7 md:left-10 md:gap-10">
-          {[
-            ["Est. Hormuz throughput", "80%", true, false],
-            ["Demand focus", "China", false, false],
-            ["Refined products", "Tight", true, true],
-          ].map(([k, v, hot, dim]) => (
-            <div key={k as string} className={dim ? "hidden sm:block" : ""}>
-              <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">{k}</p>
-              <p className="mt-1 font-mono text-sm" style={{ color: hot ? AMBER_CSS : "var(--ink)" }}>{v}</p>
-            </div>
-          ))}
+          {TRACKED.map((b) => {
+            const q = quoteFor(b);
+            const dotColor: string | null =
+              q?.staleness === "fresh"
+                ? AMBER_CSS
+                : q?.staleness === "aging"
+                  ? "var(--ink-2)"
+                  : q
+                    ? "var(--ink-3)"
+                    : null;
+            const valueColor =
+              !q || q.staleness === "stale" || q.staleness === "dead" ? "var(--ink-3)" : "var(--ink)";
+            const isSel = benchSel === b;
+            return (
+              <button
+                key={b}
+                type="button"
+                onClick={() => (isSel ? closePanel() : focusBenchmark(b))}
+                className="group pointer-events-auto text-left"
+                aria-label={`Open ${b} benchmark detail`}
+              >
+                <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
+                  {b} · USD/bbl
+                </p>
+                <p className="mt-1 flex items-center gap-[6px] font-mono text-sm">
+                  {dotColor && (
+                    <span
+                      aria-hidden
+                      className="inline-block h-[5px] w-[5px] rounded-full"
+                      style={{ background: dotColor }}
+                    />
+                  )}
+                  <span
+                    className="transition-colors duration-[var(--dur-micro)] group-hover:!text-[var(--ink)]"
+                    style={{ color: valueColor }}
+                  >
+                    {q ? formatUsdBbl(q.price) : "—"}
+                  </span>
+                  {q?.suspect && (
+                    <sup className="font-mono text-[8px] uppercase tracking-[0.15em]" style={{ color: AMBER_CSS }}>
+                      SUSPECT
+                    </sup>
+                  )}
+                </p>
+              </button>
+            );
+          })}
+          <div className="hidden sm:block">
+            <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">Feed</p>
+            <p className="mt-1 font-mono text-sm" style={{ color: "var(--ink)" }}>
+              {feed.status === "error"
+                ? "OFFLINE"
+                : feed.quotes && feed.quotes.length > 0
+                ? formatUtcTime(
+                    feed.quotes.reduce((latest, q) => (q.observedAt > latest ? q.observedAt : latest), feed.quotes[0].observedAt)
+                  )
+                : "—"}
+            </p>
+          </div>
         </div>
 
         {/* interaction hint */}
@@ -845,22 +1055,24 @@ export default function OilTrackerCore({
 
               <p
                 className="mt-2 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em]"
-                style={{ color: statusColor(sel.kind) }}
+                style={{ color: sel.id === "usgc" && usgulfLive ? AMBER_CSS : statusColor(sel.kind) }}
               >
                 <span aria-hidden className="inline-block h-1 w-1 rounded-full" style={{ background: "currentColor" }} />
-                {sel.status}
+                {sel.id === "usgc" && usgulfLive ? "Weekly · live" : sel.status}
               </p>
 
               <div className="mt-5">
-                <p className={`font-mono ${sel.kind === "reserved" ? "text-xl text-[var(--ink-3)]" : "text-3xl text-[var(--ink)]"}`}>
-                  {sel.metric}
+                <p className={`font-mono ${sel.id === "usgc" && usgulfLive ? "text-3xl text-[var(--ink)]" : sel.kind === "reserved" ? "text-xl text-[var(--ink-3)]" : "text-3xl text-[var(--ink)]"}`}>
+                  {sel.id === "usgc" && usgulfLive ? usgcOverrideMetric : sel.metric}
                 </p>
-                <p className="mt-1 text-[11px] leading-relaxed text-[var(--ink-3)]">{sel.metricLabel}</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-[var(--ink-3)]">
+                  {sel.id === "usgc" && usgulfLive ? usgcOverrideMetricLabel : sel.metricLabel}
+                </p>
               </div>
 
-              {sel.rows.length > 0 && (
+              {(sel.id === "usgc" && usgulfLive ? usgcOverrideRows : sel.rows).length > 0 && (
                 <div className="mt-5 flex flex-col gap-3">
-                  {sel.rows.map((r) => (
+                  {(sel.id === "usgc" && usgulfLive ? usgcOverrideRows : sel.rows).map((r) => (
                     <div key={r.k}>
                       <div className="flex items-baseline justify-between">
                         <p className="text-[11px] text-[var(--ink-2)]">{r.k}</p>
@@ -885,7 +1097,11 @@ export default function OilTrackerCore({
                 </div>
               )}
 
-              {sel.spark.length > 0 && (
+              {sel.id === "usgc" && usgulfLive ? (
+                <p className="mt-6 font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+                  WEEKLY SERIES · CHART PENDING
+                </p>
+              ) : sel.spark.length > 0 && (
                 <div className="mt-6">
                   <Spark values={sel.spark} id={sel.id} />
                   <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
@@ -894,16 +1110,149 @@ export default function OilTrackerCore({
                 </div>
               )}
 
-              <p className="mt-5 text-[11px] leading-relaxed text-[var(--ink-2)]">{sel.note}</p>
+              <p className="mt-5 text-[11px] leading-relaxed text-[var(--ink-2)]">
+                {sel.id === "usgc" && usgulfLive
+                  ? "US Gulf export engine. Weekly EIA data — crude exports and Gulf Coast refinery utilization; more corridor metrics onboard as coverage expands."
+                  : sel.note}
+              </p>
+              </div>
+
+              <div className={narrow ? "mt-4" : "mt-4 shrink-0"}>
+                {sel.id === "usgc" && usgulfLive ? (
+                  <p className="flex items-center justify-between border-t border-[var(--line)] pt-3 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+                    <span>Corridor feed</span>
+                    <span>weekly</span>
+                  </p>
+                ) : (
+                  <p className="flex items-center justify-between border-t border-[var(--line)] pt-3 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+                    <span>Full corridor view</span>
+                    <span>Private beta</span>
+                  </p>
+                )}
+                <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.18em] text-[var(--ink-3)] opacity-70">
+                  {sel.id === "usgc" && usgulfLive
+                    ? "Live weekly data · EIA · not investment advice"
+                    : "Modeled estimates · illustrative · not investment advice"}
+                </p>
+              </div>
+            </motion.aside>
+          )}
+        </AnimatePresence>
+
+        {/* benchmark signal panel */}
+        <AnimatePresence>
+          {benchSel && (
+            <motion.aside
+              key={benchSel}
+              initial={narrow ? { y: 24, opacity: 0 } : { x: 28, opacity: 0 }}
+              animate={narrow ? { y: 0, opacity: 1 } : { x: 0, opacity: 1 }}
+              exit={narrow ? { y: 24, opacity: 0 } : { x: 28, opacity: 0 }}
+              transition={{ duration: DUR.base * 1.4, ease: EASE_OUT as unknown as number[] }}
+              className={
+                narrow
+                  ? "absolute inset-x-0 bottom-12 border-t border-[var(--line)] bg-[rgba(11,13,13,0.92)] px-5 pb-5 pt-4 backdrop-blur-md"
+                  : "absolute bottom-12 right-0 top-14 flex w-[340px] flex-col border-l border-[var(--line)] bg-[rgba(11,13,13,0.88)] px-6 py-6 backdrop-blur-md"
+              }
+            >
+              <div className={narrow ? "" : "min-h-0 flex-1 overflow-y-auto"}>
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
+                    Benchmark · {benchSel}
+                  </p>
+                  <h4 className="mt-1 text-base font-medium text-[var(--ink)]">{BENCH_TITLE[benchSel]}</h4>
+                </div>
+                <button
+                  onClick={closePanel}
+                  aria-label="Close benchmark detail"
+                  className="-mr-1 -mt-1 flex h-7 w-7 items-center justify-center text-[var(--ink-3)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]"
+                >
+                  ×
+                </button>
+              </div>
+
+              {benchStatusInfo ? (
+                <p
+                  className="mt-2 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em]"
+                  style={{ color: benchStatusInfo.color }}
+                >
+                  <span aria-hidden className="inline-block h-1 w-1 rounded-full" style={{ background: "currentColor" }} />
+                  {benchStatusInfo.text}
+                </p>
+              ) : (
+                <p className="mt-2 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
+                  <span aria-hidden className="inline-block h-1 w-1 rounded-full" style={{ background: "currentColor" }} />
+                  awaiting feed
+                </p>
+              )}
+
+              <div className="mt-5">
+                <p className={`font-mono ${bq ? "text-3xl text-[var(--ink)]" : "text-xl text-[var(--ink-3)]"}`}>
+                  {bq ? formatUsdBbl(bq.price) : "—"}
+                </p>
+                <p className="mt-1 text-[11px] leading-relaxed text-[var(--ink-3)]">
+                  {bq
+                    ? `USD per barrel · ${bq.source} · as of ${formatUtcTime(bq.observedAt)}`
+                    : "Feed unavailable — retrying automatically"}
+                </p>
+              </div>
+
+              {bq?.suspect && (
+                <p className="mt-2 font-mono text-[9px] uppercase tracking-[0.2em]" style={{ color: AMBER_CSS }}>
+                  SUSPECT — DEVIATES FROM LAST SETTLEMENT
+                </p>
+              )}
+
+              {benchRows.length > 0 && (
+                <div className="mt-5 flex flex-col gap-3">
+                  {benchRows.map((r) => (
+                    <div key={r.k}>
+                      <div className="flex items-baseline justify-between">
+                        <p className="text-[11px] text-[var(--ink-2)]">{r.k}</p>
+                        <p
+                          className="font-mono text-[10px] uppercase tracking-[0.15em]"
+                          style={{ color: r.warm ? AMBER_CSS : "var(--ink)" }}
+                        >
+                          {r.v}
+                        </p>
+                      </div>
+                      <div className="mt-[6px] h-px w-full bg-[var(--depth-3)]">
+                        <motion.div
+                          className="h-px"
+                          style={{ background: r.warm ? "#e6bd7d" : AMBER_CSS, opacity: r.warm ? 0.9 : 0.6 }}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${r.bar * 100}%` }}
+                          transition={{ duration: DUR.reveal, delay: 0.15, ease: EASE_OUT as unknown as number[] }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {bs && bs.length >= 2 ? (
+                <div className="mt-6">
+                  <Spark values={bs.map((p) => p.price)} id={`bench-${benchSel}`} />
+                  <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
+                    Daily close · 30d · live feed
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-6 font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+                  SERIES UNAVAILABLE
+                </p>
+              )}
+
+              <p className="mt-5 text-[11px] leading-relaxed text-[var(--ink-2)]">{BENCH_NOTE[benchSel]}</p>
               </div>
 
               <div className={narrow ? "mt-4" : "mt-4 shrink-0"}>
                 <p className="flex items-center justify-between border-t border-[var(--line)] pt-3 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-                  <span>Full corridor view</span>
-                  <span>Private beta</span>
+                  <span>Benchmark feed</span>
+                  <span>{bq ? bq.staleness : "offline"}</span>
                 </p>
                 <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.18em] text-[var(--ink-3)] opacity-70">
-                  Modeled estimates · illustrative · not investment advice
+                  Live benchmark data · not investment advice
                 </p>
               </div>
             </motion.aside>

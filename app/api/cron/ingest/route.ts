@@ -10,7 +10,8 @@
    CRON_SECRET is not guarded (allows iterating locally).
 ──────────────────────────────────────────────────────────────── */
 
-import { createDb, runIngestionCycle } from "@a3ro/oil-backend";
+import { createDb, runIngestionCycle, runCorridorCycle } from "@a3ro/oil-backend";
+import type { CorridorCycleReport } from "@a3ro/oil-backend";
 
 export const runtime = "nodejs";
 
@@ -31,7 +32,17 @@ export async function GET(request: Request) {
 
     const db = await createDb();
     const report = await runIngestionCycle(db);
-    return Response.json(report);
+
+    // Corridor ingestion runs in its own try/catch so it can NEVER
+    // fail price ingestion — price data is the load-bearing feed.
+    let corridors: CorridorCycleReport | { error: string };
+    try {
+      corridors = await runCorridorCycle(db);
+    } catch (e) {
+      corridors = { error: e instanceof Error ? e.message : String(e) };
+    }
+
+    return Response.json({ ...report, corridors });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return Response.json(

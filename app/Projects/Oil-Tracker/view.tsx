@@ -129,7 +129,7 @@ export default function OilTrackerView() {
           ) : (
             <span aria-hidden className="inline-block h-[5px] w-[5px] rounded-full" style={{ background: AMBER_CSS }} />
           )}
-          Live monitor · simulated feed
+          Live monitor · benchmark feed
         </p>
       </header>
 
@@ -139,7 +139,7 @@ export default function OilTrackerView() {
           P·01 — Featured build
         </p>
         <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-          Modeled estimates · illustrative · not investment advice
+          Benchmark prices live · corridor signals modeled · not investment advice
         </p>
       </footer>
     </motion.main>
