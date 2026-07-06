@@ -63,6 +63,10 @@ interface ChokepointConfig {
 const CHOKEPOINTS: ChokepointConfig[] = [
   { corridor: "hormuz", portid: "chokepoint6", portname: "Strait of Hormuz" },
   { corridor: "singapore", portid: "chokepoint5", portname: "Malacca Strait" },
+  { corridor: "suez", portid: "chokepoint1", portname: "Suez Canal" },
+  { corridor: "bab_el_mandeb", portid: "chokepoint4", portname: "Bab el-Mandeb Strait" },
+  { corridor: "cape", portid: "chokepoint7", portname: "Cape of Good Hope" },
+  { corridor: "panama", portid: "chokepoint2", portname: "Panama Canal" },
 ];
 
 interface PortWatchFeatureAttributes {
@@ -94,7 +98,7 @@ export class PortWatchSource extends CorridorBaseSource {
     id: "portwatch",
     name: "IMF PortWatch — daily chokepoint transits (satellite AIS)",
     confidence: "aggregator",
-    corridors: ["hormuz", "singapore"],
+    corridors: ["hormuz", "singapore", "suez", "bab_el_mandeb", "cape", "panama"],
     expectedCadenceMs: 7 * 86_400_000, // published weekly
     rateLimit: {
       // Public service, no key — be polite regardless of published limits.

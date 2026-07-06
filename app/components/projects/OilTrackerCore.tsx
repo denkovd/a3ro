@@ -15,97 +15,48 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { DUR, EASE_OUT } from "../motion";
 import {
   AMB, AMB_HI, AMBER_CSS, DOT, INK,
-  HOME, MAJOR_PTS, SECONDARY_PTS, TERTIARY_PTS,
+  HOME, TERTIARY_PTS,
   bakeCorridor, getDots, rotator, vec,
   type OTView, type Rot,
 } from "./oilTrackerShared";
+import { FLOW_ROUTES, GATE_EIA_EST_MBD, type FlowTier } from "./flowRoutes";
 import useOilData from "./useOilData";
 import { formatPctSigned, formatUsdBbl, formatUtcDateTime, formatUtcTime, isUtcToday } from "./oilFormat";
-import type { Benchmark, CorridorMetricLatest, DailyPrice, LatestQuote } from "@a3ro/oil-backend";
+import type { Benchmark, CorridorId, CorridorMetricLatest, DailyPrice, LatestQuote } from "@a3ro/oil-backend";
 
 /* ══ route-only content: hotspot hierarchy + signal copy ══ */
 type HotspotKind = "live" | "demand" | "watch" | "reserved";
 type Hotspot = {
-  id: string;
-  label: string;
-  sub?: string;
-  side?: -1 | 1;
-  glyph?: "ring" | "diamond";
-  lon: number;
-  lat: number;
-  kind: HotspotKind;
-  zoom: number;
-  corridor: string;
-  title: string;
-  status: string;
-  metric: string;
-  metricLabel: string;
-  rows: { k: string; v: string; bar: number; warm?: boolean }[];
-  spark: number[];
-  note: string;
+  id: string; label: string; side?: -1 | 1; glyph?: "ring" | "diamond";
+  lon: number; lat: number; kind: HotspotKind; zoom: number;
+  corridor: string; title: string; status: string;
 };
 
 const HOTSPOTS: Hotspot[] = [
   {
-    id: "hormuz", label: "HORMUZ", sub: "EST. THROUGHPUT 80%", side: -1,
+    id: "hormuz", label: "HORMUZ", side: -1,
     glyph: "ring", lon: 56.5, lat: 26.6, kind: "live", zoom: 1.5,
-    corridor: "Corridor 01", title: "Strait of Hormuz", status: "Signal",
-    metric: "80%", metricLabel: "Estimated throughput · modeled baseline",
-    rows: [
-      { k: "Outbound flow recovery", v: "Strong", bar: 0.78 },
-      { k: "Modeled corridor flow", v: "≈14.2 Mb/d", bar: 0.71 },
-      { k: "Scenario pressure", v: "Elevated", bar: 0.58, warm: true },
-    ],
-    spark: [52, 54, 51, 47, 42, 38, 41, 44, 49, 55, 60, 63, 61, 66, 70, 74, 72, 77, 79, 80],
-    note: "Primary live chokepoint. Outbound recovery holds above the modeled baseline — scenario pressure stays elevated.",
+    corridor: "Corridor 01", title: "Strait of Hormuz", status: "Connecting",
   },
   {
-    id: "china", label: "CHINA · DEMAND", sub: "WILDCARD",
+    id: "china", label: "CHINA · DEMAND",
     glyph: "diamond", lon: 122.2, lat: 29.9, kind: "demand", zoom: 1.32,
-    corridor: "Demand · 01", title: "China · East Coast", status: "Demand",
-    metric: "Wildcard", metricLabel: "Inferred demand pressure · import posture",
-    rows: [
-      { k: "Inferred demand pressure", v: "Elevated variance", bar: 0.62, warm: true },
-      { k: "Stockpile posture", v: "Opaque", bar: 0.48 },
-      { k: "Refinery run signal", v: "Firm", bar: 0.66 },
-    ],
-    spark: [61, 64, 58, 66, 60, 69, 63, 71, 65, 73, 66, 75, 68, 74, 70, 77, 71, 79, 73, 80],
-    note: "The system's demand wildcard. Import posture sets corridor variance — read against stockpile and run-rate signals.",
+    corridor: "Demand · 01", title: "China · East Coast", status: "Watchlist",
   },
   {
     id: "sg", label: "SINGAPORE STRAIT",
     glyph: "ring", lon: 104.2, lat: 1.1, kind: "watch", zoom: 1.45,
-    corridor: "Corridor 02", title: "Singapore Strait", status: "Watch",
-    metric: "Firm", metricLabel: "Transit density · modeled flow-through",
-    rows: [
-      { k: "Transit density", v: "Firm", bar: 0.64 },
-      { k: "Eastbound share", v: "Rising", bar: 0.58 },
-      { k: "Bunker demand signal", v: "Steady", bar: 0.51 },
-    ],
-    spark: [58, 57, 59, 61, 60, 63, 66, 64, 67, 70, 68, 72, 71, 74, 73, 76, 78, 75, 79, 81],
-    note: "Primary transit gate between Gulf supply and North Asian demand — watched for routing shifts and congestion pressure.",
+    corridor: "Corridor 02", title: "Singapore Strait", status: "Connecting",
   },
   {
     id: "ara", label: "ARA · ROTTERDAM",
     glyph: "ring", lon: 4.3, lat: 51.9, kind: "watch", zoom: 1.45,
-    corridor: "Corridor 03", title: "ARA · Rotterdam", status: "Watch",
-    metric: "Tight", metricLabel: "Refined product balance · modeled",
-    rows: [
-      { k: "Product tightness", v: "Persistent", bar: 0.69, warm: true },
-      { k: "Crude structure", v: "Softening", bar: 0.38 },
-      { k: "Crack pressure", v: "Elevated", bar: 0.64 },
-    ],
-    spark: [64, 66, 63, 67, 70, 69, 73, 72, 75, 74, 77, 80, 78, 82, 81, 84, 83, 86, 85, 88],
-    note: "Products stay tight while crude softens — refined-side pressure leads the corridor signal.",
+    corridor: "Corridor 03", title: "ARA · Rotterdam", status: "Watchlist",
   },
   {
     id: "usgc", label: "US GULF",
     glyph: "ring", lon: -94.5, lat: 28.6, kind: "reserved", zoom: 1.2,
-    corridor: "Corridor 04", title: "US Gulf Exports", status: "Reserved",
-    metric: "—", metricLabel: "Corridor slot reserved",
-    rows: [],
-    spark: [],
-    note: "Activation pending. Additional corridors onboard as coverage expands.",
+    corridor: "Corridor 04", title: "US Gulf Exports", status: "Connecting",
   },
 ];
 
@@ -125,19 +76,44 @@ const BENCH_NOTE: Record<Benchmark, string> = {
   BRENT: "ICE Brent benchmark. Normalized to USD per barrel by the A3RO ingest pipeline; staleness and cross-source checks applied automatically.",
 };
 
-const TICKS = [
-  { label: "BAB EL-MANDEB", lon: 43.4, lat: 12.6 },
-  { label: "SUEZ", lon: 32.4, lat: 30.0 },
+const TICKS: { label: string; lon: number; lat: number; gate?: CorridorId }[] = [
+  { label: "BAB EL-MANDEB", lon: 43.4, lat: 12.6, gate: "bab_el_mandeb" },
+  { label: "SUEZ", lon: 32.4, lat: 30.0, gate: "suez" },
+  { label: "CAPE", lon: 19, lat: -35, gate: "cape" },
+  { label: "PANAMA", lon: -79.5, lat: 9, gate: "panama" },
 ];
 
-type CorridorRank = "major" | "secondary" | "tertiary";
-type Baked = { samples: Float32Array; n: number; rank: CorridorRank; speed: number; phase: number };
+type CorridorRank = "major" | "secondary" | "thin" | "tertiary";
+type Baked = {
+  samples: Float32Array; n: number; rank: CorridorRank; speed: number; phase: number;
+  routeId?: string; name?: string; gates?: CorridorId[];
+};
+
+/* tier → rank + base pulse speed (Section C1/C3) */
+const TIER_RANK: Record<FlowTier, Exclude<CorridorRank, "tertiary">> = {
+  major: "major",
+  medium: "secondary",
+  thin: "thin",
+};
+const TIER_SPEED: Record<FlowTier, number> = {
+  major: 0.05,
+  medium: 0.03,
+  thin: 0.02,
+};
+
 let BAKED: Baked[] | null = null;
 function getCorridors(): Baked[] {
   if (BAKED) return BAKED;
   BAKED = [
-    { ...bakeCorridor(MAJOR_PTS), rank: "major", speed: 0.05, phase: 0 },
-    { ...bakeCorridor(SECONDARY_PTS), rank: "secondary", speed: 0.03, phase: 0.55 },
+    ...FLOW_ROUTES.map((route, i) => ({
+      ...bakeCorridor(route.pts),
+      rank: TIER_RANK[route.tier],
+      speed: TIER_SPEED[route.tier],
+      phase: (i * 0.37) % 1,
+      routeId: route.id,
+      name: route.name,
+      gates: route.gates,
+    })),
     ...TERTIARY_PTS.map((pts) => ({ ...bakeCorridor(pts), rank: "tertiary" as const, speed: 0, phase: 0 })),
   ];
   return BAKED;
@@ -285,6 +261,28 @@ function buildCorridorPanel(
   return null;
 }
 
+/* ══ pro-tier locked rows + watchlist copy — no fabricated data behind
+   any of this; PRO_LOCKS names commercial detail we don't hold, and
+   WATCHLIST_COPY explains exactly why a corridor has no live feed. ══ */
+type LockedRow = { k: string; context: string };
+const PRO_LOCKS: Record<string, LockedRow[]> = {
+  hormuz: [{ k: "Vessel-level transit detail", context: "hormuz-vessel-detail" }],
+  sg: [{ k: "Vessel-level transit detail", context: "singapore-vessel-detail" }],
+  china: [
+    { k: "Live import tracking · seaborne AIS", context: "china-imports" },
+    { k: "Stockpile build estimates", context: "china-stockpiles" },
+  ],
+  ara: [
+    { k: "ARA product inventories · weekly", context: "ara-inventories" },
+    { k: "Refined product tightness", context: "ara-tightness" },
+  ],
+  usgc: [],
+};
+const WATCHLIST_COPY: Record<string, string> = {
+  china: "No live feed connected. Free sources cover monthly customs data only; near-real-time import tracking runs on commercial satellite AIS.",
+  ara: "No live feed connected. Weekly ARA product inventories are commercial data; crack-spread signals arrive free in a later phase.",
+};
+
 /* ══ component ══ */
 export default function OilTrackerCore({
   initialView,
@@ -307,6 +305,7 @@ export default function OilTrackerCore({
   const [selected, setSelected] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
   const [narrow, setNarrow] = useState(false);
+  const [proContact, setProContact] = useState<string | null>(null);
 
   const sim = useRef<Sim>({
     lon: initialView?.lon ?? 97,
@@ -324,9 +323,11 @@ export default function OilTrackerCore({
   const hasMoved = useRef(false);
   const skipIntroRef = useRef(skipIntro);
   const selectedRef = useRef<string | null>(null);
+  const proContactRef = useRef<string | null>(null);
   const reducedRef = useRef(false);
   reducedRef.current = !!reduced;
   selectedRef.current = selected;
+  proContactRef.current = proContact;
 
   const tweenTo = useCallback((to: Partial<Tween["to"]>, dur = 1150) => {
     const s = sim.current;
@@ -342,6 +343,7 @@ export default function OilTrackerCore({
 
   const focusHotspot = useCallback((h: Hotspot) => {
     setSelected(h.id);
+    setProContact(null);
     setTouched(true);
     hasMoved.current = true;
     sim.current.lastInteract = performance.now();
@@ -360,6 +362,7 @@ export default function OilTrackerCore({
 
   const focusBenchmark = useCallback((b: Benchmark) => {
     setSelected(`bench:${b}`);
+    setProContact(null);
     setTouched(true);
     sim.current.lastInteract = performance.now();
     const isNarrow = size.current.w < 640;
@@ -368,9 +371,81 @@ export default function OilTrackerCore({
 
   const closePanel = useCallback(() => {
     setSelected(null);
+    setProContact(null);
     sim.current.lastInteract = performance.now();
     tweenTo({ zoom: 1, off: 0, lat: clamp(sim.current.lat, -34, 34) }, 900);
   }, [tweenTo]);
+
+  /* ── data-driven globe sub-labels ──
+     Stable-identity ref so the engine effect's [] deps stay valid;
+     this effect just repopulates its contents whenever corridor data
+     changes. No modeled/fabricated text — "CONNECTING" / "WATCHLIST"
+     when a corridor has no live datapoint yet. live=true only when a
+     real feed value backs the sub (amber in the canvas draw); false
+     for the neutral CONNECTING/WATCHLIST placeholders. */
+  const hotspotSubsRef = useRef<Record<string, { text: string; live: boolean }>>({});
+  /* per-route pulse-speed multiplier (Section C3): live tanker_volume_7d
+     at a route's gates vs. the EIA H1'25 estimate for that gate. Stable
+     ref identity so the engine effect's [] deps stay valid — this effect
+     just repopulates contents whenever corridor data changes. */
+  const gateActivityRef = useRef<Record<string, number>>({});
+  /* per-gate tick-label live suffix, e.g. " · 12/D" (Section C5). */
+  const gateSubsRef = useRef<Record<string, string>>({});
+  useEffect(() => {
+    const metrics = feed.corridors ?? [];
+    const find = (corridor: string, metric: string) =>
+      metrics.find((m) => m.corridor === corridor && m.metric === metric);
+
+    const hormuzTransits = find("hormuz", "tanker_transits_7d");
+    const sgTransits = find("singapore", "tanker_transits_7d");
+    const usgcExports = find("usgulf", "crude_exports");
+
+    hotspotSubsRef.current = {
+      hormuz: hormuzTransits
+        ? { text: `TANKERS ${hormuzTransits.value.toFixed(1)}/D · 7D`, live: true }
+        : { text: "CONNECTING", live: false },
+      sg: sgTransits
+        ? { text: `TANKERS ${sgTransits.value.toFixed(1)}/D · 7D`, live: true }
+        : { text: "CONNECTING", live: false },
+      usgc: usgcExports
+        ? { text: `EXPORTS ${usgcExports.value.toFixed(2)} MB/D`, live: true }
+        : { text: "CONNECTING", live: false },
+      china: { text: "WATCHLIST", live: false },
+      ara: { text: "WATCHLIST", live: false },
+    };
+
+    // gate tick suffixes: live tanker_transits_7d per gate, "/D" formatted.
+    const gateIds: CorridorId[] = ["hormuz", "singapore", "suez", "bab_el_mandeb", "cape", "panama"];
+    const nextGateSubs: Record<string, string> = {};
+    for (const gid of gateIds) {
+      const v = find(gid, "tanker_transits_7d");
+      nextGateSubs[gid] = v ? ` · ${v.value.toFixed(0)}/D` : "";
+    }
+    gateSubsRef.current = nextGateSubs;
+
+    // per-route activity factor: avg over the route's gates of
+    // (live tanker_volume_7d Mt/d ÷ (EIA est. Mb/d × 0.136)) — 0.136 Mt/d
+    // ≈ 1 Mb/d of crude (density conversion), clamped to [0.35, 2].
+    // Routes with no gates, or no live data at any gate, default to 1.
+    const nextActivity: Record<string, number> = {};
+    for (const route of FLOW_ROUTES) {
+      if (route.gates.length === 0) {
+        nextActivity[route.id] = 1;
+        continue;
+      }
+      const ratios: number[] = [];
+      for (const gate of route.gates) {
+        const est = GATE_EIA_EST_MBD[gate];
+        const vol7d = find(gate, "tanker_volume_7d");
+        if (!est || !vol7d) continue;
+        ratios.push(vol7d.value / (est * 0.136));
+      }
+      nextActivity[route.id] = ratios.length > 0
+        ? clamp(ratios.reduce((a, b) => a + b, 0) / ratios.length, 0.35, 2)
+        : 1;
+    }
+    gateActivityRef.current = nextActivity;
+  }, [feed.corridors]);
 
   /* ── engine ── */
   useEffect(() => {
@@ -443,6 +518,17 @@ export default function OilTrackerCore({
       const aTert = ramp(2400, 900);
       const labPrim = ramp(1900, 700);
       const labSec = ramp(2800, 700);
+      /* legibility halo for small canvas text (hotspot/route/tick labels) —
+         a dark stroke behind the fill so text stays readable over land
+         dots, corridor strokes, and the sphere sheen. fillStyle is set by
+         the caller before invoking this, as today. */
+      const haloText = (txt: string, x: number, y: number) => {
+        ctx.strokeStyle = "rgba(7,8,8,0.85)";
+        ctx.lineWidth = 3;
+        ctx.lineJoin = "round";
+        ctx.strokeText(txt, x, y);
+        ctx.fillText(txt, x, y);
+      };
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
       ctx.globalAlpha = ramp(0, 650);
@@ -500,7 +586,7 @@ export default function OilTrackerCore({
         rot(dots[i], dots[i + 1], dots[i + 2], o);
         if (o[2] <= 0.02) continue;
         const sx = cx + o[0] * R, sy = cy - o[1] * R;
-        const a = 0.15 + 0.6 * Math.pow(o[2], 1.6);
+        const a = 0.18 + 0.6 * Math.pow(o[2], 1.6);
         const ds = (1 + 1.1 * o[2]) * Math.min(1.25, Math.max(0.8, R / 260));
         ctx.fillStyle = DOT(a);
         ctx.fillRect(sx - ds / 2, sy - ds / 2, ds, ds);
@@ -513,10 +599,14 @@ export default function OilTrackerCore({
       ctx.arc(cx, cy, R, 0, Math.PI * 2);
       ctx.stroke();
 
-      /* corridors — ranked hierarchy with intro draw-in */
+      /* corridors — ranked hierarchy with intro draw-in
+         widths/alphas (Section C2): major 1.8/0.4, secondary 1.2/0.22,
+         thin 0.8/0.14, tertiary unchanged (dashed). major uses revMajor,
+         secondary+thin use revSec (as-is). */
+      const routeMidpoints: { c: Baked; sx: number; sy: number; z: number }[] = [];
       for (const c of corridors) {
         const S = c.samples, N = c.n;
-        const rev = c.rank === "major" ? revMajor : c.rank === "secondary" ? revSec : 1;
+        const rev = c.rank === "major" ? revMajor : c.rank === "secondary" || c.rank === "thin" ? revSec : 1;
         const limit = Math.max(2, Math.ceil(N * rev));
         if (rev <= 0.01) continue;
         ctx.beginPath();
@@ -537,12 +627,27 @@ export default function OilTrackerCore({
           continue;
         }
         const major = c.rank === "major";
-        ctx.strokeStyle = AMB(major ? 0.38 : 0.16);
-        ctx.lineWidth = major ? 1.6 : 1;
+        const secondary = c.rank === "secondary";
+        ctx.strokeStyle = AMB(major ? 0.4 : secondary ? 0.22 : 0.14);
+        ctx.lineWidth = major ? 1.8 : secondary ? 1.2 : 0.8;
         ctx.stroke();
 
+        // route label anchor: middle sample point, captured regardless of
+        // reveal progress so C4 can gate on its own label ramps.
+        if ((major || secondary) && c.routeId) {
+          const mid = Math.floor((N - 1) / 2);
+          rot(S[mid * 3], S[mid * 3 + 1], S[mid * 3 + 2], o);
+          if (o[2] > 0) {
+            routeMidpoints.push({ c, sx: cx + o[0] * R, sy: cy - o[1] * R, z: o[2] });
+          }
+        }
+
         if (!reducedRef.current && rev >= 1) {
-          const head = (t * c.speed + c.phase) % 1;
+          // per-route speed = base × activity factor (Section C3); the
+          // ref is read fresh each frame, stable identity so the engine
+          // effect's [] deps stay valid.
+          const activity = c.routeId ? gateActivityRef.current[c.routeId] ?? 1 : 1;
+          const head = (t * c.speed * activity + c.phase) % 1;
           const len = 0.1;
           const passes = major
             ? ([[3.4, AMB(0.12)], [1.6, AMB_HI(0.85)]] as const)
@@ -567,6 +672,18 @@ export default function OilTrackerCore({
         }
       }
 
+      /* route labels (Section C4) — major+secondary only, thin skipped
+         to declutter. Drawn after corridor strokes, before ticks. */
+      ctx.font = '500 8px "JetBrains Mono", ui-monospace, monospace';
+      for (const { c, sx, sy, z } of routeMidpoints) {
+        if (z <= 0.4 || !c.name) continue;
+        const zFade = Math.min(1, (z - 0.4) / 0.3);
+        const a = 0.5 * labSec * zFade;
+        if (a <= 0.01) continue;
+        ctx.fillStyle = INK(a);
+        haloText(c.name, sx, sy - 8);
+      }
+
       /* chokepoint ticks */
       ctx.font = '500 8px "JetBrains Mono", ui-monospace, monospace';
       for (const tk of TICKS) {
@@ -583,11 +700,14 @@ export default function OilTrackerCore({
         ctx.lineTo(sx, sy + 3);
         ctx.stroke();
         ctx.fillStyle = INK(a * 0.8);
-        ctx.fillText(tk.label, sx + 6, sy + 2.5);
+        const liveSuffix = tk.gate ? gateSubsRef.current[tk.gate] ?? "" : "";
+        haloText(`${tk.label}${liveSuffix}`, sx + 6, sy + 2.5);
       }
 
-      /* hotspots */
-      ctx.font = '500 9px "JetBrains Mono", ui-monospace, monospace';
+      /* hotspots — title font scales with globe radius R (Section C6),
+         computed once per frame before the loop. */
+      const hotspotFontPx = Math.max(9, Math.min(12, R / 55)).toFixed(0);
+      ctx.font = `500 ${hotspotFontPx}px "JetBrains Mono", ui-monospace, monospace`;
       for (const hs of HOTSPOTS) {
         rot(...vec(hs.lon, hs.lat), o);
         if (o[2] < 0.12) continue;
@@ -649,7 +769,7 @@ export default function OilTrackerCore({
         }
 
         const side = hs.side ?? 1;
-        const lx = sx + side * 12, ly = sy - 10;
+        const lx = sx + side * 14, ly = sy - 10;
         ctx.textAlign = side < 0 ? "right" : "left";
         ctx.strokeStyle = INK(0.22 * fade);
         ctx.beginPath();
@@ -657,13 +777,16 @@ export default function OilTrackerCore({
         ctx.lineTo(lx - side * 3, ly + 3);
         ctx.stroke();
         ctx.fillStyle = INK((isSel || isHover ? 0.9 : primary ? 0.85 : 0.55) * fade);
-        ctx.fillText(hs.label, lx, ly);
-        if (primary && hs.sub) {
-          ctx.fillStyle = AMB(0.8 * fade);
-          ctx.fillText(hs.sub, lx, ly + 11);
+        haloText(hs.label, lx, ly);
+        const sub = hotspotSubsRef.current[hs.id];
+        if (primary && sub) {
+          // amber only when a real feed value backs this sub (Section C7);
+          // the neutral CONNECTING/WATCHLIST placeholders stay ink.
+          ctx.fillStyle = sub.live ? AMB(0.8 * fade) : INK(0.55 * fade);
+          haloText(sub.text, lx, ly + 11);
         } else if (isHover && !isSel) {
           ctx.fillStyle = INK(0.45 * fade);
-          ctx.fillText(hs.kind === "reserved" ? "SLOT RESERVED" : "SIGNAL — OPEN", lx, ly + 11);
+          haloText(sub?.text ?? "OPEN", lx, ly + 11);
         }
         ctx.textAlign = "left";
       }
@@ -844,11 +967,13 @@ export default function OilTrackerCore({
     }
   };
 
-  /* esc: close panel first, then hand control back to the route */
+  /* esc: contact panel first, then corridor/benchmark panel, then hand
+     control back to the route */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (selectedRef.current) closePanel();
+      if (proContactRef.current) setProContact(null);
+      else if (selectedRef.current) closePanel();
       else onExit?.();
     };
     window.addEventListener("keydown", onKey);
@@ -857,8 +982,11 @@ export default function OilTrackerCore({
   }, [closePanel]);
 
   const sel = HOTSPOTS.find((h) => h.id === selected) ?? null;
-  const statusColor = (k: HotspotKind) =>
-    k === "live" || k === "demand" ? AMBER_CSS : k === "reserved" ? "var(--ink-3)" : "var(--ink-2)";
+  /* Only an actual live override (amber, applied at the call site when
+     selLive/hLive is present) earns amber. Kind alone no longer implies
+     "live" — hormuz/china are just as un-connected as any other corridor
+     until real data lands, so the kind-based fallback is neutral ink. */
+  const statusColor = (k: HotspotKind) => (k === "reserved" ? "var(--ink-3)" : "var(--ink-2)");
 
   const quoteFor = (b: Benchmark): LatestQuote | undefined =>
     feed.quotes?.find((q) => q.benchmark === b);
@@ -931,10 +1059,20 @@ export default function OilTrackerCore({
 
   /* ── live corridor panel content — declarative, per hotspot ──
      buildCorridorPanel returns null when a hotspot has no live
-     coverage yet, in which case the signal panel below falls back
-     to the hotspot's modeled HOTSPOTS content unchanged. */
+     coverage yet, in which case the signal panel below falls back to
+     an honest "connecting" (live-capable, no data yet) or
+     "watchlist" (no live source at all) state — never modeled data. */
   const liveFor = (hid: string) => buildCorridorPanel(hid, feed.corridors ?? []);
   const selLive = sel ? liveFor(sel.id) : null;
+  const LIVE_CAPABLE = new Set(["hormuz", "sg", "usgc"]);
+  const selIsWatchlist = !!sel && !selLive && WATCHLIST_COPY[sel.id] !== undefined;
+  const selIsConnecting = !!sel && !selLive && LIVE_CAPABLE.has(sel.id);
+  const selLocks = sel ? PRO_LOCKS[sel.id] ?? [] : [];
+
+  /* Section C9: the wide-screen corridor index rail hides while ANY
+     right panel (corridor, benchmark, or pro-contact) is open — it
+     would otherwise sit underneath/behind the panel on wide screens. */
+  const panelOpen = sel !== null || benchSel !== null || proContact !== null;
 
   return (
     <div ref={wrapRef} className={`relative overflow-hidden ${className}`} data-lenis-prevent="">
@@ -976,78 +1114,88 @@ export default function OilTrackerCore({
           </p>
           {!narrow && (
             <p className="mt-2 hidden text-xs leading-relaxed text-[var(--ink-3)] md:block">
-              Benchmark prices stream live. Corridor signals are modeled
-              estimates while real feeds onboard.
+              Benchmark prices and covered corridors stream live.
+              Locked signals unlock with the pro tier.
             </p>
           )}
         </div>
 
         {/* corridor index */}
         {!narrow && (
-          <div className="absolute right-6 top-[4.5rem] hidden flex-col items-stretch md:right-10 md:top-[5.5rem] md:flex">
-            <p className="border-l border-[var(--line)] px-3 py-[7px] font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-              Benchmarks
-            </p>
-            {TRACKED.map((b) => {
-              const q = quoteFor(b);
-              const st = benchStatus(q);
-              const isSel = benchSel === b;
-              return (
-                <button
-                  key={b}
-                  onClick={() => (isSel ? closePanel() : focusBenchmark(b))}
-                  aria-label={`Open ${b} benchmark detail`}
-                  title={BENCH_TITLE[b]}
-                  className={`flex items-center justify-between gap-6 border-l px-3 py-[7px] text-left transition-colors duration-[var(--dur-micro)] ${
-                    isSel
-                      ? "border-[#d4a157] bg-[rgba(212,161,87,0.08)]"
-                      : "border-[var(--line)] hover:border-[var(--line-2)] hover:bg-[rgba(232,235,232,0.03)]"
-                  }`}
-                >
-                  <span className={`font-mono text-[10px] uppercase tracking-[0.2em] ${isSel ? "text-[var(--ink)]" : "text-[var(--ink-2)]"}`}>
-                    {BENCH_TITLE[b]}
-                  </span>
-                  <span
-                    className="font-mono text-[9px] uppercase tracking-[0.2em]"
-                    style={{ color: st.color }}
-                  >
-                    {st.text}
-                  </span>
-                </button>
-              );
-            })}
+          <AnimatePresence>
+            {!panelOpen && (
+              <motion.div
+                initial={{ opacity: 0, x: 12 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 12 }}
+                transition={{ duration: DUR.base, ease: EASE_OUT as unknown as number[] }}
+                className="absolute right-6 top-[4.5rem] hidden flex-col items-stretch md:right-10 md:top-[5.5rem] md:flex"
+              >
+                <p className="border-l border-[var(--line)] px-3 py-[7px] font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+                  Benchmarks
+                </p>
+                {TRACKED.map((b) => {
+                  const q = quoteFor(b);
+                  const st = benchStatus(q);
+                  const isSel = benchSel === b;
+                  return (
+                    <button
+                      key={b}
+                      onClick={() => (isSel ? closePanel() : focusBenchmark(b))}
+                      aria-label={`Open ${b} benchmark detail`}
+                      title={BENCH_TITLE[b]}
+                      className={`flex items-center justify-between gap-6 border-l px-3 py-[7px] text-left transition-colors duration-[var(--dur-micro)] ${
+                        isSel
+                          ? "border-[#d4a157] bg-[rgba(212,161,87,0.08)]"
+                          : "border-[var(--line)] hover:border-[var(--line-2)] hover:bg-[rgba(232,235,232,0.03)]"
+                      }`}
+                    >
+                      <span className={`font-mono text-[10px] uppercase tracking-[0.2em] ${isSel ? "text-[var(--ink)]" : "text-[var(--ink-2)]"}`}>
+                        {BENCH_TITLE[b]}
+                      </span>
+                      <span
+                        className="font-mono text-[9px] uppercase tracking-[0.2em]"
+                        style={{ color: st.color }}
+                      >
+                        {st.text}
+                      </span>
+                    </button>
+                  );
+                })}
 
-            <p className="mt-3 border-l border-[var(--line)] px-3 py-[7px] font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-              Corridors
-            </p>
-            {HOTSPOTS.map((h) => {
-              const hLive = liveFor(h.id);
-              return (
-                <button
-                  key={h.id}
-                  onClick={() => (selected === h.id ? closePanel() : focusHotspot(h))}
-                  className={`flex items-center justify-between gap-6 border-l px-3 py-[7px] text-left transition-colors duration-[var(--dur-micro)] ${
-                    selected === h.id
-                      ? "border-[#d4a157] bg-[rgba(212,161,87,0.08)]"
-                      : "border-[var(--line)] hover:border-[var(--line-2)] hover:bg-[rgba(232,235,232,0.03)]"
-                  }`}
-                >
-                  <span className={`font-mono text-[10px] uppercase tracking-[0.2em] ${selected === h.id ? "text-[var(--ink)]" : "text-[var(--ink-2)]"}`}>
-                    {h.title}
-                  </span>
-                  <span
-                    className="font-mono text-[9px] uppercase tracking-[0.2em]"
-                    style={{ color: hLive ? AMBER_CSS : statusColor(h.kind) }}
-                  >
-                    {hLive ? hLive.railText : h.status}
-                  </span>
-                </button>
-              );
-            })}
-            <p className="border-l border-[var(--line)] px-3 py-[7px] font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-              + corridor slots reserved
-            </p>
-          </div>
+                <p className="mt-3 border-l border-[var(--line)] px-3 py-[7px] font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+                  Corridors
+                </p>
+                {HOTSPOTS.map((h) => {
+                  const hLive = liveFor(h.id);
+                  return (
+                    <button
+                      key={h.id}
+                      onClick={() => (selected === h.id ? closePanel() : focusHotspot(h))}
+                      className={`flex items-center justify-between gap-6 border-l px-3 py-[7px] text-left transition-colors duration-[var(--dur-micro)] ${
+                        selected === h.id
+                          ? "border-[#d4a157] bg-[rgba(212,161,87,0.08)]"
+                          : "border-[var(--line)] hover:border-[var(--line-2)] hover:bg-[rgba(232,235,232,0.03)]"
+                      }`}
+                    >
+                      <span className={`font-mono text-[10px] uppercase tracking-[0.2em] ${selected === h.id ? "text-[var(--ink)]" : "text-[var(--ink-2)]"}`}>
+                        {h.title}
+                      </span>
+                      <span
+                        className="font-mono text-[9px] uppercase tracking-[0.2em]"
+                        style={{ color: hLive ? AMBER_CSS : statusColor(h.kind) }}
+                      >
+                        {hLive ? hLive.railText : h.status}
+                      </span>
+                    </button>
+                  );
+                })}
+                <p className="border-l border-[var(--line)] px-3 py-[7px] font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+                  + corridors onboarding · pro feeds on request
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         )}
 
         {/* live benchmark ticker */}
@@ -1148,7 +1296,7 @@ export default function OilTrackerCore({
                   : "absolute bottom-12 right-0 top-14 flex w-[340px] flex-col border-l border-[var(--line)] bg-[rgba(11,13,13,0.88)] px-6 py-6 backdrop-blur-md"
               }
             >
-              <div className={narrow ? "" : "min-h-0 flex-1 overflow-y-auto"}>
+              <div className={narrow ? "" : "min-h-0 flex-1 overflow-y-auto overflow-x-hidden"}>
               <div className="flex items-start justify-between">
                 <div>
                   <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
@@ -1167,29 +1315,41 @@ export default function OilTrackerCore({
 
               <p
                 className="mt-2 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em]"
-                style={{ color: selLive ? AMBER_CSS : statusColor(sel.kind) }}
+                style={{
+                  color: selLive
+                    ? AMBER_CSS
+                    : selIsWatchlist
+                      ? "var(--ink-3)"
+                      : selIsConnecting
+                        ? "var(--ink-2)"
+                        : statusColor(sel.kind),
+                }}
               >
                 <span aria-hidden className="inline-block h-1 w-1 rounded-full" style={{ background: "currentColor" }} />
                 {selLive ? selLive.statusText : sel.status}
               </p>
 
               <div className="mt-5">
-                <p className={`font-mono ${selLive ? "text-3xl text-[var(--ink)]" : sel.kind === "reserved" ? "text-xl text-[var(--ink-3)]" : "text-3xl text-[var(--ink)]"}`}>
-                  {selLive ? selLive.metric : sel.metric}
+                <p className={`font-mono ${selLive ? "text-3xl text-[var(--ink)]" : "text-xl text-[var(--ink-3)]"}`}>
+                  {selLive ? selLive.metric : "—"}
                 </p>
                 <p className="mt-1 text-[11px] leading-relaxed text-[var(--ink-3)]">
-                  {selLive ? selLive.metricLabel : sel.metricLabel}
+                  {selLive
+                    ? selLive.metricLabel
+                    : selIsWatchlist
+                      ? "No live feed connected"
+                      : "Feed connecting — retrying automatically"}
                 </p>
               </div>
 
-              {(selLive ? selLive.rows : sel.rows).length > 0 && (
+              {(selLive ? selLive.rows.length > 0 : selLocks.length > 0) && (
                 <div className="mt-5 flex flex-col gap-3">
-                  {(selLive ? selLive.rows : sel.rows).map((r) => (
+                  {selLive?.rows.map((r) => (
                     <div key={r.k}>
-                      <div className="flex items-baseline justify-between">
-                        <p className="text-[11px] text-[var(--ink-2)]">{r.k}</p>
+                      <div className="flex items-baseline justify-between gap-3">
+                        <p className="min-w-0 truncate text-[11px] text-[var(--ink-2)]">{r.k}</p>
                         <p
-                          className="font-mono text-[10px] uppercase tracking-[0.15em]"
+                          className="whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.15em]"
                           style={{ color: r.warm ? AMBER_CSS : "var(--ink)" }}
                         >
                           {r.v}
@@ -1206,24 +1366,45 @@ export default function OilTrackerCore({
                       </div>
                     </div>
                   ))}
+                  {selLocks.map((r) => (
+                    <button
+                      key={r.k}
+                      type="button"
+                      onClick={() => setProContact(r.context)}
+                      aria-label={`Unlock ${r.k} — contact for pro access`}
+                      className="text-left"
+                    >
+                      <div className="flex items-baseline justify-between">
+                        <p className="text-[11px] text-[var(--ink-2)]">{r.k}</p>
+                        <p
+                          className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.15em]"
+                          style={{ color: AMBER_CSS, opacity: 0.85 }}
+                        >
+                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden>
+                            <rect x="2" y="4.5" width="6" height="4.5" rx="0.6" stroke="currentColor" strokeWidth="0.9" />
+                            <path d="M3.3 4.5V3.2a1.7 1.7 0 0 1 3.4 0V4.5" stroke="currentColor" strokeWidth="0.9" />
+                          </svg>
+                          PRO
+                        </p>
+                      </div>
+                      <div className="mt-[6px] h-px w-full bg-[var(--line)]" />
+                    </button>
+                  ))}
                 </div>
               )}
 
-              {selLive ? (
+              {selLive && (
                 <p className="mt-6 font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
                   {selLive.seriesNote}
                 </p>
-              ) : sel.spark.length > 0 && (
-                <div className="mt-6">
-                  <Spark values={sel.spark} id={sel.id} />
-                  <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-                    {sel.kind === "demand" ? "Inferred demand pressure · 30d" : "Modeled corridor flow · 30d"}
-                  </p>
-                </div>
               )}
 
               <p className="mt-5 text-[11px] leading-relaxed text-[var(--ink-2)]">
-                {selLive ? selLive.note : sel.note}
+                {selLive
+                  ? selLive.note
+                  : selIsWatchlist
+                    ? WATCHLIST_COPY[sel.id]
+                    : "This corridor is wired to a live source; data appears after the next ingestion cycle."}
               </p>
               </div>
 
@@ -1235,12 +1416,16 @@ export default function OilTrackerCore({
                   </p>
                 ) : (
                   <p className="flex items-center justify-between border-t border-[var(--line)] pt-3 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-                    <span>Full corridor view</span>
-                    <span>Private beta</span>
+                    <span>Corridor feed</span>
+                    <span>{selIsWatchlist ? "watchlist" : "connecting"}</span>
                   </p>
                 )}
                 <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.18em] text-[var(--ink-3)] opacity-70">
-                  {selLive ? selLive.footerLine : "Modeled estimates · illustrative · not investment advice"}
+                  {selLive
+                    ? selLive.footerLine
+                    : selIsWatchlist
+                      ? "Watchlist · no live data · not investment advice"
+                      : "Awaiting live data · not investment advice"}
                 </p>
               </div>
             </motion.aside>
@@ -1262,7 +1447,7 @@ export default function OilTrackerCore({
                   : "absolute bottom-12 right-0 top-14 flex w-[340px] flex-col border-l border-[var(--line)] bg-[rgba(11,13,13,0.88)] px-6 py-6 backdrop-blur-md"
               }
             >
-              <div className={narrow ? "" : "min-h-0 flex-1 overflow-y-auto"}>
+              <div className={narrow ? "" : "min-h-0 flex-1 overflow-y-auto overflow-x-hidden"}>
               <div className="flex items-start justify-between">
                 <div>
                   <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
@@ -1317,10 +1502,10 @@ export default function OilTrackerCore({
                 <div className="mt-5 flex flex-col gap-3">
                   {benchRows.map((r) => (
                     <div key={r.k}>
-                      <div className="flex items-baseline justify-between">
-                        <p className="text-[11px] text-[var(--ink-2)]">{r.k}</p>
+                      <div className="flex items-baseline justify-between gap-3">
+                        <p className="min-w-0 truncate text-[11px] text-[var(--ink-2)]">{r.k}</p>
                         <p
-                          className="font-mono text-[10px] uppercase tracking-[0.15em]"
+                          className="whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.15em]"
                           style={{ color: r.warm ? AMBER_CSS : "var(--ink)" }}
                         >
                           {r.v}
@@ -1368,8 +1553,175 @@ export default function OilTrackerCore({
             </motion.aside>
           )}
         </AnimatePresence>
+
+        {/* pro contact / lead-capture panel */}
+        <AnimatePresence>
+          {proContact !== null && (
+            <motion.aside
+              key="pro-contact"
+              initial={narrow ? { y: 24, opacity: 0 } : { x: 28, opacity: 0 }}
+              animate={narrow ? { y: 0, opacity: 1 } : { x: 0, opacity: 1 }}
+              exit={narrow ? { y: 24, opacity: 0 } : { x: 28, opacity: 0 }}
+              transition={{ duration: DUR.base * 1.4, ease: EASE_OUT as unknown as number[] }}
+              className={
+                narrow
+                  ? "absolute inset-x-0 bottom-12 border-t border-[var(--line)] bg-[rgba(11,13,13,0.92)] px-5 pb-5 pt-4 backdrop-blur-md"
+                  : "absolute bottom-12 right-0 top-14 flex w-[340px] flex-col border-l border-[var(--line)] bg-[rgba(11,13,13,0.88)] px-6 py-6 backdrop-blur-md"
+              }
+            >
+              <ProContactPanel context={proContact} narrow={narrow} onClose={() => setProContact(null)} />
+            </motion.aside>
+          )}
+        </AnimatePresence>
       </div>
     </div>
+  );
+}
+
+/* ── pro tier lead-capture panel ──
+   Contact form only — no commercial data is faked to fill the panel
+   while we wait on a real feed. POSTs to /api/leads (backend/leadRepo);
+   states are local (idle/sending/ok/error), never fabricated. */
+function ProContactPanel({
+  context,
+  narrow,
+  onClose,
+}: {
+  context: string;
+  narrow: boolean;
+  onClose: () => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [company, setCompany] = useState(""); // honeypot — real users never see/fill this
+  const [state, setState] = useState<"idle" | "sending" | "ok" | "error">("idle");
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setState("sending");
+    try {
+      const res = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, message, context, company }),
+      });
+      if (!res.ok) throw new Error("bad status");
+      setState("ok");
+    } catch {
+      setState("error");
+    }
+  };
+
+  return (
+    <>
+      <div className={narrow ? "" : "min-h-0 flex-1 overflow-y-auto overflow-x-hidden"}>
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
+              A3RO · Pro tier
+            </p>
+            <h4 className="mt-1 text-base font-medium text-[var(--ink)]">Commercial data, on request</h4>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close contact panel"
+            className="-mr-1 -mt-1 flex h-7 w-7 items-center justify-center text-[var(--ink-3)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]"
+          >
+            ×
+          </button>
+        </div>
+
+        <p className="mt-5 text-[11px] leading-relaxed text-[var(--ink-2)]">
+          This signal runs on commercial data — satellite cargo tracking, terminal inventories, vendor feeds. We
+          onboard pro feeds per request. Leave an email and we&apos;ll come back with access options.
+        </p>
+
+        {state === "ok" ? (
+          <div className="mt-6">
+            <p className="font-mono text-[11px] uppercase tracking-[0.15em] text-[var(--ink)]">
+              RECEIVED — WE&apos;LL BE IN TOUCH.
+            </p>
+            <p className="mt-3 text-[11px] leading-relaxed text-[var(--ink-2)]">
+              Or write to us directly:{" "}
+              <a href="mailto:a3ro.helpdesk@gmail.com" style={{ color: AMBER_CSS }}>
+                a3ro.helpdesk@gmail.com
+              </a>
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-4">
+            <div>
+              <label htmlFor="pro-contact-email" className="font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+                Email
+              </label>
+              <input
+                id="pro-contact-email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="mt-2 w-full border border-[var(--line)] bg-transparent px-3 py-2 font-mono text-[11px] text-[var(--ink)] outline-none transition-colors duration-[var(--dur-micro)] focus:border-[var(--line-2)]"
+                placeholder="you@company.com"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="pro-contact-message" className="font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+                Message · optional
+              </label>
+              <textarea
+                id="pro-contact-message"
+                rows={3}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                className="mt-2 w-full resize-none border border-[var(--line)] bg-transparent px-3 py-2 font-mono text-[11px] text-[var(--ink)] outline-none transition-colors duration-[var(--dur-micro)] focus:border-[var(--line-2)]"
+                placeholder="What you need access to…"
+              />
+            </div>
+
+            {/* honeypot — hidden from real users, left unstyled visually so
+                bots filling every field still trip it */}
+            <input
+              type="text"
+              name="company"
+              tabIndex={-1}
+              autoComplete="off"
+              value={company}
+              onChange={(e) => setCompany(e.target.value)}
+              style={{ position: "absolute", left: "-9999px" }}
+              aria-hidden="true"
+            />
+
+            {state === "error" && (
+              <p className="font-mono text-[10px] text-[var(--ink-2)]">
+                Something went wrong — email us at{" "}
+                <a href="mailto:a3ro.helpdesk@gmail.com" style={{ color: AMBER_CSS }}>
+                  a3ro.helpdesk@gmail.com
+                </a>
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={state === "sending"}
+              className="border border-[var(--line-2)] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink)] transition-colors duration-[var(--dur-micro)] hover:bg-[var(--ink)] hover:text-[var(--depth-1)] disabled:opacity-50"
+            >
+              {state === "sending" ? "Sending…" : "Request access"}
+            </button>
+          </form>
+        )}
+      </div>
+
+      <div className={narrow ? "mt-4" : "mt-4 shrink-0"}>
+        <p className="flex items-center justify-between border-t border-[var(--line)] pt-3 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+          <span>Pro tier</span>
+          <span>lead capture</span>
+        </p>
+        <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.18em] text-[var(--ink-3)] opacity-70">
+          No fabricated data · commercial access on request
+        </p>
+      </div>
+    </>
   );
 }
 

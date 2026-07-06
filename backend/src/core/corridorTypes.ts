@@ -15,7 +15,7 @@
 import { Confidence } from "./types";
 
 /** Corridors we track. Extend the array + union together. */
-export const CORRIDORS = ["hormuz", "china", "singapore", "ara", "usgulf"] as const;
+export const CORRIDORS = ["hormuz", "china", "singapore", "ara", "usgulf", "suez", "bab_el_mandeb", "cape", "panama"] as const;
 export type CorridorId = (typeof CORRIDORS)[number];
 
 export function isCorridorId(x: string): x is CorridorId {

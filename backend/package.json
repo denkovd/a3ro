@@ -10,6 +10,9 @@
     "ingest": "tsx scripts/run-ingest.ts",
     "migrate": "psql \"$DATABASE_URL\" -f migrations/001_init.sql",
     "migrate:corridors": "psql \"$DATABASE_URL\" -f migrations/002_corridors.sql",
+    "migrate:leads": "psql \"$DATABASE_URL\" -f migrations/003_leads.sql",
+    "migrate:regime": "psql \"$DATABASE_URL\" -f migrations/004_regime.sql",
+    "verify:regime": "tsx scripts/verify-regime.ts",
     "test": "tsx --test tests/**/*.test.ts"
   },
   "dependencies": {

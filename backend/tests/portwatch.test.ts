@@ -33,6 +33,23 @@ describe("PortWatchSource", () => {
     };
   };
 
+  /** Tiny inline stub response reused for the "chokepoint1" (Suez) routing
+   *  assertion below — a couple of rows is enough to prove the new gate
+   *  maps to corridor "suez", without pulling in a full fixture file. */
+  const suezStubResponse = {
+    objectIdFieldName: "OBJECTID",
+    fields: [
+      { name: "date", type: "esriFieldTypeDateOnly" },
+      { name: "n_tanker", type: "esriFieldTypeInteger" },
+      { name: "capacity_tanker", type: "esriFieldTypeInteger" },
+    ],
+    exceededTransferLimit: true,
+    features: [
+      { attributes: { date: "2026-06-28", n_tanker: 22, capacity_tanker: 2_800_000 } },
+      { attributes: { date: "2026-06-27", n_tanker: 19, capacity_tanker: 2_500_000 } },
+    ],
+  };
+
   test("tonsToMegatons divides by 1_000_000", () => {
     assert.equal(tonsToMegatons(2_400_000), 2.4);
     assert.equal(tonsToMegatons(0), 0);
@@ -69,6 +86,56 @@ describe("PortWatchSource", () => {
       assert.ok(sgJun28);
       assert.equal(sgJun28.value, 55);
       assert.deepEqual(sgJun28.meta, { portid: "chokepoint5", portname: "Malacca Strait" });
+    } finally {
+      teardownTest();
+    }
+  });
+
+  test("descriptor.corridors covers all six live-gated chokepoints", () => {
+    const source = new PortWatchSource();
+    assert.deepEqual(source.descriptor.corridors, [
+      "hormuz",
+      "singapore",
+      "suez",
+      "bab_el_mandeb",
+      "cape",
+      "panama",
+    ]);
+  });
+
+  test("stub response routed for chokepoint1 produces corridor \"suez\" records", async () => {
+    setupTest();
+    try {
+      global.fetch = async (url: string | URL) => {
+        const urlStr = String(url);
+        if (urlStr.includes("chokepoint1")) {
+          return new Response(JSON.stringify(suezStubResponse), { status: 200 });
+        }
+        return new Response(JSON.stringify({ features: [] }), { status: 200 });
+      };
+
+      const source = new PortWatchSource();
+      const records = await source.fetchLatest();
+
+      const suezTransits = records.filter(
+        (r) => r.corridor === "suez" && r.metric === "tanker_transits",
+      );
+      assert.equal(suezTransits.length, 2);
+      const jun28 = suezTransits.find((r) => r.periodDate === "2026-06-28");
+      assert.ok(jun28);
+      assert.equal(jun28.value, 22);
+      assert.equal(jun28.corridor, "suez");
+      assert.deepEqual(jun28.meta, { portid: "chokepoint1", portname: "Suez Canal" });
+
+      const suezVolume = records.filter(
+        (r) => r.corridor === "suez" && r.metric === "tanker_volume",
+      );
+      assert.equal(suezVolume.length, 2);
+      assert.equal(suezVolume.find((r) => r.periodDate === "2026-06-28")?.value, tonsToMegatons(2_800_000));
+
+      // No other configured chokepoint should have picked up suez rows.
+      const nonSuez = records.filter((r) => r.corridor !== "suez");
+      assert.equal(nonSuez.length, 0);
     } finally {
       teardownTest();
     }
