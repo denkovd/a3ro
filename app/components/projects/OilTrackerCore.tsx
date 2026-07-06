@@ -20,6 +20,7 @@ import {
   type OTView, type Rot,
 } from "./oilTrackerShared";
 import { FLOW_ROUTES, GATE_EIA_EST_MBD, type FlowTier } from "./flowRoutes";
+import { PRODUCERS, PRODUCERS_SOURCE, type Producer, type ProducerLayerMode } from "./producers";
 import useOilData from "./useOilData";
 import { formatPctSigned, formatUsdBbl, formatUtcDateTime, formatUtcTime, isUtcToday } from "./oilFormat";
 import type { Benchmark, CorridorId, CorridorMetricLatest, DailyPrice, LatestQuote } from "@a3ro/oil-backend";
@@ -31,6 +32,10 @@ type Hotspot = {
   lon: number; lat: number; kind: HotspotKind; zoom: number;
   corridor: string; title: string; status: string;
 };
+
+/* discriminated hitTest result — hotspots and producer markers share
+   the same nearest-wins pointer hit-test (Section §4b). */
+type HitResult = { type: "hotspot"; h: Hotspot } | { type: "producer"; p: Producer };
 
 const HOTSPOTS: Hotspot[] = [
   {
@@ -306,6 +311,7 @@ export default function OilTrackerCore({
   const [touched, setTouched] = useState(false);
   const [narrow, setNarrow] = useState(false);
   const [proContact, setProContact] = useState<string | null>(null);
+  const [producerMode, setProducerMode] = useState<ProducerLayerMode>("off");
 
   const sim = useRef<Sim>({
     lon: initialView?.lon ?? 97,
@@ -325,9 +331,11 @@ export default function OilTrackerCore({
   const selectedRef = useRef<string | null>(null);
   const proContactRef = useRef<string | null>(null);
   const reducedRef = useRef(false);
+  const producerModeRef = useRef<ProducerLayerMode>("off");
   reducedRef.current = !!reduced;
   selectedRef.current = selected;
   proContactRef.current = proContact;
+  producerModeRef.current = producerMode;
 
   const tweenTo = useCallback((to: Partial<Tween["to"]>, dur = 1150) => {
     const s = sim.current;
@@ -354,11 +362,29 @@ export default function OilTrackerCore({
     );
   }, [tweenTo]);
 
+  const focusProducer = useCallback((p: Producer) => {
+    setSelected("prod:" + p.id);
+    setProContact(null);
+    setTouched(true);
+    hasMoved.current = true;
+    sim.current.lastInteract = performance.now();
+    const isNarrow = size.current.w < 640;
+    tweenTo(
+      { lon: p.lon, lat: clamp(p.lat, -48, 48), zoom: Math.max(sim.current.zoom, 1.25), off: isNarrow ? 0 : -0.14 },
+      1000
+    );
+  }, [tweenTo]);
+
   const feed = useOilData();
 
   /* benchmarks reuse the existing `selected` state via "bench:WTI" / "bench:BRENT" ids */
   const benchSel: Benchmark | null =
     selected === "bench:WTI" ? "WTI" : selected === "bench:BRENT" ? "BRENT" : null;
+
+  /* producers reuse the existing `selected` state via "prod:<id>" ids */
+  const prodSel: Producer | null = selected?.startsWith("prod:")
+    ? PRODUCERS.find((p) => p.id === selected.slice(5)) ?? null
+    : null;
 
   const focusBenchmark = useCallback((b: Benchmark) => {
     setSelected(`bench:${b}`);
@@ -491,16 +517,24 @@ export default function OilTrackerCore({
       return { x: cx + o[0] * R, y: cy - o[1] * R, z: o[2] };
     };
 
-    const hitTest = (mx: number, my: number): Hotspot | null => {
+    const hitTest = (mx: number, my: number): HitResult | null => {
       const { s, cx, cy, R } = frame();
       const rot = rotator(s.lon, s.lat);
-      let best: Hotspot | null = null;
+      let best: HitResult | null = null;
       let bestD = 18;
       for (const hs of HOTSPOTS) {
         const p = project(rot, vec(hs.lon, hs.lat), cx, cy, R);
         if (p.z < 0.12) continue;
         const d = Math.hypot(p.x - mx, p.y - my);
-        if (d < bestD) { bestD = d; best = hs; }
+        if (d < bestD) { bestD = d; best = { type: "hotspot", h: hs }; }
+      }
+      if (producerModeRef.current !== "off") {
+        for (const prod of PRODUCERS) {
+          const pp = project(rot, vec(prod.lon, prod.lat), cx, cy, R);
+          if (pp.z <= 0.15) continue;
+          const d = Math.hypot(pp.x - mx, pp.y - my);
+          if (d < bestD) { bestD = d; best = { type: "producer", p: prod }; }
+        }
       }
       return best;
     };
@@ -702,6 +736,79 @@ export default function OilTrackerCore({
         ctx.fillStyle = INK(a * 0.8);
         const liveSuffix = tk.gate ? gateSubsRef.current[tk.gate] ?? "" : "";
         haloText(`${tk.label}${liveSuffix}`, sx + 6, sy + 2.5);
+      }
+
+      /* producers overlay (toggleable) — country markers sized by
+         production or reserves. No ramp needed; alpha follows each
+         point's own z-fade. Skipped entirely when the layer is off. */
+      const pMode = producerModeRef.current;
+      if (pMode !== "off") {
+        const rScale = Math.min(1.25, Math.max(0.8, R / 260));
+        const drawnLabelRects: [number, number, number, number][] = [];
+        const intersects = (
+          a: [number, number, number, number],
+          b: [number, number, number, number],
+        ) => a[0] < b[0] + b[2] && a[0] + a[2] > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1];
+
+        ctx.font = '500 8px "JetBrains Mono", ui-monospace, monospace';
+        const sortedProducers = [...PRODUCERS].sort((a, b) => {
+          const va = pMode === "production" ? a.productionMbd : a.reservesBbl;
+          const vb = pMode === "production" ? b.productionMbd : b.reservesBbl;
+          return vb - va;
+        });
+
+        for (const prod of sortedProducers) {
+          rot(...vec(prod.lon, prod.lat), o);
+          if (o[2] <= 0.15) continue;
+          const sx = cx + o[0] * R, sy = cy - o[1] * R;
+          const fade = Math.min(1, (o[2] - 0.15) / 0.3);
+          const alpha = 0.9 * fade;
+          if (alpha <= 0.01) continue;
+
+          const v = pMode === "production" ? prod.productionMbd : prod.reservesBbl;
+          const r =
+            (pMode === "production" ? 3 + Math.sqrt(v) * 2.3 : 3 + Math.sqrt(v) * 0.62) * rScale;
+
+          ctx.strokeStyle = AMB(0.5 * alpha);
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(sx, sy, r, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.fillStyle = AMB(0.06 * alpha);
+          ctx.fill();
+          ctx.fillStyle = AMB(0.7 * alpha);
+          ctx.beginPath();
+          ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          const isSelProd = selectedRef.current === "prod:" + prod.id;
+          if (isSelProd) {
+            const b = r + 6;
+            ctx.strokeStyle = AMB(0.85 * alpha);
+            ctx.lineWidth = 1;
+            for (const [dx, dy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) {
+              ctx.beginPath();
+              ctx.moveTo(sx + dx * b, sy + dy * b - dy * 5);
+              ctx.lineTo(sx + dx * b, sy + dy * b);
+              ctx.lineTo(sx + dx * b - dx * 5, sy + dy * b);
+              ctx.stroke();
+            }
+          }
+
+          const label =
+            pMode === "production"
+              ? `${prod.name} · ${v.toFixed(1)} MB/D`
+              : `${prod.name} · ${v.toFixed(0)}B BBL`;
+          const lx = sx + r + 5, ly = sy + 3;
+          const width = ctx.measureText(label).width;
+          const rect: [number, number, number, number] = [lx, ly - 8, width, 10];
+          const collides = drawnLabelRects.some((dr) => intersects(rect, dr));
+          if (!collides) {
+            ctx.fillStyle = INK(0.75 * fade);
+            haloText(label, lx, ly);
+            drawnLabelRects.push(rect);
+          }
+        }
       }
 
       /* hotspots — title font scales with globe radius R (Section C6),
@@ -943,9 +1050,9 @@ export default function OilTrackerCore({
       s.lastInteract = performance.now();
     } else {
       const hit = (canvasRef.current as unknown as {
-        __hit?: (x: number, y: number) => Hotspot | null;
+        __hit?: (x: number, y: number) => HitResult | null;
       })?.__hit?.(p.x, p.y);
-      s.hovered = hit ? hit.id : null;
+      s.hovered = hit ? (hit.type === "hotspot" ? hit.h.id : "prod:" + hit.p.id) : null;
       e.currentTarget.style.cursor = hit ? "pointer" : "grab";
     }
   };
@@ -961,9 +1068,12 @@ export default function OilTrackerCore({
     if (s.movedPx < 6) {
       const p = local(e);
       const hit = (canvasRef.current as unknown as {
-        __hit?: (x: number, y: number) => Hotspot | null;
+        __hit?: (x: number, y: number) => HitResult | null;
       })?.__hit?.(p.x, p.y);
-      if (hit) focusHotspot(hit);
+      if (hit) {
+        if (hit.type === "hotspot") focusHotspot(hit.h);
+        else focusProducer(hit.p);
+      }
     }
   };
 
@@ -1072,7 +1182,7 @@ export default function OilTrackerCore({
   /* Section C9: the wide-screen corridor index rail hides while ANY
      right panel (corridor, benchmark, or pro-contact) is open — it
      would otherwise sit underneath/behind the panel on wide screens. */
-  const panelOpen = sel !== null || benchSel !== null || proContact !== null;
+  const panelOpen = sel !== null || benchSel !== null || prodSel !== null || proContact !== null;
 
   return (
     <div ref={wrapRef} className={`relative overflow-hidden ${className}`} data-lenis-prevent="">
@@ -1264,6 +1374,30 @@ export default function OilTrackerCore({
                 : "—"}
             </p>
           </div>
+        </div>
+
+        {/* producers overlay toggle */}
+        <div className="pointer-events-none absolute bottom-24 right-6 z-10 flex flex-col items-end gap-1 md:right-10">
+          <button
+            type="button"
+            onClick={() =>
+              setProducerMode((m) => (m === "off" ? "production" : m === "production" ? "reserves" : "off"))
+            }
+            aria-label="Toggle producer overlay"
+            className="pointer-events-auto border border-[var(--line)] px-3 py-[6px] font-mono text-[9px] uppercase tracking-[0.25em] transition-colors duration-[var(--dur-micro)] hover:border-[var(--line-2)]"
+            style={{ color: producerMode === "off" ? "var(--ink-3)" : AMBER_CSS }}
+          >
+            {producerMode === "off"
+              ? "Producers · off"
+              : producerMode === "production"
+                ? "Producers · output"
+                : "Producers · reserves"}
+          </button>
+          {producerMode !== "off" && (
+            <p className="pointer-events-none font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+              {PRODUCERS_SOURCE}
+            </p>
+          )}
         </div>
 
         {/* interaction hint */}
@@ -1548,6 +1682,134 @@ export default function OilTrackerCore({
                 </p>
                 <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.18em] text-[var(--ink-3)] opacity-70">
                   Live benchmark data · not investment advice
+                </p>
+              </div>
+            </motion.aside>
+          )}
+        </AnimatePresence>
+
+        {/* producer signal panel */}
+        <AnimatePresence>
+          {prodSel && (
+            <motion.aside
+              key={prodSel.id}
+              initial={narrow ? { y: 24, opacity: 0 } : { x: 28, opacity: 0 }}
+              animate={narrow ? { y: 0, opacity: 1 } : { x: 0, opacity: 1 }}
+              exit={narrow ? { y: 24, opacity: 0 } : { x: 28, opacity: 0 }}
+              transition={{ duration: DUR.base * 1.4, ease: EASE_OUT as unknown as number[] }}
+              className={
+                narrow
+                  ? "absolute inset-x-0 bottom-12 border-t border-[var(--line)] bg-[rgba(11,13,13,0.92)] px-5 pb-5 pt-4 backdrop-blur-md"
+                  : "absolute bottom-12 right-0 top-14 flex w-[340px] flex-col border-l border-[var(--line)] bg-[rgba(11,13,13,0.88)] px-6 py-6 backdrop-blur-md"
+              }
+            >
+              <div className={narrow ? "" : "min-h-0 flex-1 overflow-y-auto overflow-x-hidden"}>
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
+                    Producer
+                  </p>
+                  <h4 className="mt-1 text-base font-medium text-[var(--ink)]">{prodSel.name}</h4>
+                </div>
+                <button
+                  onClick={closePanel}
+                  aria-label="Close producer detail"
+                  className="-mr-1 -mt-1 flex h-7 w-7 items-center justify-center text-[var(--ink-3)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]"
+                >
+                  ×
+                </button>
+              </div>
+
+              <p
+                className="mt-2 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em]"
+                style={{ color: "var(--ink-2)" }}
+              >
+                <span aria-hidden className="inline-block h-1 w-1 rounded-full" style={{ background: "currentColor" }} />
+                Annual reference
+              </p>
+
+              <div className="mt-5">
+                <p className="font-mono text-3xl text-[var(--ink)]">
+                  {producerMode === "reserves"
+                    ? `${prodSel.reservesBbl.toFixed(0)}B bbl`
+                    : `${prodSel.productionMbd.toFixed(1)} Mb/d`}
+                </p>
+                <p className="mt-1 text-[11px] leading-relaxed text-[var(--ink-3)]">
+                  {producerMode === "reserves"
+                    ? "Proven reserves · end-2024 · OPEC ASB 2025"
+                    : "Crude + condensate output · 2025 est. · EIA"}
+                </p>
+              </div>
+
+              <div className="mt-5 flex flex-col gap-3">
+                {[
+                  {
+                    k: "Production · 2025 est.",
+                    v: `${prodSel.productionMbd.toFixed(1)} Mb/d`,
+                    // bar divisor is a display scaler vs the largest producer (US, ~13.6 Mb/d), not a physical limit.
+                    bar: clamp(prodSel.productionMbd / 14, 0, 1),
+                  },
+                  {
+                    k: "Proven reserves · end-2024",
+                    v: `${prodSel.reservesBbl.toFixed(0)}B bbl`,
+                    // bar divisor is a display scaler vs the largest producer (Venezuela, 303B bbl), not a physical limit.
+                    bar: clamp(prodSel.reservesBbl / 310, 0, 1),
+                  },
+                ].map((r) => (
+                  <div key={r.k}>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <p className="min-w-0 truncate text-[11px] text-[var(--ink-2)]">{r.k}</p>
+                      <p className="whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.15em] text-[var(--ink)]">
+                        {r.v}
+                      </p>
+                    </div>
+                    <div className="mt-[6px] h-px w-full bg-[var(--depth-3)]">
+                      <motion.div
+                        className="h-px"
+                        style={{ background: AMBER_CSS, opacity: 0.6 }}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${r.bar * 100}%` }}
+                        transition={{ duration: DUR.reveal, delay: 0.15, ease: EASE_OUT as unknown as number[] }}
+                      />
+                    </div>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setProContact(`producer-${prodSel.id}`)}
+                  aria-label="Unlock Field-level output & grades — contact for pro access"
+                  className="text-left"
+                >
+                  <div className="flex items-baseline justify-between">
+                    <p className="text-[11px] text-[var(--ink-2)]">Field-level output &amp; grades</p>
+                    <p
+                      className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.15em]"
+                      style={{ color: AMBER_CSS, opacity: 0.85 }}
+                    >
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden>
+                        <rect x="2" y="4.5" width="6" height="4.5" rx="0.6" stroke="currentColor" strokeWidth="0.9" />
+                        <path d="M3.3 4.5V3.2a1.7 1.7 0 0 1 3.4 0V4.5" stroke="currentColor" strokeWidth="0.9" />
+                      </svg>
+                      PRO
+                    </p>
+                  </div>
+                  <div className="mt-[6px] h-px w-full bg-[var(--line)]" />
+                </button>
+              </div>
+
+              <p className="mt-5 text-[11px] leading-relaxed text-[var(--ink-2)]">
+                Static annual reference — reserves and output move yearly, not daily. Live field-level production,
+                export grades, and loading programs are commercial data.
+              </p>
+              </div>
+
+              <div className={narrow ? "mt-4" : "mt-4 shrink-0"}>
+                <p className="flex items-center justify-between border-t border-[var(--line)] pt-3 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+                  <span>Reference data</span>
+                  <span>annual</span>
+                </p>
+                <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.18em] text-[var(--ink-3)] opacity-70">
+                  OPEC ASB 2025 · EIA · not investment advice
                 </p>
               </div>
             </motion.aside>
