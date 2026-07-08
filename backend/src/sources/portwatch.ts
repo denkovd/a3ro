@@ -39,6 +39,10 @@
    each publication carries daily datapoints. Daily values are noisy
    (e.g. 12→10→20 tankers/day at Hormuz), which is why this adapter
    also emits 7-day-average metrics alongside the daily ones.
+
+   CHOKEPOINTS (below) is exported for sources/portwatchBaselines.ts,
+   which reuses this same gate list/portid↔corridor mapping for its
+   longer-lookback historical-statistics queries against this endpoint.
 ──────────────────────────────────────────────────────────────── */
 
 import { SourceErrorKind } from "../core/types";
@@ -60,7 +64,7 @@ interface ChokepointConfig {
   portname: string;
 }
 
-const CHOKEPOINTS: ChokepointConfig[] = [
+export const CHOKEPOINTS: ChokepointConfig[] = [
   { corridor: "hormuz", portid: "chokepoint6", portname: "Strait of Hormuz" },
   { corridor: "singapore", portid: "chokepoint5", portname: "Malacca Strait" },
   { corridor: "suez", portid: "chokepoint1", portname: "Suez Canal" },

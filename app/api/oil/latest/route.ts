@@ -5,6 +5,8 @@ import { createDb, getLatestQuotes, classifyStaleness, buildSources } from "@a3r
 // REQUIRED: `pg` speaks raw TCP, which Vercel's Edge runtime cannot do.
 // Every route/cron handler that touches storage/ must pin the Node runtime.
 export const runtime = "nodejs";
+// Never statically pre-render at build time — hits the live DB. Runtime-only.
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {

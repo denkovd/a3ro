@@ -8,6 +8,9 @@
    CorridorId — pulling a value from "@a3ro/oil-backend" here would
    drag the pg-backed package into this bundle (same rule oilFormat/
    OilTrackerCore already follow for the corridor-metrics domain).
+
+   The Russia → India · Suez route reflects post-2022 trade
+   reorientation (published context, not live data).
 ──────────────────────────────────────────────────────────────── */
 import type { CorridorId } from "@a3ro/oil-backend";
 
@@ -97,6 +100,58 @@ export const FLOW_ROUTES: FlowRoute[] = [
     pts: [
       [5, 3.5], [-2, 5], [-10, 10], [-14, 18], [-15, 27], [-13, 35], [-9, 42],
       [-4, 47], [4.3, 51.9],
+    ],
+  },
+  {
+    id: "russia_india_suez",
+    name: "RUSSIA → INDIA · SUEZ",
+    tier: "medium",
+    gates: ["suez", "bab_el_mandeb"],
+    pts: [
+      [37.8, 44.6], [33, 42], [29, 41], [26, 39], [25, 36], [28, 33.5],
+      [32.4, 30], [36, 24], [38, 20], [43.4, 12.6], [48, 11], [55, 10],
+      [63, 13], [72.8, 18.9],
+    ],
+  },
+  {
+    id: "russia_baltic_asia",
+    name: "RUSSIA BALTIC → ASIA · CAPE",
+    tier: "thin",
+    gates: ["cape"],
+    pts: [
+      [28.7, 60.3], [24, 58.5], [18, 56.5], [12.5, 56], [8, 57.5], [4, 58],
+      [-2, 55], [-6, 50], [-11, 42], [-14, 30], [-12, 15], [-6, 0], [2, -15],
+      [12, -28], [19, -35], [32, -30], [45, -18], [58, -5], [68, 8], [72.8, 18.9],
+    ],
+  },
+  {
+    id: "waf_china",
+    name: "W. AFRICA → CHINA · CAPE",
+    tier: "thin",
+    gates: ["cape", "singapore"],
+    pts: [
+      [5, 3.5], [2, -6], [8, -18], [14, -28], [19, -35], [32, -30], [48, -18],
+      [65, -8], [80, -2], [92, 0], [100.5, 3], [104.2, 1.2], [110, 7], [117, 20], [122, 29],
+    ],
+  },
+  {
+    id: "venezuela_asia",
+    name: "VENEZUELA → ASIA · CAPE",
+    tier: "thin",
+    gates: ["cape", "singapore"],
+    pts: [
+      [-64.5, 10.5], [-55, 10], [-42, 3], [-28, -8], [-12, -20], [2, -30],
+      [19, -35], [35, -27], [52, -12], [70, -3], [85, 0], [100.5, 3],
+      [104.2, 1.2], [113, 13], [122, 29],
+    ],
+  },
+  {
+    id: "northsea_ara",
+    name: "NORTH SEA → ARA",
+    tier: "thin",
+    gates: [],
+    pts: [
+      [1.5, 60.5], [2.2, 58], [3, 55], [3.8, 53.3], [4.3, 51.9],
     ],
   },
 ];

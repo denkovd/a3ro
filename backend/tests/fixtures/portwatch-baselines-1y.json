@@ -1,0 +1,90 @@
+{
+  "fields": [
+    { "name": "portid", "type": "esriFieldTypeString" },
+    { "name": "avg_transits", "type": "esriFieldTypeDouble" },
+    { "name": "avg_volume", "type": "esriFieldTypeDouble" },
+    { "name": "p10_transits", "type": "esriFieldTypeDouble" },
+    { "name": "p90_transits", "type": "esriFieldTypeDouble" },
+    { "name": "p10_volume", "type": "esriFieldTypeDouble" },
+    { "name": "p90_volume", "type": "esriFieldTypeDouble" }
+  ],
+  "features": [
+    {
+      "attributes": {
+        "portid": "chokepoint6",
+        "avg_transits": "20",
+        "avg_volume": 2600000,
+        "p10_transits": 11,
+        "p90_transits": 34,
+        "p10_volume": 900000,
+        "p90_volume": 4100000
+      }
+    },
+    {
+      "attributes": {
+        "portid": "chokepoint5",
+        "avg_transits": 52.3,
+        "avg_volume": 3200000.5,
+        "p10_transits": 40,
+        "p90_transits": 65,
+        "p10_volume": 2100000,
+        "p90_volume": 4500000
+      }
+    },
+    {
+      "attributes": {
+        "portid": "chokepoint1",
+        "avg_transits": 30.1,
+        "avg_volume": 2900000,
+        "p10_transits": 18,
+        "p90_transits": 42,
+        "p10_volume": 1500000,
+        "p90_volume": 4000000
+      }
+    },
+    {
+      "attributes": {
+        "portid": "chokepoint4",
+        "avg_transits": 14.6,
+        "avg_volume": 1800000,
+        "p10_transits": 8,
+        "p90_transits": 22,
+        "p10_volume": 700000,
+        "p90_volume": 2600000
+      }
+    },
+    {
+      "attributes": {
+        "portid": "chokepoint7",
+        "avg_transits": 9.2,
+        "avg_volume": 1200000,
+        "p10_transits": 4,
+        "p90_transits": 15,
+        "p10_volume": 400000,
+        "p90_volume": 1900000
+      }
+    },
+    {
+      "attributes": {
+        "portid": "chokepoint2",
+        "avg_transits": 18.4,
+        "avg_volume": 2100000,
+        "p10_transits": 10,
+        "p90_transits": 27,
+        "p10_volume": 950000,
+        "p90_volume": 3000000
+      }
+    },
+    {
+      "attributes": {
+        "portid": "chokepoint99",
+        "avg_transits": 5,
+        "avg_volume": 500000,
+        "p10_transits": 2,
+        "p90_transits": 8,
+        "p10_volume": 200000,
+        "p90_volume": 800000
+      }
+    }
+  ]
+}

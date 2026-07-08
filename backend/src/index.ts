@@ -20,6 +20,7 @@ export { CorridorBaseSource } from "./sources/CorridorSource";
 export { EiaUsGulfSource } from "./sources/eiaCorridor";
 export { PortWatchSource, tonsToMegatons } from "./sources/portwatch";
 export { buildCorridorSources, getCorridorSource } from "./sources/corridorRegistry";
+export { fetchGateBaselines } from "./sources/portwatchBaselines";
 
 export { createDb } from "./storage/db";
 export type { Queryable } from "./storage/db";
@@ -30,6 +31,9 @@ export {
 export {
   insertCorridorMetrics, getLatestCorridorMetrics,
 } from "./storage/corridorRepo";
+export {
+  upsertBaselines, getBaselines, getBaselineAgeDays,
+} from "./storage/baselineRepo";
 export {
   getUndeliveredAlertEvents, markAlertEventDelivered,
 } from "./storage/alertRepo";
@@ -60,6 +64,8 @@ export { runIngestionCycle } from "./ingest/pipeline";
 export type { CycleReport } from "./ingest/pipeline";
 export { runCorridorCycle } from "./ingest/corridorPipeline";
 export type { CorridorCycleReport } from "./ingest/corridorPipeline";
+export { runBaselineCycle } from "./ingest/baselineCycle";
+export type { BaselineCycleReport } from "./ingest/baselineCycle";
 export { resolveLatestQuote, resolveDailyClose, DISAGREEMENT_TOLERANCE, SUSPECT_DEVIATION } from "./ingest/resolve";
 export { evaluateRule } from "./alerts/rules";
 export type { AlertRule, AlertState, EvalContext } from "./alerts/rules";

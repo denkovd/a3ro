@@ -48,3 +48,21 @@ export interface CorridorMetricLatest {
   observedAt: string;
   updatedAt: string;
 }
+
+/** Historical baseline lookback windows for chokepoint gates. */
+export type BaselineWindow = "1y" | "5y";
+
+/** One (corridor, metric, win) historical norm row — 1y/5y mean/p10/p90,
+ *  plus year-over-year drift (1y rows only). See migrations/005_baselines.sql. */
+export interface CorridorBaseline {
+  corridor: CorridorId;
+  metric: string;
+  win: BaselineWindow;
+  meanValue: number;
+  p10: number | null;
+  p90: number | null;
+  yoyPct: number | null;
+  sampleFrom: string;
+  sampleTo: string;
+  computedAt: string;
+}

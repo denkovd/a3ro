@@ -1,0 +1,44 @@
+{
+  "fields": [
+    { "name": "portid", "type": "esriFieldTypeString" },
+    { "name": "avg_transits", "type": "esriFieldTypeDouble" },
+    { "name": "avg_volume", "type": "esriFieldTypeDouble" }
+  ],
+  "features": [
+    {
+      "attributes": {
+        "portid": "chokepoint6",
+        "avg_transits": 16,
+        "avg_volume": 2000000
+      }
+    },
+    {
+      "attributes": {
+        "portid": "chokepoint5",
+        "avg_transits": 50.0,
+        "avg_volume": 3100000
+      }
+    },
+    {
+      "attributes": {
+        "portid": "chokepoint1",
+        "avg_transits": 28.0,
+        "avg_volume": 2750000
+      }
+    },
+    {
+      "attributes": {
+        "portid": "chokepoint4",
+        "avg_transits": 0,
+        "avg_volume": 0
+      }
+    },
+    {
+      "attributes": {
+        "portid": "chokepoint2",
+        "avg_transits": 17.9,
+        "avg_volume": 2050000
+      }
+    }
+  ]
+}

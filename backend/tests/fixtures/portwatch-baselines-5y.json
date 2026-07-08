@@ -1,0 +1,79 @@
+{
+  "fields": [
+    { "name": "portid", "type": "esriFieldTypeString" },
+    { "name": "avg_transits", "type": "esriFieldTypeDouble" },
+    { "name": "avg_volume", "type": "esriFieldTypeDouble" },
+    { "name": "p10_transits", "type": "esriFieldTypeDouble" },
+    { "name": "p90_transits", "type": "esriFieldTypeDouble" },
+    { "name": "p10_volume", "type": "esriFieldTypeDouble" },
+    { "name": "p90_volume", "type": "esriFieldTypeDouble" }
+  ],
+  "features": [
+    {
+      "attributes": {
+        "portid": "chokepoint6",
+        "avg_transits": 17.8,
+        "avg_volume": 2300000,
+        "p10_transits": 9,
+        "p90_transits": 30,
+        "p10_volume": 800000,
+        "p90_volume": 3800000
+      }
+    },
+    {
+      "attributes": {
+        "portid": "chokepoint5",
+        "avg_transits": 48.9,
+        "avg_volume": 3000000,
+        "p10_transits": 36,
+        "p90_transits": 60,
+        "p10_volume": 1900000,
+        "p90_volume": 4200000
+      }
+    },
+    {
+      "attributes": {
+        "portid": "chokepoint1",
+        "avg_transits": 27.5,
+        "avg_volume": 2700000,
+        "p10_transits": 16,
+        "p90_transits": 39,
+        "p10_volume": 1400000,
+        "p90_volume": 3700000
+      }
+    },
+    {
+      "attributes": {
+        "portid": "chokepoint4",
+        "avg_transits": 13.9,
+        "avg_volume": 1700000,
+        "p10_transits": 7,
+        "p90_transits": 20,
+        "p10_volume": 650000,
+        "p90_volume": 2400000
+      }
+    },
+    {
+      "attributes": {
+        "portid": "chokepoint7",
+        "avg_transits": 8.4,
+        "avg_volume": 1100000,
+        "p10_transits": 3,
+        "p90_transits": 13,
+        "p10_volume": 350000,
+        "p90_volume": 1700000
+      }
+    },
+    {
+      "attributes": {
+        "portid": "chokepoint2",
+        "avg_transits": 17.1,
+        "avg_volume": 1950000,
+        "p10_transits": 9,
+        "p90_transits": 25,
+        "p10_volume": 880000,
+        "p90_volume": 2800000
+      }
+    }
+  ]
+}

@@ -5,6 +5,8 @@ import { createDb, insertLead } from "@a3ro/oil-backend";
 // REQUIRED: `pg` speaks raw TCP, which Vercel's Edge runtime cannot do.
 // Every route/cron handler that touches storage/ must pin the Node runtime.
 export const runtime = "nodejs";
+// Never statically pre-render at build time — hits the live DB. Runtime-only.
+export const dynamic = "force-dynamic";
 
 const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/;
 

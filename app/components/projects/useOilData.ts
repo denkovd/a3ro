@@ -12,7 +12,7 @@
    backend's benchmark list.
 ──────────────────────────────────────────────────────────────── */
 import { useEffect, useRef, useState } from "react";
-import type { Benchmark, CorridorMetricLatest, DailyPrice, LatestQuote } from "@a3ro/oil-backend";
+import type { Benchmark, CorridorBaseline, CorridorMetricLatest, DailyPrice, LatestQuote } from "@a3ro/oil-backend";
 
 /** Local mirror of the backend's BENCHMARKS — see bundle-safety note above. */
 const TRACKED = ["WTI", "BRENT"] as const satisfies readonly Benchmark[];
@@ -29,7 +29,9 @@ export interface OilData {
   series: Partial<Record<Benchmark, DailyPrice[]>>;
   /** null until the first successful /corridors fetch. */
   corridors: CorridorMetricLatest[] | null;
-  /** "error" ONLY if we have never received quotes. Corridors never affect this. */
+  /** null until the first successful /baselines fetch. */
+  baselines: CorridorBaseline[] | null;
+  /** "error" ONLY if we have never received quotes. Corridors/baselines never affect this. */
   status: OilFeedStatus;
   /** Date.now() of the last successful /latest fetch. */
   lastFetchedAt: number | null;
@@ -76,6 +78,14 @@ async function fetchCorridors(signal: AbortSignal): Promise<CorridorMetricLatest
   return json as CorridorMetricLatest[];
 }
 
+async function fetchBaselines(signal: AbortSignal): Promise<CorridorBaseline[] | null> {
+  const res = await fetch("/api/oil/baselines", { cache: "no-store", signal });
+  if (!res.ok) return null;
+  const json: unknown = await res.json();
+  if (!Array.isArray(json)) return null;
+  return json as CorridorBaseline[];
+}
+
 export default function useOilData(opts?: { pollMs?: number; seriesDays?: number }): OilData {
   const pollMs = opts?.pollMs ?? DEFAULT_POLL_MS;
   const seriesDays = opts?.seriesDays ?? DEFAULT_SERIES_DAYS;
@@ -83,6 +93,7 @@ export default function useOilData(opts?: { pollMs?: number; seriesDays?: number
   const [quotes, setQuotes] = useState<LatestQuote[] | null>(null);
   const [series, setSeries] = useState<Partial<Record<Benchmark, DailyPrice[]>>>({});
   const [corridors, setCorridors] = useState<CorridorMetricLatest[] | null>(null);
+  const [baselines, setBaselines] = useState<CorridorBaseline[] | null>(null);
   const [status, setStatus] = useState<OilFeedStatus>("loading");
   const [lastFetchedAt, setLastFetchedAt] = useState<number | null>(null);
 
@@ -133,15 +144,15 @@ export default function useOilData(opts?: { pollMs?: number; seriesDays?: number
       }
     };
 
-    /* runSlowCycle covers both the daily-series feed and the corridor
-       feed: both refresh far less often than /latest (60-min timer),
-       so they share one mount-time fetch + one interval rather than
-       running two nearly-identical cycles side by side. */
+    /* runSlowCycle covers the daily-series feed, the corridor feed, and
+       the baseline feed: all three refresh far less often than /latest
+       (60-min timer), so they share one mount-time fetch + one interval
+       rather than running nearly-identical cycles side by side. */
     const runSlowCycle = async () => {
       const ac = new AbortController();
       inFlight.add(ac);
       try {
-        const [seriesResults, corridorsResult] = await Promise.all([
+        const [seriesResults, corridorsResult, baselinesResult] = await Promise.all([
           Promise.all(
             TRACKED.map(async (b) => {
               const s = await fetchSeries(b, seriesDaysRef.current, ac.signal);
@@ -149,6 +160,7 @@ export default function useOilData(opts?: { pollMs?: number; seriesDays?: number
             })
           ),
           fetchCorridors(ac.signal),
+          fetchBaselines(ac.signal),
         ]);
         if (!mountedRef.current || ac.signal.aborted) return;
         setSeries((prev) => {
@@ -162,15 +174,18 @@ export default function useOilData(opts?: { pollMs?: number; seriesDays?: number
         // failure: stale-while-error — keep previously held corridors.
         // Corridors never affect `status`.
         if (corridorsResult !== null) setCorridors(corridorsResult);
+        // failure: stale-while-error — keep previously held baselines.
+        // Baselines never affect `status`.
+        if (baselinesResult !== null) setBaselines(baselinesResult);
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
-        // stale-while-error: swallow, keep previously held series/corridors
+        // stale-while-error: swallow, keep previously held series/corridors/baselines
       } finally {
         inFlight.delete(ac);
       }
     };
 
-    /* initial parallel fetch: /latest + series (every tracked benchmark) + corridors */
+    /* initial parallel fetch: /latest + series (every tracked benchmark) + corridors + baselines */
     void runLatestCycle();
     void runSlowCycle();
 
@@ -204,5 +219,5 @@ export default function useOilData(opts?: { pollMs?: number; seriesDays?: number
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { quotes, series, corridors, status, lastFetchedAt };
+  return { quotes, series, corridors, baselines, status, lastFetchedAt };
 }

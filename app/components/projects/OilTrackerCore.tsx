@@ -23,7 +23,7 @@ import { FLOW_ROUTES, GATE_EIA_EST_MBD, type FlowTier } from "./flowRoutes";
 import { PRODUCERS, PRODUCERS_SOURCE, type Producer, type ProducerLayerMode } from "./producers";
 import useOilData from "./useOilData";
 import { formatPctSigned, formatUsdBbl, formatUtcDateTime, formatUtcTime, isUtcToday } from "./oilFormat";
-import type { Benchmark, CorridorId, CorridorMetricLatest, DailyPrice, LatestQuote } from "@a3ro/oil-backend";
+import type { Benchmark, CorridorBaseline, CorridorId, CorridorMetricLatest, DailyPrice, LatestQuote } from "@a3ro/oil-backend";
 
 /* ══ route-only content: hotspot hierarchy + signal copy ══ */
 type HotspotKind = "live" | "demand" | "watch" | "reserved";
@@ -33,9 +33,14 @@ type Hotspot = {
   corridor: string; title: string; status: string;
 };
 
-/* discriminated hitTest result — hotspots and producer markers share
-   the same nearest-wins pointer hit-test (Section §4b). */
-type HitResult = { type: "hotspot"; h: Hotspot } | { type: "producer"; p: Producer };
+/* discriminated hitTest result — hotspots, producer markers, gate ticks,
+   and routes share the same nearest-wins pointer hit-test (Section §4a/§4b).
+   Points (hotspot/producer/gate) always beat routes when both hit. */
+type HitResult =
+  | { type: "hotspot"; h: Hotspot }
+  | { type: "producer"; p: Producer }
+  | { type: "gate"; corridorId: CorridorId; label: string }
+  | { type: "route"; routeId: string };
 
 const HOTSPOTS: Hotspot[] = [
   {
@@ -87,6 +92,19 @@ const TICKS: { label: string; lon: number; lat: number; gate?: CorridorId }[] = 
   { label: "CAPE", lon: 19, lat: -35, gate: "cape" },
   { label: "PANAMA", lon: -79.5, lat: 9, gate: "panama" },
 ];
+
+/* display label for every gate-capable CorridorId — covers both the
+   TICKS entries above and hormuz/singapore, which are HOTSPOTS rather
+   than ticks but still appear as route gates (Section §4c route card:
+   "HORMUZ 14.3/D · SUEZ 41/D"). */
+const GATE_LABEL: Partial<Record<CorridorId, string>> = {
+  hormuz: "HORMUZ",
+  singapore: "SINGAPORE",
+  suez: "SUEZ",
+  bab_el_mandeb: "BAB EL-MANDEB",
+  cape: "CAPE",
+  panama: "PANAMA",
+};
 
 type CorridorRank = "major" | "secondary" | "thin" | "tertiary";
 type Baked = {
@@ -163,9 +181,21 @@ type CorridorPanelContent = {
   footerLine: string; // fine-print line
 };
 
+/** Looks up one (corridor, metric, window) historical-norm row, or null
+ *  when no baseline is on file yet for that combination (Section §3a). */
+function baselineFor(
+  baselines: CorridorBaseline[] | null,
+  corridor: string,
+  metric: string,
+  win: "1y" | "5y",
+) {
+  return baselines?.find((b) => b.corridor === corridor && b.metric === metric && b.win === win) ?? null;
+}
+
 function buildCorridorPanel(
   hotspotId: string,
   metrics: CorridorMetricLatest[],
+  baselines: CorridorBaseline[] | null,
 ): CorridorPanelContent | null {
   if (hotspotId === "usgc") {
     const usgulfMetrics = metrics.filter((m) => m.corridor === "usgulf");
@@ -241,6 +271,30 @@ function buildCorridorPanel(
       });
     }
 
+    // Baseline trend rows (Section §3b) — only when a live 1y norm is on
+    // file for this corridor's tanker_transits_7d metric. These read the
+    // freshly-added feed.baselines; they append AFTER the live rows above,
+    // BEFORE the pro-lock rows (added later by the caller).
+    const baseline1y = baselineFor(baselines, corridor, "tanker_transits", "1y");
+    if (baseline1y && baseline1y.meanValue > 0) {
+      const ratio = transits7d.value / baseline1y.meanValue;
+      rows.push({
+        k: "vs 1-year norm",
+        v: `${Math.round(ratio * 100)}%`,
+        bar: clamp(ratio * 0.5, 0, 1), // 100% of norm = mid-bar
+        warm: ratio < 0.7 || ratio > 1.3,
+      });
+      if (baseline1y.yoyPct != null) {
+        const yoyPct = baseline1y.yoyPct;
+        rows.push({
+          k: "Year over year",
+          v: `${yoyPct >= 0 ? "▲" : "▼"} ${Math.abs(yoyPct).toFixed(1)}%`,
+          bar: clamp(Math.abs(yoyPct) / 50, 0.05, 1),
+          warm: Math.abs(yoyPct) >= 15,
+        });
+      }
+    }
+
     const metricLabel =
       hotspotId === "hormuz"
         ? `Tanker transits · 7-day avg · IMF PortWatch · as of ${transits7d.periodDate}`
@@ -311,7 +365,16 @@ export default function OilTrackerCore({
   const [touched, setTouched] = useState(false);
   const [narrow, setNarrow] = useState(false);
   const [proContact, setProContact] = useState<string | null>(null);
-  const [producerMode, setProducerMode] = useState<ProducerLayerMode>("off");
+  const [layers, setLayers] = useState<{ flows: boolean; gates: boolean; producers: ProducerLayerMode }>({
+    flows: true,
+    gates: true,
+    producers: "off",
+  });
+  /* remembers the last non-"off" producer sub-mode so the LAYERS toggle
+     can restore it (off↔last-nonoff-mode), defaulting to "production". */
+  const lastProducerModeRef = useRef<Exclude<ProducerLayerMode, "off">>("production");
+  const [layersExpanded, setLayersExpanded] = useState(false);
+  const [hoverId, setHoverId] = useState<string | null>(null);
 
   const sim = useRef<Sim>({
     lon: initialView?.lon ?? 97,
@@ -331,11 +394,19 @@ export default function OilTrackerCore({
   const selectedRef = useRef<string | null>(null);
   const proContactRef = useRef<string | null>(null);
   const reducedRef = useRef(false);
-  const producerModeRef = useRef<ProducerLayerMode>("off");
+  const layersRef = useRef<{ flows: boolean; gates: boolean; producers: ProducerLayerMode }>({
+    flows: true,
+    gates: true,
+    producers: "off",
+  });
+  /* hover-card screen position — set imperatively on every pointer move
+     while something is hovered (Section §4b), so the card can track the
+     cursor without a per-mousemove React re-render. */
+  const hoverPosRef = useRef<HTMLDivElement | null>(null);
   reducedRef.current = !!reduced;
   selectedRef.current = selected;
   proContactRef.current = proContact;
-  producerModeRef.current = producerMode;
+  layersRef.current = layers;
 
   const tweenTo = useCallback((to: Partial<Tween["to"]>, dur = 1150) => {
     const s = sim.current;
@@ -520,6 +591,7 @@ export default function OilTrackerCore({
     const hitTest = (mx: number, my: number): HitResult | null => {
       const { s, cx, cy, R } = frame();
       const rot = rotator(s.lon, s.lat);
+      const L = layersRef.current;
       let best: HitResult | null = null;
       let bestD = 18;
       for (const hs of HOTSPOTS) {
@@ -528,13 +600,50 @@ export default function OilTrackerCore({
         const d = Math.hypot(p.x - mx, p.y - my);
         if (d < bestD) { bestD = d; best = { type: "hotspot", h: hs }; }
       }
-      if (producerModeRef.current !== "off") {
+      if (L.producers !== "off") {
         for (const prod of PRODUCERS) {
           const pp = project(rot, vec(prod.lon, prod.lat), cx, cy, R);
           if (pp.z <= 0.15) continue;
           const d = Math.hypot(pp.x - mx, pp.y - my);
           if (d < bestD) { bestD = d; best = { type: "producer", p: prod }; }
         }
+      }
+      /* gate ticks (Section §4a): 14px threshold, z > 0.35, only when the
+         gates layer is on. Points always beat routes, so this still runs
+         before the route pass below and can only be beaten by a closer
+         hotspot/producer above. */
+      if (L.gates) {
+        let bestGateD = 14;
+        for (const tk of TICKS) {
+          if (!tk.gate) continue;
+          const p = project(rot, vec(tk.lon, tk.lat), cx, cy, R);
+          if (p.z <= 0.35) continue;
+          const d = Math.hypot(p.x - mx, p.y - my);
+          if (d < bestGateD && d < bestD) {
+            bestGateD = d; bestD = d;
+            best = { type: "gate", corridorId: tk.gate, label: tk.label };
+          }
+        }
+      }
+      /* routes (Section §4a): only when flows layer on, only visible
+         (non-tertiary) routes, proximity test every 4th baked sample,
+         front-facing only, nearest route wins. Points/markers already
+         found above take priority (best/bestD carried forward). */
+      if (L.flows && best === null) {
+        let bestRouteD = 8;
+        let bestRouteId: string | null = null;
+        for (const c of getCorridors()) {
+          if (!c.routeId) continue; // tertiary background texture — not hit-testable
+          const S = c.samples, N = c.n;
+          for (let i = 0; i < N; i += 4) {
+            rot(S[i * 3], S[i * 3 + 1], S[i * 3 + 2], o);
+            if (o[2] <= 0) continue;
+            const sx = cx + o[0] * R, sy = cy - o[1] * R;
+            const d = Math.hypot(sx - mx, sy - my);
+            if (d < bestRouteD) { bestRouteD = d; bestRouteId = c.routeId; }
+          }
+        }
+        if (bestRouteId) best = { type: "route", routeId: bestRouteId };
       }
       return best;
     };
@@ -634,11 +743,15 @@ export default function OilTrackerCore({
       ctx.stroke();
 
       /* corridors — ranked hierarchy with intro draw-in
-         widths/alphas (Section C2): major 1.8/0.4, secondary 1.2/0.22,
-         thin 0.8/0.14, tertiary unchanged (dashed). major uses revMajor,
-         secondary+thin use revSec (as-is). */
+         widths/alphas (Section C2/§5): major 1.8/0.4, secondary 1.2/0.30,
+         thin 0.8/0.20, tertiary unchanged (dashed). major uses revMajor,
+         secondary+thin use revSec (as-is). Flows layer OFF skips route
+         strokes + pulses (below) for major/secondary/thin, but tertiary
+         is background texture, not data — it always draws (Section §2c). */
+      const flowsOn = layersRef.current.flows;
       const routeMidpoints: { c: Baked; sx: number; sy: number; z: number }[] = [];
       for (const c of corridors) {
+        if (c.rank !== "tertiary" && !flowsOn) continue;
         const S = c.samples, N = c.n;
         const rev = c.rank === "major" ? revMajor : c.rank === "secondary" || c.rank === "thin" ? revSec : 1;
         const limit = Math.max(2, Math.ceil(N * rev));
@@ -662,7 +775,7 @@ export default function OilTrackerCore({
         }
         const major = c.rank === "major";
         const secondary = c.rank === "secondary";
-        ctx.strokeStyle = AMB(major ? 0.4 : secondary ? 0.22 : 0.14);
+        ctx.strokeStyle = AMB(major ? 0.4 : secondary ? 0.3 : 0.2);
         ctx.lineWidth = major ? 1.8 : secondary ? 1.2 : 0.8;
         ctx.stroke();
 
@@ -683,9 +796,14 @@ export default function OilTrackerCore({
           const activity = c.routeId ? gateActivityRef.current[c.routeId] ?? 1 : 1;
           const head = (t * c.speed * activity + c.phase) % 1;
           const len = 0.1;
+          // secondary/thin both get the secondary-style pulse head (§5):
+          // thin previously had no pulse head at all — it now shares the
+          // secondary two-pass treatment, with its own head alpha (0.5).
           const passes = major
             ? ([[3.4, AMB(0.12)], [1.6, AMB_HI(0.85)]] as const)
-            : ([[2.6, AMB(0.07)], [1.1, AMB(0.55)]] as const);
+            : secondary
+              ? ([[2.6, AMB(0.07)], [1.1, AMB(0.65)]] as const)
+              : ([[2.6, AMB(0.07)], [1.1, AMB(0.5)]] as const);
           for (const pass of passes) {
             ctx.beginPath();
             pen = false;
@@ -706,8 +824,10 @@ export default function OilTrackerCore({
         }
       }
 
-      /* route labels (Section C4) — major+secondary only, thin skipped
-         to declutter. Drawn after corridor strokes, before ticks. */
+      /* route labels (Section C4/§2c) — major+secondary only, thin skipped
+         to declutter. Drawn after corridor strokes, before ticks. Skipped
+         entirely when the flows layer is off (routeMidpoints is empty in
+         that case since the loop above never pushes to it). */
       ctx.font = '500 8px "JetBrains Mono", ui-monospace, monospace';
       for (const { c, sx, sy, z } of routeMidpoints) {
         if (z <= 0.4 || !c.name) continue;
@@ -718,9 +838,10 @@ export default function OilTrackerCore({
         haloText(c.name, sx, sy - 8);
       }
 
-      /* chokepoint ticks */
+      /* chokepoint ticks — skipped entirely when the gates layer is off
+         (Section §2c). */
       ctx.font = '500 8px "JetBrains Mono", ui-monospace, monospace';
-      for (const tk of TICKS) {
+      for (const tk of (layersRef.current.gates ? TICKS : [])) {
         rot(...vec(tk.lon, tk.lat), o);
         if (o[2] < 0.35) continue;
         const sx = cx + o[0] * R, sy = cy - o[1] * R;
@@ -741,7 +862,7 @@ export default function OilTrackerCore({
       /* producers overlay (toggleable) — country markers sized by
          production or reserves. No ramp needed; alpha follows each
          point's own z-fade. Skipped entirely when the layer is off. */
-      const pMode = producerModeRef.current;
+      const pMode = layersRef.current.producers;
       if (pMode !== "off") {
         const rScale = Math.min(1.25, Math.max(0.8, R / 260));
         const drawnLabelRects: [number, number, number, number][] = [];
@@ -757,7 +878,7 @@ export default function OilTrackerCore({
           return vb - va;
         });
 
-        for (const prod of sortedProducers) {
+        for (const [rankIdx, prod] of sortedProducers.entries()) {
           rot(...vec(prod.lon, prod.lat), o);
           if (o[2] <= 0.15) continue;
           const sx = cx + o[0] * R, sy = cy - o[1] * R;
@@ -794,6 +915,14 @@ export default function OilTrackerCore({
               ctx.stroke();
             }
           }
+
+          // markers always draw (above); labels are declutter-gated (§5):
+          // rank > 8 (9th+ by current-mode value) draws its label only at
+          // zoom ≥ 1.15. Also skipped while a hover card is showing for
+          // this producer, to avoid doubling the info (Section §4d).
+          const isHoverCardShown = sim.current.hovered === "prod:" + prod.id;
+          const rankGatesLabel = rankIdx > 8 && s.zoom < 1.15;
+          if (isHoverCardShown || rankGatesLabel) continue;
 
           const label =
             pMode === "production"
@@ -1024,9 +1153,44 @@ export default function OilTrackerCore({
     e.currentTarget.style.cursor = "grabbing";
   };
 
+  /* stable hover-id string per hit type (Section §4a): plain (hotspot),
+     "prod:" (producer), "gate:<corridorId>" , "route:<routeId>". Shared by
+     both pointer call sites below so hover/click logic never drifts. */
+  const hoverIdFor = (hit: HitResult): string =>
+    hit.type === "hotspot" ? hit.h.id
+    : hit.type === "producer" ? "prod:" + hit.p.id
+    : hit.type === "gate" ? "gate:" + hit.corridorId
+    : "route:" + hit.routeId;
+
+  /* clamp the hover card's screen position so it never overflows the
+     viewport (Section §4b): flip left past w-260, flip up past h-180. */
+  const positionHoverCard = (x: number, y: number) => {
+    const el = hoverPosRef.current;
+    if (!el) return;
+    const { w, h } = size.current;
+    const flipX = x > w - 260;
+    const flipY = y > h - 180;
+    const px = flipX ? x - 14 - 240 : x + 14;
+    const py = flipY ? y - 10 - 160 : y + 10;
+    el.style.transform = `translate(${px}px, ${py}px)`;
+  };
+  /* last local pointer position — lets the effect below place the card
+     correctly the instant it mounts (hoverPosRef isn't attached to a DOM
+     node yet on the same synchronous move that first sets hoverId). */
+  const lastPointerRef = useRef({ x: 0, y: 0 });
+
+  /* re-position immediately on mount (hoverId transitions null → id, or
+     id → a different id) using the last known pointer position, so the
+     card never flashes at translate(0,0) before the next move arrives. */
+  useEffect(() => {
+    if (hoverId) positionHoverCard(lastPointerRef.current.x, lastPointerRef.current.y);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hoverId]);
+
   const onPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const s = sim.current;
     const p = local(e);
+    lastPointerRef.current = p;
     if (s.pointers.has(e.pointerId)) s.pointers.set(e.pointerId, p);
 
     if (s.pointers.size === 2) {
@@ -1052,8 +1216,20 @@ export default function OilTrackerCore({
       const hit = (canvasRef.current as unknown as {
         __hit?: (x: number, y: number) => HitResult | null;
       })?.__hit?.(p.x, p.y);
-      s.hovered = hit ? (hit.type === "hotspot" ? hit.h.id : "prod:" + hit.p.id) : null;
-      e.currentTarget.style.cursor = hit ? "pointer" : "grab";
+      const nextHovered = hit ? hoverIdFor(hit) : null;
+      /* setHoverId (React state → triggers the AnimatePresence card) only
+         fires when the hovered id actually changes — every other move just
+         updates s.hovered (read by the canvas draw loop) and imperatively
+         repositions the card via hoverPosRef, with NO re-render (Section §4b). */
+      if (s.hovered !== nextHovered) {
+        s.hovered = nextHovered;
+        setHoverId(nextHovered);
+      }
+      if (nextHovered) positionHoverCard(p.x, p.y);
+      // cursor reads "pointer" only when a click on this hit actually opens
+      // a panel — hotspot/producer today; gate/route have no panel (§4d).
+      const opensPanel = hit != null && (hit.type === "hotspot" || hit.type === "producer");
+      e.currentTarget.style.cursor = opensPanel ? "pointer" : "grab";
     }
   };
 
@@ -1070,9 +1246,10 @@ export default function OilTrackerCore({
       const hit = (canvasRef.current as unknown as {
         __hit?: (x: number, y: number) => HitResult | null;
       })?.__hit?.(p.x, p.y);
+      // only hotspot/producer open a panel on click — gate/route have none yet.
       if (hit) {
         if (hit.type === "hotspot") focusHotspot(hit.h);
-        else focusProducer(hit.p);
+        else if (hit.type === "producer") focusProducer(hit.p);
       }
     }
   };
@@ -1172,12 +1349,124 @@ export default function OilTrackerCore({
      coverage yet, in which case the signal panel below falls back to
      an honest "connecting" (live-capable, no data yet) or
      "watchlist" (no live source at all) state — never modeled data. */
-  const liveFor = (hid: string) => buildCorridorPanel(hid, feed.corridors ?? []);
+  const liveFor = (hid: string) => buildCorridorPanel(hid, feed.corridors ?? [], feed.baselines ?? null);
   const selLive = sel ? liveFor(sel.id) : null;
   const LIVE_CAPABLE = new Set(["hormuz", "sg", "usgc"]);
   const selIsWatchlist = !!sel && !selLive && WATCHLIST_COPY[sel.id] !== undefined;
   const selIsConnecting = !!sel && !selLive && LIVE_CAPABLE.has(sel.id);
   const selLocks = sel ? PRO_LOCKS[sel.id] ?? [] : [];
+
+  /* generalized version of the selIsWatchlist/selIsConnecting derivation
+     above, for any hotspot id — reused by the hover card (Section §4c)
+     so its status line never drifts from the signal panel's wording. */
+  const statusFor = (h: Hotspot, hLive: CorridorPanelContent | null): { text: string; color: string } => {
+    if (hLive) return { text: hLive.statusText, color: AMBER_CSS };
+    if (WATCHLIST_COPY[h.id] !== undefined) return { text: "Watchlist", color: "var(--ink-3)" };
+    if (LIVE_CAPABLE.has(h.id)) return { text: "Connecting", color: "var(--ink-2)" };
+    return { text: h.status, color: statusColor(h.kind) };
+  };
+
+  /* corridor id for a hotspot's gate-backed corridor, when it has one —
+     only hormuz/sg map onto a live gate corridor today (matches
+     buildCorridorPanel's coverage). Used by the hover card's baseline line. */
+  const HOTSPOT_GATE_CORRIDOR: Partial<Record<string, CorridorId>> = { hormuz: "hormuz", sg: "singapore" };
+
+  /* Shared "vs 1-year norm / YoY" one-liner (Section §4a/§4c) — reads the
+     exact same feed.corridors + feed.baselines that back the panel's own
+     baseline rows (Section §3b), so the hover card never shows a number
+     the panel wouldn't also show. Returns null when no baseline is on file. */
+  const baselineLineFor = (corridorId: CorridorId): { text: string; warm: boolean } | null => {
+    const transits7d = feed.corridors?.find(
+      (m) => m.corridor === corridorId && m.metric === "tanker_transits_7d",
+    );
+    if (!transits7d) return null;
+    const baseline1y = baselineFor(feed.baselines ?? null, corridorId, "tanker_transits", "1y");
+    if (!baseline1y || baseline1y.meanValue <= 0) return null;
+    const ratio = transits7d.value / baseline1y.meanValue;
+    const pct = Math.round(ratio * 100);
+    const warm = ratio < 0.7 || ratio > 1.3;
+    if (baseline1y.yoyPct == null) return { text: `${pct}% OF 1Y NORM`, warm };
+    const yoyPct = baseline1y.yoyPct;
+    const yoyWarm = Math.abs(yoyPct) >= 15;
+    return {
+      text: `${pct}% OF 1Y NORM · ${yoyPct >= 0 ? "▲" : "▼"}${Math.abs(yoyPct).toFixed(0)}% YOY`,
+      warm: warm || yoyWarm,
+    };
+  };
+
+  /* ── hover card content (Section §4c) — built once per hoverId change,
+     not per pointer move (hoverId only updates via setHoverId when the
+     hovered entity actually changes; see onPointerMove). Every value here
+     traces to feed.corridors / feed.baselines / static labeled sources
+     (PRODUCERS, GATE_EIA_EST_MBD, TICKS) — nothing invented. ── */
+  type HoverCardContent = {
+    title: string;
+    statusLine?: { text: string; color: string };
+    lines: { text: string; warm?: boolean }[];
+    showClickFooter: boolean;
+  };
+  const hoverCard: HoverCardContent | null = (() => {
+    if (!hoverId) return null;
+
+    if (hoverId.startsWith("prod:")) {
+      const p = PRODUCERS.find((x) => x.id === hoverId.slice(5));
+      if (!p) return null;
+      return {
+        title: p.name,
+        lines: [
+          { text: `OUTPUT ${p.productionMbd.toFixed(1)} MB/D · 2025 EST` },
+          { text: `RESERVES ${p.reservesBbl.toFixed(0)}B BBL · END-2024` },
+        ],
+        showClickFooter: true,
+      };
+    }
+
+    if (hoverId.startsWith("gate:")) {
+      const corridorId = hoverId.slice(5) as CorridorId;
+      const tick = TICKS.find((t) => t.gate === corridorId);
+      const label = tick?.label ?? GATE_LABEL[corridorId] ?? corridorId.toUpperCase();
+      const transits7d = feed.corridors?.find(
+        (m) => m.corridor === corridorId && m.metric === "tanker_transits_7d",
+      );
+      const lines: { text: string; warm?: boolean }[] = [];
+      if (transits7d) lines.push({ text: `${transits7d.value.toFixed(0)}/D · 7D AVG` });
+      const baseLine = baselineLineFor(corridorId);
+      if (baseLine) lines.push({ text: baseLine.text, warm: baseLine.warm });
+      return { title: label, lines, showClickFooter: false };
+    }
+
+    if (hoverId.startsWith("route:")) {
+      const routeId = hoverId.slice(6);
+      const route = FLOW_ROUTES.find((r) => r.id === routeId);
+      if (!route) return null;
+      const lines: { text: string; warm?: boolean }[] = [];
+      if (route.gates.length === 0) {
+        lines.push({ text: "NO LIVE GATE ON ROUTE · WIDTH = EIA SCALE" });
+      } else {
+        const parts: string[] = [];
+        for (const g of route.gates) {
+          const v = feed.corridors?.find((m) => m.corridor === g && m.metric === "tanker_transits_7d");
+          if (v) parts.push(`${GATE_LABEL[g] ?? g.toUpperCase()} ${v.value.toFixed(1)}/D`);
+        }
+        lines.push({ text: parts.length > 0 ? parts.join(" · ") : "NO LIVE GATE ON ROUTE · WIDTH = EIA SCALE" });
+      }
+      return { title: route.name, lines, showClickFooter: false };
+    }
+
+    // plain id → hotspot
+    const h = HOTSPOTS.find((x) => x.id === hoverId);
+    if (!h) return null;
+    const hLive = liveFor(h.id);
+    const status = statusFor(h, hLive);
+    const lines: { text: string; warm?: boolean }[] = [];
+    if (hLive) lines.push({ text: hLive.metric });
+    const gateCorridor = HOTSPOT_GATE_CORRIDOR[h.id];
+    if (gateCorridor) {
+      const baseLine = baselineLineFor(gateCorridor);
+      if (baseLine) lines.push({ text: baseLine.text, warm: baseLine.warm });
+    }
+    return { title: h.title, statusLine: status, lines, showClickFooter: true };
+  })();
 
   /* Section C9: the wide-screen corridor index rail hides while ANY
      right panel (corridor, benchmark, or pro-contact) is open — it
@@ -1376,27 +1665,46 @@ export default function OilTrackerCore({
           </div>
         </div>
 
-        {/* producers overlay toggle */}
-        <div className="pointer-events-none absolute bottom-24 right-6 z-10 flex flex-col items-end gap-1 md:right-10">
-          <button
-            type="button"
-            onClick={() =>
-              setProducerMode((m) => (m === "off" ? "production" : m === "production" ? "reserves" : "off"))
-            }
-            aria-label="Toggle producer overlay"
-            className="pointer-events-auto border border-[var(--line)] px-3 py-[6px] font-mono text-[9px] uppercase tracking-[0.25em] transition-colors duration-[var(--dur-micro)] hover:border-[var(--line-2)]"
-            style={{ color: producerMode === "off" ? "var(--ink-3)" : AMBER_CSS }}
-          >
-            {producerMode === "off"
-              ? "Producers · off"
-              : producerMode === "production"
-                ? "Producers · output"
-                : "Producers · reserves"}
-          </button>
-          {producerMode !== "off" && (
-            <p className="pointer-events-none font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-              {PRODUCERS_SOURCE}
-            </p>
+        {/* layers control (Section §2b) — replaces the old producer-only
+            chip. Flow paths / gates are simple on-off toggles; producers
+            is a three-state off/production/reserves toggle that remembers
+            its last non-off mode so re-enabling restores where you left
+            off, defaulting to "production" the first time. */}
+        <div className="pointer-events-none absolute bottom-24 right-6 z-10 flex flex-col items-end md:right-10">
+          {narrow ? (
+            <div className="relative">
+              <AnimatePresence>
+                {layersExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 6 }}
+                    transition={{ duration: DUR.base, ease: EASE_OUT as unknown as number[] }}
+                    className="pointer-events-auto absolute bottom-full right-0 mb-2 w-44 border border-[var(--line)] backdrop-blur"
+                    style={{ background: "rgba(11,13,13,0.85)" }}
+                  >
+                    <LayersPanelBody layers={layers} setLayers={setLayers} lastProducerModeRef={lastProducerModeRef} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <button
+                type="button"
+                onClick={() => setLayersExpanded((v) => !v)}
+                aria-label="Toggle layers panel"
+                aria-expanded={layersExpanded}
+                className="pointer-events-auto border border-[var(--line)] px-3 py-[6px] font-mono text-[9px] uppercase tracking-[0.25em] transition-colors duration-[var(--dur-micro)] hover:border-[var(--line-2)]"
+                style={{ color: layersExpanded ? AMBER_CSS : "var(--ink-3)" }}
+              >
+                Layers
+              </button>
+            </div>
+          ) : (
+            <div
+              className="pointer-events-auto w-44 border border-[var(--line)] backdrop-blur"
+              style={{ background: "rgba(11,13,13,0.85)" }}
+            >
+              <LayersPanelBody layers={layers} setLayers={setLayers} lastProducerModeRef={lastProducerModeRef} />
+            </div>
           )}
         </div>
 
@@ -1414,6 +1722,56 @@ export default function OilTrackerCore({
             </motion.p>
           )}
         </AnimatePresence>
+
+        {/* hover card (Section §4) — cursor-tracking info card for
+            hotspots/producers/gates/routes. The outer wrapper never moves;
+            the inner positioned div's transform is set imperatively via
+            hoverPosRef on every pointer move (see positionHoverCard), so
+            tracking the cursor never triggers a React re-render. Only
+            mounting/unmounting the card (on hoverId change) goes through
+            React/AnimatePresence. */}
+        <div className="pointer-events-none absolute inset-0 z-20">
+          <AnimatePresence>
+            {hoverCard && (
+              <motion.div
+                key={hoverId}
+                ref={hoverPosRef}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.12 }}
+                className="absolute left-0 top-0 w-max max-w-[240px] border border-[var(--line)] px-3 py-2 backdrop-blur-md"
+                style={{ background: "rgba(11,13,13,0.92)" }}
+              >
+                <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-[var(--ink)]">
+                  {hoverCard.title}
+                </p>
+                {hoverCard.statusLine && (
+                  <p
+                    className="mt-1 font-mono text-[8px] uppercase tracking-[0.2em]"
+                    style={{ color: hoverCard.statusLine.color }}
+                  >
+                    {hoverCard.statusLine.text}
+                  </p>
+                )}
+                {hoverCard.lines.map((l, i) => (
+                  <p
+                    key={i}
+                    className="mt-1 font-mono text-[9px] uppercase tracking-[0.15em]"
+                    style={{ color: l.warm ? AMBER_CSS : "var(--ink-2)" }}
+                  >
+                    {l.text}
+                  </p>
+                ))}
+                {hoverCard.showClickFooter && (
+                  <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+                    Click for detail
+                  </p>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         {/* signal panel */}
         <AnimatePresence>
@@ -1730,12 +2088,12 @@ export default function OilTrackerCore({
 
               <div className="mt-5">
                 <p className="font-mono text-3xl text-[var(--ink)]">
-                  {producerMode === "reserves"
+                  {layers.producers === "reserves"
                     ? `${prodSel.reservesBbl.toFixed(0)}B bbl`
                     : `${prodSel.productionMbd.toFixed(1)} Mb/d`}
                 </p>
                 <p className="mt-1 text-[11px] leading-relaxed text-[var(--ink-3)]">
-                  {producerMode === "reserves"
+                  {layers.producers === "reserves"
                     ? "Proven reserves · end-2024 · OPEC ASB 2025"
                     : "Crude + condensate output · 2025 est. · EIA"}
                 </p>
@@ -1837,6 +2195,97 @@ export default function OilTrackerCore({
         </AnimatePresence>
       </div>
     </div>
+  );
+}
+
+/* ── layers panel body (Section §2b) ──
+   Shared between the wide-screen always-visible panel and the narrow-
+   screen expandable one, so the two never drift out of sync. */
+function LayersPanelBody({
+  layers,
+  setLayers,
+  lastProducerModeRef,
+}: {
+  layers: { flows: boolean; gates: boolean; producers: ProducerLayerMode };
+  setLayers: React.Dispatch<React.SetStateAction<{ flows: boolean; gates: boolean; producers: ProducerLayerMode }>>;
+  lastProducerModeRef: React.MutableRefObject<Exclude<ProducerLayerMode, "off">>;
+}) {
+  const glyphStyle = "inline-block w-3 shrink-0 text-center";
+  const rowClass =
+    "flex w-full items-center gap-2 py-[5px] text-left font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-2)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]";
+
+  const toggleProducers = () => {
+    setLayers((prev) => {
+      if (prev.producers === "off") {
+        return { ...prev, producers: lastProducerModeRef.current };
+      }
+      lastProducerModeRef.current = prev.producers;
+      return { ...prev, producers: "off" };
+    });
+  };
+
+  const setProducerSubMode = (mode: Exclude<ProducerLayerMode, "off">) => {
+    lastProducerModeRef.current = mode;
+    setLayers((prev) => ({ ...prev, producers: mode }));
+  };
+
+  return (
+    <>
+      <div className="px-3 py-[7px]">
+        <p className="font-mono text-[9px] tracking-[0.25em] text-[var(--ink-3)]">LAYERS</p>
+      </div>
+      <div className="flex flex-col px-3">
+        <button type="button" onClick={() => setLayers((p) => ({ ...p, flows: !p.flows }))} className={rowClass}>
+          <span className={glyphStyle} style={{ color: layers.flows ? AMBER_CSS : "var(--ink-3)" }}>
+            {layers.flows ? "▣" : "▢"}
+          </span>
+          Flow paths
+        </button>
+        <button type="button" onClick={() => setLayers((p) => ({ ...p, gates: !p.gates }))} className={rowClass}>
+          <span className={glyphStyle} style={{ color: layers.gates ? AMBER_CSS : "var(--ink-3)" }}>
+            {layers.gates ? "▣" : "▢"}
+          </span>
+          Gates
+        </button>
+        <button type="button" onClick={toggleProducers} className={rowClass}>
+          <span className={glyphStyle} style={{ color: layers.producers !== "off" ? AMBER_CSS : "var(--ink-3)" }}>
+            {layers.producers !== "off" ? "▣" : "▢"}
+          </span>
+          Producers
+        </button>
+        {layers.producers !== "off" && (
+          <div className="ml-3 flex flex-col border-l border-[var(--line)] pl-3">
+            <button
+              type="button"
+              onClick={() => setProducerSubMode("production")}
+              className={rowClass}
+              aria-label="Show producer output"
+            >
+              <span className={glyphStyle} style={{ color: layers.producers === "production" ? AMBER_CSS : "var(--ink-3)" }}>
+                {layers.producers === "production" ? "●" : "○"}
+              </span>
+              Output
+            </button>
+            <button
+              type="button"
+              onClick={() => setProducerSubMode("reserves")}
+              className={rowClass}
+              aria-label="Show producer reserves"
+            >
+              <span className={glyphStyle} style={{ color: layers.producers === "reserves" ? AMBER_CSS : "var(--ink-3)" }}>
+                {layers.producers === "reserves" ? "●" : "○"}
+              </span>
+              Reserves
+            </button>
+          </div>
+        )}
+      </div>
+      {layers.producers !== "off" && (
+        <p className="border-t border-[var(--line)] px-3 py-[7px] font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+          {PRODUCERS_SOURCE}
+        </p>
+      )}
+    </>
   );
 }
 
