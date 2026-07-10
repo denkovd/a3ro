@@ -3,6 +3,7 @@
 
 export * from "./core/types";
 export * from "./core/corridorTypes";
+export * from "./core/scoreTypes";
 export { toUsdPerBarrel, PRICE_BOUNDS, NormalizationError } from "./core/units";
 export {
   classifyStaleness, isUsable, isAlertGrade,
@@ -35,6 +36,9 @@ export {
   upsertBaselines, getBaselines, getBaselineAgeDays,
 } from "./storage/baselineRepo";
 export {
+  upsertScoreSnapshots, getLatestScoreSnapshots,
+} from "./storage/scoreRepo";
+export {
   getUndeliveredAlertEvents, markAlertEventDelivered,
 } from "./storage/alertRepo";
 export type { AlertEvent } from "./storage/alertRepo";
@@ -66,6 +70,15 @@ export { runCorridorCycle } from "./ingest/corridorPipeline";
 export type { CorridorCycleReport } from "./ingest/corridorPipeline";
 export { runBaselineCycle } from "./ingest/baselineCycle";
 export type { BaselineCycleReport } from "./ingest/baselineCycle";
+export { runScoreCycle } from "./ingest/scorePipeline";
+export type { ScoreCycleReport } from "./ingest/scorePipeline";
+
+// Composite scores (Phase 1: Brent-WTI spread) - see docs/scores-plan.md
+export {
+  computeSpreadSignal, computeFlowStress, combineComposite,
+  alignSpread, percentileOf, clamp01,
+} from "./scores/engine";
+export type { PricePoint, CombineOptions } from "./scores/engine";
 export { resolveLatestQuote, resolveDailyClose, DISAGREEMENT_TOLERANCE, SUSPECT_DEVIATION } from "./ingest/resolve";
 export { evaluateRule } from "./alerts/rules";
 export type { AlertRule, AlertState, EvalContext } from "./alerts/rules";

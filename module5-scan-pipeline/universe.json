@@ -1,0 +1,29 @@
+{
+  "_comment": "Module 5 daily scan pipeline — market watchlist universe. adjustment_method: 'raw' = unadjusted close as returned by provider (futures/index/crypto have no split/dividend adjustment); 'back-adjusted' = continuous back-adjusted series (used for rolled futures continuations if ever swapped in).",
+  "symbols": [
+    {
+      "symbol": "BTC-USD",
+      "asset_class": "crypto",
+      "provider_ticker": "BTC-USD",
+      "adjustment_method": "raw"
+    },
+    {
+      "symbol": "CL=F",
+      "asset_class": "futures",
+      "provider_ticker": "CL=F",
+      "adjustment_method": "raw"
+    },
+    {
+      "symbol": "GC=F",
+      "asset_class": "futures",
+      "provider_ticker": "GC=F",
+      "adjustment_method": "raw"
+    },
+    {
+      "symbol": "^GSPC",
+      "asset_class": "index",
+      "provider_ticker": "^GSPC",
+      "adjustment_method": "raw"
+    }
+  ]
+}

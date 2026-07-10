@@ -9,6 +9,7 @@ Status date: 2026-07-05. Everything below is free-tier data unless marked PRO.
 - Hormuz + Singapore corridors live (IMF PortWatch satellite AIS: tanker transits + volume, daily history, 7-day averages).
 - Truth pass: all modeled/illustrative numbers removed; corridors are live, connecting, or watchlist; globe sub-labels are data-driven.
 - PRO lock framework: locked rows on commercial-data signals; lead capture to `leads` table via `/api/leads`; contact fallback a3ro.helpdesk@gmail.com.
+- Module 4 — Regime Shift Finder (P·04): Money Line engine (Donchian 20 close-flip, ratcheted) on daily × weekly closes across a 30-asset macro watchlist; newly-bullish detection + recency-first ranking; `regime_snapshots` via the daily cron, `/api/regime/latest`, homepage card + `/Projects/Regime-Finder`. See docs/regime-finder.md.
 
 ## Phases
 

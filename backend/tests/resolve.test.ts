@@ -153,6 +153,18 @@ describe("resolveLatestQuote", () => {
     assert.equal(qOk.suspect, false);
   });
 
+  test("7b. suspect is NOT flagged when the reference settlement is stale/dead", () => {
+    // Big deviation (live 100 vs ref 70 ≈ 43%) that WOULD flag — but the
+    // reference close is itself stale/dead, so it must not be called suspect.
+    // This is the lagging-Brent-settlement false positive.
+    const bigDev = liveRecord({ price: 100, observedAt: "2026-07-05T11:59:00Z" });
+    assert.equal(resolveLatestQuote("WTI", [bigDev], lookup, 70, NOW, "stale")?.suspect, false);
+    assert.equal(resolveLatestQuote("WTI", [bigDev], lookup, 70, NOW, "dead")?.suspect, false);
+    // A current (fresh/aging) reference still catches the anomaly.
+    assert.equal(resolveLatestQuote("WTI", [bigDev], lookup, 70, NOW, "fresh")?.suspect, true);
+    assert.equal(resolveLatestQuote("WTI", [bigDev], lookup, 70, NOW, "aging")?.suspect, true);
+  });
+
   test("8. wrong-benchmark records are ignored", () => {
     const wtiLive = liveRecord({ price: 68.5, observedAt: "2026-07-05T11:59:00Z", benchmark: "WTI" });
     const brentLive = liveRecord({ price: 72.1, observedAt: "2026-07-05T11:59:00Z", benchmark: "BRENT" });

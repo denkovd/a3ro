@@ -23,6 +23,51 @@ export const AMB = (a: number) => `rgba(212,161,87,${a})`; // core amber #d4a157
 export const AMB_HI = (a: number) => `rgba(232,190,120,${a})`; // tracer head only
 export const AMBER_CSS = "#d4a157";
 
+/* ── flow-health diverging scale (colour-blind-safe: red → amber → teal) ──
+   Turns a corridor's "vs 1-year norm" ratio (current ÷ norm) into colour.
+   Neutral band 0.85–1.15 stays amber so ordinary week-to-week wobble
+   doesn't flash colour; below → reds (not flowing), above → teals (flowing
+   above norm). Red↔teal (NOT red↔green) so it survives the common
+   red-green colour-vision deficiencies. Returns an rgba() string and takes
+   an alpha, matching AMB/INK so the canvas draw loop can reuse it.
+
+   This is the visual layer of the Flow Stress score: the ratio here is the
+   same "vs norm" input that feeds the composite. */
+type RGB = [number, number, number];
+const HEALTH_RED: RGB = [199, 62, 58]; //  #c73e3a — well below norm
+const HEALTH_AMBER: RGB = [212, 161, 87]; // #d4a157 — neutral (== AMBER_CSS)
+const HEALTH_TEAL: RGB = [46, 160, 144]; //  #2ea090 — well above norm
+const HEALTH_LOW = 0.85; //  neutral band lower edge
+const HEALTH_HIGH = 1.15; // neutral band upper edge
+const HEALTH_RED_FLOOR = 0.5; // ratio ≤ this ⇒ full red
+const HEALTH_TEAL_CEIL = 1.5; // ratio ≥ this ⇒ full teal
+
+function healthLerp(a: RGB, b: RGB, t: number): RGB {
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+}
+
+export function flowHealthRgb(ratio: number): RGB {
+  if (!Number.isFinite(ratio)) return HEALTH_AMBER;
+  if (ratio >= HEALTH_LOW && ratio <= HEALTH_HIGH) return HEALTH_AMBER;
+  if (ratio < HEALTH_LOW) {
+    const t = (HEALTH_LOW - Math.max(ratio, HEALTH_RED_FLOOR)) / (HEALTH_LOW - HEALTH_RED_FLOOR);
+    return healthLerp(HEALTH_AMBER, HEALTH_RED, t);
+  }
+  const t = (Math.min(ratio, HEALTH_TEAL_CEIL) - HEALTH_HIGH) / (HEALTH_TEAL_CEIL - HEALTH_HIGH);
+  return healthLerp(HEALTH_AMBER, HEALTH_TEAL, t);
+}
+
+export function flowHealth(ratio: number, a = 1): string {
+  const [r, g, b] = flowHealthRgb(ratio);
+  return `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${a})`;
+}
+
+/** Bucket for legend / accessibility text. */
+export function flowHealthBucket(ratio: number): "low" | "neutral" | "high" {
+  if (!Number.isFinite(ratio)) return "neutral";
+  return ratio < HEALTH_LOW ? "low" : ratio > HEALTH_HIGH ? "high" : "neutral";
+}
+
 /* ── geometry ── */
 export const D2R = Math.PI / 180;
 

@@ -111,9 +111,23 @@ export async function runIngestionCycle(
       }
     }
 
-    // 3b. ticker quote, sanity-checked against the latest resolved close
+    // 3b. ticker quote, sanity-checked against the latest resolved close.
+    // Classify that close's own freshness so a live quote is only flagged
+    // "suspect" against a CURRENT settlement — a lagging Brent close would
+    // otherwise trip the 10% check on a legitimate multi-day price move.
     const refClose = await getLatestDailyPrice(db, b);
-    const quote = resolveLatestQuote(b, obs, lookup, refClose?.price ?? null, now());
+    const refStaleness = refClose
+      ? classifyStaleness(
+          {
+            kind: "settlement",
+            observedAt: `${refClose.periodDate}T00:00:00Z`,
+            periodDate: refClose.periodDate,
+          },
+          lookup(refClose.source),
+          now(),
+        )
+      : undefined;
+    const quote = resolveLatestQuote(b, obs, lookup, refClose?.price ?? null, now(), refStaleness);
     if (quote) await upsertLatestQuote(db, quote);
 
     report.resolved.push({ benchmark: b, quote: quote !== null, dailyUpserts });

@@ -17,8 +17,11 @@
 
 import {
   createDb, runIngestionCycle, runCorridorCycle, runRegimeCycle, runBaselineCycle,
+  runScoreCycle,
 } from "@a3ro/oil-backend";
-import type { CorridorCycleReport, RegimeCycleReport, BaselineCycleReport } from "@a3ro/oil-backend";
+import type {
+  CorridorCycleReport, RegimeCycleReport, BaselineCycleReport, ScoreCycleReport,
+} from "@a3ro/oil-backend";
 
 export const runtime = "nodejs";
 // Never statically pre-render at build time — this route runs a full
@@ -74,7 +77,17 @@ export async function GET(request: Request) {
       baselines = { error: e instanceof Error ? e.message : String(e) };
     }
 
-    return Response.json({ ...report, corridors, regime, baselines });
+    // Composite scores - computed FROM the data the cycles above just
+    // wrote (prices -> Brent-WTI spread), so it runs last and in its own
+    // try/catch: a score failure must never fail ingestion.
+    let scores: ScoreCycleReport | { error: string };
+    try {
+      scores = await runScoreCycle(db);
+    } catch (e) {
+      scores = { error: e instanceof Error ? e.message : String(e) };
+    }
+
+    return Response.json({ ...report, corridors, regime, baselines, scores });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return Response.json(

@@ -1,15 +1,16 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
-   Modules — a pinned lateral traverse across the platform's three
+   Modules — a pinned lateral traverse across the platform's four
    intelligence surfaces. On desktop the section pins and vertical
    scroll drives horizontal travel, like moving along a corridor
    of monitors. On touch/mobile it degrades to a vertical stack
    with inner parallax.
 
-   P·01 Oil Tracker and P·02 Gold Tracker are live surfaces (see
-   projects/OilTracker and projects/GoldTracker). P·03 BTC renders
-   as a module card in private preview — same card grammar,
-   asset-specific accent and signal trace.
+   P·01 Oil Tracker, P·02 Gold Tracker and P·04 Regime Finder are
+   live surfaces (projects/OilTracker, projects/GoldTracker,
+   projects/RegimeFinder). P·03 BTC renders as a module card in
+   private preview — same card grammar, asset-specific accent and
+   signal trace.
 ──────────────────────────────────────────────────────────────── */
 import { useRef, type CSSProperties } from "react";
 import {
@@ -22,6 +23,7 @@ import {
 import { Reveal, useFinePointer } from "../motion";
 import OilTracker from "../projects/OilTracker";
 import GoldTracker from "../projects/GoldTracker";
+import RegimeFinder from "../projects/RegimeFinder";
 
 /* ── deterministic signal trace — seeded, so SSR and client agree ── */
 function walk(seed: number, n: number, vol: number, drift: number): number[] {
@@ -61,7 +63,7 @@ const MODULES = [
   },
 ];
 type Module = (typeof MODULES)[number];
-const TOTAL = MODULES.length + 2; /* + Oil (featured) + Gold (live card) */
+const TOTAL = MODULES.length + 3; /* + Oil (featured) + Gold + Regime (live cards) */
 
 /* Shared inner surface: depth field, time ticks, one signal trace */
 function ModuleSurface({
@@ -258,14 +260,14 @@ function ModulesTraverse() {
     target: ref,
     offset: ["start start", "end end"],
   });
-  // 72vw featured + 2 × 62vw + gaps; travel ends with last panel in frame
-  const x = useTransform(scrollYProgress, [0.05, 0.95], ["0vw", "-112vw"]);
+  // 72vw featured + 3 × 62vw + gaps; travel ends with last panel in frame
+  const x = useTransform(scrollYProgress, [0.05, 0.95], ["0vw", "-180vw"]);
   const innerX = useTransform(scrollYProgress, [0, 1], [28, -28]);
   const counter = useTransform(scrollYProgress, [0.1, 0.9], [1, TOTAL]);
   const counterText = useTransform(counter, (v) => String(Math.round(v)).padStart(2, "0"));
 
   return (
-    <div ref={ref} className="relative h-[340vh]">
+    <div ref={ref} className="relative h-[520vh]">
       <div className="sticky top-0 flex h-[100svh] flex-col justify-center overflow-hidden">
         <div className="mx-auto mb-10 flex w-full max-w-6xl items-end justify-between px-10">
           <div>
@@ -273,7 +275,7 @@ function ModulesTraverse() {
               03 / Modules
             </p>
             <h2 className="max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
-              One platform. Three intelligence surfaces.
+              One platform. Four intelligence surfaces.
             </h2>
           </div>
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--ink-3)]">
@@ -297,6 +299,7 @@ function ModulesTraverse() {
               className="flex h-[52svh] w-[62vw] shrink-0 flex-col"
             />
           ))}
+          <RegimeFinder className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
         </motion.div>
       </div>
     </div>
@@ -333,7 +336,7 @@ function ModulesStack() {
         03 / Modules
       </p>
       <h2 className="mb-16 max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)]">
-        One platform. Three intelligence surfaces.
+        One platform. Four intelligence surfaces.
       </h2>
       <div className="flex flex-col gap-10">
         <Reveal>
@@ -345,6 +348,9 @@ function ModulesStack() {
         {MODULES.map((m, i) => (
           <StackedModule key={m.id} module={m} index={i + 2} />
         ))}
+        <Reveal delay={0.15}>
+          <RegimeFinder className="flex min-h-[560px] flex-col" />
+        </Reveal>
       </div>
     </div>
   );

@@ -17,6 +17,7 @@ import {
   AMB, AMB_HI, AMBER_CSS, DOT, INK,
   HOME, TERTIARY_PTS,
   bakeCorridor, getDots, rotator, vec,
+  flowHealth,
   type OTView, type Rot,
 } from "./oilTrackerShared";
 import { FLOW_ROUTES, GATE_EIA_EST_MBD, type FlowTier } from "./flowRoutes";
@@ -168,7 +169,7 @@ const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
    hotspot whose corridor has live metrics gets its signal-panel
    content from here; hotspots with no live coverage yet (null
    return) fall back to their modeled HOTSPOTS content unchanged. */
-type LiveRow = { k: string; v: string; bar: number; warm?: boolean };
+type LiveRow = { k: string; v: string; bar: number; warm?: boolean; color?: string };
 type CorridorPanelContent = {
   statusText: string; // e.g. "Weekly · live"
   railText: string; // e.g. "Weekly"
@@ -283,6 +284,7 @@ function buildCorridorPanel(
         v: `${Math.round(ratio * 100)}%`,
         bar: clamp(ratio * 0.5, 0, 1), // 100% of norm = mid-bar
         warm: ratio < 0.7 || ratio > 1.3,
+        color: flowHealth(ratio), // red < 0.85 · amber 0.85–1.15 · teal > 1.15
       });
       if (baseline1y.yoyPct != null) {
         const yoyPct = baseline1y.yoyPct;
@@ -291,6 +293,8 @@ function buildCorridorPanel(
           v: `${yoyPct >= 0 ? "▲" : "▼"} ${Math.abs(yoyPct).toFixed(1)}%`,
           bar: clamp(Math.abs(yoyPct) / 50, 0.05, 1),
           warm: Math.abs(yoyPct) >= 15,
+          // treat YoY as a growth ratio (−40% ⇒ 0.60 ⇒ red, +growth ⇒ teal)
+          color: flowHealth(1 + yoyPct / 100),
         });
       }
     }
@@ -481,6 +485,14 @@ export default function OilTrackerCore({
      real feed value backs the sub (amber in the canvas draw); false
      for the neutral CONNECTING/WATCHLIST placeholders. */
   const hotspotSubsRef = useRef<Record<string, { text: string; live: boolean }>>({});
+  /* per-hotspot flow-health ratio (7d transits ÷ 1y norm), or null when no
+     baseline is on file. Drives the gate-dot colour in the draw loop — the
+     visual layer of Flow Stress. Only gate-capable hotspots get a value. */
+  const hotspotHealthRef = useRef<Record<string, number | null>>({});
+  /* per-gate flow-health ratio keyed by corridor id (all chokepoints) —
+     drives the tick-gate dot colour + salience on the globe. Same signal
+     as hotspotHealthRef, keyed by corridor instead of hotspot. */
+  const gateHealthRef = useRef<Record<string, number | null>>({});
   /* per-route pulse-speed multiplier (Section C3): live tanker_volume_7d
      at a route's gates vs. the EIA H1'25 estimate for that gate. Stable
      ref identity so the engine effect's [] deps stay valid — this effect
@@ -511,6 +523,20 @@ export default function OilTrackerCore({
       ara: { text: "WATCHLIST", live: false },
     };
 
+    // per-hotspot flow health: 7d transits ÷ 1-year norm (same ratio the
+    // hover card + panel show). Only gate hotspots (hormuz/sg) have a
+    // transits baseline; others stay null → default amber in the draw loop.
+    const healthOf = (corridor: CorridorId): number | null => {
+      const t = find(corridor, "tanker_transits_7d");
+      const b = baselineFor(feed.baselines ?? null, corridor, "tanker_transits", "1y");
+      if (!t || !b || b.meanValue <= 0) return null;
+      return t.value / b.meanValue;
+    };
+    hotspotHealthRef.current = {
+      hormuz: healthOf("hormuz"),
+      sg: healthOf("singapore"),
+    };
+
     // gate tick suffixes: live tanker_transits_7d per gate, "/D" formatted.
     const gateIds: CorridorId[] = ["hormuz", "singapore", "suez", "bab_el_mandeb", "cape", "panama"];
     const nextGateSubs: Record<string, string> = {};
@@ -519,6 +545,12 @@ export default function OilTrackerCore({
       nextGateSubs[gid] = v ? ` · ${v.value.toFixed(0)}/D` : "";
     }
     gateSubsRef.current = nextGateSubs;
+
+    // per-gate flow health (same 7d-transits ÷ 1y-norm ratio the hover card
+    // and panel show) for every chokepoint — colours the tick-gate dots.
+    gateHealthRef.current = Object.fromEntries(
+      gateIds.map((g) => [g, healthOf(g)] as [string, number | null]),
+    );
 
     // per-route activity factor: avg over the route's gates of
     // (live tanker_volume_7d Mt/d ÷ (EIA est. Mb/d × 0.136)) — 0.136 Mt/d
@@ -542,7 +574,7 @@ export default function OilTrackerCore({
         : 1;
     }
     gateActivityRef.current = nextActivity;
-  }, [feed.corridors]);
+  }, [feed.corridors, feed.baselines]);
 
   /* ── engine ── */
   useEffect(() => {
@@ -846,7 +878,17 @@ export default function OilTrackerCore({
         if (o[2] < 0.35) continue;
         const sx = cx + o[0] * R, sy = cy - o[1] * R;
         const a = 0.3 * o[2] * labSec;
-        ctx.strokeStyle = INK(a);
+        // flow-health: a live 7d-transits ÷ 1y-norm ratio for this gate
+        // gets a filled colour dot (salience) + tints the crosshair; gates
+        // with no baseline yet stay the faint neutral cross.
+        const gh = tk.gate ? gateHealthRef.current[tk.gate] : null;
+        if (typeof gh === "number") {
+          ctx.fillStyle = flowHealth(gh, Math.min(1, o[2] * labSec * 0.85));
+          ctx.beginPath();
+          ctx.arc(sx, sy, 2.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.strokeStyle = typeof gh === "number" ? flowHealth(gh, Math.min(1, a * 1.8)) : INK(a);
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(sx - 3, sy);
@@ -953,7 +995,10 @@ export default function OilTrackerCore({
         if (fade <= 0.01) continue;
         const isSel = selectedRef.current === hs.id;
         const isHover = s.hovered === hs.id;
-        const col = primary ? AMB : INK;
+        // Flow-health colour: gate hotspots with a live "vs 1y norm" ratio
+        // tint red→amber→teal; everything else keeps the base amber/ink.
+        const health = hotspotHealthRef.current[hs.id];
+        const col = typeof health === "number" ? (a: number) => flowHealth(health, a) : primary ? AMB : INK;
         const coreA = primary ? 0.95 : hs.kind === "reserved" ? 0.35 : 0.6;
 
         if (hs.glyph === "diamond") {
@@ -972,6 +1017,15 @@ export default function OilTrackerCore({
           ctx.arc(sx, sy, 1.8, 0, Math.PI * 2);
           ctx.fill();
         } else {
+          // health salience: a faint filled disc in the gate's health colour
+          // behind the core dot, so a stressed (red) or strong (teal) gate
+          // reads at a glance instead of relying on the 2px core alone.
+          if (typeof health === "number") {
+            ctx.fillStyle = flowHealth(health, 0.16 * fade);
+            ctx.beginPath();
+            ctx.arc(sx, sy, primary ? 7.5 : 6, 0, Math.PI * 2);
+            ctx.fill();
+          }
           ctx.fillStyle = col(coreA * fade);
           ctx.beginPath();
           ctx.arc(sx, sy, primary ? 2.4 : 1.7, 0, Math.PI * 2);
@@ -1337,6 +1391,27 @@ export default function OilTrackerCore({
       warm: anyDisagreement,
     });
   }
+  // Brent–WTI spread (Phase 1 composite-score feed). Cross-benchmark and
+  // symmetric, so it shows in both the WTI and Brent panels. Skipped until
+  // runScoreCycle has a real reading (score + normalized non-null), so it
+  // never renders a fabricated bar — same honesty rule as the corridor rows.
+  const spreadSig = feed.scores?.find((s) => s.scoreId === "brent_wti_spread");
+  const spreadLeg = spreadSig?.components[0];
+  if (
+    spreadSig &&
+    spreadSig.score !== null &&
+    spreadLeg &&
+    spreadLeg.value !== null &&
+    spreadLeg.normalized !== null
+  ) {
+    const v = spreadLeg.value;
+    benchRows.push({
+      k: "Brent–WTI spread",
+      v: `${v >= 0 ? "+" : "−"}$${Math.abs(v).toFixed(2)} · ${spreadSig.label}`,
+      bar: clamp(spreadLeg.normalized, 0.05, 1),
+      warm: spreadSig.label !== "NORMAL",
+    });
+  }
   const benchStatusInfo: { text: string; color: string } | null = bq
     ? {
         text: `${bq.kind} · ${bq.staleness}`,
@@ -1375,7 +1450,7 @@ export default function OilTrackerCore({
      exact same feed.corridors + feed.baselines that back the panel's own
      baseline rows (Section §3b), so the hover card never shows a number
      the panel wouldn't also show. Returns null when no baseline is on file. */
-  const baselineLineFor = (corridorId: CorridorId): { text: string; warm: boolean } | null => {
+  const baselineLineFor = (corridorId: CorridorId): { text: string; warm: boolean; ratio: number } | null => {
     const transits7d = feed.corridors?.find(
       (m) => m.corridor === corridorId && m.metric === "tanker_transits_7d",
     );
@@ -1385,12 +1460,13 @@ export default function OilTrackerCore({
     const ratio = transits7d.value / baseline1y.meanValue;
     const pct = Math.round(ratio * 100);
     const warm = ratio < 0.7 || ratio > 1.3;
-    if (baseline1y.yoyPct == null) return { text: `${pct}% OF 1Y NORM`, warm };
+    if (baseline1y.yoyPct == null) return { text: `${pct}% OF 1Y NORM`, warm, ratio };
     const yoyPct = baseline1y.yoyPct;
     const yoyWarm = Math.abs(yoyPct) >= 15;
     return {
       text: `${pct}% OF 1Y NORM · ${yoyPct >= 0 ? "▲" : "▼"}${Math.abs(yoyPct).toFixed(0)}% YOY`,
       warm: warm || yoyWarm,
+      ratio,
     };
   };
 
@@ -1402,7 +1478,7 @@ export default function OilTrackerCore({
   type HoverCardContent = {
     title: string;
     statusLine?: { text: string; color: string };
-    lines: { text: string; warm?: boolean }[];
+    lines: { text: string; warm?: boolean; color?: string }[];
     showClickFooter: boolean;
   };
   const hoverCard: HoverCardContent | null = (() => {
@@ -1428,10 +1504,10 @@ export default function OilTrackerCore({
       const transits7d = feed.corridors?.find(
         (m) => m.corridor === corridorId && m.metric === "tanker_transits_7d",
       );
-      const lines: { text: string; warm?: boolean }[] = [];
+      const lines: { text: string; warm?: boolean; color?: string }[] = [];
       if (transits7d) lines.push({ text: `${transits7d.value.toFixed(0)}/D · 7D AVG` });
       const baseLine = baselineLineFor(corridorId);
-      if (baseLine) lines.push({ text: baseLine.text, warm: baseLine.warm });
+      if (baseLine) lines.push({ text: baseLine.text, warm: baseLine.warm, color: flowHealth(baseLine.ratio) });
       return { title: label, lines, showClickFooter: false };
     }
 
@@ -1439,7 +1515,7 @@ export default function OilTrackerCore({
       const routeId = hoverId.slice(6);
       const route = FLOW_ROUTES.find((r) => r.id === routeId);
       if (!route) return null;
-      const lines: { text: string; warm?: boolean }[] = [];
+      const lines: { text: string; warm?: boolean; color?: string }[] = [];
       if (route.gates.length === 0) {
         lines.push({ text: "NO LIVE GATE ON ROUTE · WIDTH = EIA SCALE" });
       } else {
@@ -1458,12 +1534,12 @@ export default function OilTrackerCore({
     if (!h) return null;
     const hLive = liveFor(h.id);
     const status = statusFor(h, hLive);
-    const lines: { text: string; warm?: boolean }[] = [];
+    const lines: { text: string; warm?: boolean; color?: string }[] = [];
     if (hLive) lines.push({ text: hLive.metric });
     const gateCorridor = HOTSPOT_GATE_CORRIDOR[h.id];
     if (gateCorridor) {
       const baseLine = baselineLineFor(gateCorridor);
-      if (baseLine) lines.push({ text: baseLine.text, warm: baseLine.warm });
+      if (baseLine) lines.push({ text: baseLine.text, warm: baseLine.warm, color: flowHealth(baseLine.ratio) });
     }
     return { title: h.title, statusLine: status, lines, showClickFooter: true };
   })();
@@ -1567,6 +1643,9 @@ export default function OilTrackerCore({
                 </p>
                 {HOTSPOTS.map((h) => {
                   const hLive = liveFor(h.id);
+                  const hGate = HOTSPOT_GATE_CORRIDOR[h.id];
+                  const hBase = hGate ? baselineLineFor(hGate) : null;
+                  const hHealth = hBase ? flowHealth(hBase.ratio) : null;
                   return (
                     <button
                       key={h.id}
@@ -1580,11 +1659,20 @@ export default function OilTrackerCore({
                       <span className={`font-mono text-[10px] uppercase tracking-[0.2em] ${selected === h.id ? "text-[var(--ink)]" : "text-[var(--ink-2)]"}`}>
                         {h.title}
                       </span>
-                      <span
-                        className="font-mono text-[9px] uppercase tracking-[0.2em]"
-                        style={{ color: hLive ? AMBER_CSS : statusColor(h.kind) }}
-                      >
-                        {hLive ? hLive.railText : h.status}
+                      <span className="flex items-center gap-2">
+                        {hHealth && (
+                          <span
+                            aria-hidden
+                            className="inline-block h-[6px] w-[6px] shrink-0 rounded-full"
+                            style={{ background: hHealth }}
+                          />
+                        )}
+                        <span
+                          className="font-mono text-[9px] uppercase tracking-[0.2em]"
+                          style={{ color: hLive ? AMBER_CSS : statusColor(h.kind) }}
+                        >
+                          {hLive ? hLive.railText : h.status}
+                        </span>
                       </span>
                     </button>
                   );
@@ -1592,6 +1680,7 @@ export default function OilTrackerCore({
                 <p className="border-l border-[var(--line)] px-3 py-[7px] font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
                   + corridors onboarding · pro feeds on request
                 </p>
+                <FlowHealthLegend className="mt-3 border-l border-[var(--line)] px-3 py-[7px]" />
               </motion.div>
             )}
           </AnimatePresence>
@@ -1758,7 +1847,7 @@ export default function OilTrackerCore({
                   <p
                     key={i}
                     className="mt-1 font-mono text-[9px] uppercase tracking-[0.15em]"
-                    style={{ color: l.warm ? AMBER_CSS : "var(--ink-2)" }}
+                    style={{ color: l.color ?? (l.warm ? AMBER_CSS : "var(--ink-2)") }}
                   >
                     {l.text}
                   </p>
@@ -1842,7 +1931,7 @@ export default function OilTrackerCore({
                         <p className="min-w-0 truncate text-[11px] text-[var(--ink-2)]">{r.k}</p>
                         <p
                           className="whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.15em]"
-                          style={{ color: r.warm ? AMBER_CSS : "var(--ink)" }}
+                          style={{ color: r.color ?? (r.warm ? AMBER_CSS : "var(--ink)") }}
                         >
                           {r.v}
                         </p>
@@ -1850,7 +1939,7 @@ export default function OilTrackerCore({
                       <div className="mt-[6px] h-px w-full bg-[var(--depth-3)]">
                         <motion.div
                           className="h-px"
-                          style={{ background: r.warm ? "#e6bd7d" : AMBER_CSS, opacity: r.warm ? 0.9 : 0.6 }}
+                          style={{ background: r.color ?? (r.warm ? "#e6bd7d" : AMBER_CSS), opacity: r.color ? 0.95 : r.warm ? 0.9 : 0.6 }}
                           initial={{ width: 0 }}
                           animate={{ width: `${r.bar * 100}%` }}
                           transition={{ duration: DUR.reveal, delay: 0.15, ease: EASE_OUT as unknown as number[] }}
@@ -1883,6 +1972,10 @@ export default function OilTrackerCore({
                     </button>
                   ))}
                 </div>
+              )}
+
+              {selLive?.rows.some((r) => r.color) && (
+                <FlowHealthLegend className="mt-4 border-t border-[var(--line)] pt-3" />
               )}
 
               {selLive && (
@@ -2193,6 +2286,37 @@ export default function OilTrackerCore({
             </motion.aside>
           )}
         </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+/* ── flow-health legend ──
+   Shared by the corridor rail and the corridor signal panel so the
+   swatches — drawn from flowHealth() — can never drift from the live
+   gate/hover/row colours. Rendered in the panel too, since the rail
+   hides whenever a panel is open. */
+function FlowHealthLegend({ className = "" }: { className?: string }) {
+  return (
+    <div className={className}>
+      <span className="font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+        Flow vs 1y norm
+      </span>
+      <div className="mt-[6px] flex items-center gap-3 font-mono text-[8px] uppercase tracking-[0.12em] text-[var(--ink-3)]">
+        {[
+          { c: flowHealth(0.5), t: "<85%" },
+          { c: flowHealth(1), t: "85–115%" },
+          { c: flowHealth(1.5), t: ">115%" },
+        ].map((s) => (
+          <span key={s.t} className="flex items-center gap-[5px]">
+            <span
+              aria-hidden
+              className="inline-block h-[6px] w-[6px] shrink-0 rounded-full"
+              style={{ background: s.c }}
+            />
+            {s.t}
+          </span>
+        ))}
       </div>
     </div>
   );

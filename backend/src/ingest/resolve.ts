@@ -31,7 +31,7 @@ import {
   SourceDescriptor,
   Staleness,
 } from "../core/types";
-import { classifyStaleness, isUsable, nowIso } from "../core/time";
+import { classifyStaleness, isAlertGrade, isUsable, nowIso } from "../core/time";
 
 /** Settlement values within this relative spread are "in agreement". */
 export const DISAGREEMENT_TOLERANCE = 0.005; // 0.5 %
@@ -108,6 +108,11 @@ export function resolveLatestQuote(
   lookup: DescriptorLookup,
   referenceSettlement: number | null,
   now: Date = new Date(),
+  /** Staleness of `referenceSettlement` itself. When the reference close is
+   *  stale/dead the suspect check is skipped — you can't call a live quote
+   *  "suspect" against a lagging settlement (docs/RULES.md §3.1). Undefined
+   *  (no reference classification) keeps the original always-check behavior. */
+  referenceStaleness?: Staleness,
 ): LatestQuote | null {
   const stalenessRank: Record<Staleness, number> = { fresh: 0, aging: 1, stale: 2, dead: 3 };
   const classified = classifyAll(records, lookup, now).filter(
@@ -154,8 +159,18 @@ export function resolveLatestQuote(
     referenceSettlement !== null &&
     referenceSettlement !== 0
   ) {
-    const deviation = Math.abs(chosen.record.price - referenceSettlement) / Math.abs(referenceSettlement);
-    suspect = deviation > SUSPECT_DEVIATION;
+    // Only sanity-check a live quote against a CURRENT settlement. When the
+    // reference close is itself stale/dead (e.g. a lagging Brent settlement),
+    // a real multi-day price move would be mislabeled "suspect" — so gate on
+    // the reference's own freshness (fresh/aging = alert-grade). Callers that
+    // pass no referenceStaleness keep the original always-check behavior.
+    const referenceCurrent =
+      referenceStaleness === undefined || isAlertGrade(referenceStaleness);
+    if (referenceCurrent) {
+      const deviation =
+        Math.abs(chosen.record.price - referenceSettlement) / Math.abs(referenceSettlement);
+      suspect = deviation > SUSPECT_DEVIATION;
+    }
   }
 
   return {
