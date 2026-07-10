@@ -19,6 +19,10 @@ concurrency:
   group: daily-market-scan
   cancel-in-progress: false
 
+defaults:
+  run:
+    working-directory: module5-scan-pipeline
+
 jobs:
   scan:
     runs-on: ubuntu-latest
@@ -33,7 +37,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install --quiet yfinance pandas
+        run: pip install --quiet -r requirements.txt
 
       - name: Probe-verify universe
         id: probe
