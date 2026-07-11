@@ -13,7 +13,7 @@ import {
   useReducedMotion,
   type MotionValue,
 } from "framer-motion";
-import { Reveal } from "../motion";
+import { MaskText, Parallax, Reveal } from "../motion";
 
 const STEPS = [
   {
@@ -77,12 +77,27 @@ export default function Process() {
 
   return (
     <section ref={ref} id="method" className="relative z-10 py-[18vh]">
-      <div className="mx-auto max-w-6xl px-6 md:px-10">
-        <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-          04 / Method
-        </p>
+      {/* Ghost numeral — drifts against scroll, deep background */}
+      <Parallax
+        depth={-0.3}
+        className="pointer-events-none absolute right-[2%] top-[4%] select-none"
+      >
+        <span
+          aria-hidden
+          className="font-mono text-[clamp(8rem,22vw,18rem)] font-medium leading-none text-[var(--depth-2)]"
+        >
+          04
+        </span>
+      </Parallax>
+
+      <div className="relative mx-auto max-w-6xl px-6 md:px-10">
+        <Reveal>
+          <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
+            04 / Method
+          </p>
+        </Reveal>
         <h2 className="mb-20 max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
-          From raw feed to readable signal.
+          <MaskText>From raw feed to readable signal.</MaskText>
         </h2>
 
         <div className="relative pl-8 md:pl-12">

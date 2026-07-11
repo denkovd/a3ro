@@ -1,9 +1,23 @@
 # A3RO Oil Tracker — Composite Scores Plan
 
-Status date: 2026-07-09. Design spec for the layered signal scores that sit on
-top of the existing price + corridor feeds. Free-tier data unless marked PRO.
-No code written yet — this precedes the P4/P5-era build work in `roadmap.md` and
-is the consumer those primitives should be built for.
+Status date: 2026-07-09 (design) · 2026-07-11 (build status). Design spec for
+the layered signal scores that sit on top of the existing price + corridor
+feeds. Free-tier data unless marked PRO.
+
+**Build status 2026-07-11:** sequencing #1–#3 SHIPPED, #4 partially —
+throughput expansion (all 6 gates + 1y/5y baselines), Brent–WTI spread, the
+Flow Stress composite (all four legs live), the full WPSR inventories pack
+(`eiaInventory.ts`: crude/Cushing/gasoline/distillate/SPR stocks + US-total
+utilization, every id live-verified), the week-of-year 5-yr seasonal bands
+(`seasonal_baselines`, `008_seasonal.sql`, monthly-guarded cycle; SPR
+deliberately excluded — policy-driven, not seasonal), and the **Tightness
+composite** (inventories-vs-band + utilization legs live; the crack-proxy leg
+ships dark-but-visible until the futures-derived cracks land, which is the
+remaining half of #4). Deliberate deviation from the architecture below:
+inventory levels ride `corridor_metrics` under `usgulf` rather than a
+dedicated inventories table; the seasonal NORMS got their own table because
+they are provider-fetched 5y aggregates, not rolling observations. Next:
+crack + term structure (#4 remainder), then the FRED macro layer (#5).
 
 Scores are **composites**, not raw feeds. They follow the Module 4 (Regime
 Finder) precedent exactly: a pure engine (`regime/engine.ts`) → snapshot table

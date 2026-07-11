@@ -10,10 +10,12 @@
 
 import { CorridorSource } from "./CorridorSource";
 import { EiaUsGulfSource } from "./eiaCorridor";
+import { EiaInventorySource } from "./eiaInventory";
+import { MpaSingaporeSource } from "./mpaSingapore";
 import { PortWatchSource } from "./portwatch";
 
 export function buildCorridorSources(): CorridorSource[] {
-  return [new EiaUsGulfSource(), new PortWatchSource()];
+  return [new EiaUsGulfSource(), new EiaInventorySource(), new PortWatchSource(), new MpaSingaporeSource()];
 }
 
 export function getCorridorSource(id: string): CorridorSource | undefined {

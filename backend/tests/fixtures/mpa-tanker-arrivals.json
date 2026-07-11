@@ -1,0 +1,18 @@
+{
+  "success": true,
+  "result": {
+    "resource_id": "d_9adb5ace517591edd9a8c88291ac1f1c",
+    "fields": [
+      { "type": "text", "id": "month" },
+      { "type": "text", "id": "number_of_tankers" },
+      { "type": "text", "id": "gross_tonnage" },
+      { "type": "int4", "id": "_id" }
+    ],
+    "records": [
+      { "_id": 293, "month": "2026-05", "number_of_tankers": "2332", "gross_tonnage": "82280.92" },
+      { "_id": 292, "month": "2026-04", "number_of_tankers": "2085", "gross_tonnage": "" }
+    ],
+    "total": 293,
+    "limit": 2
+  }
+}

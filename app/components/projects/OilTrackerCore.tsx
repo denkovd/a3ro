@@ -24,7 +24,7 @@ import { FLOW_ROUTES, GATE_EIA_EST_MBD, type FlowTier } from "./flowRoutes";
 import { PRODUCERS, PRODUCERS_SOURCE, type Producer, type ProducerLayerMode } from "./producers";
 import useOilData from "./useOilData";
 import { formatPctSigned, formatUsdBbl, formatUtcDateTime, formatUtcTime, isUtcToday } from "./oilFormat";
-import type { Benchmark, CorridorBaseline, CorridorId, CorridorMetricLatest, DailyPrice, LatestQuote } from "@a3ro/oil-backend";
+import type { Benchmark, CorridorBaseline, CorridorId, CorridorMetricLatest, DailyPrice, LatestQuote, ScoreSnapshot } from "@a3ro/oil-backend";
 
 /* ══ route-only content: hotspot hierarchy + signal copy ══ */
 type HotspotKind = "live" | "demand" | "watch" | "reserved";
@@ -182,6 +182,37 @@ type CorridorPanelContent = {
   footerLine: string; // fine-print line
 };
 
+/** "Next WPSR release" countdown — the EIA Weekly Petroleum Status
+ *  Report publishes Wednesdays 10:30 ET. Computed as pure ET
+ *  wall-clock arithmetic via Intl (client-safe; core/time's
+ *  zonedTimeToUtc is a backend VALUE export and must not enter the
+ *  client bundle — see useOilData's bundle-safety note). Federal
+ *  holidays shift the release; not modeled, hence "scheduled". Worst
+ *  case across a DST transition the countdown is off by one hour
+ *  until the shift passes — acceptable for a chip. */
+function nextWpsrText(now: Date = new Date()): string {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const parts = Object.fromEntries(fmt.formatToParts(now).map((p) => [p.type, p.value]));
+  const dowNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const dow = dowNames.indexOf(String(parts.weekday));
+  const minsNow = (Number(parts.hour) % 24) * 60 + Number(parts.minute);
+  const minsTarget = 10 * 60 + 30;
+  let daysUntilWed = (3 - dow + 7) % 7;
+  if (daysUntilWed === 0 && minsNow >= minsTarget) daysUntilWed = 7;
+  const deltaMin = daysUntilWed * 1440 + minsTarget - minsNow;
+  if (deltaMin <= 0) return "NEXT WPSR · DUE NOW";
+  const d = Math.floor(deltaMin / 1440);
+  const h = Math.floor((deltaMin % 1440) / 60);
+  const when = d > 0 ? `${d}D ${h}H` : h > 0 ? `${h}H ${deltaMin % 60}M` : `${deltaMin}M`;
+  return `NEXT WPSR · WED 10:30 ET · IN ${when}`;
+}
+
 /** Looks up one (corridor, metric, window) historical-norm row, or null
  *  when no baseline is on file yet for that combination (Section §3a). */
 function baselineFor(
@@ -197,6 +228,7 @@ function buildCorridorPanel(
   hotspotId: string,
   metrics: CorridorMetricLatest[],
   baselines: CorridorBaseline[] | null,
+  scores: ScoreSnapshot[] | null,
 ): CorridorPanelContent | null {
   if (hotspotId === "usgc") {
     const usgulfMetrics = metrics.filter((m) => m.corridor === "usgulf");
@@ -215,6 +247,39 @@ function buildCorridorPanel(
         ? `PADD 3 refinery utilization · weekly EIA · as of ${util.periodDate}`
         : "";
     const rows: LiveRow[] = [];
+
+    // Flow Stress — first composite score (docs/scores-plan.md Phase 1).
+    // Rendered only with a real reading (score non-null), same honesty
+    // rule as every other row: never a fabricated bar. It sits ABOVE its
+    // input rows so the legs stay individually inspectable underneath
+    // (exports/utilization/stocks here; the spread leg renders in the
+    // WTI/Brent benchmark panels).
+    const flowStress = scores?.find((s) => s.scoreId === "flow_stress") ?? null;
+    const flowStressRail =
+      flowStress !== null && flowStress.score !== null ? `Stress ${flowStress.score}` : "Weekly";
+    const flowStressNote =
+      flowStress !== null && flowStress.score !== null ? ` ${flowStress.headline}.` : "";
+    if (flowStress && flowStress.score !== null) {
+      rows.push({
+        k: "Flow stress · composite",
+        v: `${flowStress.score}/100 · ${flowStress.label}`,
+        bar: clamp(flowStress.score / 100, 0.05, 1),
+        warm: flowStress.status === "elevated",
+      });
+    }
+    // Tightness — second composite (Phase 2): physical scarcity vs the
+    // 5-yr week-of-year seasonal bands. Same honesty rule as above.
+    const tightness = scores?.find((s) => s.scoreId === "tightness") ?? null;
+    const tightnessNote =
+      tightness !== null && tightness.score !== null ? ` ${tightness.headline}.` : "";
+    if (tightness && tightness.score !== null) {
+      rows.push({
+        k: "Tightness · composite",
+        v: `${tightness.score}/100 · ${tightness.label}`,
+        bar: clamp(tightness.score / 100, 0.05, 1),
+        warm: tightness.status === "elevated",
+      });
+    }
     if (exports) {
       rows.push({
         k: "US crude exports",
@@ -231,15 +296,49 @@ function buildCorridorPanel(
       });
     }
 
+    // Weekly EIA stocks (WPSR) — the regional-stock-draw leg's inputs,
+    // shown raw so the composite above never hides them. Bar divisors
+    // are display scalers only (same convention as the gate rows).
+    const usStocks = usgulfMetrics.find((m) => m.metric === "us_crude_stocks");
+    const cushing = usgulfMetrics.find((m) => m.metric === "cushing_stocks");
+    if (usStocks) {
+      rows.push({
+        k: "US crude stocks · ex-SPR",
+        v: `${usStocks.value.toFixed(1)} Mbbl`,
+        bar: clamp(usStocks.value / 500, 0, 1),
+      });
+    }
+    if (cushing) {
+      rows.push({
+        k: "Cushing stocks",
+        v: `${cushing.value.toFixed(1)} Mbbl`,
+        bar: clamp(cushing.value / 50, 0, 1),
+      });
+    }
+    // SPR — level + trend context only, deliberately outside the
+    // seasonal bands (policy-driven, not seasonal — see eiaSeasonal.ts).
+    // Bar = fill fraction of the ~727 Mbbl design capacity (a real
+    // physical reference, not a display scaler).
+    const spr = usgulfMetrics.find((m) => m.metric === "spr_stocks");
+    if (spr) {
+      rows.push({
+        k: "SPR level",
+        v: `${spr.value.toFixed(1)} Mbbl`,
+        bar: clamp(spr.value / 727, 0, 1),
+      });
+    }
+
     return {
       statusText: "Weekly · live",
-      railText: "Weekly",
+      railText: flowStressRail,
       metric,
       metricLabel,
       rows,
-      seriesNote: "WEEKLY SERIES · CHART PENDING",
+      seriesNote: nextWpsrText(),
       note:
-        "US Gulf export engine. Weekly EIA data — crude exports and Gulf Coast refinery utilization; more corridor metrics onboard as coverage expands.",
+        "US Gulf export engine. Weekly EIA data — crude exports, Gulf Coast refinery utilization and WPSR stocks; more corridor metrics onboard as coverage expands." +
+        flowStressNote +
+        tightnessNote,
       footerRight: "weekly",
       footerLine: "Live weekly data · EIA · not investment advice",
     };
@@ -299,6 +398,30 @@ function buildCorridorPanel(
       }
     }
 
+    // Monthly MPA port statistics via data.gov.sg (roadmap P6) —
+    // Singapore only. MPA flags the latest month as a preliminary
+    // estimate; ~4–7 week publication lag, hence "monthly" labels
+    // rather than pretending these move with the AIS rows above.
+    // Bar divisors are display scalers (same convention as above).
+    if (hotspotId === "sg") {
+      const bunker = corridorMetrics.find((m) => m.metric === "bunker_sales");
+      const arrivals = corridorMetrics.find((m) => m.metric === "tanker_arrivals");
+      if (bunker) {
+        rows.push({
+          k: "Bunker sales · monthly",
+          v: `${bunker.value.toFixed(2)} Mt`,
+          bar: clamp(bunker.value / 6, 0, 1),
+        });
+      }
+      if (arrivals) {
+        rows.push({
+          k: "Tanker arrivals · monthly",
+          v: `${Math.round(arrivals.value).toLocaleString("en-US")} /mo`,
+          bar: clamp(arrivals.value / 3000, 0, 1),
+        });
+      }
+    }
+
     const metricLabel =
       hotspotId === "hormuz"
         ? `Tanker transits · 7-day avg · IMF PortWatch · as of ${transits7d.periodDate}`
@@ -317,7 +440,10 @@ function buildCorridorPanel(
       seriesNote: "SATELLITE SERIES · CHART PENDING",
       note,
       footerRight: "satellite",
-      footerLine: "Live AIS data · IMF PortWatch · not investment advice",
+      footerLine:
+        hotspotId === "sg"
+          ? "Live AIS + monthly MPA port stats · PortWatch / data.gov.sg · not investment advice"
+          : "Live AIS data · IMF PortWatch · not investment advice",
     };
   }
 
@@ -1424,7 +1550,8 @@ export default function OilTrackerCore({
      coverage yet, in which case the signal panel below falls back to
      an honest "connecting" (live-capable, no data yet) or
      "watchlist" (no live source at all) state — never modeled data. */
-  const liveFor = (hid: string) => buildCorridorPanel(hid, feed.corridors ?? [], feed.baselines ?? null);
+  const liveFor = (hid: string) =>
+    buildCorridorPanel(hid, feed.corridors ?? [], feed.baselines ?? null, feed.scores ?? null);
   const selLive = sel ? liveFor(sel.id) : null;
   const LIVE_CAPABLE = new Set(["hormuz", "sg", "usgc"]);
   const selIsWatchlist = !!sel && !selLive && WATCHLIST_COPY[sel.id] !== undefined;

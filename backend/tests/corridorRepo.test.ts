@@ -1,6 +1,10 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { insertCorridorMetrics, getLatestCorridorMetrics } from "../src/storage/corridorRepo";
+import {
+  insertCorridorMetrics,
+  getCorridorMetricSeries,
+  getLatestCorridorMetrics,
+} from "../src/storage/corridorRepo";
 import { CorridorMetricRecord } from "../src/core/corridorTypes";
 import { QueryResultLike, Queryable } from "../src/storage/db";
 
@@ -148,5 +152,40 @@ describe("corridorRepo", () => {
 
     const latest = await getLatestCorridorMetrics(db);
     assert.deepEqual(latest, []);
+  });
+
+  test("getCorridorMetricSeries binds (corridor, metric, from, to), orders ascending, maps rows", async () => {
+    const db = new StubDb();
+    db.responses = [
+      {
+        rows: [
+          { period_date: new Date(2026, 5, 5), value: "408.359" }, // Jun 5 local — string value
+          { period_date: new Date(2026, 6, 3), value: 411.357 }, // Jul 3 local — numeric value
+        ],
+      },
+    ];
+
+    const series = await getCorridorMetricSeries(db, "usgulf", "us_crude_stocks", "2026-04-04", "2026-07-11");
+
+    assert.equal(db.calls.length, 1);
+    const call = db.calls[0];
+    assert.match(call.text, /from corridor_metrics/);
+    assert.match(call.text, /period_date between \$3 and \$4/);
+    assert.match(call.text, /order by period_date asc/);
+    assert.deepEqual(call.params, ["usgulf", "us_crude_stocks", "2026-04-04", "2026-07-11"]);
+
+    // Date columns map via local components (the repo's UTC+N-safe rule)
+    // and values coerce to numbers.
+    assert.deepEqual(series, [
+      { periodDate: "2026-06-05", value: 408.359 },
+      { periodDate: "2026-07-03", value: 411.357 },
+    ]);
+  });
+
+  test("getCorridorMetricSeries returns an empty array when no rows match", async () => {
+    const db = new StubDb();
+    db.responses = [{ rows: [] }];
+    const series = await getCorridorMetricSeries(db, "usgulf", "cushing_stocks", "2026-01-01", "2026-07-11");
+    assert.deepEqual(series, []);
   });
 });

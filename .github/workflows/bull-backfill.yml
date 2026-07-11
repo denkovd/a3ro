@@ -1,0 +1,42 @@
+# ──────────────────────────────────────────────────────────────
+# Module 5 — manual chunked backfill (workflow_dispatch only).
+# The scan script auto-backfills symbols with no stored bars, so
+# this is just the scan run in slices — resumable by construction:
+# already-backfilled symbols only fetch a 1-month increment.
+#
+# Dispatch with chunk "1/4" … "4/4" (or "1/1" for everything).
+# ──────────────────────────────────────────────────────────────
+name: bull-backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      chunk:
+        description: "Universe slice to backfill, N/M (e.g. 1/4)"
+        required: true
+        default: "1/1"
+
+concurrency:
+  group: bull-scan     # never concurrent with the daily scan
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Backfill chunk
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
+        run: npx tsx scripts/run-bull-scan.ts --chunk "${{ github.event.inputs.chunk }}"

@@ -62,7 +62,7 @@ export default function RegimeFinder({ className = "" }: { className?: string })
   return (
     <a
       href={ROUTE}
-      aria-label="Regime Finder — cross-asset regime shifts, open module"
+      aria-label="Bull Market Finder 1 — macro-30 bullish-state screener, open module"
       className={`group/rf relative flex cursor-pointer flex-col overflow-hidden rounded-sm hairline bg-[var(--depth-1)] transition-colors duration-[var(--dur-base)] hover:border-[var(--line-2)] ${className}`}
     >
       {/* stage */}
@@ -145,11 +145,11 @@ export default function RegimeFinder({ className = "" }: { className?: string })
             A3RO Intelligence
           </p>
           <h3 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--ink)] md:text-3xl">
-            Regime Finder
+            Bull Market Finder 1
           </h3>
           <p className="mt-3 hidden text-[13px] leading-relaxed text-[var(--ink-2)] md:block">
-            Cross-asset regime shifts — trend flips confirmed on daily and
-            weekly closes, ranked by recency.
+            Macro-30 bullish-state screener — Money Line trend flips confirmed
+            on daily and weekly closes, ranked by recency.
           </p>
 
           {/* hero list: what just turned */}
@@ -275,10 +275,10 @@ export default function RegimeFinder({ className = "" }: { className?: string })
       {/* card footer — directory grammar */}
       <div className="flex items-baseline justify-between gap-4 px-5 py-4 hairline-t">
         <h3 className="text-sm font-medium text-[var(--ink)]">
-          A3RO Intelligence — Regime Finder
+          A3RO Intelligence — Bull Market Finder 1
         </h3>
         <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-          Cross-asset regime shifts — daily × weekly confirm
+          Macro-30 bullish state — daily × weekly confirm
         </p>
       </div>
     </a>

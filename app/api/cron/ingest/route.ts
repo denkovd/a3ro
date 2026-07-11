@@ -17,10 +17,11 @@
 
 import {
   createDb, runIngestionCycle, runCorridorCycle, runRegimeCycle, runBaselineCycle,
-  runScoreCycle,
+  runSeasonalCycle, runScoreCycle,
 } from "@a3ro/oil-backend";
 import type {
-  CorridorCycleReport, RegimeCycleReport, BaselineCycleReport, ScoreCycleReport,
+  CorridorCycleReport, RegimeCycleReport, BaselineCycleReport, SeasonalCycleReport,
+  ScoreCycleReport,
 } from "@a3ro/oil-backend";
 
 export const runtime = "nodejs";
@@ -77,9 +78,20 @@ export async function GET(request: Request) {
       baselines = { error: e instanceof Error ? e.message : String(e) };
     }
 
+    // Week-of-year seasonal norms (WPSR stocks) — same isolation +
+    // freshness-guard posture as the gate baselines above (~monthly
+    // EIA 5y-history fetch; most days a cheap no-op read).
+    let seasonal: SeasonalCycleReport | { error: string };
+    try {
+      seasonal = await runSeasonalCycle(db);
+    } catch (e) {
+      seasonal = { error: e instanceof Error ? e.message : String(e) };
+    }
+
     // Composite scores - computed FROM the data the cycles above just
-    // wrote (prices -> Brent-WTI spread), so it runs last and in its own
-    // try/catch: a score failure must never fail ingestion.
+    // wrote (prices -> spread; stocks/gates/seasonal -> Flow Stress,
+    // Tightness), so it runs last and in its own try/catch: a score
+    // failure must never fail ingestion.
     let scores: ScoreCycleReport | { error: string };
     try {
       scores = await runScoreCycle(db);
@@ -87,7 +99,7 @@ export async function GET(request: Request) {
       scores = { error: e instanceof Error ? e.message : String(e) };
     }
 
-    return Response.json({ ...report, corridors, regime, baselines, scores });
+    return Response.json({ ...report, corridors, regime, baselines, seasonal, scores });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return Response.json(

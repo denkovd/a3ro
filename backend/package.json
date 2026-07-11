@@ -13,7 +13,12 @@
     "migrate:leads": "psql \"$DATABASE_URL\" -f migrations/003_leads.sql",
     "migrate:regime": "psql \"$DATABASE_URL\" -f migrations/004_regime.sql",
     "migrate:scores": "psql \"$DATABASE_URL\" -f migrations/006_scores.sql",
+    "migrate:bull": "psql \"$DATABASE_URL\" -f migrations/007_bull.sql",
+    "migrate:seasonal": "psql \"$DATABASE_URL\" -f migrations/008_seasonal.sql",
     "verify:regime": "tsx scripts/verify-regime.ts",
+    "verify:bull": "tsx scripts/verify-bull.ts",
+    "scan:bull": "tsx scripts/run-bull-scan.ts",
+    "refresh:universe": "tsx scripts/refresh-universe.ts",
     "test": "tsx --test tests/**/*.test.ts"
   },
   "dependencies": {

@@ -142,3 +142,17 @@ export function isUsable(s: Staleness): boolean {
 export function isAlertGrade(s: Staleness): boolean {
   return s === "fresh" || s === "aging";
 }
+
+/**
+ * ISO-8601 week number (1..53) of a YYYY-MM-DD calendar date, computed
+ * in UTC. Backs the week-of-year seasonal baselines (the "5-year
+ * seasonal range" in docs/scores-plan.md): a week is assigned to the
+ * year containing its Thursday, per ISO 8601.
+ */
+export function isoWeekOf(dateStr: string): number {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  const day = d.getUTCDay() || 7; // Mon=1 .. Sun=7
+  d.setUTCDate(d.getUTCDate() + 4 - day); // shift to this week's Thursday
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+}

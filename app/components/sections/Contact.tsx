@@ -42,7 +42,7 @@ export default function Contact() {
         className="relative mx-auto w-full max-w-6xl px-6 will-change-transform md:px-10"
       >
         <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-          05 / Contact
+          06 / Contact
         </p>
         <h2 className="max-w-3xl text-balance text-4xl font-semibold leading-[1.08] tracking-tight text-[var(--ink)] md:text-6xl">
           <MaskText>Three markets under watch.</MaskText>

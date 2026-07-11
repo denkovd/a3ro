@@ -45,6 +45,7 @@ export default function Manifesto() {
   // Words light across the middle of the pin; scene eases in/out at edges
   const wordsProgress = useTransform(scrollYProgress, [0.08, 0.85], [0, 1]);
   const sceneIn = useTransform(scrollYProgress, [0, 0.08], [0.4, 1]);
+  const sceneScale = useTransform(scrollYProgress, [0, 0.1], [0.965, 1]);
   const barScale = useTransform(scrollYProgress, [0.08, 0.85], [0, 1]);
 
   const words = STATEMENT.split(" ");
@@ -52,8 +53,8 @@ export default function Manifesto() {
   return (
     <section ref={ref} id="platform" className="relative z-10 h-[220vh]">
       <motion.div
-        style={reduced ? undefined : { opacity: sceneIn }}
-        className="sticky top-0 flex h-[100svh] items-center"
+        style={reduced ? undefined : { opacity: sceneIn, scale: sceneScale }}
+        className="sticky top-0 flex h-[100svh] items-center will-change-transform"
       >
         <div className="mx-auto w-full max-w-4xl px-6 md:px-10">
           <div className="mb-10 flex items-center justify-between">

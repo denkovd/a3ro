@@ -10,6 +10,7 @@ const LINKS = [
   { label: "Platform", href: "#platform" },
   { label: "Modules", href: "#modules" },
   { label: "Method", href: "#method" },
+  { label: "Index", href: "#index" },
   { label: "Contact", href: "#contact" },
 ];
 

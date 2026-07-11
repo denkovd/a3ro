@@ -1,0 +1,18 @@
+{
+  "success": true,
+  "result": {
+    "resource_id": "d_89d2874dad74a273270369334f1e7d28",
+    "fields": [
+      { "type": "text", "id": "month" },
+      { "type": "text", "id": "bunker_sales" },
+      { "type": "int4", "id": "_id" }
+    ],
+    "records": [
+      { "_id": 377, "month": "2026-05", "bunker_sales": "4548.35" },
+      { "_id": 376, "month": "2026-04", "bunker_sales": "4351.04" },
+      { "_id": 375, "month": "2026-03", "bunker_sales": null }
+    ],
+    "total": 377,
+    "limit": 3
+  }
+}

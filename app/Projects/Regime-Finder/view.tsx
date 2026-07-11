@@ -115,13 +115,13 @@ export default function RegimeFinderView() {
           <button
             onClick={leave}
             className="sweep font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-2)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]"
-            aria-label="Close Regime Finder and return to the index"
+            aria-label="Close Bull Market Finder 1 and return to the index"
           >
             ← Index
           </button>
           <span aria-hidden className="text-[var(--ink-3)]">/</span>
           <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
-            A3RO Intelligence — Regime Finder
+            A3RO Intelligence — Bull Market Finder 1
           </p>
         </div>
         <p className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
@@ -157,12 +157,13 @@ export default function RegimeFinderView() {
                 P·04 — Intelligence module
               </p>
               <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
-                Regime Shift Finder
+                Bull Market Finder 1
               </h1>
               <p className="mt-3 max-w-xl text-[13px] leading-relaxed text-[var(--ink-2)]">
-                Money Line trend states across a 30-asset macro watchlist —
-                Donchian&nbsp;20 close-flips, confirmed independently on daily
-                and weekly closes, ranked by how recently regimes aligned.
+                Money Line bullish-state screener across a 30-asset macro
+                watchlist — Donchian&nbsp;20 close-flips, double-confirmed on
+                daily and weekly closes, ranked by how recently trends aligned.
+                (Variant 1 · macro-30 universe.)
               </p>
             </div>
             <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
@@ -354,7 +355,7 @@ export default function RegimeFinderView() {
       {/* ── bottom chrome ── */}
       <footer className="absolute inset-x-0 bottom-0 z-30 flex h-12 items-center justify-between border-t border-[var(--line)] bg-[rgba(6,7,7,0.55)] px-6 backdrop-blur-md md:px-10">
         <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-          P·04 — Regime Shift Finder
+          P·04 — Bull Market Finder 1
         </p>
         <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
           Trend-state readouts on free data feeds · not investment advice

@@ -1,0 +1,27 @@
+{
+  "response": {
+    "data": [
+      {
+        "period": "2026-07-03",
+        "series": "WCESTUS1",
+        "series-description": "U.S. Ending Stocks excluding SPR of Crude Oil (Thousand Barrels)",
+        "value": "411357",
+        "units": "MBBL"
+      },
+      {
+        "period": "2026-06-26",
+        "series": "WCESTUS1",
+        "series-description": "U.S. Ending Stocks excluding SPR of Crude Oil (Thousand Barrels)",
+        "value": 408359,
+        "units": "MBBL"
+      },
+      {
+        "period": "2026-06-19",
+        "series": "WCESTUS1",
+        "series-description": "U.S. Ending Stocks excluding SPR of Crude Oil (Thousand Barrels)",
+        "value": null,
+        "units": "MBBL"
+      }
+    ]
+  }
+}

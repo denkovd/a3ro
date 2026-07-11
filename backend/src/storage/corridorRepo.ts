@@ -45,6 +45,34 @@ export async function insertCorridorMetrics(
   return written;
 }
 
+/**
+ * Historical values for one (corridor, metric), ascending by
+ * period_date, bounded to [from, to] (YYYY-MM-DD, inclusive).
+ * Backs the score cycle's leg computations (export-strength
+ * percentile, stock-draw deltas) — corridor_metrics accumulates
+ * history because rows are keyed on period_date and never deleted.
+ */
+export async function getCorridorMetricSeries(
+  db: Queryable,
+  corridor: CorridorId,
+  metric: string,
+  from: string,
+  to: string,
+): Promise<{ periodDate: string; value: number }[]> {
+  const res = await db.query(
+    `select period_date, value
+       from corridor_metrics
+      where corridor = $1 and metric = $2
+        and period_date between $3 and $4
+      order by period_date asc`,
+    [corridor, metric, from, to],
+  );
+  return res.rows.map((r: Record<string, unknown>) => ({
+    periodDate: toDateStr(r.period_date),
+    value: Number(r.value),
+  }));
+}
+
 /** Newest row per (corridor, metric) — what the API/frontend reads. */
 export async function getLatestCorridorMetrics(db: Queryable): Promise<CorridorMetricLatest[]> {
   const res = await db.query(

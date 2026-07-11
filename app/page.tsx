@@ -14,6 +14,7 @@ import Manifesto from "./components/sections/Manifesto";
 import Craft from "./components/sections/Craft";
 import Work from "./components/sections/Work";
 import Process from "./components/sections/Process";
+import FeatureLoop from "./components/sections/FeatureLoop";
 import Contact from "./components/sections/Contact";
 
 export default function Home() {
@@ -31,6 +32,7 @@ export default function Home() {
       <Craft />
       <Work />
       <Process />
+      <FeatureLoop />
       <Contact />
     </main>
   );

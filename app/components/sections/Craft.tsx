@@ -7,7 +7,23 @@
 ──────────────────────────────────────────────────────────────── */
 import { useRef, useState } from "react";
 import { motion, useSpring } from "framer-motion";
-import { StaggerGroup, StaggerItem, useFinePointer } from "../motion";
+import {
+  CountUp,
+  MaskText,
+  Parallax,
+  Reveal,
+  StaggerGroup,
+  StaggerItem,
+  useFinePointer,
+} from "../motion";
+
+/* Platform vitals — derived from the page's own copy */
+const STATS = [
+  { value: 3, pad: 2, suffix: "", label: "Markets under watch" },
+  { value: 5, pad: 2, suffix: "", label: "Intelligence surfaces" },
+  { value: 24, pad: 0, suffix: "/7", label: "Signal capture" },
+  { value: 1, pad: 2, suffix: "", label: "Intelligence layer" },
+];
 
 const CAPABILITIES = [
   {
@@ -54,12 +70,27 @@ export default function Craft() {
         py.set(e.clientY - r.top);
       }}
     >
-      <div className="mx-auto max-w-6xl px-6 md:px-10">
-        <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-          02 / Intelligence
-        </p>
+      {/* Ghost numeral — directory grammar, drifting against scroll */}
+      <Parallax
+        depth={-0.3}
+        className="pointer-events-none absolute right-[2%] top-[6%] select-none"
+      >
+        <span
+          aria-hidden
+          className="font-mono text-[clamp(8rem,22vw,18rem)] font-medium leading-none text-[var(--depth-2)]"
+        >
+          02
+        </span>
+      </Parallax>
+
+      <div className="relative mx-auto max-w-6xl px-6 md:px-10">
+        <Reveal>
+          <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
+            02 / Intelligence
+          </p>
+        </Reveal>
         <h2 className="mb-16 max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
-          Four capabilities. One discipline.
+          <MaskText>Four capabilities. One discipline.</MaskText>
         </h2>
 
         <StaggerGroup>
@@ -86,6 +117,27 @@ export default function Craft() {
               </StaggerItem>
             ))}
           </ul>
+        </StaggerGroup>
+
+        {/* Vitals — numbers rise as the band enters frame */}
+        <StaggerGroup className="mt-24">
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-sm bg-[var(--line)] hairline md:grid-cols-4">
+            {STATS.map((s) => (
+              <StaggerItem key={s.label}>
+                <div className="flex h-full flex-col gap-3 bg-[var(--depth-1)] px-6 py-8">
+                  <CountUp
+                    to={s.value}
+                    pad={s.pad}
+                    suffix={s.suffix}
+                    className="font-mono text-4xl font-medium tracking-tight text-[var(--ink)] md:text-5xl"
+                  />
+                  <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
+                    {s.label}
+                  </span>
+                </div>
+              </StaggerItem>
+            ))}
+          </div>
         </StaggerGroup>
       </div>
 

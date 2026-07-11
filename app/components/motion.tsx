@@ -12,6 +12,7 @@ import {
   useScroll,
   useSpring,
   useTransform,
+  useVelocity,
   type MotionValue,
 } from "framer-motion";
 import Lenis from "lenis";
@@ -212,6 +213,135 @@ export function MaskText({
       >
         {children}
       </motion.span>
+    </span>
+  );
+}
+
+/* ── wrap: modulo that survives negatives — seamless loop math ── */
+export const wrap = (min: number, max: number, v: number) => {
+  const range = max - min;
+  return ((((v - min) % range) + range) % range) + min;
+};
+
+/* ── useVelocityLean: scroll velocity → small value (deg/px), sprung ──
+   Feeds transform-only "the page has momentum" cues. */
+export function useVelocityLean(max = 3): MotionValue<number> {
+  const { scrollY } = useScroll();
+  const velocity = useVelocity(scrollY);
+  const smooth = useSpring(velocity, { stiffness: 260, damping: 46, mass: 0.6 });
+  return useTransform(smooth, [-2600, 0, 2600], [-max, 0, max], {
+    clamp: true,
+  });
+}
+
+/* ── DecodeText: glyphs resolve left→right into the real string ──
+   The data-feed entrance for mono labels. SSR renders the final
+   text; the scramble only ever runs on the client. */
+const DECODE_GLYPHS = "01<>/|·:+-=#";
+export function DecodeText({
+  text,
+  delay = 0,
+  duration = 1.0,
+  className = "",
+}: {
+  text: string;
+  delay?: number;
+  duration?: number;
+  className?: string;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-10% 0px" });
+  const reduced = useReducedMotion();
+  const [out, setOut] = useState(text);
+  const [started, setStarted] = useState(false);
+
+  useEffect(() => {
+    if (reduced || !inView) return;
+    let raf = 0;
+    const t0 = performance.now() + delay * 1000;
+    const total = duration * 1000;
+    const scramble = (settled: number) =>
+      text
+        .split("")
+        .map((ch, i) =>
+          ch === " " || i < settled
+            ? ch
+            : DECODE_GLYPHS[(Math.random() * DECODE_GLYPHS.length) | 0]
+        )
+        .join("");
+    const tick = (now: number) => {
+      if (now < t0) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+      setStarted(true);
+      const t = (now - t0) / total;
+      if (t >= 1) {
+        setOut(text);
+        return;
+      }
+      setOut(scramble(Math.floor(t * text.length)));
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [inView, reduced, text, delay, duration]);
+
+  return (
+    <span ref={ref} className={className}>
+      <span aria-hidden className={reduced ? undefined : started ? undefined : "opacity-0"}>
+        {out}
+      </span>
+      <span className="sr-only">{text}</span>
+    </span>
+  );
+}
+
+/* ── CountUp: a number rises to its value when it enters view ── */
+export function CountUp({
+  to,
+  duration = 1.6,
+  pad = 0,
+  prefix = "",
+  suffix = "",
+  className = "",
+}: {
+  to: number;
+  duration?: number;
+  pad?: number;
+  prefix?: string;
+  suffix?: string;
+  className?: string;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-15% 0px" });
+  const reduced = useReducedMotion();
+  const fmt = (v: number) =>
+    `${prefix}${String(Math.round(v)).padStart(pad, "0")}${suffix}`;
+  const [display, setDisplay] = useState(fmt(0));
+
+  useEffect(() => {
+    if (!inView) return;
+    if (reduced) {
+      setDisplay(fmt(to));
+      return;
+    }
+    let raf = 0;
+    const t0 = performance.now();
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - t0) / (duration * 1000));
+      const eased = 1 - Math.pow(1 - t, 4);
+      setDisplay(fmt(to * eased));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inView, reduced, to, duration]);
+
+  return (
+    <span ref={ref} className={className}>
+      {display}
     </span>
   );
 }

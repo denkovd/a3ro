@@ -1,0 +1,27 @@
+{
+  "response": {
+    "data": [
+      {
+        "period": "2026-07-03",
+        "series": "W_EPC0_SAX_YCUOK_MBBL",
+        "series-description": "Cushing, OK Ending Stocks excluding SPR of Crude Oil (Thousand Barrels)",
+        "value": "19614",
+        "units": "MBBL"
+      },
+      {
+        "period": "2026-06-26",
+        "series": "STRAY_OTHER_SERIES",
+        "series-description": "A row echoing a different series id — must be skipped",
+        "value": "99999",
+        "units": "MBBL"
+      },
+      {
+        "period": "2026-06-26",
+        "series": "W_EPC0_SAX_YCUOK_MBBL",
+        "series-description": "Cushing, OK Ending Stocks excluding SPR of Crude Oil (Thousand Barrels)",
+        "value": "19666",
+        "units": "MBBL"
+      }
+    ]
+  }
+}

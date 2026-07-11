@@ -4,6 +4,19 @@ Status date: 2026-07-06. Ranks a curated 30-asset macro watchlist by newly
 bullish regime, using the Money Line trend engine confirmed on daily **and**
 weekly closes. Free data only.
 
+> **Repositioning note (2026-07-11).** P·04 stays the **Regime Shift Finder**
+> and stays live — it works today, backed by the `regime_snapshots` pipeline.
+> P·05 is the separate **Bull Market Finder**. The two are kept as clearly-named
+> distinct modules. The overlap to be aware of: P·05 imports this exact
+> `REGIME_UNIVERSE` verbatim as its "Macro 30" tab and runs it through the same
+> Money Line engine, so today P·04's content is a subset of P·05. Per the
+> 2026-07-11 decision, P·04's **engine will evolve** (keeping its Regime Shift
+> Finder identity) from Money-Line-trend into a **Darius-Dale-style macro regime
+> model** — a top-down growth × inflation GRID on free FRED data, sharing the
+> macro layer with scores-plan's Macro Override — which removes the overlap.
+> See docs/roadmap.md → "P·04 evolution". Everything below documents the current
+> Money Line engine: it powers P·04 today and also backs P·05's Macro 30 tab.
+
 ## Signal engine
 
 TypeScript port of the "BullMania Money Line [Recreation]" Pine v6 indicator
