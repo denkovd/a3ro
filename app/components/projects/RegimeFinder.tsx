@@ -1,6 +1,8 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
-   A3RO Intelligence — Regime Finder · homepage module card (P·04)
+   A3RO Intelligence — Bull Market Finder 1 · homepage module card (P·04)
+   (internal names stay "regime"/RegimeFinder to avoid route/API churn;
+    display label is Bull Market Finder 1 — the macro-30 Money Line variant)
    A live intelligence surface: ranked regime shifts across a
    30-asset macro watchlist, scored by the Money Line engine
    (Donchian 20 close-flip) on daily × weekly closes. The card

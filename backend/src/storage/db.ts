@@ -27,7 +27,16 @@ export async function createDb(connectionString = process.env.DATABASE_URL): Pro
   if (!connectionString) {
     throw new Error("DATABASE_URL is not set (see backend/.env.example)");
   }
+  // Memoize pools per connection string on globalThis: every API route
+  // calls createDb() per request, and without this each warm serverless
+  // invocation would stack fresh pools against the PG pooler (connection
+  // churn + eventual exhaustion). Survives module re-evaluation in dev.
+  const g = globalThis as typeof globalThis & { __a3roPgPools?: Map<string, Queryable> };
+  g.__a3roPgPools ??= new Map();
+  const existing = g.__a3roPgPools.get(connectionString);
+  if (existing) return existing;
   const { Pool } = await import("pg");
   const pool = new Pool({ connectionString, max: 5 });
+  g.__a3roPgPools.set(connectionString, pool);
   return pool;
 }

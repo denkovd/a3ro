@@ -1,21 +1,27 @@
-# Module 4 — Regime Shift Finder (P·04)
+# Module 4 — Money Line macro screener (P·04 · displayed as "Bull Market Finder 1")
 
 Status date: 2026-07-06. Ranks a curated 30-asset macro watchlist by newly
 bullish regime, using the Money Line trend engine confirmed on daily **and**
 weekly closes. Free data only.
 
-> **Repositioning note (2026-07-11).** P·04 stays the **Regime Shift Finder**
-> and stays live — it works today, backed by the `regime_snapshots` pipeline.
-> P·05 is the separate **Bull Market Finder**. The two are kept as clearly-named
-> distinct modules. The overlap to be aware of: P·05 imports this exact
-> `REGIME_UNIVERSE` verbatim as its "Macro 30" tab and runs it through the same
-> Money Line engine, so today P·04's content is a subset of P·05. Per the
-> 2026-07-11 decision, P·04's **engine will evolve** (keeping its Regime Shift
-> Finder identity) from Money-Line-trend into a **Darius-Dale-style macro regime
-> model** — a top-down growth × inflation GRID on free FRED data, sharing the
-> macro layer with scores-plan's Macro Override — which removes the overlap.
-> See docs/roadmap.md → "P·04 evolution". Everything below documents the current
-> Money Line engine: it powers P·04 today and also backs P·05's Macro 30 tab.
+> **Naming note (2026-07-11).** This module (internally `regime` / Module 4) is
+> now **displayed as "Bull Market Finder 1"**. It and P·05 ("Bull Market
+> Finder 2") are the same Money Line screener on different universes — P·05
+> imports this exact `REGIME_UNIVERSE` verbatim as its "Macro 30" tab and runs
+> it through the same engine, so P·04's content is a subset of P·05. Rather than
+> delete either, both are kept side-by-side as **Bull Market Finder 1**
+> (macro-30) and **Bull Market Finder 2** (whole-market) so the stronger one can
+> be chosen later. Only display labels changed — internal names, routes and APIs
+> stay `regime`/`bull` (no churn), which is why this file, the component
+> (`RegimeFinder.tsx`), the route (`/Projects/Regime-Finder`) and the API
+> (`/api/regime/latest`) still say "regime".
+>
+> The distinct **Regime Shift Finder** — a top-down Darius-Dale-style growth ×
+> inflation macro regime on free FRED data — is now a **new module, P·06**, with
+> its own engine/route/table (it shares the macro layer with scores-plan's Macro
+> Override). See docs/roadmap.md → "P·06 — Regime Shift Finder". Everything below
+> documents the current Money Line engine that powers this card (P·04 / BMF 1)
+> and also backs P·05's Macro 30 tab.
 
 ## Signal engine
 

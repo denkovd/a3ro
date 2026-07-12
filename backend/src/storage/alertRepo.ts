@@ -93,6 +93,53 @@ export async function markAlertEventDelivered(db: Queryable, id: string): Promis
   );
 }
 
+/** A fired event enriched with its rule's benchmark + type (for the UI). */
+export interface AlertEventView {
+  id: string;
+  ruleId: string;
+  firedAt: string; // ISO 8601
+  delivered: boolean;
+  benchmark: string | null;
+  type: string | null;
+  payload: Record<string, unknown>;
+}
+
+/** Recent fired events, newest first — the read model behind
+ *  /api/oil/alerts (roadmap P8). Left-joins alert_rules so the UI can
+ *  show the benchmark + rule type even for payloads that omit them
+ *  (e.g. pct_move / stale_benchmark). Optionally filtered by benchmark. */
+export async function getRecentAlertEvents(
+  db: Queryable,
+  opts: { limit?: number; benchmark?: string } = {},
+): Promise<AlertEventView[]> {
+  const limit = Math.min(Math.max(opts.limit ?? 20, 1), 100);
+  const params: unknown[] = [];
+  let where = "";
+  if (opts.benchmark) {
+    params.push(opts.benchmark);
+    where = `where r.benchmark = $${params.length}`;
+  }
+  params.push(limit);
+  const res = await db.query(
+    `select e.id, e.rule_id, e.fired_at, e.delivered_at, e.payload, r.benchmark, r.type
+       from alert_events e
+       left join alert_rules r on r.id = e.rule_id
+       ${where}
+       order by e.fired_at desc
+       limit $${params.length}`,
+    params,
+  );
+  return res.rows.map((r) => ({
+    id: String(r.id),
+    ruleId: String(r.rule_id),
+    firedAt: toIso(r.fired_at),
+    delivered: r.delivered_at != null,
+    benchmark: r.benchmark != null ? String(r.benchmark) : null,
+    type: r.type != null ? String(r.type) : null,
+    payload: typeof r.payload === "string" ? JSON.parse(r.payload) : (r.payload ?? {}),
+  }));
+}
+
 function toIso(v: unknown): string {
   return v instanceof Date ? v.toISOString() : new Date(String(v)).toISOString();
 }

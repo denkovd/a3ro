@@ -17,11 +17,11 @@
 
 import {
   createDb, runIngestionCycle, runCorridorCycle, runRegimeCycle, runBaselineCycle,
-  runSeasonalCycle, runScoreCycle,
+  runSeasonalCycle, runMacroCycle, runPositioningCycle, runScoreCycle,
 } from "@a3ro/oil-backend";
 import type {
   CorridorCycleReport, RegimeCycleReport, BaselineCycleReport, SeasonalCycleReport,
-  ScoreCycleReport,
+  MacroCycleReport, PositioningCycleReport, ScoreCycleReport,
 } from "@a3ro/oil-backend";
 
 export const runtime = "nodejs";
@@ -88,6 +88,25 @@ export async function GET(request: Request) {
       seasonal = { error: e instanceof Error ? e.message : String(e) };
     }
 
+    // Macro layer (FRED, keyless) — GRID regime (P·06) + Macro pressure
+    // (#5), same isolation posture. Runs after price ingestion so the
+    // oil-momentum divergence input reads fresh WTI closes.
+    let macro: MacroCycleReport | { error: string };
+    try {
+      macro = await runMacroCycle(db);
+    } catch (e) {
+      macro = { error: e instanceof Error ? e.message : String(e) };
+    }
+
+    // CFTC managed-money positioning (Macro Override's other half, P7)
+    // — its own cycle + table, never folded into the FRED macro half.
+    let positioning: PositioningCycleReport | { error: string };
+    try {
+      positioning = await runPositioningCycle(db);
+    } catch (e) {
+      positioning = { error: e instanceof Error ? e.message : String(e) };
+    }
+
     // Composite scores - computed FROM the data the cycles above just
     // wrote (prices -> spread; stocks/gates/seasonal -> Flow Stress,
     // Tightness), so it runs last and in its own try/catch: a score
@@ -99,7 +118,7 @@ export async function GET(request: Request) {
       scores = { error: e instanceof Error ? e.message : String(e) };
     }
 
-    return Response.json({ ...report, corridors, regime, baselines, seasonal, scores });
+    return Response.json({ ...report, corridors, regime, baselines, seasonal, macro, positioning, scores });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return Response.json(

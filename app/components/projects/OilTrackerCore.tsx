@@ -23,6 +23,8 @@ import {
 import { FLOW_ROUTES, GATE_EIA_EST_MBD, type FlowTier } from "./flowRoutes";
 import { PRODUCERS, PRODUCERS_SOURCE, type Producer, type ProducerLayerMode } from "./producers";
 import useOilData from "./useOilData";
+import CorridorSpark from "./CorridorSpark";
+import AlertsFeed from "./AlertsFeed";
 import { formatPctSigned, formatUsdBbl, formatUtcDateTime, formatUtcTime, isUtcToday } from "./oilFormat";
 import type { Benchmark, CorridorBaseline, CorridorId, CorridorMetricLatest, DailyPrice, LatestQuote, ScoreSnapshot } from "@a3ro/oil-backend";
 
@@ -180,6 +182,8 @@ type CorridorPanelContent = {
   note: string;
   footerRight: string; // right side of "Corridor feed" row
   footerLine: string; // fine-print line
+  sparkCorridor?: string; // corridor id for the panel Spark (roadmap P3)
+  sparkMetric?: string; // metric whose accumulated history the Spark draws
 };
 
 /** "Next WPSR release" countdown — the EIA Weekly Petroleum Status
@@ -296,6 +300,22 @@ function buildCorridorPanel(
       });
     }
 
+    // Crack 3:2:1 (refining margin) — the Tightness crack leg's inputs,
+    // shown raw so the composite never hides them. Same margin the engine
+    // scores: (2·gasoline + heatingOil)/3 − wti, all $/bbl (EIA spot).
+    const gasolineSpot = usgulfMetrics.find((m) => m.metric === "gasoline_spot");
+    const heatingOilSpot = usgulfMetrics.find((m) => m.metric === "heating_oil_spot");
+    const wtiSpot = usgulfMetrics.find((m) => m.metric === "wti_spot");
+    if (gasolineSpot && heatingOilSpot && wtiSpot) {
+      const crack = (2 * gasolineSpot.value + heatingOilSpot.value) / 3 - wtiSpot.value;
+      rows.push({
+        k: "Crack 3:2:1 · refining margin",
+        v: `$${crack.toFixed(2)}/bbl`,
+        bar: clamp((crack - 10) / 40, 0, 1),
+        warm: crack >= 40,
+      });
+    }
+
     // Weekly EIA stocks (WPSR) — the regional-stock-draw leg's inputs,
     // shown raw so the composite above never hides them. Bar divisors
     // are display scalers only (same convention as the gate rows).
@@ -335,6 +355,8 @@ function buildCorridorPanel(
       metricLabel,
       rows,
       seriesNote: nextWpsrText(),
+      sparkCorridor: "usgulf",
+      sparkMetric: "crude_exports",
       note:
         "US Gulf export engine. Weekly EIA data — crude exports, Gulf Coast refinery utilization and WPSR stocks; more corridor metrics onboard as coverage expands." +
         flowStressNote +
@@ -437,7 +459,9 @@ function buildCorridorPanel(
       metric: `${transits7d.value.toFixed(1)} /day`,
       metricLabel,
       rows,
-      seriesNote: "SATELLITE SERIES · CHART PENDING",
+      seriesNote: "Live AIS transits · 7-day avg",
+      sparkCorridor: corridor,
+      sparkMetric: "tanker_transits_7d",
       note,
       footerRight: "satellite",
       footerLine:
@@ -2105,10 +2129,18 @@ export default function OilTrackerCore({
                 <FlowHealthLegend className="mt-4 border-t border-[var(--line)] pt-3" />
               )}
 
-              {selLive && (
-                <p className="mt-6 font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-                  {selLive.seriesNote}
-                </p>
+              {selLive && selLive.sparkCorridor && selLive.sparkMetric ? (
+                <CorridorSpark
+                  corridor={selLive.sparkCorridor}
+                  metric={selLive.sparkMetric}
+                  caption={selLive.seriesNote}
+                />
+              ) : (
+                selLive && (
+                  <p className="mt-6 font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+                    {selLive.seriesNote}
+                  </p>
+                )
               )}
 
               <p className="mt-5 text-[11px] leading-relaxed text-[var(--ink-2)]">
@@ -2251,6 +2283,8 @@ export default function OilTrackerCore({
               )}
 
               <p className="mt-5 text-[11px] leading-relaxed text-[var(--ink-2)]">{BENCH_NOTE[benchSel]}</p>
+
+              <AlertsFeed benchmark={benchSel} className="mt-5 border-t border-[var(--line)] pt-4" />
               </div>
 
               <div className={narrow ? "mt-4" : "mt-4 shrink-0"}>

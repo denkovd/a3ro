@@ -559,29 +559,71 @@ export function computeUtilizationLeg(
   };
 }
 
+// 3:2:1 crack (refining margin, $/bbl) → normalized scale. A wider
+// crack means refiners are pulling crude hard into product demand —
+// a tightening signal. Fixed, documented bounds (like the utilization
+// leg): no history needed, so the leg is live from the first fetch.
+// Bounds cover the historical 3:2:1 range (~$10 weak → ~$50 very fat;
+// e.g. 2020 lows vs 2022 highs). Live-probed 2026-07 spot sits near the
+// top, so the leg currently reads very tight — a fixed, documented scale
+// (percentile-vs-history refinement can come once crack history accrues).
+const CRACK_FLOOR_USD = 10; // → 0 (slack product market / weak margins)
+const CRACK_CEIL_USD = 50; // → 1 (very tight product market / fat margins)
+
 /**
- * Crack proxy — deliberately dark in v1. The plan derives it from
- * RBOB/HO vs WTI futures (existing adapters, P4-era work); until that
- * lands, Tightness carries this as a visible pending leg so coverage
- * reads 2/3 honestly instead of pretending the composite is complete.
+ * Crack 3:2:1 — refining margin from EIA spot (RBOB gasoline + No. 2
+ * heating oil vs WTI, all $/bbl). Replaces the former dark pending leg
+ * (docs/scores-plan.md #4). 3:2:1 = 3 barrels crude → 2 gasoline + 1
+ * distillate: margin = (2·gasoline + heatingOil)/3 − wti. Live inputs
+ * come from corridor_metrics/usgulf (gasoline_spot/heating_oil_spot/
+ * wti_spot, sources/eiaSpotProducts.ts). Any missing input → a visible
+ * pending leg, so coverage stays honest.
  */
-export function crackPendingLeg(): ScoreComponent {
+export function computeCrackLeg(inputs: {
+  gasoline: number | null;
+  heatingOil: number | null;
+  wti: number | null;
+  asOf: string | null;
+}): ScoreComponent {
+  const { gasoline, heatingOil, wti, asOf } = inputs;
+  const ok =
+    gasoline !== null &&
+    Number.isFinite(gasoline) &&
+    heatingOil !== null &&
+    Number.isFinite(heatingOil) &&
+    wti !== null &&
+    Number.isFinite(wti);
+  if (!ok) {
+    return {
+      key: "crack_321",
+      label: "Crack 3:2:1 (RBOB/HO vs WTI)",
+      value: null,
+      unit: "$/bbl",
+      normalized: null,
+      weight: 1,
+      asOf: null,
+      note: "pending — need gasoline + heating-oil + WTI spot on file",
+    };
+  }
+  const crack = (2 * (gasoline as number) + (heatingOil as number)) / 3 - (wti as number);
+  const normalized = clamp01((crack - CRACK_FLOOR_USD) / (CRACK_CEIL_USD - CRACK_FLOOR_USD));
   return {
-    key: "crack_proxy",
-    label: "Crack proxy (RBOB/HO vs WTI)",
-    value: null,
+    key: "crack_321",
+    label: "Crack 3:2:1 (RBOB/HO vs WTI)",
+    value: round(crack, 2),
     unit: "$/bbl",
-    normalized: null,
+    normalized: round(normalized, 4),
     weight: 1,
-    asOf: null,
-    note: "pending — derives from futures adapters (roadmap P4)",
+    asOf,
+    note: `3:2:1 margin · scale $${CRACK_FLOOR_USD}→0, $${CRACK_CEIL_USD}→1`,
   };
 }
 
 /**
  * Tightness — is the physical barrel scarce vs. its own seasonal
  * history? Legs: inventories vs 5-yr band, refinery utilization,
- * crack proxy (pending). minLegs 2 = inventories + utilization.
+ * crack 3:2:1 (all live as of #4). minLegs 2 keeps the score alive if
+ * any single leg (e.g. a spot-price gap) drops out on a given run.
  */
 export function computeTightness(runDate: string, legs: ScoreComponent[]): ScoreSnapshot {
   return combineComposite("tightness", runDate, legs, {
@@ -616,4 +658,102 @@ export function spreadLegFrom(spread: ScoreSnapshot | null): ScoreComponent {
     asOf: live ? src.asOf : null,
     note: live ? src.note : "spread signal not live this run",
   };
+}
+
+/* ── Composite tape — the headline synthesis (scores-plan additional
+   metrics: "Composite tape stance"). Rolls Flow Stress (corridor) +
+   Tightness (fundamentals) + Macro Override into ONE stance and names
+   the dominant driver. Pure — the score cycle feeds it the three
+   composites it already computed this run. Built last, on purpose:
+   only trustworthy once all three read cleanly. */
+
+export type TapeStance = "SUPPLY_TIGHT" | "SUPPLY_AMPLE" | "MACRO_DRIVEN" | "BALANCED" | "PENDING";
+
+export interface TapeSnapshot {
+  runDate: string;
+  stance: TapeStance;
+  label: string; // display form, e.g. "SUPPLY-TIGHT"
+  headline: string;
+  drivers: { key: string; label: string; value: number | null }[];
+  coverage: { available: number; total: number };
+}
+
+const TAPE_LABEL: Record<TapeStance, string> = {
+  SUPPLY_TIGHT: "SUPPLY-TIGHT",
+  SUPPLY_AMPLE: "SUPPLY-AMPLE",
+  MACRO_DRIVEN: "MACRO-DRIVEN",
+  BALANCED: "BALANCED",
+  PENDING: "PENDING",
+};
+
+export function computeTapeStance(
+  runDate: string,
+  inputs: {
+    flowStress: number | null;
+    tightness: number | null;
+    macroPressure: number | null;
+    macroDiverging?: boolean;
+    positioningStance?: string | null;
+  },
+): TapeSnapshot {
+  const { flowStress, tightness, macroPressure } = inputs;
+  const diverging = inputs.macroDiverging === true;
+  const drivers = [
+    { key: "flow_stress", label: "Flow Stress", value: flowStress },
+    { key: "tightness", label: "Tightness", value: tightness },
+    { key: "macro_override", label: "Macro pressure", value: macroPressure },
+  ];
+  const available = drivers.filter((d) => d.value !== null).length;
+  const total = drivers.length;
+
+  if (available < 2) {
+    return {
+      runDate, stance: "PENDING", label: TAPE_LABEL.PENDING,
+      headline: `Awaiting scores — ${available}/${total} composites live.`,
+      drivers, coverage: { available, total },
+    };
+  }
+
+  // Supply side = the hotter of Flow Stress / Tightness (both are
+  // "high = supportive-for-oil / physically tight").
+  const supply = Math.max(flowStress ?? -1, tightness ?? -1);
+  const supplyTight = supply >= 60;
+  const bothSupplyKnown = flowStress !== null && tightness !== null;
+  const supplyAmple = bothSupplyKnown
+    ? (flowStress as number) <= 40 && (tightness as number) <= 40
+    : supply >= 0 && supply <= 35;
+  const macroHot = macroPressure !== null && macroPressure >= 66;
+
+  // Divergence is the explicit signal Macro Override exists to flag, so
+  // it leads; otherwise a hot supply side, then a macro headwind, then
+  // an ample market, else balanced.
+  let stance: TapeStance;
+  if (diverging) stance = "MACRO_DRIVEN";
+  else if (supplyTight) stance = "SUPPLY_TIGHT";
+  else if (macroHot) stance = "MACRO_DRIVEN";
+  else if (supplyAmple) stance = "SUPPLY_AMPLE";
+  else stance = "BALANCED";
+
+  const parts: string[] = [];
+  if (tightness !== null) parts.push(`tightness ${tightness}`);
+  if (flowStress !== null) parts.push(`flow stress ${flowStress}`);
+  if (macroPressure !== null) parts.push(`macro ${macroPressure}`);
+  const nums = parts.join(" · ");
+  const crowd =
+    inputs.positioningStance === "CROWDED_LONG"
+      ? " Positioning crowded long — squeeze risk."
+      : inputs.positioningStance === "CROWDED_SHORT"
+        ? " Positioning crowded short."
+        : "";
+
+  const headline =
+    stance === "SUPPLY_TIGHT"
+      ? `Supply-side leads — physically tight / corridors strained (${nums}).${crowd}`
+      : stance === "SUPPLY_AMPLE"
+        ? `Supply-side loose — ample barrels, soft physical pull (${nums}).${crowd}`
+        : stance === "MACRO_DRIVEN"
+          ? `${diverging ? "Macro divergence" : "Macro headwind"} in the driver's seat (${nums}).${crowd}`
+          : `No single driver dominant — balanced tape (${nums}).${crowd}`;
+
+  return { runDate, stance, label: TAPE_LABEL[stance], headline, drivers, coverage: { available, total } };
 }

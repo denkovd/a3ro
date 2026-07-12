@@ -1,16 +1,22 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
-   Modules — a pinned lateral traverse across the platform's four
+   Modules — a pinned lateral traverse across the platform's seven
    intelligence surfaces. On desktop the section pins and vertical
    scroll drives horizontal travel, like moving along a corridor
    of monitors. On touch/mobile it degrades to a vertical stack
    with inner parallax.
 
-   P·01 Oil Tracker, P·02 Gold Tracker, P·04 Regime Finder and
-   P·05 Bull Market Finder are live surfaces (projects/OilTracker,
-   projects/GoldTracker, projects/RegimeFinder, projects/BullFinder).
+   Live surfaces: P·01 Oil Tracker (featured), P·02 Gold Tracker,
+   P·04 Bull Market Finder 1 (macro-30), P·05 Bull Market Finder 2
+   (whole-market), P·06 Regime Shift Finder (Darius-Dale GRID) and
+   P·07 Thesis Lab (pressure test → scenarios → portfolio risk).
    P·03 BTC renders as a module card in private preview — same card
    grammar, asset-specific accent and signal trace.
+
+   TRAVERSE MATH — keep these three in sync when adding a card:
+   • SURFACES = total cards (featured + module cards)
+   • TRAVEL_VW = 248 + 68 × (SURFACES − 5)  (each card = 62vw + 6vw gap)
+   • runway h-[…vh] ≈ 120vh per surface (pacing of the pin)
 ──────────────────────────────────────────────────────────────── */
 import { useRef, type CSSProperties } from "react";
 import {
@@ -25,6 +31,8 @@ import OilTracker from "../projects/OilTracker";
 import GoldTracker from "../projects/GoldTracker";
 import RegimeFinder from "../projects/RegimeFinder";
 import BullFinder from "../projects/BullFinder";
+import RegimeShiftFinder from "../projects/RegimeShiftFinder";
+import ThesisLab from "../projects/ThesisLab";
 
 /* ── deterministic signal trace — seeded, so SSR and client agree ── */
 function walk(seed: number, n: number, vol: number, drift: number): number[] {
@@ -49,7 +57,7 @@ const toPath = (vals: number[]) =>
     )
     .join(" ");
 
-/* ── preview modules rendered as cards; P·01 and P·02 are live ── */
+/* ── preview modules rendered as cards; the rest are live components ── */
 const MODULES = [
   {
     id: "P·03",
@@ -64,7 +72,12 @@ const MODULES = [
   },
 ];
 type Module = (typeof MODULES)[number];
-const TOTAL = MODULES.length + 4; /* + Oil (featured) + Gold + Regime + Bull (live cards) */
+
+/* Featured Oil card + Gold + BTC preview + BMF1 + BMF2 + Regime Shift + Thesis Lab */
+const SURFACES = MODULES.length + 6;
+/* 72vw featured + (SURFACES−1) × 62vw + 6vw gaps; travel ends with the
+   last panel in frame: 248vw at 5 surfaces, +68vw per extra card. */
+const TRAVEL_VW = 248 + 68 * (SURFACES - 5);
 
 /* Shared inner surface: depth field, time ticks, one signal trace */
 function ModuleSurface({
@@ -261,14 +274,13 @@ function ModulesTraverse() {
     target: ref,
     offset: ["start start", "end end"],
   });
-  // 72vw featured + 4 × 62vw + gaps; travel ends with last panel in frame
-  const x = useTransform(scrollYProgress, [0.05, 0.95], ["0vw", "-248vw"]);
+  const x = useTransform(scrollYProgress, [0.05, 0.95], ["0vw", `-${TRAVEL_VW}vw`]);
   const innerX = useTransform(scrollYProgress, [0, 1], [28, -28]);
-  const counter = useTransform(scrollYProgress, [0.1, 0.9], [1, TOTAL]);
+  const counter = useTransform(scrollYProgress, [0.1, 0.9], [1, SURFACES]);
   const counterText = useTransform(counter, (v) => String(Math.round(v)).padStart(2, "0"));
 
   return (
-    <div ref={ref} className="relative h-[600vh]">
+    <div ref={ref} className="relative h-[840vh]">
       <div className="sticky top-0 flex h-[100svh] flex-col justify-center overflow-hidden">
         <div className="mx-auto mb-10 flex w-full max-w-6xl items-end justify-between px-10">
           <div>
@@ -276,12 +288,12 @@ function ModulesTraverse() {
               03 / Modules
             </p>
             <h2 className="max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
-              <MaskText>One platform. Five intelligence surfaces.</MaskText>
+              <MaskText>One platform. Seven intelligence surfaces.</MaskText>
             </h2>
           </div>
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--ink-3)]">
             <motion.span className="text-[var(--acid)]">{counterText}</motion.span>
-            &nbsp;/&nbsp;{String(TOTAL).padStart(2, "0")}
+            &nbsp;/&nbsp;{String(SURFACES).padStart(2, "0")}
           </p>
         </div>
 
@@ -302,6 +314,8 @@ function ModulesTraverse() {
           ))}
           <RegimeFinder className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
           <BullFinder className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
+          <RegimeShiftFinder className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
+          <ThesisLab className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
         </motion.div>
       </div>
     </div>
@@ -338,7 +352,7 @@ function ModulesStack() {
         03 / Modules
       </p>
       <h2 className="mb-16 max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)]">
-        <MaskText>One platform. Five intelligence surfaces.</MaskText>
+        <MaskText>One platform. Seven intelligence surfaces.</MaskText>
       </h2>
       <div className="flex flex-col gap-10">
         <Reveal>
@@ -355,6 +369,12 @@ function ModulesStack() {
         </Reveal>
         <Reveal delay={0.2}>
           <BullFinder className="flex min-h-[560px] flex-col" />
+        </Reveal>
+        <Reveal delay={0.25}>
+          <RegimeShiftFinder className="flex min-h-[560px] flex-col" />
+        </Reveal>
+        <Reveal delay={0.3}>
+          <ThesisLab className="flex min-h-[560px] flex-col" />
         </Reveal>
       </div>
     </div>

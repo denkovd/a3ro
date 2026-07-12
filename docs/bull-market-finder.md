@@ -1,10 +1,13 @@
-# Module 5 — Bull Market Finder (P·05)
+# Module 5 — Bull Market Finder 2 (P·05)
 
 Plan date: 2026-07-10. Status: **built 2026-07-10 — awaiting migration + first scan.**
 Whole-market bullish-state screener ranking ~650 assets by newly bullish
 regime, daily × weekly confirmed. Free data only. Shares the verified Money
-Line engine with P·04 (Regime Shift Finder), which stays as the curated
-30-asset macro view. P·05 is the scale version.
+Line engine with P·04 (now displayed as **Bull Market Finder 1**), the curated
+30-asset macro variant. This module is the scale version, displayed as **Bull
+Market Finder 2** (2026-07-11 naming). The two are kept side-by-side so the
+stronger one can be chosen later; the separate Darius-Dale-style **Regime Shift
+Finder** is a new module, P·06 (see docs/roadmap.md).
 
 ## What P·05 adds over P·04
 

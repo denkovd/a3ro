@@ -11,11 +11,18 @@
 import { CorridorSource } from "./CorridorSource";
 import { EiaUsGulfSource } from "./eiaCorridor";
 import { EiaInventorySource } from "./eiaInventory";
+import { EiaSpotProductsSource } from "./eiaSpotProducts";
 import { MpaSingaporeSource } from "./mpaSingapore";
 import { PortWatchSource } from "./portwatch";
 
 export function buildCorridorSources(): CorridorSource[] {
-  return [new EiaUsGulfSource(), new EiaInventorySource(), new PortWatchSource(), new MpaSingaporeSource()];
+  return [
+    new EiaUsGulfSource(),
+    new EiaInventorySource(),
+    new EiaSpotProductsSource(),
+    new PortWatchSource(),
+    new MpaSingaporeSource(),
+  ];
 }
 
 export function getCorridorSource(id: string): CorridorSource | undefined {

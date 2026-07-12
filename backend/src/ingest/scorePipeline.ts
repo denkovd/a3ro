@@ -20,15 +20,16 @@
 
 import { ScoreComponent, ScoreSnapshot } from "../core/scoreTypes";
 import {
+  computeCrackLeg,
   computeExportStrengthLeg,
   computeFlowStress,
   computeSeasonalTightnessLeg,
   computeSpreadSignal,
   computeStockDrawLeg,
   computeThroughputDeviationLeg,
+  computeTapeStance,
   computeTightness,
   computeUtilizationLeg,
-  crackPendingLeg,
   GateThroughput,
   PricePoint,
   spreadLegFrom,
@@ -40,6 +41,9 @@ import { getCorridorMetricSeries, getLatestCorridorMetrics } from "../storage/co
 import { getDailySeries } from "../storage/priceRepo";
 import { getSeasonalBaselines } from "../storage/seasonalRepo";
 import { upsertScoreSnapshots } from "../storage/scoreRepo";
+import { getLatestMacroSnapshot } from "../storage/macroRepo";
+import { getLatestPositioning } from "../storage/positioningRepo";
+import { upsertTapeSnapshot } from "../storage/tapeRepo";
 
 /** How far back to pull closes — comfortably over the spread's 60-session
  *  window, allowing for weekends/holidays inside a calendar range. */
@@ -195,10 +199,22 @@ export async function runScoreCycle(
         ? { value: padd3Util.value, asOf: padd3Util.periodDate, series: "PADD 3" as const }
         : null;
 
+    // Crack 3:2:1 — EIA spot products + WTI, all $/bbl, same source so
+    // dates align (sources/eiaSpotProducts.ts). asOf = the products'
+    // date (gasoline), the newer-lagging of the three in practice.
+    const gasolineSpot = usgulf.find((m) => m.metric === "gasoline_spot");
+    const heatingOilSpot = usgulf.find((m) => m.metric === "heating_oil_spot");
+    const wtiSpot = usgulf.find((m) => m.metric === "wti_spot");
+
     const legs: ScoreComponent[] = [
       computeSeasonalTightnessLeg(levels, seasonal, runDate),
       computeUtilizationLeg(util),
-      crackPendingLeg(),
+      computeCrackLeg({
+        gasoline: gasolineSpot ? gasolineSpot.value : null,
+        heatingOil: heatingOilSpot ? heatingOilSpot.value : null,
+        wti: wtiSpot ? wtiSpot.value : null,
+        asOf: gasolineSpot ? gasolineSpot.periodDate : null,
+      }),
     ];
 
     const tightness = computeTightness(runDate, legs);
@@ -213,6 +229,41 @@ export async function runScoreCycle(
   } catch (e) {
     report.computed.push({
       scoreId: "tightness",
+      ok: false,
+      score: null,
+      error: e instanceof Error ? e.message : String(e),
+    });
+  }
+
+  // ── tape ── (headline synthesis; own try/catch + own table). Rolls
+  // the three composites this run computed (flow_stress + tightness,
+  // just above) plus Macro Override (macro_snapshots, written by the
+  // macro cycle earlier in the cron) into one stance.
+  try {
+    const flowStressScore = snapshots.find((s) => s.scoreId === "flow_stress")?.score ?? null;
+    const tightnessScore = snapshots.find((s) => s.scoreId === "tightness")?.score ?? null;
+    const [macroRow, posRow] = await Promise.all([
+      getLatestMacroSnapshot(db),
+      getLatestPositioning(db),
+    ]);
+    const tape = computeTapeStance(runDate, {
+      flowStress: flowStressScore,
+      tightness: tightnessScore,
+      macroPressure: macroRow?.pressureScore ?? null,
+      macroDiverging: macroRow?.diverging ?? false,
+      positioningStance: posRow?.stance ?? null,
+    });
+    await upsertTapeSnapshot(db, tape);
+    report.computed.push({
+      scoreId: "tape",
+      ok: true,
+      score: null,
+      status: tape.stance,
+      coverage: `${tape.coverage.available}/${tape.coverage.total}`,
+    });
+  } catch (e) {
+    report.computed.push({
+      scoreId: "tape",
       ok: false,
       score: null,
       error: e instanceof Error ? e.message : String(e),

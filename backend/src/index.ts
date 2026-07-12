@@ -21,11 +21,27 @@ export type { CorridorSource, CorridorSourceDescriptor } from "./sources/Corrido
 export { CorridorBaseSource } from "./sources/CorridorSource";
 export { EiaUsGulfSource } from "./sources/eiaCorridor";
 export { EiaInventorySource, thousandBblToMillionBbl, INVENTORY_SERIES } from "./sources/eiaInventory";
+export { EiaSpotProductsSource, dollarsPerGallonToPerBarrel, GALLONS_PER_BARREL, SPOT_PRODUCT_SERIES } from "./sources/eiaSpotProducts";
 export { MpaSingaporeSource, thousandTonnesToMt, MPA_DATASETS } from "./sources/mpaSingapore";
 export { PortWatchSource, tonsToMegatons } from "./sources/portwatch";
 export { buildCorridorSources, getCorridorSource } from "./sources/corridorRegistry";
 export { fetchGateBaselines } from "./sources/portwatchBaselines";
 export { fetchSeasonalBaselines, groupByIsoWeek, SEASONAL_METRICS } from "./sources/eiaSeasonal";
+export { fetchFredSeries, fetchMacroPanel, parseFredCsv, MACRO_SERIES } from "./sources/fredMacro";
+export type { MacroSeries, MacroObservation, FredSeriesConfig } from "./sources/fredMacro";
+export { computeMacroRegime, computeMacroPressure, computePositioning, yoyAndMomentum } from "./macro/engine";
+export type {
+  MacroRegimeSnapshot, MacroPressureSnapshot, MacroQuadrant, MacroAxisRead,
+  PositioningSnapshot, PositioningStance,
+} from "./macro/types";
+export { upsertMacroSnapshot, getLatestMacroSnapshot } from "./storage/macroRepo";
+export type { MacroSnapshotRow } from "./storage/macroRepo";
+export { fetchCotPositioning, parseCotRows, WTI_CONTRACT_CODE } from "./sources/cftcCot";
+export type { CotSeries, CotObservation } from "./sources/cftcCot";
+export { upsertPositioning, getLatestPositioning } from "./storage/positioningRepo";
+export type { PositioningRow } from "./storage/positioningRepo";
+export { upsertTapeSnapshot, getLatestTapeSnapshot } from "./storage/tapeRepo";
+export type { TapeRow } from "./storage/tapeRepo";
 
 export { createDb } from "./storage/db";
 export type { Queryable } from "./storage/db";
@@ -46,9 +62,9 @@ export {
   upsertScoreSnapshots, getLatestScoreSnapshots,
 } from "./storage/scoreRepo";
 export {
-  getUndeliveredAlertEvents, markAlertEventDelivered,
+  getUndeliveredAlertEvents, markAlertEventDelivered, getRecentAlertEvents,
 } from "./storage/alertRepo";
-export type { AlertEvent } from "./storage/alertRepo";
+export type { AlertEvent, AlertEventView } from "./storage/alertRepo";
 // site domain — pro-tier lead capture (app/api/leads), unrelated to price/corridor ingestion
 export { insertLead } from "./storage/leadRepo";
 
@@ -79,6 +95,10 @@ export { runBaselineCycle } from "./ingest/baselineCycle";
 export type { BaselineCycleReport } from "./ingest/baselineCycle";
 export { runSeasonalCycle } from "./ingest/seasonalCycle";
 export type { SeasonalCycleReport } from "./ingest/seasonalCycle";
+export { runMacroCycle } from "./ingest/macroCycle";
+export type { MacroCycleReport } from "./ingest/macroCycle";
+export { runPositioningCycle } from "./ingest/positioningCycle";
+export type { PositioningCycleReport } from "./ingest/positioningCycle";
 export { runScoreCycle } from "./ingest/scorePipeline";
 export type { ScoreCycleReport } from "./ingest/scorePipeline";
 
@@ -88,10 +108,11 @@ export {
   computeSpreadSignal, computeFlowStress, combineComposite,
   computeExportStrengthLeg, computeStockDrawLeg, computeThroughputDeviationLeg,
   spreadLegFrom,
-  computeTightness, computeSeasonalTightnessLeg, computeUtilizationLeg, crackPendingLeg,
+  computeTightness, computeSeasonalTightnessLeg, computeUtilizationLeg, computeCrackLeg,
+  computeTapeStance,
   alignSpread, percentileOf, clamp01,
 } from "./scores/engine";
-export type { GateThroughput, StockLevel } from "./scores/engine";
+export type { GateThroughput, StockLevel, TapeStance, TapeSnapshot } from "./scores/engine";
 export type { PricePoint, CombineOptions } from "./scores/engine";
 export { resolveLatestQuote, resolveDailyClose, DISAGREEMENT_TOLERANCE, SUSPECT_DEVIATION } from "./ingest/resolve";
 export { evaluateRule } from "./alerts/rules";
@@ -131,3 +152,35 @@ export {
   getLatestBullSnapshots, getRecentTransitions,
 } from "./storage/bullRepo";
 export type { BullSnapshotRow, BullTransitionRow, BarSeries } from "./storage/bullRepo";
+
+// Module 7 — Thesis Lab (P·07): pressure test → scenarios → portfolio risk
+export {
+  analyzeThesis, parseThesis, splitSentences, classifyKinds, readLanguage,
+  scoreClaim, contextChecks,
+  THESIS_ENGINE_VERSION, FAKE_STATED_MIN, FAKE_EVIDENCE_MAX,
+} from "./thesis/engine";
+export {
+  buildScenarios, tradingDaysIn, horizonReturns, empiricalProbabilities,
+  SCENARIO_SIGMA,
+} from "./thesis/scenarios";
+export {
+  buildRiskReport, pairwiseCorrelations, correlationClusters, pearson, betaTo,
+} from "./thesis/risk";
+export type { RiskInputs } from "./thesis/risk";
+export { assembleMarketContext, closeSeriesFor, realizedVolFrom } from "./thesis/marketContext";
+export type {
+  Assumption, ClaimKind, AssumptionOrigin, LanguageRead, ContextCheck,
+  ThesisAnalysis, ThesisVerdict, StrengthComponent, ParsedThesis,
+  MarketContext, RealizedVol, TrendRead,
+  Scenario, ScenarioId, ScenarioSet, AssumptionOutcome,
+  PositionInput, MarkedPosition, RiskFlag, RiskFlagKind, CorrelationPair,
+  PositionRisk, PortfolioRiskReport,
+} from "./thesis/types";
+export {
+  insertThesis, deleteThesis, listTheses, getThesis, getThesisMeta,
+} from "./storage/thesisRepo";
+export type { ThesisRow, ThesisSummary } from "./storage/thesisRepo";
+export {
+  insertPosition, updatePosition, deletePosition, listPositions, markPositions,
+} from "./storage/portfolioRepo";
+export type { PositionWrite } from "./storage/portfolioRepo";

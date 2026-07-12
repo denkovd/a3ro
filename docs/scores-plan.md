@@ -4,20 +4,31 @@ Status date: 2026-07-09 (design) · 2026-07-11 (build status). Design spec for
 the layered signal scores that sit on top of the existing price + corridor
 feeds. Free-tier data unless marked PRO.
 
-**Build status 2026-07-11:** sequencing #1–#3 SHIPPED, #4 partially —
+**Build status 2026-07-11:** sequencing #1–#3 SHIPPED; **#4 crack SHIPPED**,
+term structure blocked (see below) —
 throughput expansion (all 6 gates + 1y/5y baselines), Brent–WTI spread, the
 Flow Stress composite (all four legs live), the full WPSR inventories pack
 (`eiaInventory.ts`: crude/Cushing/gasoline/distillate/SPR stocks + US-total
 utilization, every id live-verified), the week-of-year 5-yr seasonal bands
 (`seasonal_baselines`, `008_seasonal.sql`, monthly-guarded cycle; SPR
 deliberately excluded — policy-driven, not seasonal), and the **Tightness
-composite** (inventories-vs-band + utilization legs live; the crack-proxy leg
-ships dark-but-visible until the futures-derived cracks land, which is the
-remaining half of #4). Deliberate deviation from the architecture below:
+composite** — now **3/3 legs live**: inventories-vs-band + utilization + the
+**crack 3:2:1** (`eiaSpotProducts.ts`: NY Harbor RBOB `EER_EPMRU_PF4_Y35NY_DPG`
++ No. 2 heating oil `EER_EPD2F_PF4_Y35NY_DPG` vs WTI spot `RWTC`, all $/bbl,
+all live-verified 2026-07-11; the former dark crack-proxy leg is retired).
+Deliberate deviation from the architecture below:
 inventory levels ride `corridor_metrics` under `usgulf` rather than a
 dedicated inventories table; the seasonal NORMS got their own table because
-they are provider-fetched 5y aggregates, not rolling observations. Next:
-crack + term structure (#4 remainder), then the FRED macro layer (#5).
+they are provider-fetched 5y aggregates, not rolling observations.
+
+**Term structure — blocked on data (2026-07-11 probe).** The plan called for
+front-vs-back-month WTI. EIA's futures series RCLC1–RCLC4 (route
+`petroleum/pri/fut`) were live-probed and are **discontinued** — newest row
+2024-04-05. A Yahoo futures curve (CL=F front vs a deferred contract) isn't
+verifiable from the build sandbox (Yahoo is only reachable at deploy, like the
+regime golden-verify). So term structure is deferred until a live curve source
+is confirmed at deploy; it must NOT be built on the dead EIA series. Next after
+that: the FRED macro layer (#5).
 
 Scores are **composites**, not raw feeds. They follow the Module 4 (Regime
 Finder) precedent exactly: a pure engine (`regime/engine.ts`) → snapshot table
@@ -174,8 +185,10 @@ override-amber concept at ~L1272), not a gauge — it is a state, not a level.
 
 Grounded in what the current adapters already reach:
 
-- **Term structure (contango/backwardation)** — front vs back-month WTI
-  (yfinance). Strongest single confirmation of Tightness; near-free. (P4)
+- **Term structure (contango/backwardation)** — front vs back-month WTI.
+  Strongest single confirmation of Tightness. **Blocked (2026-07-11):** EIA
+  futures RCLC1–4 are discontinued; needs a deploy-verified Yahoo curve
+  (CL=F front vs a deferred contract). (P4)
 - **Brent–WTI spread, standalone** — already computed for Flow Stress; surfacing
   it alone reads US export economics.
 - **Days of supply / stock cover** — crude stocks ÷ refinery runs. One derived,
@@ -185,9 +198,10 @@ Grounded in what the current adapters already reach:
   P5 "next release" countdown.
 - **CFTC managed-money net-length percentile** (P7) — is the Positioning-pressure
   half of Macro Override; build it there, surface it here too.
-- **Composite "tape" stance** — roll Flow Stress + Tightness + Macro Override into
-  one headline verdict (e.g. SUPPLY-TIGHT / DEMAND-SOFT / MACRO-DRIVEN), mirroring
-  how Regime Finder ranks to a single verdict. Only after all three ship.
+- **Composite "tape" stance** — **SHIPPED 2026-07-11.** `computeTapeStance` rolls
+  Flow Stress + Tightness + Macro Override into one headline verdict (SUPPLY-TIGHT /
+  SUPPLY-AMPLE / MACRO-DRIVEN / BALANCED), naming the dominant driver — `tape_snapshots`
+  (011) → `/api/oil/tape` → the TapeBanner atop the P·06 page.
 
 ## Sequencing (cheapest-first, all free-tier)
 
@@ -197,10 +211,28 @@ Grounded in what the current adapters already reach:
    corridor product.
 3. **EIA inventories pack + seasonal baseline** → unlocks Tightness and deepens
    Flow Stress's stock-draw leg.
-4. **Crack + term structure** from futures adapters → completes Tightness, adds
-   two standalone signals.
-5. **FRED macro layer → Macro pressure** half of Macro Override.
-6. **CFTC positioning → Positioning pressure** half; then the composite tape.
+4. **Crack** (`eiaSpotProducts.ts`, EIA spot RBOB/HO vs WTI) → **SHIPPED**,
+   completes Tightness (3/3). Term structure deferred — EIA futures discontinued,
+   needs a deploy-verified curve source.
+5. **FRED macro layer → Macro pressure** half of Macro Override. **Backend
+   SHIPPED 2026-07-11** — keyless `fredMacro.ts` (fredgraph CSV; `FRED_API_KEY`
+   was empty, so no key needed), `macro/engine.ts` (`computeMacroRegime` GRID for
+   P·06 + `computeMacroPressure` for the chip), `macro_snapshots` (`009_macro.sql`),
+   `runMacroCycle` in the daily cron, `/api/oil/macro`. Fixture-tested. **UI SHIPPED 2026-07-11** —
+   P·06 card + `/Projects/Regime-Shift` page (GRID quadrant dial, growth/inflation
+   axes, Macro Override pressure legs + divergence chip), `macroData.ts` on
+   `/api/oil/macro`. (Embedding the amber chip inside OilTrackerCore's rail is an
+   optional later touch.)
+6. **CFTC positioning → Positioning pressure** half — **SHIPPED 2026-07-11**
+   (`cftcCot.ts` keyless Socrata + `computePositioning` net-length + 1y percentile,
+   own `cot_positioning` table + isolated cycle, surfaced on P·06's Macro Override
+   section). Kept a separate named data family, never folded into the macro half.
+   **Composite tape — SHIPPED 2026-07-11** (the capstone): `computeTapeStance`
+   rolls Flow Stress + Tightness + Macro Override into one headline stance
+   (SUPPLY-TIGHT / SUPPLY-AMPLE / MACRO-DRIVEN / BALANCED) and names the dominant
+   driver; stored in `tape_snapshots` (`011_tape.sql`), computed at the end of
+   `runScoreCycle`, served at `/api/oil/tape`, shown as the TapeBanner atop the
+   P·06 page. Divergence leads, then a hot supply side, then a macro headwind.
 
 ## Build discipline
 

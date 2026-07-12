@@ -3,10 +3,15 @@ import assert from "node:assert/strict";
 import {
   computeSeasonalTightnessLeg,
   computeUtilizationLeg,
-  crackPendingLeg,
+  computeCrackLeg,
   computeTightness,
   StockLevel,
 } from "../src/scores/engine";
+
+/** A crack leg with no inputs on file — the honest "dark" leg used to
+ *  assert 2/3-coverage behaviour (mirrors a run before spot prices land). */
+const darkCrack = () =>
+  computeCrackLeg({ gasoline: null, heatingOil: null, wti: null, asOf: null });
 import { SeasonalBaseline } from "../src/core/seasonalTypes";
 
 /* runDate 2026-07-11 is ISO week 28 (verified in eiaSeasonal.test.ts). */
@@ -149,7 +154,7 @@ describe("computeTightness — composite with the crack leg dark", () => {
       RUN_DATE,
     ); // ~0.95
     const util = computeUtilizationLeg({ value: 98.5, asOf: "2026-07-03", series: "US" }); // 0.9
-    const s = computeTightness(RUN_DATE, [inv, util, crackPendingLeg()]);
+    const s = computeTightness(RUN_DATE, [inv, util, darkCrack()]);
     assert.equal(s.coverage.available, 2);
     assert.equal(s.coverage.total, 3);
     assert.equal(s.label, "TIGHT");
@@ -164,7 +169,7 @@ describe("computeTightness — composite with the crack leg dark", () => {
       RUN_DATE,
     );
     const util = computeUtilizationLeg({ value: 86, asOf: "2026-07-03", series: "US" });
-    const s = computeTightness(RUN_DATE, [inv, util, crackPendingLeg()]);
+    const s = computeTightness(RUN_DATE, [inv, util, darkCrack()]);
     assert.equal(s.label, "SLACK");
   });
 
@@ -173,9 +178,51 @@ describe("computeTightness — composite with the crack leg dark", () => {
     const s = computeTightness(RUN_DATE, [
       computeSeasonalTightnessLeg([], [], RUN_DATE),
       util,
-      crackPendingLeg(),
+      darkCrack(),
     ]);
     assert.equal(s.score, null);
     assert.equal(s.label, "PENDING");
+  });
+});
+
+describe("computeCrackLeg (3:2:1 refining margin)", () => {
+  test("live inputs → 3:2:1 margin and mid-scale normalization", () => {
+    // (2*100 + 100)/3 - 70 = 100 - 70 = 30 $/bbl → scale $10→0,$50→1: (30-10)/40 = 0.5.
+    const leg = computeCrackLeg({ gasoline: 100, heatingOil: 100, wti: 70, asOf: "2026-07-06" });
+    assert.equal(leg.key, "crack_321");
+    assert.equal(leg.value, 30);
+    assert.equal(leg.normalized, 0.5);
+    assert.equal(leg.asOf, "2026-07-06");
+  });
+
+  test("fat margin clamps to 1, thin margin clamps to 0", () => {
+    const fat = computeCrackLeg({ gasoline: 200, heatingOil: 200, wti: 60, asOf: "2026-07-06" });
+    assert.equal(fat.normalized, 1); // (140-8)/24 > 1 → clamped
+    const thin = computeCrackLeg({ gasoline: 63, heatingOil: 63, wti: 70, asOf: "2026-07-06" });
+    assert.equal(thin.normalized, 0); // negative margin → clamped to 0
+  });
+
+  test("any missing input → dark leg (null, honest coverage)", () => {
+    const leg = computeCrackLeg({ gasoline: 126, heatingOil: null, wti: 69.6, asOf: "2026-07-06" });
+    assert.equal(leg.value, null);
+    assert.equal(leg.normalized, null);
+    assert.equal(leg.asOf, null);
+  });
+
+  test("all three legs live → Tightness reads 3/3", () => {
+    const inv = computeSeasonalTightnessLeg(
+      [level("us_crude_stocks", 402), level("gasoline_stocks", 202)],
+      [
+        band({ metric: "us_crude_stocks", minValue: 400, maxValue: 480 }),
+        band({ metric: "gasoline_stocks", minValue: 200, maxValue: 240 }),
+      ],
+      RUN_DATE,
+    );
+    const util = computeUtilizationLeg({ value: 96, asOf: "2026-07-03", series: "US" });
+    const crack = computeCrackLeg({ gasoline: 100, heatingOil: 100, wti: 70, asOf: "2026-07-06" });
+    const s = computeTightness(RUN_DATE, [inv, util, crack]);
+    assert.equal(s.coverage.available, 3);
+    assert.equal(s.coverage.total, 3);
+    assert.ok(s.score !== null);
   });
 });
