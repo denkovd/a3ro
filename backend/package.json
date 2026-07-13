@@ -23,6 +23,8 @@
     "verify:bull": "tsx scripts/verify-bull.ts",
     "scan:bull": "tsx scripts/run-bull-scan.ts",
     "refresh:universe": "tsx scripts/refresh-universe.ts",
+    "migrate:win": "tsx scripts/migrate.ts",
+    "run:macro": "tsx scripts/run-macro.ts",
     "test": "tsx --test tests/**/*.test.ts"
   },
   "dependencies": {
