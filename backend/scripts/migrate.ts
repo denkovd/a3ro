@@ -11,8 +11,10 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { Client } from "pg";
+import pg from "pg";
 import { ensureDatabaseUrl } from "./loadEnv";
+
+const { Client } = pg;
 
 async function main() {
   const arg = process.argv[2];

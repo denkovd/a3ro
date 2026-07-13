@@ -40,6 +40,7 @@
   "exclude": [
     "node_modules",
     "job1-fred",
-    "backend/tests"
+    "backend/tests",
+    "backend/scripts"
   ]
 }
