@@ -35,6 +35,14 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
+      - name: Preflight — verify DATABASE_URL secret
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Repo secret DATABASE_URL is not set — add it under Settings → Secrets and variables → Actions (pooled Supabase string)."
+            exit 1
+          fi
       - name: Backfill chunk
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

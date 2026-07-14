@@ -10,6 +10,9 @@
      DATABASE_URL=... npx tsx scripts/run-bull-scan.ts [--chunk N/M]
 ──────────────────────────────────────────────────────────────── */
 
+import { ensureDatabaseUrl } from "./loadEnv";
+ensureDatabaseUrl();
+
 import { createDb } from "../src/storage/db";
 import { runBullScan } from "../src/bull/pipeline";
 import { BULL_UNIVERSE } from "../src/bull/universe";
