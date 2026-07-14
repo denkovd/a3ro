@@ -23,6 +23,8 @@ import {
   type MacroQuadrant,
   type PositioningStance,
 } from "../../components/projects/macro/macroData";
+import { deriveMacroBrief } from "../../components/projects/macro/macroBrief";
+import MacroBriefOverlay, { HorizonRibbon } from "../../components/projects/macro/MacroBriefOverlay";
 
 const ATMOSPHERE =
   "radial-gradient(90% 110% at 50% 65%, #0e1020 0%, var(--depth-1) 55%, #070808 100%)";
@@ -49,6 +51,7 @@ export default function RegimeShiftView() {
 
   const live = snap.status === "live" && snap.quadrant !== "PENDING";
   const active = live ? (snap.quadrant as Exclude<MacroQuadrant, "PENDING">) : null;
+  const brief = deriveMacroBrief(snap);
 
   return (
     <motion.main
@@ -157,6 +160,10 @@ export default function RegimeShiftView() {
                   </p>
                   <p className="mt-2 text-[13px] leading-relaxed text-[var(--ink-2)]">{snap.regimeHeadline}</p>
                   <p className="mt-2 text-[12px] leading-relaxed text-[var(--ink-3)]">{snap.favored}</p>
+                  {/* Macro Brief Overlay · 1 — horizon ribbon */}
+                  <div className="mt-4">
+                    <HorizonRibbon brief={brief} />
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <AxisCard label="Growth (IP)" yoy={snap.growthYoy} momentum={snap.growthMomentum} />
@@ -165,6 +172,9 @@ export default function RegimeShiftView() {
               </div>
             </div>
           )}
+
+          {/* Macro Brief Overlay · 2+3 — cycle attribution grid + asset implication strip */}
+          {live && <MacroBriefOverlay brief={brief} />}
 
           {/* Macro Override pressure */}
           {live && (

@@ -19,12 +19,15 @@
     "migrate:positioning": "psql \"$DATABASE_URL\" -f migrations/010_positioning.sql",
     "migrate:tape": "psql \"$DATABASE_URL\" -f migrations/011_tape.sql",
     "migrate:thesis": "psql \"$DATABASE_URL\" -f migrations/012_thesis.sql",
+    "migrate:earnings": "psql \"$DATABASE_URL\" -f migrations/013_earnings.sql",
     "verify:regime": "tsx scripts/verify-regime.ts",
     "verify:bull": "tsx scripts/verify-bull.ts",
     "scan:bull": "tsx scripts/run-bull-scan.ts",
     "refresh:universe": "tsx scripts/refresh-universe.ts",
     "migrate:win": "tsx scripts/migrate.ts",
     "run:macro": "tsx scripts/run-macro.ts",
+    "run:earnings-weekly": "tsx scripts/run-earnings-weekly.ts",
+    "backfill:earnings": "tsx scripts/run-earnings-backfill.ts",
     "test": "tsx --test tests/**/*.test.ts"
   },
   "dependencies": {

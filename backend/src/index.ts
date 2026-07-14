@@ -184,3 +184,31 @@ export {
   insertPosition, updatePosition, deletePosition, listPositions, markPositions,
 } from "./storage/portfolioRepo";
 export type { PositionWrite } from "./storage/portfolioRepo";
+
+// Earnings-Beat Tracker — watchlist EPS/revenue surprise tracking
+// (see earnings-beat-tracker-architecture.md for the full spec)
+export { fetchCalendarEarnings, fetchStockEarnings, safePct } from "./earnings/finnhub";
+export {
+  computeBeatStreak, computeTrailingAverages, computeRankScore, computeTickerMetrics,
+  winsor, RECENCY_WEIGHTS, WINSOR_BOUND, EPS_BLEND_WEIGHT, REVENUE_BLEND_WEIGHT,
+} from "./earnings/engine";
+export {
+  upsertQuarter, runWeeklyIncremental, backfillTicker, reconcileUnderfilledTickers,
+} from "./earnings/pipeline";
+export type {
+  WeeklyIncrementalReport, WeeklyIncrementalOptions,
+  BackfillReport, BackfillReconcileReport,
+} from "./earnings/pipeline";
+export type {
+  WatchlistEntry, ReportHour, EarningsQuarterRow, UpsertQuarterInput,
+  FinnhubCalendarEntry, FinnhubStockEarningsEntry,
+  QuarterSurprise, TickerMetrics,
+  RankingsQueryParams, RankingsQuarterEntry, RankingsLatest, RankingsResultEntry, RankingsResponse,
+  ApiErrorCode, ApiErrorBody,
+} from "./earnings/types";
+export {
+  getActiveWatchlist, getAllWatchlist, getActiveQuarterCounts,
+  getCachedQuarterKeys, insertQuarterIfAbsent, getCachedQuarters, getRankingData,
+} from "./storage/earningsRepo";
+export type { RankingDataEntry } from "./storage/earningsRepo";
+"./storage/earningsRepo";
