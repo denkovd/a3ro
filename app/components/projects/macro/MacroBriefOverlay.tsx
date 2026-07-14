@@ -114,7 +114,7 @@ export default function MacroBriefOverlay({ brief }: { brief: MacroBrief }) {
     <div className="mt-12 border-t border-[var(--line)] pt-8">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-          Macro brief — cycle overlay
+          What&apos;s driving the regime
         </p>
         <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
           · live feed &nbsp;|&nbsp; unmarked — brief {brief.asOf}

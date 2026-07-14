@@ -153,15 +153,18 @@ export default function RegimeShiftView() {
 
               {/* axes + headline */}
               <div className="flex flex-col justify-center gap-5">
-                <div>
+                {/* regime + horizon outlook — one block */}
+                <div
+                  className="rounded-[4px] border border-[var(--line)] bg-[var(--depth-1)] p-4"
+                  style={{ borderLeft: `2px solid ${active ? QUADRANT_META[active].color : "var(--line)"}` }}
+                >
                   <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">Current regime</p>
                   <p className="mt-1 text-2xl font-semibold" style={{ color: active ? QUADRANT_META[active].color : "var(--ink)" }}>
                     {active ? QUADRANT_META[active].label : "—"}
                   </p>
                   <p className="mt-2 text-[13px] leading-relaxed text-[var(--ink-2)]">{snap.regimeHeadline}</p>
                   <p className="mt-2 text-[12px] leading-relaxed text-[var(--ink-3)]">{snap.favored}</p>
-                  {/* Macro Brief Overlay · 1 — horizon ribbon */}
-                  <div className="mt-4">
+                  <div className="mt-4 border-t border-[var(--line)] pt-3">
                     <HorizonRibbon brief={brief} />
                   </div>
                 </div>
@@ -181,7 +184,7 @@ export default function RegimeShiftView() {
             <div className="mt-12 border-t border-[var(--line)] pt-8">
               <div className="flex items-baseline justify-between">
                 <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-                  Macro Override — pressure
+                  Macro pressure on oil
                 </p>
                 {snap.diverging && (
                   <span
@@ -226,7 +229,7 @@ export default function RegimeShiftView() {
               {snap.positioning && (
                 <div className="mt-6 border-t border-[var(--line)] pt-4">
                   <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
-                    Positioning · CFTC managed money
+                    Futures positioning
                   </p>
                   <div className="mt-2 flex flex-wrap items-baseline gap-x-6 gap-y-1">
                     <span className="text-lg font-semibold" style={{ color: stanceColor(snap.positioning.stance) }}>

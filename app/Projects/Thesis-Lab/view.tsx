@@ -1,10 +1,11 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
    /Projects/Thesis-Lab — fullscreen experience shell (P·07).
-   One coherent workflow across three stages sharing state:
+   One coherent workflow across four stages sharing state:
      01 Pressure Test  — thesis in, assumptions out (weakest first)
-     02 Scenarios      — five paths, downside first, legs traced
-     03 Portfolio Risk — the real book audited against both
+     02 Grill Me       — interrogation loop → decision memo
+     03 Scenarios      — five paths, downside first, legs traced
+     04 Portfolio Risk — the real book audited against both
    The analyzed thesis flows forward: scenarios are generated from
    it; the risk audit pins its saved id so scenario P&L on the book
    traces to the exact thesis under test. Esc or "Index" returns to
@@ -14,26 +15,36 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import PressureTest from "../../components/projects/thesis/PressureTest";
+import GrillMe from "../../components/projects/thesis/GrillMe";
 import ScenarioBoard from "../../components/projects/thesis/ScenarioBoard";
 import RiskAudit from "../../components/projects/thesis/RiskAudit";
 import { LAB_ACCENT, type LabResult } from "../../components/projects/thesis/thesisData";
+import { type GrillSessionState } from "../../components/projects/thesis/grill";
 
 const ATMOSPHERE =
   "radial-gradient(90% 110% at 50% 65%, #0a1416 0%, var(--depth-1) 55%, #070808 100%)";
 
-type Stage = "test" | "scenarios" | "risk";
+type Stage = "test" | "grill" | "scenarios" | "risk";
 
 const STAGES: { id: Stage; num: string; label: string }[] = [
   { id: "test", num: "01", label: "Pressure Test" },
-  { id: "scenarios", num: "02", label: "Scenarios" },
-  { id: "risk", num: "03", label: "Portfolio Risk" },
+  { id: "grill", num: "02", label: "Grill Me" },
+  { id: "scenarios", num: "03", label: "Scenarios" },
+  { id: "risk", num: "04", label: "Portfolio Risk" },
 ];
 
 export default function ThesisLabView() {
   const router = useRouter();
   const [stage, setStage] = useState<Stage>("test");
   const [result, setResult] = useState<LabResult | null>(null);
+  const [grill, setGrill] = useState<GrillSessionState | null>(null);
   const [leaving, setLeaving] = useState(false);
+
+  /* a fresh analysis invalidates any in-flight interrogation */
+  const onResult = useCallback((r: LabResult | null) => {
+    setResult(r);
+    setGrill(null);
+  }, []);
 
   const leave = useCallback(() => {
     if (leaving) return;
@@ -100,7 +111,7 @@ export default function ThesisLabView() {
           <div className="mt-8 flex items-center gap-1 border-b border-[var(--line)]">
             {STAGES.map((s, i) => {
               const active = stage === s.id;
-              const chained = s.id === "scenarios" && result !== null;
+              const chained = (s.id === "grill" || s.id === "scenarios") && result !== null;
               return (
                 <span key={s.id} className="flex items-center">
                   {i > 0 && <span aria-hidden className="mx-2 font-mono text-[10px] text-[var(--ink-3)]">→</span>}
@@ -131,7 +142,10 @@ export default function ThesisLabView() {
           {/* stages */}
           <div className="mt-8">
             {stage === "test" && (
-              <PressureTest result={result} onResult={setResult} onOpenScenarios={() => setStage("scenarios")} />
+              <PressureTest result={result} onResult={onResult} onOpenScenarios={() => setStage("scenarios")} />
+            )}
+            {stage === "grill" && (
+              <GrillMe result={result} session={grill} onSession={setGrill} onBack={() => setStage("test")} />
             )}
             {stage === "scenarios" && <ScenarioBoard result={result} onBack={() => setStage("test")} />}
             {stage === "risk" && <RiskAudit pinnedThesisId={result?.thesisId ?? null} />}
