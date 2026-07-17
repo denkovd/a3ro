@@ -1,8 +1,10 @@
 # ──────────────────────────────────────────────────────────────
 # Earnings Beat Tracker — backfill on watchlist-add (manual dispatch).
-# Backfills specified tickers with 3 years of earnings history from
-# /calendar/earnings, or reconciles all active tickers with < 4 cached
-# quarters if no tickers are provided.
+# Seeds up to the last 4 quarters per ticker EPS-only from
+# /stock/earnings (the free-tier calendar only looks back ~30 days),
+# then enriches recently-reported quarters with revenue/report_date
+# from a today-30d calendar pass. With no tickers provided, reconciles
+# all active tickers with < 4 cached quarters.
 #
 # Dispatch with comma-separated tickers (optional; if omitted, reconciles
 # all underfilled active tickers). Respects 60 req/min free tier via
