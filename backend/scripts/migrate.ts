@@ -11,10 +11,7 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import pg from "pg";
 import { ensureDatabaseUrl } from "./loadEnv";
-
-const { Client } = pg;
 
 async function main() {
   const arg = process.argv[2];
@@ -31,6 +28,14 @@ async function main() {
       "DATABASE_URL not set and not found in ../.env.local — set it in the environment or pass it explicitly.",
     );
   }
+  // Dynamic import (matches storage/db.ts's convention) rather than a
+  // static `import pg from "pg"` default import: @types/pg 8.20 has no
+  // `export =`/default export, so under this project's
+  // moduleResolution:"bundler" tsconfig a static default import types as
+  // the bare module namespace and loses the `Client` member — a
+  // pre-existing, earnings-unrelated typecheck break fixed in passing
+  // because it blocked `npm run typecheck` for the whole workspace.
+  const { Client } = await import("pg");
   const client = new Client({ connectionString: process.env.DATABASE_URL });
   await client.connect();
   try {

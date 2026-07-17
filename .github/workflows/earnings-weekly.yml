@@ -1,0 +1,52 @@
+# ──────────────────────────────────────────────────────────────
+# Earnings Beat Tracker — weekly incremental pipeline.
+# Runs at 12:00 UTC on Saturdays (≈ Sat 07:00/08:00 ET, after Friday
+# amc reports have settled). Detects who reported, fills late revenue,
+# and inserts new quarters.
+#
+# Required repo secrets: DATABASE_URL, FINNHUB_API_KEY.
+# ──────────────────────────────────────────────────────────────
+name: earnings-weekly
+
+on:
+  schedule:
+    - cron: "0 12 * * 6"
+  workflow_dispatch: {}
+
+concurrency:
+  group: earnings-weekly
+  cancel-in-progress: false
+
+jobs:
+  weekly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Preflight — verify DATABASE_URL and FINNHUB_API_KEY secrets
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Repo secret DATABASE_URL is not set — add it under Settings → Secrets and variables → Actions (pooled Supabase string)."
+            exit 1
+          fi
+          if [ -z "$FINNHUB_API_KEY" ]; then
+            echo "::error::Repo secret FINNHUB_API_KEY is not set — get a free key at https://finnhub.io, then add it under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+      - name: Run weekly incremental
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+        run: npx tsx scripts/run-earnings-weekly.ts

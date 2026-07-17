@@ -61,6 +61,26 @@ describe("Finnhub adapter parsing", () => {
     }
   });
 
+  test("fetchCalendarEarnings: '' hour normalizes to null (§1/§2.1/V3)", async () => {
+    setup();
+    try {
+      global.fetch = async () =>
+        new Response(
+          JSON.stringify({
+            earningsCalendar: [
+              { symbol: "ACME", date: "2026-05-20", hour: "", year: 2026, quarter: 1, epsActual: 1, epsEstimate: 1, revenueActual: 1, revenueEstimate: 1 },
+            ],
+          }),
+          { status: 200 },
+        );
+      const rows = await fetchCalendarEarnings("2026-05-20", "2026-05-28");
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0].hour, null);
+    } finally {
+      teardown();
+    }
+  });
+
   test("fetchStockEarnings: parses bare array response", async () => {
     setup();
     try {

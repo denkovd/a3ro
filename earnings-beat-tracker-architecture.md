@@ -1,28 +1,40 @@
-# Earnings-Beat Tracker — Architecture Spec
+# Earnings-Beat Leaderboard — Module Spec (v2)
 
-Stack: TypeScript/Python · Supabase (Postgres) · Finnhub free tier (60 req/min, no daily cap).
-Scope: EPS + revenue surprise tracking for a watchlist, pulled **once per quarter per ticker** right after each reports.
+**Product goal:** a leaderboard that ranks watchlist companies by the size, consistency, and recency of their earnings beats. Top of the board = companies that keep beating estimates, beat big, and beat *recently*. Every number on the board traces to a real Finnhub field or a deterministic formula defined in this doc — **no synthetic, sample, or placeholder data is ever written to the database or rendered as real** (see §8, Data-integrity guarantees).
+
+Stack: TypeScript (`backend/`) · Supabase (Postgres) · Finnhub free tier (60 req/min, no daily cap).
+Cadence: data changes at most weekly (one pipeline run); reads are DB-only and cached.
+
+> v2 supersedes v1. Changes: streak now walks all cached history (v1's §3.1 capped it at 4 quarters while the example showed a streak of 6 — contradiction fixed); `DO NOTHING` replaced with a fill-nulls-only upsert (late revenue no longer frozen); fixed 8-day window replaced with a watermark; pipeline error handling, cron placement/auth, RLS policies, and a test plan are now specified; three Finnhub behaviors are flagged for verification before build (§0.1).
 
 ---
 
-## 0. Important API-reality note (read first)
+## 0. API-reality note (read first)
 
-The brief assumes `/stock/earnings?symbol=X` returns **both EPS and revenue** actual/estimate/surprise. It does **not**. On the free tier:
+The obvious endpoint, `/stock/earnings?symbol=X`, does **not** return revenue. On the free tier:
 
 | Endpoint | Returns | Revenue? | Fiscal-period-end date? | EPS surprise % pre-computed? |
 |---|---|---|---|---|
 | `/calendar/earnings?from=&to=[&symbol=]` | `date`, `hour`, `year`, `quarter`, `epsActual`, `epsEstimate`, `revenueActual`, `revenueEstimate`, `symbol` | **Yes** | No (only `year`+`quarter`) | No (compute it) |
 | `/stock/earnings?symbol=X` | `period`, `year`, `quarter`, `actual`, `estimate`, `surprise`, `surprisePercent`, `symbol` | **No (EPS only)** | **Yes** (`period` = fiscal end date) | Yes (EPS only) |
 
-**Consequence:** `/calendar/earnings` is the **primary** source because it is the only free endpoint carrying revenue. `/stock/earnings` becomes an **optional supplement** used only to fill `fiscal_date_ending` and cross-check the EPS surprise %. Every design decision below follows from this.
+**Consequence:** `/calendar/earnings` is the **primary** source (only free endpoint carrying revenue). `/stock/earnings` is a **supplement** for `fiscal_date_ending` and the authoritative EPS surprise %. The schema's natural key is `(ticker, fiscal_year, fiscal_quarter)` — not `(ticker, fiscal_date_ending)` — because `fiscal_date_ending` is not reliably available and a `UNIQUE` over a nullable column does not dedup in Postgres (NULLs compare as distinct).
 
-This also drives the schema's natural key (see §1): `(ticker, fiscal_year, fiscal_quarter)` instead of `(ticker, fiscalDateEnding)`, because `fiscalDateEnding` is not reliably available and a `UNIQUE` on a nullable column does **not** prevent duplicates in Postgres (NULLs compare as distinct).
+### 0.1 Verification results (resolved 2026-07-16 against the live API)
+
+These were blocking pre-implementation tasks; all three now have recorded answers (probe transcript in `backend/docs/earnings-endpoint-verification.md`):
+
+| # | Question | **Verified answer (2026-07-16)** | Consequence |
+|---|---|---|---|
+| **V1** | Free-tier history depth of `/calendar/earnings?symbol=X` | **FAILED — lookback is ~30 days.** A 3-month market-wide request returned rows from today−30d onward only; symbol-scoped requests for older windows return `{"earningsCalendar":[]}` (HTTP 200). | Historical backfill via calendar is impossible. Fallback is **active**: Flow B backfills EPS-only from `/stock/earnings` (last 4 quarters on free tier) — see §2.3. Backfilled quarters have no revenue and no announcement date (→ `report_date` is nullable). |
+| **V2** | Do `(year, quarter)` labels agree between the two endpoints for offset-fiscal-year companies? | **PASSED.** Verified on real overlapping data: MU calendar `{date: 2026-06-24, 2026-Q3}` = stock `{period: 2026-06-30, 2026-Q3}`; NKE `2026-Q4` on both. Both endpoints use fiscal labeling. | Rows from either source collide correctly on `(ticker, fiscal_year, fiscal_quarter)`; the fill-nulls upsert merges them — no in-memory join needed at all. |
+| **V3** | Actual value set of calendar `hour` | **PASSED** (`bmo`/`amc` observed in live market-wide data; `''` remains possible per docs). | `'' → NULL` normalization stands; CHECK constraint unchanged. |
+
+Additional recorded fact: `/stock/earnings.period` is Finnhub-**normalized** calendar-quarter-end (MU reported 2026-06-24 but `period` = 2026-06-30), so `fiscal_date_ending` is approximate, not the exact fiscal close date.
 
 ---
 
 ## 1. Schema (SQL)
-
-Verified: parses cleanly as PostgreSQL DDL.
 
 ```sql
 -- ========================================================================
@@ -34,190 +46,279 @@ create table public.watchlist (
   company_name  text,
   is_active     boolean     not null default true,
   added_at      timestamptz not null default now(),
-  constraint watchlist_ticker_key unique (ticker)     -- FK target + dedup
+  constraint watchlist_ticker_key unique (ticker)
 );
 
--- Partial index: the pipeline and API only ever scan active tickers.
 create index watchlist_active_idx
   on public.watchlist (ticker)
   where is_active;
 
 -- ========================================================================
--- earnings_surprises : one row per ticker per fiscal quarter (immutable once pulled)
+-- earnings_surprises : one row per ticker per fiscal quarter
+-- Values never change once set; NULL columns may be filled by later runs.
 -- ========================================================================
 create table public.earnings_surprises (
   id                        bigint generated always as identity primary key,
   ticker                    text     not null
                               references public.watchlist (ticker)
-                              on update cascade on delete cascade,
+                              on update cascade on delete restrict,
   fiscal_year               smallint not null,
   fiscal_quarter            smallint not null check (fiscal_quarter between 1 and 4),
-  fiscal_date_ending        date,                 -- from /stock/earnings.period; nullable
-  report_date               date     not null,    -- calendar "date" (announcement date)
+  fiscal_date_ending        date,                 -- /stock/earnings.period; Finnhub-normalized quarter-end, approximate
+  report_date               date,                 -- calendar "date" (announcement date); NULL for quarters
+                                                  -- backfilled from /stock/earnings, which has no announcement
+                                                  -- date — never faked from `period` (§0.1 V1)
   report_hour               text     check (report_hour in ('bmo','amc','dmh')),
   reported_eps              numeric,
-  estimated_eps            numeric,
-  eps_surprise_percent     numeric,
-  reported_revenue         numeric(20,2),
-  estimated_revenue        numeric(20,2),
-  revenue_surprise_percent numeric,
-  source                   text        not null default 'finnhub',
-  pulled_at                timestamptz not null default now(),
+  estimated_eps             numeric,
+  eps_surprise_percent      numeric,
+  reported_revenue          numeric(20,2),        -- absolute USD, exact
+  estimated_revenue         numeric(20,2),
+  revenue_surprise_percent  numeric,
+  source                    text        not null default 'finnhub',
+  raw                       jsonb,                -- verbatim source payload(s) for audit
+  pulled_at                 timestamptz not null default now(),
+  updated_at                timestamptz not null default now(),
 
-  -- Prevents duplicate pulls. (year, quarter) is supplied by BOTH endpoints and
-  -- is never null, so it reliably enforces "one row per ticker per quarter".
+  -- (year, quarter) is supplied by BOTH endpoints and never null →
+  -- reliably enforces "one row per ticker per quarter".
   constraint earnings_surprises_period_key
     unique (ticker, fiscal_year, fiscal_quarter)
 );
 
--- Compute layer reads the newest N quarters per ticker — index to match.
+-- Ranking engine reads newest-first per ticker — index to match.
 create index earnings_surprises_ticker_period_idx
   on public.earnings_surprises (ticker, fiscal_year desc, fiscal_quarter desc);
 
--- Supabase: enable RLS; the pipeline writes with the service-role key (bypasses RLS),
--- the dashboard reads via policies (add per your auth model).
+-- ========================================================================
+-- pipeline_runs : one row per pipeline execution (watermark + observability)
+-- ========================================================================
+create table public.pipeline_runs (
+  id             bigint generated always as identity primary key,
+  flow           text        not null check (flow in ('weekly','backfill')),
+  started_at     timestamptz not null default now(),
+  finished_at    timestamptz,
+  window_from    date,
+  window_to      date,
+  rows_inserted  integer,
+  rows_enriched  integer,                          -- null-fill updates (§2.1)
+  tickers_failed text[]      not null default '{}',
+  status         text        not null default 'running'
+                   check (status in ('running','success','failed')),
+  error          text
+);
+
+-- ========================================================================
+-- RLS: pipeline writes with the service-role key (bypasses RLS);
+-- the dashboard reads through these explicit policies.
+-- ========================================================================
 alter table public.watchlist          enable row level security;
 alter table public.earnings_surprises enable row level security;
+alter table public.pipeline_runs      enable row level security;
+
+create policy watchlist_read on public.watchlist
+  for select to anon, authenticated using (true);
+create policy earnings_read on public.earnings_surprises
+  for select to anon, authenticated using (true);
+create policy runs_read on public.pipeline_runs
+  for select to anon, authenticated using (true);   -- powers data_as_of (§4)
+-- If the dashboard later requires login, drop `anon` from these three policies.
 ```
 
-### Schema notes / decisions
+### Schema decisions
 
-- **Unique key changed from the brief.** Requested `(ticker, fiscalDateEnding)` → delivered `(ticker, fiscal_year, fiscal_quarter)`. Reason: `fiscalDateEnding` isn't returned by the free calendar endpoint, and a `UNIQUE` constraint over a nullable column silently fails to dedup (Postgres treats each NULL as distinct, so two NULL-dated rows for the same quarter would both insert). `(year, quarter)` is present in both endpoints and non-null, so it delivers the *goal* of the requested constraint — no duplicate pulls — robustly. `fiscal_date_ending` is kept as an enrichment column. If you insist on the literal requested key, you must make `/stock/earnings` a required (not optional) call and mark `fiscal_date_ending NOT NULL`.
-- **`report_hour`** (`bmo`=before market open, `amc`=after close, `dmh`=during market hours) is stored because it disambiguates same-day reports and helps the "date shifted by a holiday" edge case.
-- **`reported_revenue` / `estimated_revenue`** use `numeric(20,2)` (absolute dollars, e.g. `89498000000.00`) — ample headroom, exact (never float).
-- **Surprise-percent columns are stored** even though the compute layer is on-read, because Finnhub's own `surprisePercent` (EPS) is worth persisting verbatim and revenue % must be derived at insert (calendar gives only actual+estimate). Storing them keeps the read path a pure sort with no per-row arithmetic.
-- **FK `on delete cascade`**: deleting a watchlist row drops its cached earnings. Prefer setting `is_active = false` to retain the cache. Switch to `on delete restrict` if you want deletion blocked while history exists.
-- **Immutability**: matches "a quarter's data never changes." Inserts use `ON CONFLICT DO NOTHING` (first write wins). If you ever want to absorb restatements, switch that single clause to `DO UPDATE`.
+- **Natural key `(ticker, fiscal_year, fiscal_quarter)`** — present and non-null in both endpoints; delivers "no duplicate pulls" robustly (see §0 for why not `fiscal_date_ending`).
+- **`on delete restrict`** (changed from v1's `cascade`): earnings rows cost API calls to rebuild and a re-add only re-backfills partial history, so hard-deleting a watchlist row must not silently destroy them. Deactivate with `is_active = false`; a deliberate hard delete removes earnings rows first, explicitly.
+- **`raw jsonb`** stores the verbatim Finnhub payload(s) the row was built from. Nearly free at this row count; turns every future "why does this number look wrong" into a `SELECT` instead of API archaeology. It is also the audit proof that no value was fabricated.
+- **`updated_at`** tracks null-fill enrichment (§2.1). `pulled_at` = first insert, immutable.
+- **Surprise-percent columns are stored** so the read path stays a pure sort: Finnhub's own EPS `surprisePercent` is persisted verbatim when available; revenue % is derived once at write time by `safePct` (§2.1).
+- **`report_hour`**: `bmo` = before market open, `amc` = after close, `dmh` = during market hours. The pipeline normalizes empty string → `NULL` before insert (V3).
 
 ---
 
-## 2. Pipeline design (weekly cron + one-time backfill)
+## 2. Pipeline
 
-Two flows share one insert routine. Both are fully idempotent, so overlapping runs and re-runs are safe.
+Two flows share one write routine. Both are idempotent: re-running any number of times converges to the same state.
 
-### Shared insert routine — `upsertQuarter(row)`
+**Where it runs:** GitHub Actions scheduled workflow (`.github/workflows/`) — *not* a Vercel cron. Reason: Flow B paces requests at ~1.1 s to respect 60 req/min, so backfilling even 30 tickers exceeds serverless function timeouts; Actions has no such pressure and its cron is free. The workflow runs a script in `backend/scripts/` that talks to Supabase with the service-role key from repository secrets. If any HTTP trigger route is ever added, it must require a `CRON_SECRET` bearer header.
 
-Given one reported quarter, map + insert:
+**Timezone:** all schedules and date windows are **UTC**. Weekly run: **Saturday 12:00 UTC** (≈ Sat 07:00/08:00 ET) — after Friday `amc` reports have settled.
+
+### 2.1 Shared write routine — `upsertQuarter(row)`
+
+Field mapping (every target column ← a named source field or a formula, nothing else):
 
 ```
-reported_eps             = calendar.epsActual
-estimated_eps            = calendar.epsEstimate
-reported_revenue         = calendar.revenueActual
-estimated_revenue        = calendar.revenueEstimate
-eps_surprise_percent     = /stock/earnings.surprisePercent   (if fetched)
+reported_eps             ← calendar.epsActual
+estimated_eps            ← calendar.epsEstimate
+reported_revenue         ← calendar.revenueActual
+estimated_revenue        ← calendar.revenueEstimate
+eps_surprise_percent     ← /stock/earnings.surprisePercent   (if fetched & V2 passed)
                            else safePct(epsActual, epsEstimate)
-revenue_surprise_percent = safePct(revenueActual, revenueEstimate)
-fiscal_year              = calendar.year
-fiscal_quarter           = calendar.quarter
-report_date              = calendar.date
-report_hour              = calendar.hour
-fiscal_date_ending       = /stock/earnings.period            (if fetched, else NULL)
-
-INSERT ... ON CONFLICT (ticker, fiscal_year, fiscal_quarter) DO NOTHING
+revenue_surprise_percent ← safePct(revenueActual, revenueEstimate)
+fiscal_year              ← calendar.year
+fiscal_quarter           ← calendar.quarter
+report_date              ← calendar.date
+report_hour              ← calendar.hour, with '' normalized to NULL
+fiscal_date_ending       ← /stock/earnings.period             (if fetched & V2 passed, else NULL)
+raw                      ← the source payload(s) verbatim
 ```
 
 `safePct(actual, estimate)`:
-- `estimate` is `null` or `0` → return `null` (no estimate / undefined surprise; see Edge Cases).
-- else → `((actual - estimate) / abs(estimate)) * 100`.
+- `actual` or `estimate` is `null`, or `estimate = 0` → `null` (no/undefined surprise — never invent a number, never use 0 as a stand-in).
+- else → `((actual − estimate) / abs(estimate)) × 100`.
 
-### Flow A — Weekly incremental (the cron)
+**Insert = fill-nulls-only upsert** (replaces v1's `DO NOTHING`). Finnhub's calendar frequently has `epsActual` within hours of a report while `revenueActual` and settled estimates arrive later; plain `DO NOTHING` would freeze those columns at `NULL` forever. This clause keeps populated values immutable (first non-null write wins — restatements are still ignored by design) while letting late-arriving data land:
 
-Schedule: weekly, a couple of days after the busiest report days (e.g. **Saturday 06:00**) so actuals have settled. Runs regardless; work is gated by data, not by the calendar.
+```sql
+insert into public.earnings_surprises (ticker, fiscal_year, fiscal_quarter, ...)
+values (...)
+on conflict (ticker, fiscal_year, fiscal_quarter) do update set
+  fiscal_date_ending       = coalesce(earnings_surprises.fiscal_date_ending,       excluded.fiscal_date_ending),
+  report_hour              = coalesce(earnings_surprises.report_hour,              excluded.report_hour),
+  reported_eps             = coalesce(earnings_surprises.reported_eps,             excluded.reported_eps),
+  estimated_eps            = coalesce(earnings_surprises.estimated_eps,            excluded.estimated_eps),
+  eps_surprise_percent     = coalesce(earnings_surprises.eps_surprise_percent,     excluded.eps_surprise_percent),
+  reported_revenue         = coalesce(earnings_surprises.reported_revenue,         excluded.reported_revenue),
+  estimated_revenue        = coalesce(earnings_surprises.estimated_revenue,        excluded.estimated_revenue),
+  revenue_surprise_percent = coalesce(earnings_surprises.revenue_surprise_percent, excluded.revenue_surprise_percent),
+  updated_at               = now()
+where earnings_surprises.fiscal_date_ending       is null and excluded.fiscal_date_ending       is not null
+   or earnings_surprises.report_hour              is null and excluded.report_hour              is not null
+   or earnings_surprises.reported_eps             is null and excluded.reported_eps             is not null
+   or earnings_surprises.estimated_eps            is null and excluded.estimated_eps            is not null
+   or earnings_surprises.eps_surprise_percent     is null and excluded.eps_surprise_percent     is not null
+   or earnings_surprises.reported_revenue         is null and excluded.reported_revenue         is not null
+   or earnings_surprises.estimated_revenue        is null and excluded.estimated_revenue        is not null
+   or earnings_surprises.revenue_surprise_percent is null and excluded.revenue_surprise_percent is not null;
+```
 
-1. **Detect who reported.** One call for the whole watchlist:
-   `GET /calendar/earnings?from={today-8d}&to={today}` (no `symbol` → whole-market list).
-   Use an **8-day** window (1-day overlap vs. the 7-day cadence) so a report that slips across the run boundary is never missed; idempotency absorbs the overlap. Filter the response to `symbol ∈ active watchlist` **and** `epsActual !== null` (a non-null actual is the definitive "it has reported" signal — scheduled date alone is unreliable).
-   → *Cost: 1 call/week regardless of watchlist size.*
+(The `where` clause makes no-op conflicts truly no-op, so `updated_at` and row versions don't churn on overlapping runs.)
 
-2. **Skip what's cached, insert what's new.** For each reported ticker, check existence by `(ticker, fiscal_year, fiscal_quarter)`. If a row exists → skip (no API call). If not:
-   - *(optional, recommended)* `GET /stock/earnings?symbol=X` → take `period` (fills `fiscal_date_ending`) and `surprisePercent` (authoritative EPS %). One call per **newly reported** ticker only.
+### 2.2 Flow A — Weekly incremental
+
+1. **Compute the window from a watermark, not a fixed 8 days.** A fixed window silently loses any report that lands during a failed/skipped week — nothing ever re-detects it.
+   `from = (window_to of the last pipeline_runs row with status='success' and flow='weekly', else today − 8d) − 2d overlap`, `to = today`. Cap the span at **30 days — the calendar's verified free-tier lookback limit (§0.1 V1)**; when the cap engages, log a warning that quarters older than 30 days are recoverable only EPS-only via the backfill/reconcile flow (§2.3).
+2. **Detect who reported.** One market-wide call: `GET /calendar/earnings?from={from}&to={to}` (no `symbol`). Filter to `symbol ∈ active watchlist` **and** `epsActual !== null` — a non-null actual is the definitive "it reported" signal; scheduled dates are unreliable (holiday shifts). → *1 call/week regardless of watchlist size.*
+3. **Re-attempt rows with missing revenue.** Select cached rows in the window where `reported_revenue is null`; their calendar entries from step 2 feed `upsertQuarter`, and the null-fill upsert absorbs late revenue. → *0 extra calls.*
+4. **Insert new quarters.** For each reported ticker with no cached row for that `(year, quarter)`:
+   - *(only if V2 passed)* `GET /stock/earnings?symbol=X` → `period` + authoritative EPS `surprisePercent`.
    - `upsertQuarter(...)`.
-   → *Cost: 0 calls for already-cached tickers; ≤1 supplemental call per genuinely new quarter. A watchlist of 100 names in a heavy week is a few dozen calls — far under 60/min.*
+   → *≤1 supplemental call per genuinely new quarter. 100-name watchlist in a heavy week ≈ a few dozen calls — far under 60/min.*
+5. **Record the run** in `pipeline_runs` (window, counts, failures, status).
 
-3. **Idempotency guarantee.** Existence check (step 2) skips before any per-ticker call, so cached quarters cost nothing; `ON CONFLICT DO NOTHING` is the backstop for races and the window overlap. Re-running the cron any number of times converges to the same state with near-zero extra calls.
+### 2.3 Flow B — Backfill on watchlist-add (revised per §0.1 V1: stock-primary)
 
-**Reasoning:** revenue only exists on the calendar payload, so step 1's single market-wide call already carries every number needed for the surprises row. `/stock/earnings` is demoted to an optional enrichment for `fiscal_date_ending` + EPS %, not the primary fetch the brief imagined.
+Streaks and trailing averages need history, and the calendar can't provide it (30-day lookback). On add (and as a nightly reconcile for active tickers with < 4 cached quarters):
 
-### Flow B — Backfill on watchlist-add (needed for the compute layer)
+1. **Primary:** `GET /stock/earnings?symbol=X` → last 4 quarters, EPS-only rows: `fiscal_year`/`fiscal_quarter` from the entry, `fiscal_date_ending = period`, EPS actual/estimate + Finnhub's `surprisePercent` verbatim, `report_date = NULL`, `report_hour = NULL`, revenue columns `NULL`, `raw` = the stock entry.
+2. **Enrich:** `GET /calendar/earnings?from={today − 30d}&to={today}&symbol=X` — if the ticker reported within the last 30 days, the calendar row (revenue, `report_date`, `hour`) merges onto the same `(ticker, fiscal_year, fiscal_quarter)` via the fill-nulls upsert (labels agree per V2 — no in-memory join).
+3. `upsertQuarter(...)` per quarter. → *2 calls per added ticker, once.*
 
-Streaks and trailing-4Q averages are impossible for a freshly added ticker if you only ever capture one quarter going forward. On add (or as a nightly reconcile for tickers with `< 4` cached quarters), backfill history:
+Consequences: backfilled history is **EPS-only** (revenue signal accrues forward from weekly runs — composite scores those quarters EPS-only per §3.3, which is exactly the honest behavior); initial streak depth is capped at ~4–5 quarters and grows over time (`streak_is_capped` keeps the UI honest).
 
-1. `GET /calendar/earnings?from={today-460d}&to={today}&symbol=X` → ~5 trailing quarters with EPS **and** revenue actual/estimate. Keep rows where `epsActual !== null`.
-2. *(optional)* `GET /stock/earnings?symbol=X` → last 4 quarters of `period` + EPS `surprisePercent`; left-join onto step 1 by `(year, quarter)` to fill `fiscal_date_ending`.
-3. `upsertQuarter(...)` for each quarter (`ON CONFLICT DO NOTHING`).
-   → *Cost: 1–2 calls per newly added ticker, one time.*
+Pacing: token bucket at ~55 req/min (1.1 s spacing) whenever more than a handful of calls are queued.
 
-Rate-limit note: at 60/min, add a ~1.1s spacing (or a small token-bucket) if backfilling many tickers at once; normal weekly load never approaches the limit.
+### 2.4 Error handling & observability (new in v2)
+
+- **Retries:** on HTTP 429/5xx/network error, retry twice with exponential backoff + jitter (≈1 s, 4 s). After the third failure, give up on that call.
+- **Per-ticker isolation:** a failed *supplemental* call never blocks the insert — calendar data alone is sufficient; insert with `fiscal_date_ending = NULL` and record the ticker in `tickers_failed`. A failed *calendar* call fails the run (`status='failed'`, watermark not advanced, so the next run re-covers the window).
+- **Never write partial/guessed data:** if a field can't be obtained, it stays `NULL`. No defaults, no estimates-as-actuals, no zeros.
+- **Alerts** (GitHub Actions job failure notification is sufficient): run `status='failed'`; or `rows_inserted = 0` in a week where the market-wide calendar showed ≥1 watchlist ticker reporting (strong signal of a filter/parse bug).
 
 ---
 
-## 3. Compute layer (on-read, not stored)
+## 3. Ranking engine (on-read, deterministic)
 
-Input: the cached quarters for a ticker, ordered most-recent-first by `(fiscal_year desc, fiscal_quarter desc)`. Let the newest `N = min(4, available)` quarters be `q₁ … q_N` (`q₁` = latest).
+Input: all cached quarters for a ticker, newest-first by `(fiscal_year desc, fiscal_quarter desc)`. All constants live in one config object (`RANKING_CONFIG`), not as literals.
 
-### 3.1 Beat streak
-Walk from `q₁`; count consecutive quarters with `eps_surprise_percent > 0`; stop at the first value `≤ 0` **or** `null` (an unknown surprise breaks the streak).
+### 3.1 Beat streak — walks **all cached history** (fixed from v1)
+
+From the newest quarter, count consecutive quarters with `eps_surprise_percent > 0`; stop at the first `≤ 0` **or** `null` (an unknown surprise breaks the streak — a data gap must never extend a streak). Not capped at 4.
+
+The streak is still bounded by cache depth: if every cached quarter is a beat, the true streak may extend further back than we can see. Expose `streak_is_capped = (beat_streak === quarters_available)` so the UI renders `"6"` vs `"9+"` honestly.
 
 ### 3.2 Trailing-4Q averages
-- `eps_surprise_avg` = mean of non-null `eps_surprise_percent` across `q₁…q_N`.
-- `revenue_surprise_avg` = mean of non-null `revenue_surprise_percent` across `q₁…q_N` (quarters with no revenue estimate are excluded from the mean, not counted as 0).
-- Always expose `quarters_available = N` so the frontend can flag low-confidence rows (`N < 4`).
+
+Over the newest `N = min(4, quarters_available)` quarters:
+- `eps_surprise_avg` = mean of **non-null** `eps_surprise_percent`.
+- `revenue_surprise_avg` = mean of **non-null** `revenue_surprise_percent` (missing-estimate quarters are excluded, never counted as 0).
+- Both `null` if no non-null values exist.
 
 ### 3.3 Composite rank score (recency-weighted, EPS-tilted)
-Deterministic; verified numerically.
+
+Over the newest `N = min(4, quarters_available)` quarters `q₁…q_N` (`q₁` latest):
 
 ```
-winsor(x) = max(-50, min(50, x))    -- clamp outliers so one blowout can't dominate
+winsor(x) = max(-50, min(50, x))      -- one blowout quarter can't dominate
 
-per-quarter blend sᵢ — renormalize the 0.6/0.4 EPS/revenue split over whichever
-components are non-null (symmetric: same treatment whether EPS or revenue is missing):
-  eᵢ = winsor(eps_surprise_percentᵢ)  ;  vᵢ = winsor(revenue_surprise_percentᵢ)
-  EPS & revenue present     →  sᵢ = 0.6·eᵢ + 0.4·vᵢ
-  revenue null              →  sᵢ = eᵢ                 (EPS-only)
-  EPS null, revenue present →  sᵢ = vᵢ                 (revenue-only)
+per-quarter blend sᵢ — 0.6/0.4 EPS/revenue split, renormalized over
+whichever components are non-null (symmetric):
+  eᵢ = winsor(eps_surprise_percentᵢ) ;  vᵢ = winsor(revenue_surprise_percentᵢ)
+  both present              →  sᵢ = 0.6·eᵢ + 0.4·vᵢ
+  revenue null              →  sᵢ = eᵢ
+  EPS null, revenue present →  sᵢ = vᵢ
   both null                 →  no signal: DROP quarter qᵢ
 
-recency weights: give each of the up-to-4 newest quarters its positional weight
-  r = [0.4, 0.3, 0.2, 0.1] (most-recent-first); drop no-signal quarters; then
-  renormalize the retained weights to sum to 1  →  wᵢ = rᵢ / Σ r_retained
+recency weights r = [0.4, 0.3, 0.2, 0.1] (newest-first, positional);
+drop no-signal quarters; renormalize retained weights to sum to 1:
+  wᵢ = rᵢ / Σ r_retained
 
-rank_score = Σ wᵢ · sᵢ            over retained quarters
-  if NO quarter has signal  →  rank_score = null   (render "—", sort last; never 0)
+rank_score = Σ wᵢ · sᵢ over retained quarters
+  no quarter has signal → rank_score = null   (render "—", sort last; never 0)
 ```
 
-Sort watchlist by `rank_score` desc (higher = stronger, more-recent beats).
+**Leaderboard order** (ties broken deterministically):
+1. `rank_score` desc (nulls always last, regardless of `order`)
+2. `beat_streak` desc
+3. `eps_surprise_avg` desc (nulls last)
+4. `ticker` asc
 
-Worked checks (verified in-sandbox):
-- 4Q, `eps=[5,3,-2,8]`, `rev=[2,null,1,4]` → `rank_score = 2.90`, `beat_streak = 2`.
-- 2Q only, `eps=[10,4]`, `rev=[5,null]` → weights renormalize to `[0.571,0.429]` → `rank_score = 6.29`.
-- Outlier `eps=[900,…]` → 900 clamped to 50 by `winsor` (no single quarter dominates).
-- EPS null, revenue present → quarter scored on revenue only (`sᵢ = vᵢ`).
-- Interior both-null quarter → dropped; retained weights renormalize (positions 1 & 3 → `[0.667,0.333]`).
-- Ticker with no signal in any quarter → `rank_score = null` (sorts last), never `0`.
+**Confidence label** (UI hint, derived, not stored): `high` = 4 quarters with signal, `medium` = 2–3, `low` = 1.
 
-Design choices: EPS weighted 0.6 vs revenue 0.4 (EPS is the headline surprise markets react to); ±50% winsorization tames small-cap blowouts; renormalization makes `N<4` and missing-revenue tickers directly comparable to full-history ones. **Null handling is symmetric across all three outputs:** the streak stops on a null, and the trailing average and composite both *exclude* null quarters rather than scoring them `0`. A fully-unknown quarter is dropped (not weighted toward 0), and a fully-unknown ticker gets `rank_score = null` — so a data gap can never outrank a genuine negative surprise. All constants (`0.6/0.4`, `±50`, recency vector) are tunable knobs — surface them as config, not literals.
+Worked checks — these six cases ship as unit-test fixtures (§7), so "verified" survives refactors:
+
+| Case | Input (newest-first) | Expected |
+|---|---|---|
+| Full 4Q | `eps=[5,3,−2,8]`, `rev=[2,null,1,4]` | `rank_score = 2.90`, `beat_streak = 2` |
+| Short history | 2Q: `eps=[10,4]`, `rev=[5,null]` | weights → `[0.571, 0.429]`, `rank_score ≈ 6.29` |
+| Outlier | `eps₁ = 900` | winsorized to 50 |
+| EPS missing | `eps₁ = null`, `rev₁ = 3` | `s₁ = 3` (revenue-only) |
+| Interior gap | q₂ both-null of 3 | q₂ dropped; weights `[0.4, 0.2]` → `[0.667, 0.333]` |
+| No signal at all | all quarters both-null | `rank_score = null`, sorts last — never 0 |
+
+Design rationale: EPS weighted 0.6 (the headline surprise markets react to) vs revenue 0.4 (harder to beat via buybacks/tax items — keeps "big beat" honest); ±50 % winsorization tames small-cap blowouts; weight renormalization makes short-history and missing-revenue tickers directly comparable. **Null handling is symmetric across all three outputs:** streak stops on null, averages exclude null, composite drops no-signal quarters and yields `null` (not 0) with no signal — so a data gap can never outrank a genuine negative surprise, and no metric ever displays an invented value.
 
 ---
 
 ## 4. API contract
 
-Single read endpoint; the compute layer runs inside it and returns render-ready, pre-sorted rows.
+One read endpoint; the ranking engine runs inside it and returns render-ready, pre-sorted rows. **The read path never calls Finnhub** — it serves from Postgres only.
 
 ### Request
+
 ```
-GET /api/watchlist/rankings
+GET /api/leaderboard/earnings-beats
 ```
+
 | Query param | Type | Default | Meaning |
 |---|---|---|---|
-| `active` | boolean | `true` | Only tickers with `is_active = true`. |
-| `min_quarters` | integer | `0` | Drop tickers with fewer than this many cached quarters. |
+| `active` | boolean | `true` | Only `is_active = true` tickers. |
+| `min_quarters` | integer | `0` | Drop tickers with fewer cached quarters (UI default: `2`). |
 | `limit` | integer | `100` | Max rows. |
-| `order` | `asc`\|`desc` | `desc` | Sort direction on `rank_score`. |
+| `order` | `asc`\|`desc` | `desc` | Sort direction on `rank_score` (nulls always last). |
+| `ticker` | string | — | Single-ticker detail view. |
+
+Response headers: `Cache-Control: public, s-maxage=3600, stale-while-revalidate=86400` — data changes at most weekly, so recomputing per-request buys nothing.
 
 ### Response `200 application/json`
+
+Field values below are **illustrative shapes, not real market data**; production values come exclusively from the pipeline.
+
 ```json
 {
-  "generated_at": "2026-07-13T06:00:12Z",
+  "generated_at": "2026-07-18T09:00:12Z",
+  "data_as_of": "2026-07-18T12:00:41Z",
   "count": 2,
   "params": { "active": true, "min_quarters": 0, "limit": 100, "order": "desc" },
   "results": [
@@ -227,9 +328,11 @@ GET /api/watchlist/rankings
       "is_active": true,
       "rank_score": 34.72,
       "beat_streak": 6,
+      "streak_is_capped": false,
+      "confidence": "high",
       "eps_surprise_avg": 8.41,
       "revenue_surprise_avg": 4.10,
-      "quarters_available": 4,
+      "quarters_available": 9,
       "latest": {
         "fiscal_year": 2026,
         "fiscal_quarter": 1,
@@ -242,13 +345,11 @@ GET /api/watchlist/rankings
         "reported_revenue": 44060000000.00,
         "estimated_revenue": 43310000000.00,
         "revenue_surprise_percent": 1.73,
-        "pulled_at": "2026-05-31T06:00:04Z"
+        "pulled_at": "2026-05-30T12:00:04Z"
       },
       "quarters": [
-        { "fiscal_year": 2026, "fiscal_quarter": 1, "eps_surprise_percent": 9.09,  "revenue_surprise_percent": 1.73 },
-        { "fiscal_year": 2025, "fiscal_quarter": 4, "eps_surprise_percent": 7.80,  "revenue_surprise_percent": 5.20 },
-        { "fiscal_year": 2025, "fiscal_quarter": 3, "eps_surprise_percent": 8.10,  "revenue_surprise_percent": 4.90 },
-        { "fiscal_year": 2025, "fiscal_quarter": 2, "eps_surprise_percent": 8.65,  "revenue_surprise_percent": 4.55 }
+        { "fiscal_year": 2026, "fiscal_quarter": 1, "eps_surprise_percent": 9.09, "revenue_surprise_percent": 1.73 },
+        { "fiscal_year": 2025, "fiscal_quarter": 4, "eps_surprise_percent": 7.80, "revenue_surprise_percent": 5.20 }
       ]
     },
     {
@@ -257,6 +358,8 @@ GET /api/watchlist/rankings
       "is_active": true,
       "rank_score": 3.10,
       "beat_streak": 1,
+      "streak_is_capped": false,
+      "confidence": "medium",
       "eps_surprise_avg": 2.20,
       "revenue_surprise_avg": null,
       "quarters_available": 2,
@@ -267,24 +370,24 @@ GET /api/watchlist/rankings
 }
 ```
 
-Field contract notes:
-- `revenue_surprise_avg` / `..._percent` are `null` when no revenue estimate exists — the frontend renders "—", never `0`.
-- `quarters_available < 4` signals low confidence (`rank_score` computed over renormalized weights).
-- `rank_score` is `null` when no quarter has a usable surprise; null scores always sort last, regardless of `order`.
-- `quarters` is newest-first; `latest` is a convenience copy of `quarters[0]`.
-- All monetary values are absolute USD; all `*_percent` are percentages (e.g. `9.09` = +9.09%).
+Field-contract notes:
+- `data_as_of` = `finished_at` of the last successful `pipeline_runs` row — the UI shows data freshness from this, not `generated_at` (which only says when the JSON was rendered).
+- Internal consistency invariants (enforced by tests, §7): `beat_streak ≤ quarters_available`; `streak_is_capped ⇔ beat_streak = quarters_available`; averages computed over ≤ 4 newest quarters; `quarters` is newest-first and `latest = quarters[0]` expanded.
+- `null` means "unknown" everywhere and renders as "—" — never coerced to `0`.
+- Monetary values: absolute USD. `*_percent`: percentages (`9.09` = +9.09 %).
 
 ### Errors
+
 ```json
-{ "error": { "code": "UPSTREAM_UNAVAILABLE", "message": "..." } }
+{ "error": { "code": "DB_UNAVAILABLE", "message": "..." } }
 ```
+
 | HTTP | `code` | When |
 |---|---|---|
 | `400` | `INVALID_PARAM` | Bad query param (e.g. non-int `limit`). |
+| `404` | `TICKER_NOT_FOUND` | `ticker` param not in watchlist. |
 | `500` | `INTERNAL` | Unhandled server error. |
-| `503` | `UPSTREAM_UNAVAILABLE` | DB unreachable. (Reads are DB-only — Finnhub is not called on this path.) |
-
-The read path never calls Finnhub; it serves from `earnings_surprises`, so it stays fast and rate-limit-free.
+| `503` | `DB_UNAVAILABLE` | Postgres unreachable (renamed from v1's misleading `UPSTREAM_UNAVAILABLE` — this path has no upstream). |
 
 ---
 
@@ -292,16 +395,43 @@ The read path never calls Finnhub; it serves from `earnings_surprises`, so it st
 
 | Case | Handling |
 |---|---|
-| **< 4 quarters of history** | Compute over `N = available`; renormalize recency weights; return `quarters_available` for the UI. Backfill (Flow B) seeds up to ~5 quarters on add. |
-| **No revenue estimate** (`revenueEstimate` null) | `safePct` → `revenue_surprise_percent = null`; excluded from `revenue_surprise_avg`; composite uses EPS-only fallback for that quarter. Never treated as 0. |
-| **Estimate = 0** | `safePct` returns `null` (avoids divide-by-zero and a meaningless ±∞ surprise). |
-| **Duplicate calendar entries** | `(ticker, fiscal_year, fiscal_quarter)` unique key + `ON CONFLICT DO NOTHING`. Also dedup within a batch before insert, preferring the row with non-null `epsActual`. |
-| **Weekend/holiday date shift** | Never key off the scheduled date. Detect via `epsActual !== null`; use an 8-day overlapping window; idempotency makes overlap free. `report_hour` distinguishes bmo/amc. |
-| **Not yet reported** (estimate present, `epsActual` null) | Filtered out in step 1 (`epsActual !== null`), so no premature/empty row is written. |
-| **Restatement after caching** | Ignored by design (`DO NOTHING`, data treated immutable). Flip to `DO UPDATE` if corrections are ever wanted. |
-| **Ticker removed from watchlist** | Prefer `is_active = false` (keeps cache). Hard delete cascades earnings rows per the FK. |
+| **< 4 quarters of history** | Compute over `N = available`; renormalize recency weights; expose `quarters_available` + `confidence`. Flow B seeds history on add. |
+| **No revenue estimate** | `safePct → null`; excluded from averages; composite scores that quarter EPS-only. Never 0. |
+| **Estimate = 0** | `safePct → null` (divide-by-zero / meaningless ±∞). |
+| **Revenue arrives after EPS** | Weekly step 3 + fill-nulls upsert absorbs it on the next run. |
+| **Duplicate calendar entries** | Unique key + upsert; also dedup within a batch pre-insert, preferring the row with non-null `epsActual`. |
+| **Weekend/holiday date shift** | Never key off scheduled date; detect via `epsActual !== null`; watermark window with 2-day overlap; idempotency makes overlap free. |
+| **Not yet reported** (`epsActual` null) | Filtered out — no premature row is ever written. |
+| **Missed cron weeks** | Watermark window covers the gap up to 30 days (calendar's verified lookback limit); older gaps are recovered EPS-only by the reconcile/backfill flow. |
+| **Backfilled quarters (older than 30 days)** | EPS-only by necessity (§0.1 V1): revenue, `report_date`, `report_hour` are `NULL` and stay `NULL` — rendered "—", never invented. |
+| **Restatement after caching** | Populated values are immutable by design (fill-nulls-only). Revisit only if restatement tracking is ever a requirement. |
+| **Ticker removed from watchlist** | Set `is_active = false` (keeps cache; leaderboard filters it out). Hard delete is blocked by the FK until earnings rows are explicitly removed first. |
+| **Offset fiscal years** | Verified safe (§0.1 V2): both endpoints use fiscal labeling, so cross-source rows merge on the natural key instead of duplicating. |
 
 ---
 
-### Handoff summary for implementation
-Primary source is `/calendar/earnings` (only free endpoint with revenue); `/stock/earnings` is an optional supplement for `fiscal_date_ending` + EPS `surprisePercent`. Weekly cron = 1 market-wide calendar call + ≤1 supplemental call per new quarter, fully idempotent. Surprise %s stored at insert; streak / averages / `rank_score` computed on read; the API serves DB-only, pre-sorted JSON.
+## 6. Data-integrity guarantees ("nothing fake")
+
+1. **Provenance:** every stored column maps 1:1 to a named Finnhub field or to `safePct` (§2.1 mapping table is exhaustive). `raw` retains the verbatim source payload as proof.
+2. **No invention:** unobtainable values stay `NULL`, propagate as `null`, and render as "—". No defaults, placeholders, or sample rows are ever written to production tables.
+3. **No silent guessing:** the three unverified Finnhub behaviors are explicit blocking tasks (§0.1) with fallbacks, not assumptions baked into code.
+4. **Determinism:** the ranking engine is a pure function of cached rows + `RANKING_CONFIG`; identical inputs always produce identical leaderboards.
+5. **Doc examples ≠ data:** JSON samples in this spec are shape illustrations and never seed anything.
+
+---
+
+## 7. Test plan
+
+| Suite | What it pins |
+|---|---|
+| **Unit — ranking engine** | The six worked checks in §3.3 as fixtures (exact expected values); plus streak cases: all-beats → `streak_is_capped = true`; null in position 2 → streak 1; streak > 4 with a miss at position 7. |
+| **Unit — `safePct`** | null actual, null estimate, zero estimate, negative estimate (`abs()` in denominator), normal case. |
+| **Integration — pipeline** | Recorded real Finnhub responses (captured during V1–V3, checked into `backend/tests/fixtures/`) replayed against a test schema: correct rows land; run twice → identical state (idempotency); EPS-first-revenue-later sequence → revenue filled on second pass, `pulled_at` unchanged, `updated_at` bumped. |
+| **Integration — API** | Sort order incl. null-last and tie-breakers; `min_quarters`/`limit`/`ticker` params; the §4 consistency invariants; error codes. |
+| **Contract check (manual, pre-launch)** | One live pipeline run against 3 real tickers; spot-check stored numbers against the companies' actual reported EPS/revenue from their press releases. |
+
+---
+
+### Handoff summary
+
+Primary source `/calendar/earnings` (only free endpoint with revenue); `/stock/earnings` optional enrichment gated on V2. Weekly cron (GitHub Actions, Sat 12:00 UTC) = 1 market-wide call + ≤1 supplemental call per new quarter, watermark-windowed, fill-nulls-idempotent, with retries and per-ticker isolation. Streak walks all cached history (`streak_is_capped` when it hits the cache edge); trailing averages and the recency-weighted 0.6/0.4 composite use the newest 4 quarters; nulls are never scored as 0 and never rendered as data. API is DB-only, cached 1 h, pre-sorted with deterministic tie-breakers, and reports `data_as_of` freshness. Three Finnhub behaviors must be verified (§0.1) before a line of pipeline code is written.

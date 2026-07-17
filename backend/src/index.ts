@@ -186,12 +186,14 @@ export {
 export type { PositionWrite } from "./storage/portfolioRepo";
 
 // Earnings-Beat Tracker — watchlist EPS/revenue surprise tracking
-// (see earnings-beat-tracker-architecture.md for the full spec)
+// (see earnings-beat-tracker-architecture.md for the full spec, v2)
 export { fetchCalendarEarnings, fetchStockEarnings, safePct } from "./earnings/finnhub";
 export {
   computeBeatStreak, computeTrailingAverages, computeRankScore, computeTickerMetrics,
-  winsor, RECENCY_WEIGHTS, WINSOR_BOUND, EPS_BLEND_WEIGHT, REVENUE_BLEND_WEIGHT,
+  compareRankings, winsor,
+  RANKING_CONFIG, RECENCY_WEIGHTS, WINSOR_BOUND, EPS_BLEND_WEIGHT, REVENUE_BLEND_WEIGHT,
 } from "./earnings/engine";
+export type { RankableEntry } from "./earnings/engine";
 export {
   upsertQuarter, runWeeklyIncremental, backfillTicker, reconcileUnderfilledTickers,
 } from "./earnings/pipeline";
@@ -200,15 +202,16 @@ export type {
   BackfillReport, BackfillReconcileReport,
 } from "./earnings/pipeline";
 export type {
-  WatchlistEntry, ReportHour, EarningsQuarterRow, UpsertQuarterInput,
+  WatchlistEntry, ReportHour, EarningsQuarterRow, UpsertQuarterInput, UpsertOutcome,
   FinnhubCalendarEntry, FinnhubStockEarningsEntry,
-  QuarterSurprise, TickerMetrics,
+  QuarterSurprise, TickerMetrics, Confidence,
+  PipelineFlow, PipelineRunStatus, PipelineRunRow,
   RankingsQueryParams, RankingsQuarterEntry, RankingsLatest, RankingsResultEntry, RankingsResponse,
   ApiErrorCode, ApiErrorBody,
 } from "./earnings/types";
 export {
   getActiveWatchlist, getAllWatchlist, getActiveQuarterCounts,
-  getCachedQuarterKeys, insertQuarterIfAbsent, getCachedQuarters, getRankingData,
+  getCachedQuarterKeys, getCachedQuarterRevenueStatus, upsertQuarterRow, getCachedQuarters, getRankingData,
+  startPipelineRun, finishPipelineRun, getLastSuccessfulPipelineRun, getLastSuccessfulRunFinishedAt,
 } from "./storage/earningsRepo";
 export type { RankingDataEntry } from "./storage/earningsRepo";
-"./storage/earningsRepo";

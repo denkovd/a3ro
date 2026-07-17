@@ -1,0 +1,67 @@
+# ──────────────────────────────────────────────────────────────
+# Earnings Beat Tracker — backfill on watchlist-add (manual dispatch).
+# Backfills specified tickers with 3 years of earnings history from
+# /calendar/earnings, or reconciles all active tickers with < 4 cached
+# quarters if no tickers are provided.
+#
+# Dispatch with comma-separated tickers (optional; if omitted, reconciles
+# all underfilled active tickers). Respects 60 req/min free tier via
+# ~1.1 s pacing.
+#
+# Required repo secrets: DATABASE_URL, FINNHUB_API_KEY.
+# ──────────────────────────────────────────────────────────────
+name: earnings-backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      tickers:
+        description: "Comma-separated ticker symbols to backfill (optional; if omitted, reconciles all tickers with < 4 quarters)"
+        required: false
+        default: ""
+
+concurrency:
+  group: earnings-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Preflight — verify DATABASE_URL and FINNHUB_API_KEY secrets
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Repo secret DATABASE_URL is not set — add it under Settings → Secrets and variables → Actions (pooled Supabase string)."
+            exit 1
+          fi
+          if [ -z "$FINNHUB_API_KEY" ]; then
+            echo "::error::Repo secret FINNHUB_API_KEY is not set — get a free key at https://finnhub.io, then add it under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+      - name: Parse and backfill tickers
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+        run: |
+          TICKERS="${{ github.event.inputs.tickers }}"
+          if [ -z "$TICKERS" ]; then
+            npx tsx scripts/run-earnings-backfill.ts
+          else
+            # Parse comma-separated tickers and convert to positional args
+            IFS=',' read -ra TICKER_ARRAY <<< "$TICKERS"
+            npx tsx scripts/run-earnings-backfill.ts "${TICKER_ARRAY[@]}"
+          fi
