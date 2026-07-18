@@ -65,7 +65,29 @@ async function barSeries(db: Queryable, symbol: string, fromDate: string): Promi
 }
 
 async function trendFor(db: Queryable, symbol: string): Promise<TrendRead | null> {
-  // regime_snapshots first (macro-30 — carries explicit daily/weekly trends)
+  // bull_snapshots first (unified-module merge: the ~650-symbol daily
+  // scan is now the live writer; ml-dw is the D×W double-confirm lens,
+  // exactly what the retired regime cycle used to write).
+  const bull = await db.query(
+    `select symbol, verdict, daily_trend, weekly_trend, run_date from bull_snapshots
+      where symbol = $1 and strategy = 'ml-dw'
+        and run_date = (select max(run_date) from bull_snapshots)
+      limit 1`,
+    [symbol],
+  );
+  const b = bull.rows[0];
+  if (b) {
+    return {
+      symbol: String(b.symbol),
+      verdict: String(b.verdict),
+      dailyTrend: Number(b.daily_trend),
+      weeklyTrend: Number(b.weekly_trend),
+      runDate: b.run_date instanceof Date ? b.run_date.toISOString().slice(0, 10) : String(b.run_date).slice(0, 10),
+      source: "bull_snapshots",
+    };
+  }
+  // regime_snapshots fallback — frozen history from the retired P·04
+  // cycle; removable once the transition period is over.
   const reg = await db.query(
     `select symbol, verdict, daily_trend, weekly_trend, run_date from regime_snapshots
       where symbol = $1 and run_date = (select max(run_date) from regime_snapshots)
@@ -81,23 +103,6 @@ async function trendFor(db: Queryable, symbol: string): Promise<TrendRead | null
       weeklyTrend: Number(r.weekly_trend),
       runDate: r.run_date instanceof Date ? r.run_date.toISOString().slice(0, 10) : String(r.run_date).slice(0, 10),
       source: "regime_snapshots",
-    };
-  }
-  const bull = await db.query(
-    `select symbol, verdict, daily_trend, weekly_trend, run_date from bull_snapshots
-      where symbol = $1 and run_date = (select max(run_date) from bull_snapshots)
-      limit 1`,
-    [symbol],
-  );
-  const b = bull.rows[0];
-  if (b) {
-    return {
-      symbol: String(b.symbol),
-      verdict: String(b.verdict),
-      dailyTrend: Number(b.daily_trend),
-      weeklyTrend: Number(b.weekly_trend),
-      runDate: b.run_date instanceof Date ? b.run_date.toISOString().slice(0, 10) : String(b.run_date).slice(0, 10),
-      source: "bull_snapshots",
     };
   }
   return null;

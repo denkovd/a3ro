@@ -1,18 +1,20 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
-   Modules — a pinned lateral traverse across the platform's eight
+   Modules — a pinned lateral traverse across the platform's seven
    intelligence surfaces. On desktop the section pins and vertical
    scroll drives horizontal travel, like moving along a corridor
    of monitors. On touch/mobile it degrades to a vertical stack
    with inner parallax.
 
    Live surfaces: P·01 Oil Tracker (featured), P·02 Gold Tracker,
-   P·04 Bull Market Finder 1 (macro-30), P·05 Bull Market Finder 2
-   (whole-market), P·06 Regime Shift Finder (Darius-Dale GRID),
+   P·05 Bull Market Finder (whole-market, strategy lenses),
+   P·06 Regime Shift Finder (Darius-Dale GRID),
    P·07 Thesis Lab (pressure test → scenarios → portfolio risk) and
    P·08 Earnings Beat Leaderboard (surprise → streak → rank).
    P·03 BTC renders as a module card in private preview — same card
    grammar, asset-specific accent and signal trace.
+   P·04 merged into P·05 (strategy lenses) — see
+   bull-finder-unified-architecture.md.
 
    TRAVERSE MATH — keep these three in sync when adding a card:
    • SURFACES = total cards (featured + module cards)
@@ -30,7 +32,6 @@ import {
 import { MaskText, Reveal, useFinePointer } from "../motion";
 import OilTracker from "../projects/OilTracker";
 import GoldTracker from "../projects/GoldTracker";
-import RegimeFinder from "../projects/RegimeFinder";
 import BullFinder from "../projects/BullFinder";
 import RegimeShiftFinder from "../projects/RegimeShiftFinder";
 import ThesisLab from "../projects/ThesisLab";
@@ -75,8 +76,8 @@ const MODULES = [
 ];
 type Module = (typeof MODULES)[number];
 
-/* Featured Oil card + Gold + BTC preview + BMF1 + BMF2 + Regime Shift + Thesis Lab + Earnings Beat */
-const SURFACES = MODULES.length + 7;
+/* Featured Oil card + Gold + BTC preview + Bull Market Finder + Regime Shift + Thesis Lab + Earnings Beat */
+const SURFACES = MODULES.length + 6;
 /* 72vw featured + (SURFACES−1) × 62vw + 6vw gaps; travel ends with the
    last panel in frame: 248vw at 5 surfaces, +68vw per extra card. */
 const TRAVEL_VW = 248 + 68 * (SURFACES - 5);
@@ -282,7 +283,7 @@ function ModulesTraverse() {
   const counterText = useTransform(counter, (v) => String(Math.round(v)).padStart(2, "0"));
 
   return (
-    <div ref={ref} className="relative h-[960vh]">
+    <div ref={ref} className="relative h-[840vh]">
       <div className="sticky top-0 flex h-[100svh] flex-col justify-center overflow-hidden">
         <div className="mx-auto mb-10 flex w-full max-w-6xl items-end justify-between px-10">
           <div>
@@ -290,7 +291,7 @@ function ModulesTraverse() {
               03 / Modules
             </p>
             <h2 className="max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
-              <MaskText>One platform. Eight intelligence surfaces.</MaskText>
+              <MaskText>One platform. Seven intelligence surfaces.</MaskText>
             </h2>
           </div>
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--ink-3)]">
@@ -314,7 +315,6 @@ function ModulesTraverse() {
               className="flex h-[52svh] w-[62vw] shrink-0 flex-col"
             />
           ))}
-          <RegimeFinder className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
           <BullFinder className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
           <RegimeShiftFinder className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
           <ThesisLab className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
@@ -355,7 +355,7 @@ function ModulesStack() {
         03 / Modules
       </p>
       <h2 className="mb-16 max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)]">
-        <MaskText>One platform. Eight intelligence surfaces.</MaskText>
+        <MaskText>One platform. Seven intelligence surfaces.</MaskText>
       </h2>
       <div className="flex flex-col gap-10">
         <Reveal>
@@ -368,18 +368,15 @@ function ModulesStack() {
           <StackedModule key={m.id} module={m} index={i + 2} />
         ))}
         <Reveal delay={0.15}>
-          <RegimeFinder className="flex min-h-[560px] flex-col" />
-        </Reveal>
-        <Reveal delay={0.2}>
           <BullFinder className="flex min-h-[560px] flex-col" />
         </Reveal>
-        <Reveal delay={0.25}>
+        <Reveal delay={0.2}>
           <RegimeShiftFinder className="flex min-h-[560px] flex-col" />
         </Reveal>
-        <Reveal delay={0.3}>
+        <Reveal delay={0.25}>
           <ThesisLab className="flex min-h-[560px] flex-col" />
         </Reveal>
-        <Reveal delay={0.35}>
+        <Reveal delay={0.3}>
           <EarningsBeat className="flex min-h-[560px] flex-col" />
         </Reveal>
       </div>

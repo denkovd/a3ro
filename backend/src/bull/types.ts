@@ -111,12 +111,17 @@ export interface BullSnapshot extends RegimeSnapshot {
   adjusted: boolean;
 }
 
-/** A verdict change between consecutive runs — the transitions feed. */
+/** A verdict change between consecutive runs — the transitions feed.
+ *  Diffed PER STRATEGY since the unified-module merge: a weekly-lens
+ *  flip and a D×W verdict change are separate rows. */
 export interface BullTransition {
   runDate: string;
   symbol: string;
   displayName: string;
   tier: BullTier;
+  /** Lens the diff belongs to (strategies.ts). Optional at the type
+   *  level for pre-merge callers; storage defaults it to 'ml-dw'. */
+  strategy?: string;
   fromVerdict: string | null; // null = first ever scan of the symbol
   toVerdict: string;
 }

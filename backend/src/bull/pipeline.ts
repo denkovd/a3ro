@@ -16,8 +16,10 @@
       failure on gold can never block BTC-USD or ^GSPC.
    4. Money Line on the closed 'adj' series (== raw for
       non-futures), strength v2, RS vs benchmark.
-   Then globally: rank, upsert snapshots, diff transitions,
-   write the adapter health log.
+   Then globally, PER STRATEGY (strategies.ts — ml-dw / ml-weekly /
+   ml-daily are lenses derived from the one base snapshot, zero
+   extra fetches): rank, upsert snapshots, diff transitions.
+   Finally write the adapter health log.
 ──────────────────────────────────────────────────────────────── */
 
 import { SourceError } from "../core/types";
@@ -42,6 +44,7 @@ import {
   fetchBarsWithFallback,
 } from "./adapters";
 import { computeBullSnapshot, computeTransitions, rankBullSnapshots } from "./engine";
+import { deriveStrategySnapshots, BullStrategySnapshot, STRATEGIES } from "./strategies";
 import { contractSymbols, detectRoll, verifyAdjustment } from "./rolls";
 import {
   AdapterHealthEntry,
@@ -63,9 +66,14 @@ export interface BullScanReport {
   failed: string[];
   rolls: RollEvent[];
   rollProbeFailures: string[];
+  /** Transition rows across ALL strategies. */
   transitions: number;
+  /** From the default ml-dw lens (report back-compat). */
   newlyBullish: string[];
+  /** Snapshot rows across ALL strategies. */
   written: number;
+  /** Rows written per strategy id. */
+  writtenByStrategy: Record<string, number>;
 }
 
 export interface BullScanOptions {
@@ -96,7 +104,7 @@ export async function runBullScan(
   const report: BullScanReport = {
     startedAt, runDate, universe: universe.length,
     scanned: 0, failed: [], rolls: [], rollProbeFailures: [],
-    transitions: 0, newlyBullish: [], written: 0,
+    transitions: 0, newlyBullish: [], written: 0, writtenByStrategy: {},
   };
 
   const health: AdapterHealthEntry[] = [];
@@ -157,14 +165,35 @@ export async function runBullScan(
     }
   }
 
-  const ranked = rankBullSnapshots(snapshots);
-  const previous = await getPreviousVerdicts(db, runDate);
-  const transitions = computeTransitions(previous, ranked);
+  // Pass 3 — strategy lenses: derive per-strategy rows from each base
+  // snapshot (pure), then rank / diff / write PER STRATEGY. The diff
+  // guard is per-lens too: a strategy's first ever run sees an empty
+  // previous map and produces no transition spam (spec §3).
+  const byStrategy = new Map<string, BullStrategySnapshot[]>();
+  for (const meta of STRATEGIES) byStrategy.set(meta.id, []);
+  for (const base of snapshots) {
+    for (const lensed of deriveStrategySnapshots(base)) {
+      byStrategy.get(lensed.strategy)!.push(lensed);
+    }
+  }
 
-  report.written = await upsertBullSnapshots(db, ranked);
-  report.transitions = await insertTransitions(db, transitions);
+  for (const meta of STRATEGIES) {
+    const ranked = rankBullSnapshots(byStrategy.get(meta.id)!);
+    const previous = await getPreviousVerdicts(db, runDate, meta.id);
+    const transitions = computeTransitions(previous, ranked)
+      .map((t) => ({ ...t, strategy: meta.id }));
+
+    const written = await upsertBullSnapshots(db, ranked);
+    report.written += written;
+    report.writtenByStrategy[meta.id] = written;
+    report.transitions += await insertTransitions(db, transitions);
+
+    if (meta.id === "ml-dw") {
+      report.newlyBullish = ranked.filter((s) => s.newlyBullish).map((s) => s.symbol);
+    }
+  }
+
   await insertHealthEntries(db, health);
-  report.newlyBullish = ranked.filter((s) => s.newlyBullish).map((s) => s.symbol);
   return report;
 }
 

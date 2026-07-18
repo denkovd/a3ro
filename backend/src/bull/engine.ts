@@ -115,8 +115,11 @@ function recencyOf(s: BullSnapshot): number {
 /** Newly bullish → bullish → conflicted (D, then W) → bearish →
  *  warm-up; most-recent transition first inside a group; equal
  *  recency resolves by vol-normalized strength (falls back to raw
- *  strength when ATR is unavailable). 1-based ranks. */
-export function rankBullSnapshots(snapshots: BullSnapshot[]): BullSnapshot[] {
+ *  strength when ATR is unavailable). 1-based ranks. Generic so
+ *  strategy-lens snapshots (strategies.ts) keep their extra fields
+ *  through ranking — single-leg lenses store recency in
+ *  daysSinceAligned, so this grammar applies to them unchanged. */
+export function rankBullSnapshots<T extends BullSnapshot>(snapshots: T[]): T[] {
   const strengthKey = (s: BullSnapshot) => s.strengthVol ?? s.strength ?? -Infinity;
   const ranked = [...snapshots].sort((a, b) => {
     const g = groupOf(a) - groupOf(b);

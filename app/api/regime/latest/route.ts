@@ -1,29 +1,26 @@
 /* ────────────────────────────────────────────────────────────────
-   Module 4 — Regime Shift Finder: read-only endpoint.
-   Returns the newest scan (one row per watchlist symbol, already
-   rank-ordered by the engine: newly bullish → bullish → conflicted
-   → bearish → warm-up). Writes happen in the daily cron
-   (app/api/cron/ingest) via runRegimeCycle.
+   Module 4 — Regime Shift Finder: RETIRED.
+   P·04 was merged into P·05 (Bull Market Finder) as a strategy lens;
+   see bull-finder-unified-architecture.md §5 and §7 (Phase C). This
+   endpoint no longer scans or serves data — it returns 410 Gone so
+   any stale caller finds out immediately instead of reading silently
+   frozen history. Use /api/bull/latest?tier=macro (default strategy
+   ml-dw is the same daily×weekly double confirmation) instead.
 ──────────────────────────────────────────────────────────────── */
 
-import { createDb, getLatestRegimeSnapshots } from "@a3ro/oil-backend";
-
-// `pg` speaks raw TCP → Node runtime required (see storage/db.ts).
 export const runtime = "nodejs";
-// Never statically pre-render at build time — hits the live DB. Runtime-only.
+// Never statically pre-render at build time. Runtime-only.
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  try {
-    const db = await createDb();
-    const rows = await getLatestRegimeSnapshots(db);
-    return Response.json({
-      runDate: rows.length > 0 ? rows[0].runDate : null,
-      count: rows.length,
-      rows,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return Response.json({ error: message }, { status: 500 });
-  }
+  return Response.json(
+    {
+      error: {
+        code: "GONE",
+        message:
+          "Retired — the macro-30 Money Line scan lives in the unified Bull Market Finder. Use /api/bull/latest?tier=macro (default strategy ml-dw is the same daily×weekly double confirmation).",
+      },
+    },
+    { status: 410 }
+  );
 }

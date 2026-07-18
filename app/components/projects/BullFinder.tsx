@@ -1,6 +1,6 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
-   A3RO Intelligence — Bull Market Finder 2 · homepage module card (P·05)
+   A3RO Intelligence — Bull Market Finder · homepage module card (P·05)
    The whole-market screener surface: ~650 assets in five tiers,
    ranked by newly bullish state (Money Line, daily × weekly
    confirmed). The card leads with what just double-confirmed and
@@ -64,7 +64,7 @@ export default function BullFinder({ className = "" }: { className?: string }) {
   return (
     <a
       href={BULL_ROUTE}
-      aria-label="Bull Market Finder 2 — whole-market bullish-state screener, open module"
+      aria-label="Bull Market Finder — whole-market bullish-state screener, open module"
       className={`group/bf relative flex cursor-pointer flex-col overflow-hidden rounded-sm hairline bg-[var(--depth-1)] transition-colors duration-[var(--dur-base)] hover:border-[var(--line-2)] ${className}`}
     >
       <div className="relative flex-1 overflow-hidden">
@@ -134,7 +134,7 @@ export default function BullFinder({ className = "" }: { className?: string }) {
             A3RO Intelligence
           </p>
           <h3 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--ink)] md:text-3xl">
-            Bull Market Finder 2
+            Bull Market Finder
           </h3>
           <p className="mt-3 hidden text-[13px] leading-relaxed text-[var(--ink-2)] md:block">
             Whole-market bullish-state screener — double confirmation on
@@ -263,10 +263,10 @@ export default function BullFinder({ className = "" }: { className?: string }) {
       {/* card footer — directory grammar */}
       <div className="flex items-baseline justify-between gap-4 px-5 py-4 hairline-t">
         <h3 className="text-sm font-medium text-[var(--ink)]">
-          A3RO Intelligence — Bull Market Finder 2
+          A3RO Intelligence — Bull Market Finder
         </h3>
         <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-          Whole-market screener — daily × weekly confirm
+          Money Line D×W · Weekly · Daily
         </p>
       </div>
     </a>

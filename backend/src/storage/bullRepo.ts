@@ -129,13 +129,13 @@ export async function getRolls(db: Queryable, symbol: string): Promise<RollEvent
 
 export async function upsertBullSnapshots(
   db: Queryable,
-  snapshots: BullSnapshot[],
+  snapshots: (BullSnapshot & { strategy?: string })[],
 ): Promise<number> {
   let written = 0;
   for (const s of snapshots) {
     const res = await db.query(
       `insert into bull_snapshots
-         (run_date, symbol, display_name, tier, asset_class, verdict, rank,
+         (run_date, symbol, strategy, display_name, tier, asset_class, verdict, rank,
           newly_bullish, daily_trend, weekly_trend, daily_line, weekly_line,
           daily_flip_date, daily_flip_price, weekly_flip_date, weekly_flip_price,
           daily_since_flip_pct, weekly_since_flip_pct,
@@ -144,9 +144,9 @@ export async function upsertBullSnapshots(
           aligned_since, days_since_aligned, strength,
           atr_pct, strength_vol, rs_63, adjusted,
           last_close, last_close_date, updated_at)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,
+       values ($1,$2,$32,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,
                $19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31, now())
-       on conflict (run_date, symbol) do update set
+       on conflict (run_date, symbol, strategy) do update set
          display_name = excluded.display_name, tier = excluded.tier,
          asset_class = excluded.asset_class, verdict = excluded.verdict,
          rank = excluded.rank, newly_bullish = excluded.newly_bullish,
@@ -179,6 +179,7 @@ export async function upsertBullSnapshots(
         s.alignedSince, s.daysSinceAligned, s.strength,
         s.atrPct, s.strengthVol, s.rs63, s.adjusted,
         s.lastClose, s.lastCloseDate,
+        s.strategy ?? "ml-dw",
       ],
     );
     written += res.rowCount ?? 0;
@@ -186,15 +187,21 @@ export async function upsertBullSnapshots(
   return written;
 }
 
-/** Previous run's verdict per symbol (for transition diffs). */
+/** Previous run's verdict per symbol FOR ONE STRATEGY (transition
+ *  diffs are per-lens — spec §3). An empty map on a strategy's first
+ *  ever run is exactly what computeTransitions' first-scan noise
+ *  guard keys on, so a newly added strategy never spams the feed. */
 export async function getPreviousVerdicts(
   db: Queryable,
   beforeRunDate: string,
+  strategy = "ml-dw",
 ): Promise<Map<string, string>> {
   const res = await db.query(
     `select symbol, verdict from bull_snapshots
-      where run_date = (select max(run_date) from bull_snapshots where run_date < $1)`,
-    [beforeRunDate],
+      where strategy = $2
+        and run_date = (select max(run_date) from bull_snapshots
+                         where run_date < $1 and strategy = $2)`,
+    [beforeRunDate, strategy],
   );
   return new Map(res.rows.map((r) => [String(r.symbol), String(r.verdict)]));
 }
@@ -206,11 +213,11 @@ export async function insertTransitions(
   let written = 0;
   for (const t of transitions) {
     const res = await db.query(
-      `insert into bull_transitions (run_date, symbol, display_name, tier, from_verdict, to_verdict)
-       values ($1,$2,$3,$4,$5,$6)
-       on conflict (run_date, symbol) do update set
+      `insert into bull_transitions (run_date, symbol, strategy, display_name, tier, from_verdict, to_verdict)
+       values ($1,$2,$7,$3,$4,$5,$6)
+       on conflict (run_date, symbol, strategy) do update set
          from_verdict = excluded.from_verdict, to_verdict = excluded.to_verdict`,
-      [t.runDate, t.symbol, t.displayName, t.tier, t.fromVerdict, t.toVerdict],
+      [t.runDate, t.symbol, t.displayName, t.tier, t.fromVerdict, t.toVerdict, t.strategy ?? "ml-dw"],
     );
     written += res.rowCount ?? 0;
   }
@@ -249,6 +256,11 @@ export interface BullSnapshotRow {
   verdict: string;
   rank: number;
   newlyBullish: boolean;
+  /** Raw Money Line leg direction (1 bull / -1 bear / 0 warm-up) —
+   *  always computed regardless of which leg the strategy ranks on,
+   *  so single-leg lenses can show the other leg honestly. */
+  dailyTrend: number | null;
+  weeklyTrend: number | null;
   dailyFlipDate: string | null;
   weeklyFlipDate: string | null;
   dailySinceFlipPct: number | null;
@@ -275,18 +287,22 @@ const toNum = (v: unknown): number | null => {
 export async function getLatestBullSnapshots(
   db: Queryable,
   tier?: string,
+  strategy = "ml-dw",
 ): Promise<BullSnapshotRow[]> {
   const res = tier
     ? await db.query(
         `select * from bull_snapshots
-          where run_date = (select max(run_date) from bull_snapshots) and tier = $1
+          where run_date = (select max(run_date) from bull_snapshots)
+            and strategy = $2 and tier = $1
           order by rank asc`,
-        [tier],
+        [tier, strategy],
       )
     : await db.query(
         `select * from bull_snapshots
           where run_date = (select max(run_date) from bull_snapshots)
+            and strategy = $1
           order by rank asc`,
+        [strategy],
       );
   return res.rows.map((r) => ({
     runDate: toDateStr(r.run_date)!,
@@ -297,6 +313,8 @@ export async function getLatestBullSnapshots(
     verdict: String(r.verdict),
     rank: Number(r.rank),
     newlyBullish: Boolean(r.newly_bullish),
+    dailyTrend: toNum(r.daily_trend),
+    weeklyTrend: toNum(r.weekly_trend),
     dailyFlipDate: toDateStr(r.daily_flip_date),
     weeklyFlipDate: toDateStr(r.weekly_flip_date),
     dailySinceFlipPct: toNum(r.daily_since_flip_pct),
@@ -322,15 +340,37 @@ export interface BullTransitionRow {
   toVerdict: string;
 }
 
+/** Latest run's verdict per (symbol → strategy verdicts) — feeds the
+ *  cross-strategy consensus chip (spec §1). One cheap query; the tally
+ *  itself is pure (strategies.ts tallyConsensus). */
+export async function getLatestVerdictsBySymbol(
+  db: Queryable,
+): Promise<Map<string, string[]>> {
+  const res = await db.query(
+    `select symbol, verdict from bull_snapshots
+      where run_date = (select max(run_date) from bull_snapshots)`,
+  );
+  const out = new Map<string, string[]>();
+  for (const r of res.rows) {
+    const sym = String(r.symbol);
+    const list = out.get(sym) ?? [];
+    list.push(String(r.verdict));
+    out.set(sym, list);
+  }
+  return out;
+}
+
 export async function getRecentTransitions(
   db: Queryable,
   days: number,
+  strategy = "ml-dw",
 ): Promise<BullTransitionRow[]> {
   const res = await db.query(
     `select * from bull_transitions
       where run_date >= (current_date - ($1 || ' days')::interval)::date
+        and strategy = $2
       order by run_date desc, symbol asc`,
-    [String(days)],
+    [String(days), strategy],
   );
   return res.rows.map((r) => ({
     runDate: toDateStr(r.run_date)!,

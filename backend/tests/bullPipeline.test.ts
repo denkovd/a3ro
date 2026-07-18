@@ -171,7 +171,14 @@ test("full roll cycle through the pipeline, with per-symbol isolation", async ()
   // Isolation: BTC failed, the other two scanned.
   assert.deepEqual(report.failed, ["BTC-USD"]);
   assert.equal(report.scanned, 2);
-  assert.equal(db.snapshots.length, 2);
+
+  // Strategy lenses: one snapshot row per symbol PER STRATEGY, all
+  // derived from the same bars fetch (2 symbols × 3 lenses).
+  assert.equal(db.snapshots.length, 6);
+  assert.equal(report.written, 6);
+  assert.deepEqual(report.writtenByStrategy, { "ml-dw": 2, "ml-weekly": 2, "ml-daily": 2 });
+  const strategiesWritten = new Set(db.snapshots.map((p) => p[31])); // $32 = strategy
+  assert.deepEqual([...strategiesWritten].sort(), ["ml-daily", "ml-dw", "ml-weekly"]);
 
   // Roll detected + audited.
   assert.equal(report.rolls.length, 1);

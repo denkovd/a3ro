@@ -33,6 +33,39 @@ export type BullVerdict =
   | "BEARISH"
   | "WARMUP";
 
+/* ── strategy layer (unified-module §1) ────────────────────────
+   "multi" = daily×weekly double confirmation (today's behaviour);
+   "daily"/"weekly" = single-leg lenses — conflicts cannot occur,
+   verdict collapses to BULLISH/BEARISH/WARMUP for that one leg. */
+export type StrategyTimeframe = "multi" | "daily" | "weekly";
+
+export type StrategyMeta = {
+  id: string;
+  label: string;
+  timeframe: StrategyTimeframe;
+};
+
+/** Registry-order fallback so the switcher renders correctly before
+ *  the first response arrives (and if a response ever omits the
+ *  list). Mirrors backend/src/bull/strategies.ts STRATEGIES. */
+export const DEFAULT_STRATEGY_ID = "ml-dw";
+export const DEFAULT_STRATEGIES: StrategyMeta[] = [
+  { id: "ml-dw", label: "Money Line D×W", timeframe: "multi" },
+  { id: "ml-weekly", label: "Weekly", timeframe: "weekly" },
+  { id: "ml-daily", label: "Daily", timeframe: "daily" },
+];
+
+/** How ALL lenses read this symbol on this run (conflicts/warm-up
+ *  count as neutral). The consensus "merge dividend" — spec §1. */
+export type BullConsensus = {
+  bull: number;
+  bear: number;
+  neutral: number;
+  of: number;
+};
+
+const EMPTY_CONSENSUS: BullConsensus = { bull: 0, bear: 0, neutral: 0, of: 0 };
+
 export type BullRow = {
   runDate: string;
   symbol: string;
@@ -42,6 +75,11 @@ export type BullRow = {
   verdict: BullVerdict;
   rank: number;
   newlyBullish: boolean;
+  /** Raw per-leg Money Line direction (1 / -1 / 0) — both legs are
+   *  always computed; single-leg lenses use these for honest glyphs
+   *  on the leg they don't rank on. Null on pre-merge payloads. */
+  dailyTrend: number | null;
+  weeklyTrend: number | null;
   dailyFlipDate: string | null;
   weeklyFlipDate: string | null;
   dailySinceFlipPct: number | null;
@@ -55,6 +93,7 @@ export type BullRow = {
   adjusted: boolean;
   lastClose: number | null;
   lastCloseDate: string | null;
+  consensus: BullConsensus;
 };
 
 export type BullStatus = "loading" | "live" | "pending" | "error";
@@ -64,10 +103,19 @@ export type BullSnapshotState = {
   runDate: string | null;
   count: number;
   rows: BullRow[];
+  strategy: string;
+  strategies: StrategyMeta[];
   errorMessage?: string;
 };
 
-const EMPTY: BullSnapshotState = { status: "loading", runDate: null, count: 0, rows: [] };
+const EMPTY: BullSnapshotState = {
+  status: "loading",
+  runDate: null,
+  count: 0,
+  rows: [],
+  strategy: DEFAULT_STRATEGY_ID,
+  strategies: DEFAULT_STRATEGIES,
+};
 
 const num = (v: unknown): number | null =>
   typeof v === "number" && Number.isFinite(v) ? v : null;
@@ -85,6 +133,36 @@ const VERDICTS: BullVerdict[] = [
 const toVerdict = (v: unknown): BullVerdict =>
   VERDICTS.includes(v as BullVerdict) ? (v as BullVerdict) : "WARMUP";
 
+const TIMEFRAMES: StrategyTimeframe[] = ["multi", "daily", "weekly"];
+const toTimeframe = (v: unknown): StrategyTimeframe =>
+  TIMEFRAMES.includes(v as StrategyTimeframe) ? (v as StrategyTimeframe) : "multi";
+
+function normalizeConsensus(raw: unknown): BullConsensus {
+  const o = (raw ?? {}) as Record<string, unknown>;
+  const bull = num(o.bull);
+  const bear = num(o.bear);
+  const neutral = num(o.neutral);
+  const of = num(o.of);
+  if (bull === null && bear === null && neutral === null && of === null) return EMPTY_CONSENSUS;
+  return { bull: bull ?? 0, bear: bear ?? 0, neutral: neutral ?? 0, of: of ?? 0 };
+}
+
+function normalizeStrategyMeta(raw: unknown): StrategyMeta | null {
+  const o = (raw ?? {}) as Record<string, unknown>;
+  const id = str(o.id);
+  const label = str(o.label);
+  if (!id || !label) return null;
+  return { id, label, timeframe: toTimeframe(o.timeframe) };
+}
+
+function normalizeStrategies(raw: unknown): StrategyMeta[] {
+  if (!Array.isArray(raw)) return DEFAULT_STRATEGIES;
+  const list = raw
+    .map(normalizeStrategyMeta)
+    .filter((s): s is StrategyMeta => s !== null);
+  return list.length > 0 ? list : DEFAULT_STRATEGIES;
+}
+
 function normalizeRow(raw: unknown, i: number): BullRow | null {
   const o = (raw ?? {}) as Record<string, unknown>;
   const symbol = str(o.symbol);
@@ -99,6 +177,8 @@ function normalizeRow(raw: unknown, i: number): BullRow | null {
     verdict: toVerdict(o.verdict),
     rank: num(o.rank) ?? i + 1,
     newlyBullish: bool(o.newlyBullish),
+    dailyTrend: num(o.dailyTrend),
+    weeklyTrend: num(o.weeklyTrend),
     dailyFlipDate: str(o.dailyFlipDate),
     weeklyFlipDate: str(o.weeklyFlipDate),
     dailySinceFlipPct: num(o.dailySinceFlipPct),
@@ -112,13 +192,19 @@ function normalizeRow(raw: unknown, i: number): BullRow | null {
     adjusted: bool(o.adjusted),
     lastClose: num(o.lastClose),
     lastCloseDate: str(o.lastCloseDate),
+    consensus: normalizeConsensus(o.consensus),
   };
 }
 
 export function normalizeBullSnapshot(raw: unknown): BullSnapshotState {
   const o = (raw ?? {}) as Record<string, unknown>;
+  const strategy = str(o.strategy) ?? DEFAULT_STRATEGY_ID;
+  const strategies = normalizeStrategies(o.strategies);
   if (typeof o.error === "string") {
-    return { status: "error", runDate: null, count: 0, rows: [], errorMessage: o.error };
+    return {
+      status: "error", runDate: null, count: 0, rows: [],
+      strategy, strategies, errorMessage: o.error,
+    };
   }
   const rawRows = Array.isArray(o.rows) ? o.rows : [];
   const rows = rawRows
@@ -126,29 +212,40 @@ export function normalizeBullSnapshot(raw: unknown): BullSnapshotState {
     .filter((r): r is BullRow => r !== null)
     .sort((a, b) => a.rank - b.rank);
   if (rows.length === 0) {
-    return { status: "pending", runDate: str(o.runDate), count: 0, rows: [] };
+    return { status: "pending", runDate: str(o.runDate), count: 0, rows: [], strategy, strategies };
   }
   return {
     status: "live",
     runDate: str(o.runDate) ?? rows[0].runDate,
     count: typeof o.count === "number" ? o.count : rows.length,
     rows,
+    strategy,
+    strategies,
   };
 }
 
 /** Single fetch of the full ranked universe; tier filtering happens
- *  client-side (≈650 rows — trivial) so tab switches are instant. */
-export function useBullSnapshot(): BullSnapshotState {
+ *  client-side (≈650 rows — trivial) so tab switches are instant.
+ *  `strategy` (default ml-dw) is passed through as ?strategy= — the
+ *  server ranking is authoritative, same posture as the tier filter
+ *  used to have. Switching strategy resets to "loading" so the
+ *  skeleton shows instead of stale rows from the previous lens. */
+export function useBullSnapshot(strategy: string = DEFAULT_STRATEGY_ID): BullSnapshotState {
   const [snap, setSnap] = useState<BullSnapshotState>(EMPTY);
   useEffect(() => {
     let alive = true;
-    fetch("/api/bull/latest", { cache: "no-store" })
+    setSnap((prev) => ({
+      status: "loading", runDate: null, count: 0, rows: [],
+      strategy, strategies: prev.strategies,
+    }));
+    fetch(`/api/bull/latest?strategy=${encodeURIComponent(strategy)}`, { cache: "no-store" })
       .then(async (res) => {
         const body = await res.json().catch(() => ({}));
         if (!alive) return;
         if (!res.ok) {
           setSnap({
             status: "error", runDate: null, count: 0, rows: [],
+            strategy, strategies: DEFAULT_STRATEGIES,
             errorMessage:
               typeof (body as Record<string, unknown>)?.error === "string"
                 ? ((body as Record<string, unknown>).error as string)
@@ -162,11 +259,12 @@ export function useBullSnapshot(): BullSnapshotState {
         if (!alive) return;
         setSnap({
           status: "error", runDate: null, count: 0, rows: [],
+          strategy, strategies: DEFAULT_STRATEGIES,
           errorMessage: err instanceof Error ? err.message : "network error",
         });
       });
     return () => { alive = false; };
-  }, []);
+  }, [strategy]);
   return snap;
 }
 
@@ -181,7 +279,10 @@ export type BullTransitionRow = {
   toVerdict: BullVerdict;
 };
 
-export function useBullTransitions(days = 14): {
+export function useBullTransitions(
+  days = 14,
+  strategy: string = DEFAULT_STRATEGY_ID,
+): {
   status: BullStatus;
   rows: BullTransitionRow[];
 } {
@@ -190,7 +291,11 @@ export function useBullTransitions(days = 14): {
   });
   useEffect(() => {
     let alive = true;
-    fetch(`/api/bull/transitions?days=${days}`, { cache: "no-store" })
+    setState({ status: "loading", rows: [] });
+    fetch(
+      `/api/bull/transitions?days=${days}&strategy=${encodeURIComponent(strategy)}`,
+      { cache: "no-store" },
+    )
       .then(async (res) => {
         const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
         if (!alive) return;
@@ -217,7 +322,7 @@ export function useBullTransitions(days = 14): {
       })
       .catch(() => { if (alive) setState({ status: "error", rows: [] }); });
     return () => { alive = false; };
-  }, [days]);
+  }, [days, strategy]);
   return state;
 }
 
@@ -249,6 +354,32 @@ export const BULL_VERDICT_META: Record<
   },
 };
 
+/** State-column label for a single-leg strategy (daily/weekly) — the
+ *  D×W grammar (Double Confirmed / Conflicted …) doesn't apply since
+ *  conflicts can't exist with one leg. `timeframe: "multi"` keeps
+ *  today's BULL_VERDICT_META short label unchanged. */
+export function bullStateLabel(verdict: BullVerdict, timeframe: StrategyTimeframe): string {
+  if (timeframe === "multi") return BULL_VERDICT_META[verdict].short;
+  const leg = timeframe === "weekly" ? "W" : "D";
+  if (verdict === "BULLISH") return `BULL · ${leg}`;
+  if (verdict === "BEARISH") return `BEAR · ${leg}`;
+  return "WARMUP";
+}
+
+/** Consensus chip color — spec §1/§4: all-bull reads as agreement,
+ *  any bull+bear split as active disagreement, majority-bear as a
+ *  bearish read, everything else (all-neutral, mixed-without-bear)
+ *  as neutral ink. */
+export function bullConsensusColor(c: BullConsensus): string {
+  if (c.of > 0 && c.bull === c.of) return BULL_ACCENT;
+  if (c.bull > 0 && c.bear > 0) return BULL_MUTED_AMBER;
+  if (c.bear > c.bull) return BULL_MUTED_PINK;
+  return "var(--ink-2)";
+}
+
+export const formatConsensus = (c: BullConsensus): string =>
+  c.of > 0 ? `${c.bull}/${c.of}` : "—";
+
 export const TIER_LABEL: Record<BullTier, string> = {
   macro: "Macro 30",
   us_large: "US 500",
@@ -272,6 +403,33 @@ export const BULL_GROUP_LABEL: Record<BullGroupKey, string> = {
   bearish: "Bearish — daily × weekly aligned down",
   warmup: "Warm-up — insufficient history",
 };
+
+/** Per-timeframe group label overrides for single-leg strategies —
+ *  "early"/"lagging" never occur there (no conflicts possible) so
+ *  only newlyBullish/double/bearish/warmup need lens-specific text;
+ *  "multi" uses BULL_GROUP_LABEL unchanged. */
+const BULL_GROUP_LABEL_BY_TIMEFRAME: Record<
+  Exclude<StrategyTimeframe, "multi">,
+  Partial<Record<BullGroupKey, string>>
+> = {
+  weekly: {
+    newlyBullish: "Newly Bullish — weekly close confirmed within 2 weeks",
+    double: "Bullish — confirmed on weekly closes",
+    bearish: "Bearish — weekly close confirmed down",
+    warmup: "Warm-up — insufficient weekly history",
+  },
+  daily: {
+    newlyBullish: "Newly Bullish — daily close confirmed within 10 sessions",
+    double: "Bullish — confirmed on daily closes",
+    bearish: "Bearish — daily close confirmed down",
+    warmup: "Warm-up — insufficient daily history",
+  },
+};
+
+export function bullGroupLabelFor(group: BullGroupKey, timeframe: StrategyTimeframe): string {
+  if (timeframe === "multi") return BULL_GROUP_LABEL[group];
+  return BULL_GROUP_LABEL_BY_TIMEFRAME[timeframe][group] ?? BULL_GROUP_LABEL[group];
+}
 
 export function bullGroupKeyFor(row: BullRow): BullGroupKey {
   if (row.verdict === "BULLISH") return row.newlyBullish ? "newlyBullish" : "double";

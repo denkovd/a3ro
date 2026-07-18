@@ -15,10 +15,14 @@ import {
   useBullTransitions,
   withBullGroupBoundaries,
   bullDistribution,
-  BULL_GROUP_LABEL,
+  bullGroupLabelFor,
+  bullStateLabel,
+  bullConsensusColor,
+  formatConsensus,
   BULL_VERDICT_META,
   TIER_LABEL,
   TIER_ORDER,
+  DEFAULT_STRATEGY_ID,
   formatDate,
   formatDaysSince,
   formatPct,
@@ -31,6 +35,7 @@ import {
   type BullGroupKey,
   type BullTier,
   type BullVerdict,
+  type StrategyTimeframe,
 } from "../../components/projects/bull/bullData";
 
 const ATMOSPHERE =
@@ -38,7 +43,7 @@ const ATMOSPHERE =
 
 /* table grid — one source of truth for header + rows */
 const GRID =
-  "grid grid-cols-[2.75rem_minmax(11rem,1.6fr)_6.5rem_2rem_2rem_8.5rem_5.25rem_5.25rem_7.25rem] items-baseline gap-x-3";
+  "grid grid-cols-[2.75rem_minmax(11rem,1.6fr)_6.5rem_2rem_2rem_8.5rem_5.25rem_5.25rem_4rem_7.25rem] items-baseline gap-x-3";
 
 /* daily/weekly glyphs derive from the verdict — it encodes both legs */
 const legGlyphs = (v: BullVerdict): [string, string] =>
@@ -47,6 +52,12 @@ const legGlyphs = (v: BullVerdict): [string, string] =>
       : v === "CONFLICT_WEEKLY" ? ["▼", "▲"]
         : v === "BEARISH" ? ["▼", "▼"]
           : ["·", "·"];
+
+/* Raw per-leg trend (API dailyTrend/weeklyTrend) — the honest source
+   for single-leg lenses, where the verdict encodes only the driving
+   leg. Null (pre-merge payload) falls back to the verdict derivation. */
+const trendGlyph = (t: number | null): string | null =>
+  t === 1 ? "▲" : t === -1 ? "▼" : t === 0 ? "·" : null;
 
 const glyphColor = (g: string) =>
   g === "▲" ? BULL_ACCENT : g === "▼" ? BULL_MUTED_PINK : "var(--ink-3)";
@@ -78,13 +89,56 @@ const TABS: { key: TabKey; label: string }[] = [
   ...TIER_ORDER.map((t) => ({ key: t as TabKey, label: TIER_LABEL[t] })),
 ];
 
+/* per-strategy methodology footnote — spec §5: ml-dw keeps today's
+   text verbatim; weekly/daily get honest, lens-specific equivalents.
+   All three mention the Lens/consensus column. */
+const FOOTNOTE_BY_STRATEGY: Record<string, string> = {
+  "ml-dw":
+    "States — Double Confirmed: bullish on daily and weekly · " +
+    "Conflicted Early Bullish: daily flipped, weekly hasn't · " +
+    "Conflicted Lagging Bullish: weekly bull, daily has broken · " +
+    "Bearish: bearish on both. Flips confirm only on candle close " +
+    "(Donchian 20, ratcheted); the current week never counts until " +
+    "it closes. Newly bullish = double confirmation within the last 10 " +
+    "sessions. Ranked by recency; volatility-normalized strength " +
+    "(cushion + move since flip, ÷ ATR) breaks ties. RS 63d is the " +
+    "63-session return minus the tier benchmark (S&P 500 for " +
+    "equities/ETFs, BTC for crypto) — context, not a ranking input. " +
+    "WTI and gold futures are roll-adjusted continuous series; every " +
+    "roll is logged and probe-verified. Lens is the consensus column — " +
+    "how the other strategies read the same symbol on this run.",
+  "ml-weekly":
+    "Weekly lens — Money Line evaluated on weekly closes only; a state " +
+    "changes only when a weekly candle closes, and the forming week " +
+    "never counts. States collapse to Bull/Bear/Warm-up (one leg can't " +
+    "conflict with itself); recency is shown in trading days (weekly " +
+    "bars × 5) so it stays comparable with the other lenses. Lens is " +
+    "the consensus column — how the daily and D×W lenses read the same " +
+    "symbol on this run.",
+  "ml-daily":
+    "Daily lens — Money Line evaluated on daily closes only: the fast, " +
+    "noisier read, expect more turnover here than on the weekly or D×W " +
+    "lenses. States collapse to Bull/Bear/Warm-up; flips confirm only " +
+    "on the close of the crossing daily bar. Lens is the consensus " +
+    "column — how the weekly and D×W lenses read the same symbol on " +
+    "this run; watch it here first when a fast flip is still unconfirmed " +
+    "elsewhere.",
+};
+
 export default function BullMarketFinderView() {
   const router = useRouter();
   const reduced = useReducedMotion();
-  const snap = useBullSnapshot();
-  const transitions = useBullTransitions(14);
+  const [strategy, setStrategy] = useState<string>(DEFAULT_STRATEGY_ID);
+  const snap = useBullSnapshot(strategy);
+  const transitions = useBullTransitions(14, strategy);
   const [leaving, setLeaving] = useState(false);
   const [tab, setTab] = useState<TabKey>("all");
+  const [disagreementOnly, setDisagreementOnly] = useState(false);
+
+  const strategies = snap.strategies;
+  const activeStrategyMeta =
+    strategies.find((s) => s.id === strategy) ?? strategies[0];
+  const timeframe: StrategyTimeframe = activeStrategyMeta?.timeframe ?? "multi";
 
   const leave = useCallback(() => {
     if (leaving) return;
@@ -104,9 +158,16 @@ export default function BullMarketFinderView() {
   }, [leave]);
 
   const live = snap.status === "live";
-  const visibleRows = useMemo(
+  const tierRows = useMemo(
     () => (tab === "all" ? snap.rows : snap.rows.filter((r) => r.tier === tab)),
     [snap.rows, tab],
+  );
+  const visibleRows = useMemo(
+    () =>
+      disagreementOnly
+        ? tierRows.filter((r) => r.consensus.bull > 0 && r.consensus.bear > 0)
+        : tierRows,
+    [tierRows, disagreementOnly],
   );
   const dist = bullDistribution(visibleRows);
   const newlyCount = visibleRows.filter((r) => r.newlyBullish).length;
@@ -131,13 +192,13 @@ export default function BullMarketFinderView() {
           <button
             onClick={leave}
             className="sweep font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-2)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]"
-            aria-label="Close Bull Market Finder 2 and return to the index"
+            aria-label="Close Bull Market Finder and return to the index"
           >
             ← Index
           </button>
           <span aria-hidden className="text-[var(--ink-3)]">/</span>
           <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
-            A3RO Intelligence — Bull Market Finder 2
+            A3RO Intelligence — Bull Market Finder
           </p>
         </div>
         <p className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
@@ -173,13 +234,13 @@ export default function BullMarketFinderView() {
                 P·05 — Intelligence module
               </p>
               <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
-                Bull Market Finder 2
+                Bull Market Finder
               </h1>
               <p className="mt-3 max-w-xl text-[13px] leading-relaxed text-[var(--ink-2)]">
                 Whole-market bullish-state screener — Money Line trend flips
-                double-confirmed on daily and weekly closes across macro
-                assets, the S&amp;P 500, crypto majors and liquid ETFs, ranked
-                by how recently confirmation arrived.
+                ranked by the active strategy lens across macro assets, the
+                S&amp;P 500, crypto majors and liquid ETFs, ranked by how
+                recently confirmation arrived.
               </p>
             </div>
             <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
@@ -244,8 +305,35 @@ export default function BullMarketFinderView() {
             </div>
           )}
 
-          {/* tier tabs */}
+          {/* strategy switcher — segmented control, same grammar as the
+              tier tabs below; data-driven from the API's `strategies`
+              list (DEFAULT_STRATEGIES fills in before first response). */}
           <div className="mt-10 flex flex-wrap items-baseline gap-1.5">
+            <span className="mr-1 font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
+              Strategy
+            </span>
+            {strategies.map((s) => {
+              const active = strategy === s.id;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => setStrategy(s.id)}
+                  aria-pressed={active}
+                  className="rounded-[2px] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] transition-colors duration-[var(--dur-micro)]"
+                  style={{
+                    color: active ? BULL_ACCENT : "var(--ink-3)",
+                    background: active ? "rgba(127, 158, 232, 0.10)" : "transparent",
+                    border: `1px solid ${active ? "rgba(127, 158, 232, 0.35)" : "var(--line)"}`,
+                  }}
+                >
+                  {s.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* tier tabs + disagreement toggle */}
+          <div className="mt-3 flex flex-wrap items-baseline gap-1.5">
             {TABS.map(({ key, label }) => {
               const active = tab === key;
               const count =
@@ -269,6 +357,18 @@ export default function BullMarketFinderView() {
                 </button>
               );
             })}
+            <button
+              onClick={() => setDisagreementOnly((v) => !v)}
+              aria-pressed={disagreementOnly}
+              className="rounded-[2px] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] transition-colors duration-[var(--dur-micro)]"
+              style={{
+                color: disagreementOnly ? BULL_MUTED_AMBER : "var(--ink-3)",
+                background: disagreementOnly ? "rgba(184, 163, 117, 0.12)" : "transparent",
+                border: `1px solid ${disagreementOnly ? "rgba(184, 163, 117, 0.4)" : "var(--line)"}`,
+              }}
+            >
+              Disagreement
+            </button>
           </div>
 
           {/* ── the ranked table ── */}
@@ -278,7 +378,7 @@ export default function BullMarketFinderView() {
               <div className={`${GRID} border-b border-[var(--line)] pb-3`}>
                 {[
                   "Rank", "Asset", "State", "D", "W",
-                  "Confirmed / Flip", "Str ×vol", "RS 63d", "Last close",
+                  "Confirmed / Flip", "Str ×vol", "RS 63d", "Lens", "Last close",
                 ].map((h, i) => (
                   <p
                     key={h}
@@ -296,7 +396,7 @@ export default function BullMarketFinderView() {
                 <div aria-hidden className="animate-pulse">
                   {Array.from({ length: 10 }, (_, i) => (
                     <div key={i} className={`${GRID} border-b border-[var(--line)] py-3.5`}>
-                      {Array.from({ length: 9 }, (_, j) => (
+                      {Array.from({ length: 10 }, (_, j) => (
                         <span key={j} className="h-[9px] rounded-full bg-[var(--depth-3)]" />
                       ))}
                     </div>
@@ -321,7 +421,14 @@ export default function BullMarketFinderView() {
               {/* rows, grouped by state */}
               {live &&
                 grouped.map(({ row: r, group, startsGroup }, idx) => {
-                  const [dG, wG] = legGlyphs(r.verdict);
+                  // Single-leg lenses keep both glyph columns — both legs
+                  // are always computed — but dim the leg that doesn't
+                  // drive this strategy's ranking.
+                  const [vdG, vwG] = legGlyphs(r.verdict);
+                  const dG = trendGlyph(r.dailyTrend) ?? vdG;
+                  const wG = trendGlyph(r.weeklyTrend) ?? vwG;
+                  const dimDaily = timeframe === "weekly";
+                  const dimWeekly = timeframe === "daily";
                   return (
                     <div key={r.symbol}>
                       {startsGroup && (
@@ -336,7 +443,7 @@ export default function BullMarketFinderView() {
                             }}
                           />
                           <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
-                            {BULL_GROUP_LABEL[group]}
+                            {bullGroupLabelFor(group, timeframe)}
                           </p>
                         </div>
                       )}
@@ -377,13 +484,19 @@ export default function BullMarketFinderView() {
                           className="font-mono text-[10px] uppercase tracking-[0.15em]"
                           style={{ color: BULL_VERDICT_META[r.verdict].color }}
                         >
-                          {BULL_VERDICT_META[r.verdict].short}
+                          {bullStateLabel(r.verdict, timeframe)}
                         </p>
 
-                        <p className="font-mono text-[11px]" style={{ color: glyphColor(dG) }}>
+                        <p
+                          className="font-mono text-[11px]"
+                          style={{ color: glyphColor(dG), opacity: dimDaily ? 0.3 : 1 }}
+                        >
                           {dG}
                         </p>
-                        <p className="font-mono text-[11px]" style={{ color: glyphColor(wG) }}>
+                        <p
+                          className="font-mono text-[11px]"
+                          style={{ color: glyphColor(wG), opacity: dimWeekly ? 0.3 : 1 }}
+                        >
                           {wG}
                         </p>
 
@@ -400,6 +513,12 @@ export default function BullMarketFinderView() {
                         >
                           {formatPct(r.rs63)}
                         </p>
+                        <p
+                          className="text-right font-mono text-[11px] tabular-nums"
+                          style={{ color: bullConsensusColor(r.consensus) }}
+                        >
+                          {formatConsensus(r.consensus)}
+                        </p>
                         <p className="text-right font-mono text-[11px] tabular-nums text-[var(--ink)]">
                           {formatPrice(r.lastClose)}
                         </p>
@@ -410,20 +529,9 @@ export default function BullMarketFinderView() {
             </div>
           </div>
 
-          {/* methodology footnote */}
+          {/* methodology footnote — swaps per strategy (spec §5) */}
           <p className="mt-10 max-w-2xl text-xs leading-relaxed text-[var(--ink-3)]">
-            States — Double Confirmed: bullish on daily and weekly ·
-            Conflicted Early Bullish: daily flipped, weekly hasn&apos;t ·
-            Conflicted Lagging Bullish: weekly bull, daily has broken ·
-            Bearish: bearish on both. Flips confirm only on candle close
-            (Donchian&nbsp;20, ratcheted); the current week never counts until
-            it closes. Newly bullish = double confirmation within the last 10
-            sessions. Ranked by recency; volatility-normalized strength
-            (cushion + move since flip, ÷ ATR) breaks ties. RS&nbsp;63d is the
-            63-session return minus the tier benchmark (S&amp;P&nbsp;500 for
-            equities/ETFs, BTC for crypto) — context, not a ranking input.
-            WTI and gold futures are roll-adjusted continuous series; every
-            roll is logged and probe-verified.
+            {FOOTNOTE_BY_STRATEGY[strategy] ?? FOOTNOTE_BY_STRATEGY[DEFAULT_STRATEGY_ID]}
           </p>
         </div>
       </div>
@@ -431,7 +539,7 @@ export default function BullMarketFinderView() {
       {/* ── bottom chrome ── */}
       <footer className="absolute inset-x-0 bottom-0 z-30 flex h-12 items-center justify-between border-t border-[var(--line)] bg-[rgba(6,7,7,0.55)] px-6 backdrop-blur-md md:px-10">
         <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-          P·05 — Bull Market Finder 2
+          P·05 — Bull Market Finder
         </p>
         <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
           Trend-state readouts on free data feeds · not investment advice

@@ -149,9 +149,14 @@ export {
   upsertBars, loadBars, latestBarDate, shiftAdjBarsBefore,
   insertRoll, getRolls, upsertBullSnapshots, getPreviousVerdicts,
   insertTransitions, insertHealthEntries,
-  getLatestBullSnapshots, getRecentTransitions,
+  getLatestBullSnapshots, getRecentTransitions, getLatestVerdictsBySymbol,
 } from "./storage/bullRepo";
 export type { BullSnapshotRow, BullTransitionRow, BarSeries } from "./storage/bullRepo";
+export {
+  STRATEGIES, STRATEGY_IDS, DEFAULT_STRATEGY, isStrategyId,
+  deriveStrategySnapshots, tallyConsensus,
+} from "./bull/strategies";
+export type { StrategyId, StrategyMeta, BullStrategySnapshot, StrategyConsensus } from "./bull/strategies";
 
 // Module 7 — Thesis Lab (P·07): pressure test → scenarios → portfolio risk
 export {
