@@ -22,10 +22,13 @@ import {
 } from "./oilTrackerShared";
 import { FLOW_ROUTES, GATE_EIA_EST_MBD, type FlowTier } from "./flowRoutes";
 import { PRODUCERS, PRODUCERS_SOURCE, type Producer, type ProducerLayerMode } from "./producers";
-import useOilData from "./useOilData";
 import CorridorSpark from "./CorridorSpark";
 import AlertsFeed from "./AlertsFeed";
 import { formatPctSigned, formatUsdBbl, formatUtcDateTime, formatUtcTime, isUtcToday } from "./oilFormat";
+import useOilIntelligence from "./oil/useOilIntelligence";
+import IntelRail from "./oil/IntelRail";
+import FlowHealthLegend from "./oil/FlowHealthLegend";
+import type { FocusTarget } from "./oil/types";
 import type { Benchmark, CorridorBaseline, CorridorId, CorridorMetricLatest, DailyPrice, LatestQuote, ScoreSnapshot } from "@a3ro/oil-backend";
 
 /* ══ route-only content: hotspot hierarchy + signal copy ══ */
@@ -518,6 +521,8 @@ export default function OilTrackerCore({
   const [selected, setSelected] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
   const [narrow, setNarrow] = useState(false);
+  const narrowRef = useRef(false);
+  narrowRef.current = narrow;
   const [proContact, setProContact] = useState<string | null>(null);
   const [layers, setLayers] = useState<{ flows: boolean; gates: boolean; producers: ProducerLayerMode }>({
     flows: true,
@@ -574,15 +579,18 @@ export default function OilTrackerCore({
     };
   }, []);
 
+  /* Desktop rail is ~380px — bias the globe slightly left so selection
+     and corridor geometry stay clear of the intelligence surface. */
+  const railCamOff = -0.18;
+
   const focusHotspot = useCallback((h: Hotspot) => {
     setSelected(h.id);
     setProContact(null);
     setTouched(true);
     hasMoved.current = true;
     sim.current.lastInteract = performance.now();
-    const isNarrow = size.current.w < 640;
     tweenTo(
-      { lon: h.lon, lat: clamp(h.lat, -48, 48), zoom: h.zoom, off: isNarrow ? 0 : -0.14 },
+      { lon: h.lon, lat: clamp(h.lat, -48, 48), zoom: h.zoom, off: narrowRef.current ? 0 : railCamOff },
       1150
     );
   }, [tweenTo]);
@@ -593,14 +601,13 @@ export default function OilTrackerCore({
     setTouched(true);
     hasMoved.current = true;
     sim.current.lastInteract = performance.now();
-    const isNarrow = size.current.w < 640;
     tweenTo(
-      { lon: p.lon, lat: clamp(p.lat, -48, 48), zoom: Math.max(sim.current.zoom, 1.25), off: isNarrow ? 0 : -0.14 },
+      { lon: p.lon, lat: clamp(p.lat, -48, 48), zoom: Math.max(sim.current.zoom, 1.25), off: narrowRef.current ? 0 : railCamOff },
       1000
     );
   }, [tweenTo]);
 
-  const feed = useOilData();
+  const { feed, intel } = useOilIntelligence();
 
   /* benchmarks reuse the existing `selected` state via "bench:WTI" / "bench:BRENT" ids */
   const benchSel: Benchmark | null =
@@ -616,8 +623,7 @@ export default function OilTrackerCore({
     setProContact(null);
     setTouched(true);
     sim.current.lastInteract = performance.now();
-    const isNarrow = size.current.w < 640;
-    tweenTo({ off: isNarrow ? 0 : -0.14 }, 900);
+    tweenTo({ off: narrowRef.current ? 0 : railCamOff }, 900);
   }, [tweenTo]);
 
   const closePanel = useCallback(() => {
@@ -626,6 +632,43 @@ export default function OilTrackerCore({
     sim.current.lastInteract = performance.now();
     tweenTo({ zoom: 1, off: 0, lat: clamp(sim.current.lat, -34, 34) }, 900);
   }, [tweenTo]);
+
+  const onRailFocus = useCallback(
+    (target: FocusTarget) => {
+      if (target.kind === "benchmark") {
+        focusBenchmark(target.id);
+        return;
+      }
+      if (target.kind === "producer") {
+        const p = PRODUCERS.find((x) => x.id === target.id);
+        if (p) focusProducer(p);
+        return;
+      }
+      const h = HOTSPOTS.find((x) => x.id === target.id);
+      if (h) focusHotspot(h);
+    },
+    [focusBenchmark, focusHotspot, focusProducer],
+  );
+
+  const onRailSelectCorridor = useCallback(
+    (id: string) => {
+      if (selected === id) {
+        closePanel();
+        return;
+      }
+      const h = HOTSPOTS.find((x) => x.id === id);
+      if (h) focusHotspot(h);
+    },
+    [selected, closePanel, focusHotspot],
+  );
+
+  const onRailSelectBenchmark = useCallback(
+    (b: Benchmark) => {
+      if (benchSel === b) closePanel();
+      else focusBenchmark(b);
+    },
+    [benchSel, closePanel, focusBenchmark],
+  );
 
   /* ── data-driven globe sub-labels ──
      Stable-identity ref so the engine effect's [] deps stay valid;
@@ -744,17 +787,21 @@ export default function OilTrackerCore({
 
     const resize = () => {
       const r = stage.getBoundingClientRect();
+      const wrapW = wrap.getBoundingClientRect().width;
       dpr = Math.min(2, window.devicePixelRatio || 1);
       size.current = { w: r.width, h: r.height };
       canvas.width = Math.round(r.width * dpr);
       canvas.height = Math.round(r.height * dpr);
       canvas.style.width = `${r.width}px`;
       canvas.style.height = `${r.height}px`;
-      setNarrow(r.width < 640);
+      /* Layout breakpoint uses the full terminal width (not the map stage
+         after the rail eats ~380px), so desktop keeps the side rail. */
+      setNarrow(wrapW < 768);
     };
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(stage);
+    ro.observe(wrap);
 
     const frame = () => {
       const s = sim.current;
@@ -1695,15 +1742,333 @@ export default function OilTrackerCore({
     return { title: h.title, statusLine: status, lines, showClickFooter: true };
   })();
 
-  /* Section C9: the wide-screen corridor index rail hides while ANY
-     right panel (corridor, benchmark, or pro-contact) is open — it
-     would otherwise sit underneath/behind the panel on wide screens. */
-  const panelOpen = sel !== null || benchSel !== null || prodSel !== null || proContact !== null;
+  /* Focus is open when a corridor, benchmark, producer, or pro-contact
+     panel is active. The intel rail stays mounted; only its lower dock swaps. */
+  const hasFocus = sel !== null || benchSel !== null || prodSel !== null || proContact !== null;
+  const selectedCorridorId = sel?.id ?? null;
+
+  /* ── focus dock content (shared desktop rail + mobile sheet) ── */
+  const focusSlot = (() => {
+    if (proContact !== null) {
+      return <ProContactPanel context={proContact} narrow={true} onClose={() => setProContact(null)} />;
+    }
+
+    if (sel) {
+      return (
+        <div>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
+                {sel.corridor}
+              </p>
+              <h4 className="mt-1 text-base font-medium text-[var(--ink)]">{sel.title}</h4>
+            </div>
+          </div>
+          <p
+            className="mt-2 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em]"
+            style={{
+              color: selLive
+                ? AMBER_CSS
+                : selIsWatchlist
+                  ? "var(--ink-3)"
+                  : selIsConnecting
+                    ? "var(--ink-2)"
+                    : statusColor(sel.kind),
+            }}
+          >
+            <span aria-hidden className="inline-block h-1 w-1 rounded-full" style={{ background: "currentColor" }} />
+            {selLive ? selLive.statusText : sel.status}
+          </p>
+          <div className="mt-4">
+            <p className={`font-mono ${selLive ? "text-2xl text-[var(--ink)]" : "text-lg text-[var(--ink-3)]"}`}>
+              {selLive ? selLive.metric : "—"}
+            </p>
+            <p className="mt-1 text-[11px] leading-relaxed text-[var(--ink-3)]">
+              {selLive
+                ? selLive.metricLabel
+                : selIsWatchlist
+                  ? "No live feed connected"
+                  : "Feed connecting — retrying automatically"}
+            </p>
+          </div>
+          {(selLive ? selLive.rows.length > 0 : selLocks.length > 0) && (
+            <div className="mt-4 flex flex-col gap-2.5">
+              {selLive?.rows.map((r) => (
+                <div key={r.k}>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="min-w-0 truncate text-[11px] text-[var(--ink-2)]">{r.k}</p>
+                    <p
+                      className="whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.15em]"
+                      style={{ color: r.color ?? (r.warm ? AMBER_CSS : "var(--ink)") }}
+                    >
+                      {r.v}
+                    </p>
+                  </div>
+                  <div className="mt-[5px] h-px w-full bg-[var(--depth-3)]">
+                    <motion.div
+                      className="h-px"
+                      style={{
+                        background: r.color ?? (r.warm ? "#e6bd7d" : AMBER_CSS),
+                        opacity: 0.7,
+                      }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${r.bar * 100}%` }}
+                      transition={{ duration: DUR.reveal, delay: 0.1, ease: EASE_OUT as unknown as number[] }}
+                    />
+                  </div>
+                </div>
+              ))}
+              {selLocks.map((r) => (
+                <button
+                  key={r.k}
+                  type="button"
+                  onClick={() => setProContact(r.context)}
+                  aria-label={`Unlock ${r.k} — contact for pro access`}
+                  className="text-left"
+                >
+                  <div className="flex items-baseline justify-between">
+                    <p className="text-[11px] text-[var(--ink-2)]">{r.k}</p>
+                    <p
+                      className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.15em]"
+                      style={{ color: AMBER_CSS, opacity: 0.85 }}
+                    >
+                      PRO
+                    </p>
+                  </div>
+                  <div className="mt-[6px] h-px w-full bg-[var(--line)]" />
+                </button>
+              ))}
+            </div>
+          )}
+          {selLive?.rows.some((r) => r.color) && (
+            <FlowHealthLegend className="mt-3 border-t border-[var(--line)] pt-3" />
+          )}
+          {selLive && selLive.sparkCorridor && selLive.sparkMetric ? (
+            <CorridorSpark
+              corridor={selLive.sparkCorridor}
+              metric={selLive.sparkMetric}
+              caption={selLive.seriesNote}
+            />
+          ) : (
+            selLive && (
+              <p className="mt-4 font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+                {selLive.seriesNote}
+              </p>
+            )
+          )}
+          <p className="mt-4 text-[11px] leading-relaxed text-[var(--ink-2)]">
+            {selLive
+              ? selLive.note
+              : selIsWatchlist
+                ? WATCHLIST_COPY[sel.id]
+                : "This corridor is wired to a live source; data appears after the next ingestion cycle."}
+          </p>
+          <p className="mt-4 flex items-center justify-between border-t border-[var(--line)] pt-3 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+            <span>Corridor feed</span>
+            <span>{selLive ? selLive.footerRight : selIsWatchlist ? "watchlist" : "connecting"}</span>
+          </p>
+          <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.18em] text-[var(--ink-3)] opacity-70">
+            {selLive
+              ? selLive.footerLine
+              : selIsWatchlist
+                ? "Watchlist · no live data · not investment advice"
+                : "Awaiting live data · not investment advice"}
+          </p>
+        </div>
+      );
+    }
+
+    if (benchSel) {
+      return (
+        <div>
+          <div>
+            <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
+              Benchmark · {benchSel}
+            </p>
+            <h4 className="mt-1 text-base font-medium text-[var(--ink)]">{BENCH_TITLE[benchSel]}</h4>
+          </div>
+          {benchStatusInfo ? (
+            <p
+              className="mt-2 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em]"
+              style={{ color: benchStatusInfo.color }}
+            >
+              <span aria-hidden className="inline-block h-1 w-1 rounded-full" style={{ background: "currentColor" }} />
+              {benchStatusInfo.text}
+            </p>
+          ) : (
+            <p className="mt-2 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
+              awaiting feed
+            </p>
+          )}
+          <div className="mt-4">
+            <p className={`font-mono ${bq ? "text-2xl text-[var(--ink)]" : "text-lg text-[var(--ink-3)]"}`}>
+              {bq ? formatUsdBbl(bq.price) : "—"}
+            </p>
+            <p className="mt-1 text-[11px] leading-relaxed text-[var(--ink-3)]">
+              {bq
+                ? `USD per barrel · ${bq.source} · as of ${
+                    isUtcToday(bq.observedAt) ? formatUtcTime(bq.observedAt) : formatUtcDateTime(bq.observedAt)
+                  }`
+                : "Feed unavailable — retrying automatically"}
+            </p>
+          </div>
+          {bq?.suspect && (
+            <p className="mt-2 font-mono text-[9px] uppercase tracking-[0.2em]" style={{ color: AMBER_CSS }}>
+              SUSPECT — DEVIATES FROM LAST SETTLEMENT
+            </p>
+          )}
+          {benchRows.length > 0 && (
+            <div className="mt-4 flex flex-col gap-2.5">
+              {benchRows.map((r) => (
+                <div key={r.k}>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="min-w-0 truncate text-[11px] text-[var(--ink-2)]">{r.k}</p>
+                    <p
+                      className="whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.15em]"
+                      style={{ color: r.warm ? AMBER_CSS : "var(--ink)" }}
+                    >
+                      {r.v}
+                    </p>
+                  </div>
+                  <div className="mt-[5px] h-px w-full bg-[var(--depth-3)]">
+                    <motion.div
+                      className="h-px"
+                      style={{ background: r.warm ? "#e6bd7d" : AMBER_CSS, opacity: r.warm ? 0.9 : 0.6 }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${r.bar * 100}%` }}
+                      transition={{ duration: DUR.reveal, delay: 0.1, ease: EASE_OUT as unknown as number[] }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {bs && bs.length >= 2 ? (
+            <div className="mt-4">
+              <Spark values={bs.map((p) => p.price)} id={`bench-${benchSel}`} />
+              <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
+                Daily close · 30d · live feed
+              </p>
+            </div>
+          ) : (
+            <p className="mt-4 font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+              SERIES UNAVAILABLE
+            </p>
+          )}
+          <p className="mt-4 text-[11px] leading-relaxed text-[var(--ink-2)]">{BENCH_NOTE[benchSel]}</p>
+          <AlertsFeed benchmark={benchSel} className="mt-4 border-t border-[var(--line)] pt-3" />
+          <p className="mt-4 flex items-center justify-between border-t border-[var(--line)] pt-3 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+            <span>Benchmark feed</span>
+            <span>{bq ? bq.staleness : "offline"}</span>
+          </p>
+        </div>
+      );
+    }
+
+    if (prodSel) {
+      return (
+        <div>
+          <div>
+            <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">Producer</p>
+            <h4 className="mt-1 text-base font-medium text-[var(--ink)]">{prodSel.name}</h4>
+          </div>
+          <p className="mt-2 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-2)]">
+            <span aria-hidden className="inline-block h-1 w-1 rounded-full" style={{ background: "currentColor" }} />
+            Annual reference
+          </p>
+          <div className="mt-4">
+            <p className="font-mono text-2xl text-[var(--ink)]">
+              {layers.producers === "reserves"
+                ? `${prodSel.reservesBbl.toFixed(0)}B bbl`
+                : `${prodSel.productionMbd.toFixed(1)} Mb/d`}
+            </p>
+            <p className="mt-1 text-[11px] leading-relaxed text-[var(--ink-3)]">
+              {layers.producers === "reserves"
+                ? "Proven reserves · end-2024 · OPEC ASB 2025"
+                : "Crude + condensate output · 2025 est. · EIA"}
+            </p>
+          </div>
+          <div className="mt-4 flex flex-col gap-2.5">
+            {[
+              {
+                k: "Production · 2025 est.",
+                v: `${prodSel.productionMbd.toFixed(1)} Mb/d`,
+                bar: clamp(prodSel.productionMbd / 14, 0, 1),
+              },
+              {
+                k: "Proven reserves · end-2024",
+                v: `${prodSel.reservesBbl.toFixed(0)}B bbl`,
+                bar: clamp(prodSel.reservesBbl / 310, 0, 1),
+              },
+            ].map((r) => (
+              <div key={r.k}>
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="min-w-0 truncate text-[11px] text-[var(--ink-2)]">{r.k}</p>
+                  <p className="whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.15em] text-[var(--ink)]">
+                    {r.v}
+                  </p>
+                </div>
+                <div className="mt-[5px] h-px w-full bg-[var(--depth-3)]">
+                  <motion.div
+                    className="h-px"
+                    style={{ background: AMBER_CSS, opacity: 0.6 }}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${r.bar * 100}%` }}
+                    transition={{ duration: DUR.reveal, delay: 0.1, ease: EASE_OUT as unknown as number[] }}
+                  />
+                </div>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => setProContact(`producer-${prodSel.id}`)}
+              aria-label="Unlock Field-level output & grades — contact for pro access"
+              className="text-left"
+            >
+              <div className="flex items-baseline justify-between">
+                <p className="text-[11px] text-[var(--ink-2)]">Field-level output &amp; grades</p>
+                <p
+                  className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.15em]"
+                  style={{ color: AMBER_CSS, opacity: 0.85 }}
+                >
+                  PRO
+                </p>
+              </div>
+              <div className="mt-[6px] h-px w-full bg-[var(--line)]" />
+            </button>
+          </div>
+          <p className="mt-4 text-[11px] leading-relaxed text-[var(--ink-2)]">
+            Static annual reference — reserves and output move yearly, not daily. Live field-level production,
+            export grades, and loading programs are commercial data.
+          </p>
+          <p className="mt-4 flex items-center justify-between border-t border-[var(--line)] pt-3 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+            <span>Reference data</span>
+            <span>annual</span>
+          </p>
+        </div>
+      );
+    }
+
+    return null;
+  })();
+
+  const railProps = {
+    intel,
+    selectedCorridorId,
+    selectedBenchmark: benchSel,
+    hasFocus,
+    focusSlot: focusSlot ?? undefined,
+    onFocus: onRailFocus,
+    onSelectCorridor: onRailSelectCorridor,
+    onSelectBenchmark: onRailSelectBenchmark,
+    onCloseFocus: closePanel,
+  };
 
   return (
     <div ref={wrapRef} className={`relative overflow-hidden ${className}`} data-lenis-prevent="">
-      {/* stage */}
-      <div ref={stageRef} className="absolute inset-0 overflow-hidden">
+      <div className="flex h-full w-full">
+        {/* ── map stage (center of gravity) ── */}
+        <div ref={stageRef} className="relative h-full min-w-0 flex-1 overflow-hidden">
         <div
           aria-hidden
           className="absolute inset-0"
@@ -1724,193 +2089,15 @@ export default function OilTrackerCore({
           role="img"
         />
 
-        {/* identity */}
-        <div className="pointer-events-none absolute left-6 top-[4.5rem] max-w-[46%] md:left-10 md:top-[5.5rem]">
-          <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-            P·01 — <span style={{ color: AMBER_CSS }}>Featured</span>
+        {/* slim map title — shell header owns brand; avoid competing copy stack */}
+        <div className="pointer-events-none absolute left-5 top-4 md:left-6 md:top-5">
+          <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--ink-3)]">
+            Oil · corridor surface
           </p>
-          <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--ink-2)]">
-            A3RO Intelligence
-          </p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
-            Oil Tracker
-          </h1>
-          <p className="mt-3 text-[13px] leading-relaxed text-[var(--ink-2)]">
-            Live corridor intelligence for crude, products, and price-sensitive flows.
-          </p>
-          {!narrow && (
-            <p className="mt-2 hidden text-xs leading-relaxed text-[var(--ink-3)] md:block">
-              Benchmark prices and covered corridors stream live.
-              Locked signals unlock with the pro tier.
-            </p>
-          )}
         </div>
 
-        {/* corridor index */}
-        {!narrow && (
-          <AnimatePresence>
-            {!panelOpen && (
-              <motion.div
-                initial={{ opacity: 0, x: 12 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 12 }}
-                transition={{ duration: DUR.base, ease: EASE_OUT as unknown as number[] }}
-                className="absolute right-6 top-[4.5rem] hidden flex-col items-stretch md:right-10 md:top-[5.5rem] md:flex"
-              >
-                <p className="border-l border-[var(--line)] px-3 py-[7px] font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-                  Benchmarks
-                </p>
-                {TRACKED.map((b) => {
-                  const q = quoteFor(b);
-                  const st = benchStatus(q);
-                  const isSel = benchSel === b;
-                  return (
-                    <button
-                      key={b}
-                      onClick={() => (isSel ? closePanel() : focusBenchmark(b))}
-                      aria-label={`Open ${b} benchmark detail`}
-                      title={BENCH_TITLE[b]}
-                      className={`flex items-center justify-between gap-6 border-l px-3 py-[7px] text-left transition-colors duration-[var(--dur-micro)] ${
-                        isSel
-                          ? "border-[#d4a157] bg-[rgba(212,161,87,0.08)]"
-                          : "border-[var(--line)] hover:border-[var(--line-2)] hover:bg-[rgba(232,235,232,0.03)]"
-                      }`}
-                    >
-                      <span className={`font-mono text-[10px] uppercase tracking-[0.2em] ${isSel ? "text-[var(--ink)]" : "text-[var(--ink-2)]"}`}>
-                        {BENCH_TITLE[b]}
-                      </span>
-                      <span
-                        className="font-mono text-[9px] uppercase tracking-[0.2em]"
-                        style={{ color: st.color }}
-                      >
-                        {st.text}
-                      </span>
-                    </button>
-                  );
-                })}
-
-                <p className="mt-3 border-l border-[var(--line)] px-3 py-[7px] font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-                  Corridors
-                </p>
-                {HOTSPOTS.map((h) => {
-                  const hLive = liveFor(h.id);
-                  const hGate = HOTSPOT_GATE_CORRIDOR[h.id];
-                  const hBase = hGate ? baselineLineFor(hGate) : null;
-                  const hHealth = hBase ? flowHealth(hBase.ratio) : null;
-                  return (
-                    <button
-                      key={h.id}
-                      onClick={() => (selected === h.id ? closePanel() : focusHotspot(h))}
-                      className={`flex items-center justify-between gap-6 border-l px-3 py-[7px] text-left transition-colors duration-[var(--dur-micro)] ${
-                        selected === h.id
-                          ? "border-[#d4a157] bg-[rgba(212,161,87,0.08)]"
-                          : "border-[var(--line)] hover:border-[var(--line-2)] hover:bg-[rgba(232,235,232,0.03)]"
-                      }`}
-                    >
-                      <span className={`font-mono text-[10px] uppercase tracking-[0.2em] ${selected === h.id ? "text-[var(--ink)]" : "text-[var(--ink-2)]"}`}>
-                        {h.title}
-                      </span>
-                      <span className="flex items-center gap-2">
-                        {hHealth && (
-                          <span
-                            aria-hidden
-                            className="inline-block h-[6px] w-[6px] shrink-0 rounded-full"
-                            style={{ background: hHealth }}
-                          />
-                        )}
-                        <span
-                          className="font-mono text-[9px] uppercase tracking-[0.2em]"
-                          style={{ color: hLive ? AMBER_CSS : statusColor(h.kind) }}
-                        >
-                          {hLive ? hLive.railText : h.status}
-                        </span>
-                      </span>
-                    </button>
-                  );
-                })}
-                <p className="border-l border-[var(--line)] px-3 py-[7px] font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-                  + corridors onboarding · pro feeds on request
-                </p>
-                <FlowHealthLegend className="mt-3 border-l border-[var(--line)] px-3 py-[7px]" />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        )}
-
-        {/* live benchmark ticker */}
-        <div className="pointer-events-none absolute bottom-16 left-6 flex gap-7 md:left-10 md:gap-10">
-          {TRACKED.map((b) => {
-            const q = quoteFor(b);
-            const isLiveKind = q?.kind === "live" || q?.kind === "delayed";
-            const dotColor: string | null = !q
-              ? null
-              : isLiveKind && q.staleness === "fresh"
-                ? AMBER_CSS
-                : (isLiveKind && q.staleness === "aging") ||
-                    (!isLiveKind && (q.staleness === "fresh" || q.staleness === "aging"))
-                  ? "var(--ink-2)"
-                  : "var(--ink-3)";
-            const valueColor =
-              !q || q.staleness === "stale" || q.staleness === "dead" ? "var(--ink-3)" : "var(--ink)";
-            const isSel = benchSel === b;
-            return (
-              <button
-                key={b}
-                type="button"
-                onClick={() => (isSel ? closePanel() : focusBenchmark(b))}
-                className="group pointer-events-auto text-left"
-                aria-label={`Open ${b} benchmark detail`}
-              >
-                <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-                  {b} · USD/bbl
-                </p>
-                <p className="mt-1 flex items-center gap-[6px] font-mono text-sm">
-                  {dotColor && (
-                    <span
-                      aria-hidden
-                      className="inline-block h-[5px] w-[5px] rounded-full"
-                      style={{ background: dotColor }}
-                    />
-                  )}
-                  <span
-                    className="transition-colors duration-[var(--dur-micro)] group-hover:!text-[var(--ink)]"
-                    style={{ color: valueColor }}
-                  >
-                    {q ? formatUsdBbl(q.price) : "—"}
-                  </span>
-                  {q?.suspect && (
-                    <sup className="font-mono text-[8px] uppercase tracking-[0.15em]" style={{ color: AMBER_CSS }}>
-                      SUSPECT
-                    </sup>
-                  )}
-                </p>
-              </button>
-            );
-          })}
-          <div className="hidden sm:block">
-            <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">Feed</p>
-            <p className="mt-1 font-mono text-sm" style={{ color: "var(--ink)" }}>
-              {feed.status === "error"
-                ? "OFFLINE"
-                : feed.quotes && feed.quotes.length > 0
-                ? (() => {
-                    const newest = feed.quotes.reduce(
-                      (latest, q) => (q.observedAt > latest ? q.observedAt : latest),
-                      feed.quotes[0].observedAt,
-                    );
-                    return isUtcToday(newest) ? formatUtcTime(newest) : formatUtcDateTime(newest);
-                  })()
-                : "—"}
-            </p>
-          </div>
-        </div>
-
-        {/* layers control (Section §2b) — replaces the old producer-only
-            chip. Flow paths / gates are simple on-off toggles; producers
-            is a three-state off/production/reserves toggle that remembers
-            its last non-off mode so re-enabling restores where you left
-            off, defaulting to "production" the first time. */}
-        <div className="pointer-events-none absolute bottom-24 right-6 z-10 flex flex-col items-end md:right-10">
+        {/* layers control — map chrome, not rail (lifted on mobile above the sheet) */}
+        <div className={`pointer-events-none absolute z-10 flex flex-col items-end ${narrow ? "bottom-[min(54vh,360px)] right-4" : "bottom-5 right-5"}`}>
           {narrow ? (
             <div className="relative">
               <AnimatePresence>
@@ -1950,13 +2137,13 @@ export default function OilTrackerCore({
 
         {/* interaction hint */}
         <AnimatePresence>
-          {!touched && (
+          {!touched && !narrow && (
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: DUR.base, delay: 0.6 }}
-              className="pointer-events-none absolute bottom-16 right-6 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)] md:right-10"
+              className="pointer-events-none absolute bottom-5 left-5 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]"
             >
               drag to rotate · scroll to zoom · select a corridor
             </motion.p>
@@ -2013,479 +2200,26 @@ export default function OilTrackerCore({
           </AnimatePresence>
         </div>
 
-        {/* signal panel */}
-        <AnimatePresence>
-          {sel && (
-            <motion.aside
-              key={sel.id}
-              initial={narrow ? { y: 24, opacity: 0 } : { x: 28, opacity: 0 }}
-              animate={narrow ? { y: 0, opacity: 1 } : { x: 0, opacity: 1 }}
-              exit={narrow ? { y: 24, opacity: 0 } : { x: 28, opacity: 0 }}
-              transition={{ duration: DUR.base * 1.4, ease: EASE_OUT as unknown as number[] }}
-              className={
-                narrow
-                  ? "absolute inset-x-0 bottom-12 border-t border-[var(--line)] bg-[rgba(11,13,13,0.92)] px-5 pb-5 pt-4 backdrop-blur-md"
-                  : "absolute bottom-12 right-0 top-14 flex w-[340px] flex-col border-l border-[var(--line)] bg-[rgba(11,13,13,0.88)] px-6 py-6 backdrop-blur-md"
-              }
-            >
-              <div className={narrow ? "" : "min-h-0 flex-1 overflow-y-auto overflow-x-hidden"}>
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
-                    {sel.corridor}
-                  </p>
-                  <h4 className="mt-1 text-base font-medium text-[var(--ink)]">{sel.title}</h4>
-                </div>
-                <button
-                  onClick={closePanel}
-                  aria-label="Close corridor detail"
-                  className="-mr-1 -mt-1 flex h-7 w-7 items-center justify-center text-[var(--ink-3)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]"
-                >
-                  ×
-                </button>
-              </div>
+        </div>
 
-              <p
-                className="mt-2 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em]"
-                style={{
-                  color: selLive
-                    ? AMBER_CSS
-                    : selIsWatchlist
-                      ? "var(--ink-3)"
-                      : selIsConnecting
-                        ? "var(--ink-2)"
-                        : statusColor(sel.kind),
-                }}
-              >
-                <span aria-hidden className="inline-block h-1 w-1 rounded-full" style={{ background: "currentColor" }} />
-                {selLive ? selLive.statusText : sel.status}
-              </p>
-
-              <div className="mt-5">
-                <p className={`font-mono ${selLive ? "text-3xl text-[var(--ink)]" : "text-xl text-[var(--ink-3)]"}`}>
-                  {selLive ? selLive.metric : "—"}
-                </p>
-                <p className="mt-1 text-[11px] leading-relaxed text-[var(--ink-3)]">
-                  {selLive
-                    ? selLive.metricLabel
-                    : selIsWatchlist
-                      ? "No live feed connected"
-                      : "Feed connecting — retrying automatically"}
-                </p>
-              </div>
-
-              {(selLive ? selLive.rows.length > 0 : selLocks.length > 0) && (
-                <div className="mt-5 flex flex-col gap-3">
-                  {selLive?.rows.map((r) => (
-                    <div key={r.k}>
-                      <div className="flex items-baseline justify-between gap-3">
-                        <p className="min-w-0 truncate text-[11px] text-[var(--ink-2)]">{r.k}</p>
-                        <p
-                          className="whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.15em]"
-                          style={{ color: r.color ?? (r.warm ? AMBER_CSS : "var(--ink)") }}
-                        >
-                          {r.v}
-                        </p>
-                      </div>
-                      <div className="mt-[6px] h-px w-full bg-[var(--depth-3)]">
-                        <motion.div
-                          className="h-px"
-                          style={{ background: r.color ?? (r.warm ? "#e6bd7d" : AMBER_CSS), opacity: r.color ? 0.95 : r.warm ? 0.9 : 0.6 }}
-                          initial={{ width: 0 }}
-                          animate={{ width: `${r.bar * 100}%` }}
-                          transition={{ duration: DUR.reveal, delay: 0.15, ease: EASE_OUT as unknown as number[] }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                  {selLocks.map((r) => (
-                    <button
-                      key={r.k}
-                      type="button"
-                      onClick={() => setProContact(r.context)}
-                      aria-label={`Unlock ${r.k} — contact for pro access`}
-                      className="text-left"
-                    >
-                      <div className="flex items-baseline justify-between">
-                        <p className="text-[11px] text-[var(--ink-2)]">{r.k}</p>
-                        <p
-                          className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.15em]"
-                          style={{ color: AMBER_CSS, opacity: 0.85 }}
-                        >
-                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden>
-                            <rect x="2" y="4.5" width="6" height="4.5" rx="0.6" stroke="currentColor" strokeWidth="0.9" />
-                            <path d="M3.3 4.5V3.2a1.7 1.7 0 0 1 3.4 0V4.5" stroke="currentColor" strokeWidth="0.9" />
-                          </svg>
-                          PRO
-                        </p>
-                      </div>
-                      <div className="mt-[6px] h-px w-full bg-[var(--line)]" />
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {selLive?.rows.some((r) => r.color) && (
-                <FlowHealthLegend className="mt-4 border-t border-[var(--line)] pt-3" />
-              )}
-
-              {selLive && selLive.sparkCorridor && selLive.sparkMetric ? (
-                <CorridorSpark
-                  corridor={selLive.sparkCorridor}
-                  metric={selLive.sparkMetric}
-                  caption={selLive.seriesNote}
-                />
-              ) : (
-                selLive && (
-                  <p className="mt-6 font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-                    {selLive.seriesNote}
-                  </p>
-                )
-              )}
-
-              <p className="mt-5 text-[11px] leading-relaxed text-[var(--ink-2)]">
-                {selLive
-                  ? selLive.note
-                  : selIsWatchlist
-                    ? WATCHLIST_COPY[sel.id]
-                    : "This corridor is wired to a live source; data appears after the next ingestion cycle."}
-              </p>
-              </div>
-
-              <div className={narrow ? "mt-4" : "mt-4 shrink-0"}>
-                {selLive ? (
-                  <p className="flex items-center justify-between border-t border-[var(--line)] pt-3 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-                    <span>Corridor feed</span>
-                    <span>{selLive.footerRight}</span>
-                  </p>
-                ) : (
-                  <p className="flex items-center justify-between border-t border-[var(--line)] pt-3 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-                    <span>Corridor feed</span>
-                    <span>{selIsWatchlist ? "watchlist" : "connecting"}</span>
-                  </p>
-                )}
-                <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.18em] text-[var(--ink-3)] opacity-70">
-                  {selLive
-                    ? selLive.footerLine
-                    : selIsWatchlist
-                      ? "Watchlist · no live data · not investment advice"
-                      : "Awaiting live data · not investment advice"}
-                </p>
-              </div>
-            </motion.aside>
-          )}
-        </AnimatePresence>
-
-        {/* benchmark signal panel */}
-        <AnimatePresence>
-          {benchSel && (
-            <motion.aside
-              key={benchSel}
-              initial={narrow ? { y: 24, opacity: 0 } : { x: 28, opacity: 0 }}
-              animate={narrow ? { y: 0, opacity: 1 } : { x: 0, opacity: 1 }}
-              exit={narrow ? { y: 24, opacity: 0 } : { x: 28, opacity: 0 }}
-              transition={{ duration: DUR.base * 1.4, ease: EASE_OUT as unknown as number[] }}
-              className={
-                narrow
-                  ? "absolute inset-x-0 bottom-12 border-t border-[var(--line)] bg-[rgba(11,13,13,0.92)] px-5 pb-5 pt-4 backdrop-blur-md"
-                  : "absolute bottom-12 right-0 top-14 flex w-[340px] flex-col border-l border-[var(--line)] bg-[rgba(11,13,13,0.88)] px-6 py-6 backdrop-blur-md"
-              }
-            >
-              <div className={narrow ? "" : "min-h-0 flex-1 overflow-y-auto overflow-x-hidden"}>
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
-                    Benchmark · {benchSel}
-                  </p>
-                  <h4 className="mt-1 text-base font-medium text-[var(--ink)]">{BENCH_TITLE[benchSel]}</h4>
-                </div>
-                <button
-                  onClick={closePanel}
-                  aria-label="Close benchmark detail"
-                  className="-mr-1 -mt-1 flex h-7 w-7 items-center justify-center text-[var(--ink-3)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]"
-                >
-                  ×
-                </button>
-              </div>
-
-              {benchStatusInfo ? (
-                <p
-                  className="mt-2 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em]"
-                  style={{ color: benchStatusInfo.color }}
-                >
-                  <span aria-hidden className="inline-block h-1 w-1 rounded-full" style={{ background: "currentColor" }} />
-                  {benchStatusInfo.text}
-                </p>
-              ) : (
-                <p className="mt-2 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
-                  <span aria-hidden className="inline-block h-1 w-1 rounded-full" style={{ background: "currentColor" }} />
-                  awaiting feed
-                </p>
-              )}
-
-              <div className="mt-5">
-                <p className={`font-mono ${bq ? "text-3xl text-[var(--ink)]" : "text-xl text-[var(--ink-3)]"}`}>
-                  {bq ? formatUsdBbl(bq.price) : "—"}
-                </p>
-                <p className="mt-1 text-[11px] leading-relaxed text-[var(--ink-3)]">
-                  {bq
-                    ? `USD per barrel · ${bq.source} · as of ${
-                        isUtcToday(bq.observedAt) ? formatUtcTime(bq.observedAt) : formatUtcDateTime(bq.observedAt)
-                      }`
-                    : "Feed unavailable — retrying automatically"}
-                </p>
-              </div>
-
-              {bq?.suspect && (
-                <p className="mt-2 font-mono text-[9px] uppercase tracking-[0.2em]" style={{ color: AMBER_CSS }}>
-                  SUSPECT — DEVIATES FROM LAST SETTLEMENT
-                </p>
-              )}
-
-              {benchRows.length > 0 && (
-                <div className="mt-5 flex flex-col gap-3">
-                  {benchRows.map((r) => (
-                    <div key={r.k}>
-                      <div className="flex items-baseline justify-between gap-3">
-                        <p className="min-w-0 truncate text-[11px] text-[var(--ink-2)]">{r.k}</p>
-                        <p
-                          className="whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.15em]"
-                          style={{ color: r.warm ? AMBER_CSS : "var(--ink)" }}
-                        >
-                          {r.v}
-                        </p>
-                      </div>
-                      <div className="mt-[6px] h-px w-full bg-[var(--depth-3)]">
-                        <motion.div
-                          className="h-px"
-                          style={{ background: r.warm ? "#e6bd7d" : AMBER_CSS, opacity: r.warm ? 0.9 : 0.6 }}
-                          initial={{ width: 0 }}
-                          animate={{ width: `${r.bar * 100}%` }}
-                          transition={{ duration: DUR.reveal, delay: 0.15, ease: EASE_OUT as unknown as number[] }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {bs && bs.length >= 2 ? (
-                <div className="mt-6">
-                  <Spark values={bs.map((p) => p.price)} id={`bench-${benchSel}`} />
-                  <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-                    Daily close · 30d · live feed
-                  </p>
-                </div>
-              ) : (
-                <p className="mt-6 font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-                  SERIES UNAVAILABLE
-                </p>
-              )}
-
-              <p className="mt-5 text-[11px] leading-relaxed text-[var(--ink-2)]">{BENCH_NOTE[benchSel]}</p>
-
-              <AlertsFeed benchmark={benchSel} className="mt-5 border-t border-[var(--line)] pt-4" />
-              </div>
-
-              <div className={narrow ? "mt-4" : "mt-4 shrink-0"}>
-                <p className="flex items-center justify-between border-t border-[var(--line)] pt-3 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-                  <span>Benchmark feed</span>
-                  <span>{bq ? bq.staleness : "offline"}</span>
-                </p>
-                <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.18em] text-[var(--ink-3)] opacity-70">
-                  Live benchmark data · not investment advice
-                </p>
-              </div>
-            </motion.aside>
-          )}
-        </AnimatePresence>
-
-        {/* producer signal panel */}
-        <AnimatePresence>
-          {prodSel && (
-            <motion.aside
-              key={prodSel.id}
-              initial={narrow ? { y: 24, opacity: 0 } : { x: 28, opacity: 0 }}
-              animate={narrow ? { y: 0, opacity: 1 } : { x: 0, opacity: 1 }}
-              exit={narrow ? { y: 24, opacity: 0 } : { x: 28, opacity: 0 }}
-              transition={{ duration: DUR.base * 1.4, ease: EASE_OUT as unknown as number[] }}
-              className={
-                narrow
-                  ? "absolute inset-x-0 bottom-12 border-t border-[var(--line)] bg-[rgba(11,13,13,0.92)] px-5 pb-5 pt-4 backdrop-blur-md"
-                  : "absolute bottom-12 right-0 top-14 flex w-[340px] flex-col border-l border-[var(--line)] bg-[rgba(11,13,13,0.88)] px-6 py-6 backdrop-blur-md"
-              }
-            >
-              <div className={narrow ? "" : "min-h-0 flex-1 overflow-y-auto overflow-x-hidden"}>
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
-                    Producer
-                  </p>
-                  <h4 className="mt-1 text-base font-medium text-[var(--ink)]">{prodSel.name}</h4>
-                </div>
-                <button
-                  onClick={closePanel}
-                  aria-label="Close producer detail"
-                  className="-mr-1 -mt-1 flex h-7 w-7 items-center justify-center text-[var(--ink-3)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]"
-                >
-                  ×
-                </button>
-              </div>
-
-              <p
-                className="mt-2 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em]"
-                style={{ color: "var(--ink-2)" }}
-              >
-                <span aria-hidden className="inline-block h-1 w-1 rounded-full" style={{ background: "currentColor" }} />
-                Annual reference
-              </p>
-
-              <div className="mt-5">
-                <p className="font-mono text-3xl text-[var(--ink)]">
-                  {layers.producers === "reserves"
-                    ? `${prodSel.reservesBbl.toFixed(0)}B bbl`
-                    : `${prodSel.productionMbd.toFixed(1)} Mb/d`}
-                </p>
-                <p className="mt-1 text-[11px] leading-relaxed text-[var(--ink-3)]">
-                  {layers.producers === "reserves"
-                    ? "Proven reserves · end-2024 · OPEC ASB 2025"
-                    : "Crude + condensate output · 2025 est. · EIA"}
-                </p>
-              </div>
-
-              <div className="mt-5 flex flex-col gap-3">
-                {[
-                  {
-                    k: "Production · 2025 est.",
-                    v: `${prodSel.productionMbd.toFixed(1)} Mb/d`,
-                    // bar divisor is a display scaler vs the largest producer (US, ~13.6 Mb/d), not a physical limit.
-                    bar: clamp(prodSel.productionMbd / 14, 0, 1),
-                  },
-                  {
-                    k: "Proven reserves · end-2024",
-                    v: `${prodSel.reservesBbl.toFixed(0)}B bbl`,
-                    // bar divisor is a display scaler vs the largest producer (Venezuela, 303B bbl), not a physical limit.
-                    bar: clamp(prodSel.reservesBbl / 310, 0, 1),
-                  },
-                ].map((r) => (
-                  <div key={r.k}>
-                    <div className="flex items-baseline justify-between gap-3">
-                      <p className="min-w-0 truncate text-[11px] text-[var(--ink-2)]">{r.k}</p>
-                      <p className="whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.15em] text-[var(--ink)]">
-                        {r.v}
-                      </p>
-                    </div>
-                    <div className="mt-[6px] h-px w-full bg-[var(--depth-3)]">
-                      <motion.div
-                        className="h-px"
-                        style={{ background: AMBER_CSS, opacity: 0.6 }}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${r.bar * 100}%` }}
-                        transition={{ duration: DUR.reveal, delay: 0.15, ease: EASE_OUT as unknown as number[] }}
-                      />
-                    </div>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setProContact(`producer-${prodSel.id}`)}
-                  aria-label="Unlock Field-level output & grades — contact for pro access"
-                  className="text-left"
-                >
-                  <div className="flex items-baseline justify-between">
-                    <p className="text-[11px] text-[var(--ink-2)]">Field-level output &amp; grades</p>
-                    <p
-                      className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.15em]"
-                      style={{ color: AMBER_CSS, opacity: 0.85 }}
-                    >
-                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden>
-                        <rect x="2" y="4.5" width="6" height="4.5" rx="0.6" stroke="currentColor" strokeWidth="0.9" />
-                        <path d="M3.3 4.5V3.2a1.7 1.7 0 0 1 3.4 0V4.5" stroke="currentColor" strokeWidth="0.9" />
-                      </svg>
-                      PRO
-                    </p>
-                  </div>
-                  <div className="mt-[6px] h-px w-full bg-[var(--line)]" />
-                </button>
-              </div>
-
-              <p className="mt-5 text-[11px] leading-relaxed text-[var(--ink-2)]">
-                Static annual reference — reserves and output move yearly, not daily. Live field-level production,
-                export grades, and loading programs are commercial data.
-              </p>
-              </div>
-
-              <div className={narrow ? "mt-4" : "mt-4 shrink-0"}>
-                <p className="flex items-center justify-between border-t border-[var(--line)] pt-3 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-                  <span>Reference data</span>
-                  <span>annual</span>
-                </p>
-                <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.18em] text-[var(--ink-3)] opacity-70">
-                  OPEC ASB 2025 · EIA · not investment advice
-                </p>
-              </div>
-            </motion.aside>
-          )}
-        </AnimatePresence>
-
-        {/* pro contact / lead-capture panel */}
-        <AnimatePresence>
-          {proContact !== null && (
-            <motion.aside
-              key="pro-contact"
-              initial={narrow ? { y: 24, opacity: 0 } : { x: 28, opacity: 0 }}
-              animate={narrow ? { y: 0, opacity: 1 } : { x: 0, opacity: 1 }}
-              exit={narrow ? { y: 24, opacity: 0 } : { x: 28, opacity: 0 }}
-              transition={{ duration: DUR.base * 1.4, ease: EASE_OUT as unknown as number[] }}
-              className={
-                narrow
-                  ? "absolute inset-x-0 bottom-12 border-t border-[var(--line)] bg-[rgba(11,13,13,0.92)] px-5 pb-5 pt-4 backdrop-blur-md"
-                  : "absolute bottom-12 right-0 top-14 flex w-[340px] flex-col border-l border-[var(--line)] bg-[rgba(11,13,13,0.88)] px-6 py-6 backdrop-blur-md"
-              }
-            >
-              <ProContactPanel context={proContact} narrow={narrow} onClose={() => setProContact(null)} />
-            </motion.aside>
-          )}
-        </AnimatePresence>
+        {/* Desktop intelligence rail — always mounted */}
+        {!narrow && (
+          <div className="hidden h-full shrink-0 md:block">
+            <IntelRail {...railProps} variant="desktop" />
+          </div>
+        )}
       </div>
+
+      {/* Mobile intelligence sheet */}
+      {narrow && (
+        <div className="absolute inset-x-0 bottom-0 z-30 md:hidden">
+          <IntelRail {...railProps} variant="mobile" />
+        </div>
+      )}
     </div>
   );
 }
 
-/* ── flow-health legend ──
-   Shared by the corridor rail and the corridor signal panel so the
-   swatches — drawn from flowHealth() — can never drift from the live
-   gate/hover/row colours. Rendered in the panel too, since the rail
-   hides whenever a panel is open. */
-function FlowHealthLegend({ className = "" }: { className?: string }) {
-  return (
-    <div className={className}>
-      <span className="font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-        Flow vs 1y norm
-      </span>
-      <div className="mt-[6px] flex items-center gap-3 font-mono text-[8px] uppercase tracking-[0.12em] text-[var(--ink-3)]">
-        {[
-          { c: flowHealth(0.5), t: "<85%" },
-          { c: flowHealth(1), t: "85–115%" },
-          { c: flowHealth(1.5), t: ">115%" },
-        ].map((s) => (
-          <span key={s.t} className="flex items-center gap-[5px]">
-            <span
-              aria-hidden
-              className="inline-block h-[6px] w-[6px] shrink-0 rounded-full"
-              style={{ background: s.c }}
-            />
-            {s.t}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ── layers panel body (Section §2b) ──
-   Shared between the wide-screen always-visible panel and the narrow-
-   screen expandable one, so the two never drift out of sync. */
 function LayersPanelBody({
   layers,
   setLayers,
