@@ -17,6 +17,7 @@ import {
   trendArrow,
   type MacroQuadrant,
 } from "./macro/macroData";
+import { deriveMacroBrief } from "./macro/macroBrief";
 
 const ORDER: Exclude<MacroQuadrant, "PENDING">[] = ["GOLDILOCKS", "REFLATION", "DEFLATION", "INFLATION"];
 
@@ -24,6 +25,7 @@ export default function RegimeShiftFinder({ className = "" }: { className?: stri
   const snap = useMacroSnapshot();
   const live = snap.status === "live" && snap.quadrant !== "PENDING";
   const active = live ? (snap.quadrant as Exclude<MacroQuadrant, "PENDING">) : null;
+  const regimeTag = live ? deriveMacroBrief(snap).regimeTag : null;
 
   const stateLine =
     snap.status === "loading"
@@ -57,6 +59,7 @@ export default function RegimeShiftFinder({ className = "" }: { className?: stri
           </p>
           <p className="mt-4 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
             {stateLine}
+            {regimeTag && <span style={{ color: MACRO_AMBER }}> · {regimeTag}</span>}
           </p>
           {/* Macro Override chip — pressure + divergence flag */}
           {snap.pressureScore !== null && (

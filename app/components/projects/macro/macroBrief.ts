@@ -27,7 +27,7 @@ export type CycleScore = "TAILWIND" | "NEUTRAL" | "HEADWIND";
 export type HorizonKey = "near" | "medium" | "long";
 export type HorizonTone = "BULLISH" | "CONSTRUCTIVE" | "VOLATILE" | "BEARISH" | "NEUTRAL";
 export type AssetKey = "stocks" | "bonds" | "gold" | "bitcoin" | "energy";
-export type AssetBias = "RISK_ON" | "NEUTRAL" | "RISK_OFF" | "INACTIVE";
+export type AssetBias = "RISK_ON" | "NEUTRAL" | "RISK_OFF" | "SELECTIVE" | "INACTIVE";
 export type ReadSource = "live" | "brief";
 
 export type HorizonRead = {
@@ -55,6 +55,10 @@ export type AssetRead = {
 export type MacroBrief = {
   asOf: string; // editorial brief date (ISO)
   regimeBase: MacroQuadrant;
+  /** Secondary tag on top of the base quadrant, e.g. "AI Capex Stress".
+   *  Growth/inflation (the quadrant) stay driven only by IP/CPI ROC —
+   *  this never changes the quadrant itself, only annotates it. */
+  regimeTag: string | null;
   horizons: HorizonRead[];
   cycleScores: CycleRead[];
   riskFlags: string[];
@@ -158,10 +162,33 @@ const QUADRANT_BRIEF: Record<Exclude<MacroQuadrant, "PENDING">, QuadrantBrief> =
   },
 };
 
+/* ── AI capex stress — editorial overlay, dated. Growth/inflation can
+   keep accelerating (Reflation stays Reflation) while a narrower risk —
+   deep drawdowns in AI platform names vs broader indices, disappointing
+   capex ROI, "manufactured AI race / capex bubble" narrative stress —
+   turns the crowded mega-cap/AI-capex slice of "stocks" negative even
+   as cyclicals and real assets stay bid. No live feed for this (no free
+   series for capex ROI or narrative stress), so — same as monetary/
+   fiscal/liquidity above — it's a manually-set, dated flag. Flip
+   `active` by hand when the read changes. Scoped to REFLATION only per
+   spec; extend the `if` in deriveMacroBrief if it should apply more
+   broadly later. */
+const AI_CAPEX_STRESS = {
+  active: true,
+  asOf: "2026-07-21",
+  flag: "AI capex stress",
+};
+
+const REFLATION_STOCKS_AI_STRESS: { bias: AssetBias; tag: string } = {
+  bias: "SELECTIVE",
+  tag: "favor cyclicals/real assets, avoid crowded AI capex leaders",
+};
+
 /* pending fallback — everything neutral, no directional calls */
 const PENDING_BRIEF: MacroBrief = {
   asOf: BRIEF_AS_OF,
   regimeBase: "PENDING",
+  regimeTag: null,
   horizons: [
     H("near", "0–3M", "NEUTRAL", "awaiting read"),
     H("medium", "3–12M", "NEUTRAL", "awaiting read"),
@@ -202,6 +229,7 @@ export function deriveMacroBrief(snap: MacroSnapshot): MacroBrief {
   if (snap.status !== "live" || snap.quadrant === "PENDING") return PENDING_BRIEF;
   const q = snap.quadrant as Exclude<MacroQuadrant, "PENDING">;
   const brief = QUADRANT_BRIEF[q];
+  const aiCapexStress = q === "REFLATION" && AI_CAPEX_STRESS.active;
 
   /* growth cycle — live: accelerating growth is a tailwind */
   const growth: CycleRead = {
@@ -248,15 +276,23 @@ export function deriveMacroBrief(snap: MacroSnapshot): MacroBrief {
   ];
 
   const riskFlags = [...brief.riskFlags];
+  if (aiCapexStress) riskFlags.unshift(AI_CAPEX_STRESS.flag);
   if (snap.diverging) riskFlags.unshift("macro divergence");
 
-  const portfolioBias: AssetRead[] = (Object.keys(ASSET_LABEL) as AssetKey[]).map((key) => ({
-    key,
-    label: ASSET_LABEL[key],
-    ...brief.assets[key],
-  }));
+  const portfolioBias: AssetRead[] = (Object.keys(ASSET_LABEL) as AssetKey[]).map((key) => {
+    const read = aiCapexStress && key === "stocks" ? REFLATION_STOCKS_AI_STRESS : brief.assets[key];
+    return { key, label: ASSET_LABEL[key], ...read };
+  });
 
-  return { asOf: BRIEF_AS_OF, regimeBase: q, horizons: brief.horizons, cycleScores, riskFlags, portfolioBias };
+  return {
+    asOf: BRIEF_AS_OF,
+    regimeBase: q,
+    regimeTag: aiCapexStress ? "AI Capex Stress" : null,
+    horizons: brief.horizons,
+    cycleScores,
+    riskFlags,
+    portfolioBias,
+  };
 }
 
 /* ── display helpers ── */
@@ -278,7 +314,21 @@ export const toneColor = (t: HorizonTone): string =>
           : "var(--ink-3)";
 
 export const biasColor = (b: AssetBias): string =>
-  b === "RISK_ON" ? BRIEF_GREEN : b === "RISK_OFF" ? MACRO_PINK : b === "INACTIVE" ? MACRO_AMBER : "var(--ink-3)";
+  b === "RISK_ON"
+    ? BRIEF_GREEN
+    : b === "RISK_OFF"
+      ? MACRO_PINK
+      : b === "INACTIVE" || b === "SELECTIVE"
+        ? MACRO_AMBER
+        : "var(--ink-3)";
 
 export const biasLabel = (b: AssetBias): string =>
-  b === "RISK_ON" ? "Long" : b === "RISK_OFF" ? "Short / avoid" : b === "INACTIVE" ? "Wait" : "Neutral";
+  b === "RISK_ON"
+    ? "Long"
+    : b === "RISK_OFF"
+      ? "Short / avoid"
+      : b === "INACTIVE"
+        ? "Wait"
+        : b === "SELECTIVE"
+          ? "Selective"
+          : "Neutral";

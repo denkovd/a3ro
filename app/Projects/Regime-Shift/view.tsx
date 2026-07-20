@@ -159,8 +159,13 @@ export default function RegimeShiftView() {
                   style={{ borderLeft: `2px solid ${active ? QUADRANT_META[active].color : "var(--line)"}` }}
                 >
                   <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">Current regime</p>
-                  <p className="mt-1 text-2xl font-semibold" style={{ color: active ? QUADRANT_META[active].color : "var(--ink)" }}>
-                    {active ? QUADRANT_META[active].label : "—"}
+                  <p className="mt-1 flex flex-wrap items-baseline gap-x-2 text-2xl font-semibold" style={{ color: active ? QUADRANT_META[active].color : "var(--ink)" }}>
+                    <span>{active ? QUADRANT_META[active].label : "—"}</span>
+                    {brief.regimeTag && (
+                      <span className="font-mono text-[12px] font-normal uppercase tracking-[0.1em]" style={{ color: MACRO_AMBER }}>
+                        ({brief.regimeTag})
+                      </span>
+                    )}
                   </p>
                   <p className="mt-2 text-[13px] leading-relaxed text-[var(--ink-2)]">{snap.regimeHeadline}</p>
                   <p className="mt-2 text-[12px] leading-relaxed text-[var(--ink-3)]">{snap.favored}</p>
