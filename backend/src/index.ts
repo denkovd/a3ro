@@ -220,3 +220,23 @@ export {
   startPipelineRun, finishPipelineRun, getLastSuccessfulPipelineRun, getLastSuccessfulRunFinishedAt,
 } from "./storage/earningsRepo";
 export type { RankingDataEntry } from "./storage/earningsRepo";
+
+// Gold Tracker — FRED deep history + GoldAPI live tick, pure engine over
+// trend/momentum/volatility/usdPressure/realYieldPressure
+export { fetchGoldPriceSeries, GOLD_SERIES, GOLD_INCREMENTAL_LOOKBACK_DAYS, GOLD_BACKFILL_LOOKBACK_DAYS } from "./sources/fredGold";
+export { fetchGoldSpot } from "./sources/goldapi";
+export type { GoldSpotTick } from "./sources/goldapi";
+export {
+  computeGoldSnapshot, computeGoldChanges, resolveHeadlinePrice,
+  computeTrend, computeMomentum, computeVolatility, computeUsdPressure, computeRealYieldPressure,
+} from "./gold/engine";
+export type {
+  GoldPricePoint, GoldLiveTick, GoldChanges, GoldIndicator, GoldEngineSnapshot,
+} from "./gold/engine";
+export {
+  upsertGoldPrice, upsertGoldPrices, getGoldPriceHistory,
+  upsertGoldSnapshot, getLatestGoldSnapshot, hasLiveGoldTick,
+} from "./storage/goldRepo";
+export type { GoldSnapshotRow } from "./storage/goldRepo";
+export { runGoldCycle } from "./ingest/goldCycle";
+export type { GoldCycleReport } from "./ingest/goldCycle";

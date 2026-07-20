@@ -41,7 +41,7 @@ import { SourceError, SourceErrorKind } from "../core/types";
 const BASE_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv";
 const SOURCE_ID = "fred-macro";
 
-export type MacroAxis = "growth" | "inflation" | "dollar" | "curve" | "credit" | "rates";
+export type MacroAxis = "growth" | "inflation" | "dollar" | "curve" | "credit" | "rates" | "gold";
 
 export interface FredSeriesConfig {
   seriesId: string;

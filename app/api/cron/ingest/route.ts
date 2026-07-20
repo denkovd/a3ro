@@ -22,10 +22,12 @@
 import {
   createDb, runIngestionCycle, runCorridorCycle, runBaselineCycle,
   runSeasonalCycle, runMacroCycle, runPositioningCycle, runScoreCycle,
+  runGoldCycle,
 } from "@a3ro/oil-backend";
 import type {
   CorridorCycleReport, BaselineCycleReport, SeasonalCycleReport,
   MacroCycleReport, PositioningCycleReport, ScoreCycleReport,
+  GoldCycleReport,
 } from "@a3ro/oil-backend";
 
 export const runtime = "nodejs";
@@ -93,6 +95,17 @@ export async function GET(request: Request) {
       macro = { error: e instanceof Error ? e.message : String(e) };
     }
 
+    // Gold Tracker (P·02 live wiring) — FRED deep history (always,
+    // keyless) + freshness-guarded GoldAPI live tick (100 req/month
+    // budget). Own cycle + tables, never folded into the oil macro
+    // half even though it reuses the same fetched macro panel.
+    let gold: GoldCycleReport | { error: string };
+    try {
+      gold = await runGoldCycle(db);
+    } catch (e) {
+      gold = { error: e instanceof Error ? e.message : String(e) };
+    }
+
     // CFTC managed-money positioning (Macro Override's other half, P7)
     // — its own cycle + table, never folded into the FRED macro half.
     let positioning: PositioningCycleReport | { error: string };
@@ -113,7 +126,7 @@ export async function GET(request: Request) {
       scores = { error: e instanceof Error ? e.message : String(e) };
     }
 
-    return Response.json({ ...report, corridors, baselines, seasonal, macro, positioning, scores });
+    return Response.json({ ...report, corridors, baselines, seasonal, macro, gold, positioning, scores });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return Response.json(

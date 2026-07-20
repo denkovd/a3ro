@@ -21,6 +21,7 @@
 
 import { MacroObservation, MacroSeries } from "../sources/fredMacro";
 import { CotObservation } from "../sources/cftcCot";
+import { daysBefore, latestObs, pctChange, valueOnOrBefore } from "../core/seriesMath";
 import {
   MacroAxisRead,
   MacroPressureSnapshot,
@@ -36,28 +37,6 @@ export function clamp01(x: number): number {
 function round(x: number, dp: number): number {
   const f = 10 ** dp;
   return Math.round(x * f) / f;
-}
-
-/* ── observation helpers (obs assumed ascending by date) ─────────── */
-
-function latestObs(obs: MacroObservation[]): MacroObservation | null {
-  return obs.length ? obs[obs.length - 1] : null;
-}
-function daysBefore(isoDate: string, days: number): string {
-  return new Date(new Date(`${isoDate}T00:00:00Z`).getTime() - days * 86_400_000)
-    .toISOString()
-    .slice(0, 10);
-}
-function valueOnOrBefore(obs: MacroObservation[], isoDate: string): MacroObservation | null {
-  let found: MacroObservation | null = null;
-  for (const o of obs) {
-    if (o.date <= isoDate) found = o;
-    else break;
-  }
-  return found;
-}
-function pctChange(now: number, then: number): number | null {
-  return then !== 0 ? ((now - then) / Math.abs(then)) * 100 : null;
 }
 
 /**
