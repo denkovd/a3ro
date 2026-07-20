@@ -8,13 +8,15 @@
 
    Live surfaces: P·01 Oil Tracker (featured), P·02 Gold Tracker,
    P·05 Bull Market Finder (whole-market, strategy lenses),
-   P·06 Regime Shift Finder (Darius-Dale GRID),
-   P·07 Thesis Lab (pressure test → scenarios → portfolio risk) and
+   P·06 Regime Shift Finder (Darius-Dale GRID) and
    P·08 Earnings Beat Leaderboard (surprise → streak → rank).
-   P·03 BTC renders as a module card in private preview — same card
-   grammar, asset-specific accent and signal trace.
    P·04 merged into P·05 (strategy lenses) — see
    bull-finder-unified-architecture.md.
+
+   ARCHIVED (hidden from main, not deleted — candidates for
+   remove/update later): P·03 BTC Tracker (module card def below,
+   MODULES kept empty to preserve the entry) and P·07 Thesis Lab
+   (import + render sites commented out below).
 
    TRAVERSE MATH — keep these three in sync when adding a card:
    • SURFACES = total cards (featured + module cards)
@@ -34,7 +36,8 @@ import OilTracker from "../projects/OilTracker";
 import GoldTracker from "../projects/GoldTracker";
 import BullFinder from "../projects/BullFinder";
 import RegimeShiftFinder from "../projects/RegimeShiftFinder";
-import ThesisLab from "../projects/ThesisLab";
+// ARCHIVED — Thesis Lab hidden from main modules, not deleted (see note above).
+// import ThesisLab from "../projects/ThesisLab";
 import EarningsBeat from "../projects/EarningsBeat";
 
 /* ── deterministic signal trace — seeded, so SSR and client agree ── */
@@ -60,7 +63,10 @@ const toPath = (vals: number[]) =>
     )
     .join(" ");
 
-/* ── preview modules rendered as cards; the rest are live components ── */
+/* ── preview modules rendered as cards; the rest are live components ──
+   ARCHIVED: BTC Tracker (P·03) hidden from main — kept here, commented,
+   as a candidate for remove/update later. MODULES stays empty (typed)
+   so the render map below still compiles unchanged.
 const MODULES = [
   {
     id: "P·03",
@@ -74,10 +80,22 @@ const MODULES = [
     trace: walk(5, 56, 0.16, 0.003),
   },
 ];
+*/
+const MODULES: {
+  id: string;
+  name: string;
+  accent: string;
+  desc: string;
+  detail: string;
+  stack: string;
+  footerMeta: string;
+  trace: number[];
+}[] = [];
 type Module = (typeof MODULES)[number];
 
-/* Featured Oil card + Gold + BTC preview + Bull Market Finder + Regime Shift + Thesis Lab + Earnings Beat */
-const SURFACES = MODULES.length + 6;
+/* Featured Oil card + Gold + Bull Market Finder + Regime Shift + Earnings Beat
+   (BTC Tracker and Thesis Lab archived — see notes above) */
+const SURFACES = MODULES.length + 5;
 /* 72vw featured + (SURFACES−1) × 62vw + 6vw gaps; travel ends with the
    last panel in frame: 248vw at 5 surfaces, +68vw per extra card. */
 const TRAVEL_VW = 248 + 68 * (SURFACES - 5);
@@ -291,7 +309,7 @@ function ModulesTraverse() {
               03 / Modules
             </p>
             <h2 className="max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
-              <MaskText>One platform. Seven intelligence surfaces.</MaskText>
+              <MaskText>One platform. Five intelligence surfaces.</MaskText>
             </h2>
           </div>
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--ink-3)]">
@@ -317,7 +335,9 @@ function ModulesTraverse() {
           ))}
           <BullFinder className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
           <RegimeShiftFinder className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
+          {/* ARCHIVED — Thesis Lab hidden from main, not deleted (see note at top of file).
           <ThesisLab className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
+          */}
           <EarningsBeat className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
         </motion.div>
       </div>
@@ -355,7 +375,7 @@ function ModulesStack() {
         03 / Modules
       </p>
       <h2 className="mb-16 max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)]">
-        <MaskText>One platform. Seven intelligence surfaces.</MaskText>
+        <MaskText>One platform. Five intelligence surfaces.</MaskText>
       </h2>
       <div className="flex flex-col gap-10">
         <Reveal>
@@ -373,9 +393,11 @@ function ModulesStack() {
         <Reveal delay={0.2}>
           <RegimeShiftFinder className="flex min-h-[560px] flex-col" />
         </Reveal>
+        {/* ARCHIVED — Thesis Lab hidden from main, not deleted (see note at top of file).
         <Reveal delay={0.25}>
           <ThesisLab className="flex min-h-[560px] flex-col" />
         </Reveal>
+        */}
         <Reveal delay={0.3}>
           <EarningsBeat className="flex min-h-[560px] flex-col" />
         </Reveal>
