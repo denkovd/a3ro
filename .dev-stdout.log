@@ -85,3 +85,5 @@
  ✓ Compiled in 170ms (622 modules)
  ✓ Compiled in 92ms (622 modules)
  ✓ Compiled in 123ms (622 modules)
+ ✓ Compiled /_not-found in 392ms (1236 modules)
+ GET / 404 in 478ms
