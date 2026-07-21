@@ -1,0 +1,100 @@
+{
+  "learner": "Daniel",
+  "project": "A3RO",
+  "mission": "Ship more reliable agentic workflows for A3RO; reduce token spend via architecture, not model swaps.",
+  "created": "2026-07-21",
+  "time_budget": "~2-3 hrs/week, few deep sessions",
+  "strengths": ["quantitative trading", "engineering"],
+  "gaps": ["rigorous software design", "large-scale agent harness design", "testing strategies for AFK agents"],
+  "baseline_audit": {
+    "date": "2026-07-21",
+    "findings": [
+      "20 files modified and uncommitted directly on main, no feature branch",
+      "Two stale agent branches with zero commits ahead of main: jarvis/fix-lint-fix-4, jarvis/fix-tsc-fix-3",
+      "No test framework present anywhere in repo (no jest/vitest/pytest, no *.test.* files)",
+      "No CI gate on push/PR; 5 existing GitHub workflows are all scheduled cron jobs that commit data to main without lint/typecheck/test checks",
+      "Stack: Next.js 14 / React 18 / TypeScript frontend, Python backend (module5-scan-pipeline), Postgres via pg",
+      "Multiple standalone architecture docs exist (bull-market-finder, bagholder-trigger-trade, earnings-beat-tracker) describing multi-module agent/pipeline designs"
+    ]
+  },
+  "success_criteria": [
+    "All changes land via branch + PR, never direct commit to main",
+    "Any agent-authored change revertable in under 2 minutes",
+    "At least one CI check (lint+typecheck minimum) blocks bad merges",
+    "One concrete before/after token-spend measurement tied to a named architectural change",
+    "jarvis/* stale branches resolved (merged, cherry-picked, or deleted with reason)"
+  ],
+  "curriculum": [
+    {
+      "week": 1,
+      "theme": "Git Hygiene & Reversibility",
+      "focus": ["knowledge", "skills"],
+      "knowledge": [
+        "Commit as unit of thought vs. unit of agent-turn",
+        "revert vs. reset vs. checkout and why revert is safe on shared history",
+        "Small diffs as a reliability technique, not a style preference"
+      ],
+      "skills": [
+        "Triage 20 uncommitted files into atomic commits on a branch",
+        "Resolve the two stale jarvis/* branches with documented reasoning",
+        "Practice a deliberate git revert to build the reflex",
+        "Adopt branch-naming + commit-message convention for agent-authored work"
+      ],
+      "wisdom_prompt": "What does 'small enough to revert confidently' mean for an A3RO change?",
+      "status": "not_started",
+      "notes": ""
+    },
+    {
+      "week": 2,
+      "theme": "Token Spend Diagnostics",
+      "focus": ["knowledge", "skills"],
+      "knowledge": [
+        "Where cost accumulates: context re-injection, tool-result echoing, sub-agent handoff payloads, retries",
+        "Expensive-because-hard vs. expensive-because-wasteful-harness"
+      ],
+      "skills": [
+        "Instrument one real workflow (Bull Market Finder or Earnings Beat pipeline) to log tokens per step",
+        "Build a step -> tokens in/out -> % of total table",
+        "Identify largest contributor and hypothesize why"
+      ],
+      "wisdom_prompt": "Is the biggest cost driver a context problem, a retry problem, or a decomposition problem?",
+      "status": "not_started",
+      "notes": ""
+    },
+    {
+      "week": 3,
+      "theme": "Testing Strategy for AFK Agents",
+      "focus": ["knowledge", "skills"],
+      "knowledge": [
+        "Risk-based test targeting for a zero-coverage codebase",
+        "Testing agent workflows: determinism, golden-file/snapshot comparisons, smoke tests for unattended cron jobs"
+      ],
+      "skills": [
+        "Write 3-5 tests around the highest-risk unattended path (scan pipeline or earnings backfill)",
+        "Add a CI workflow running lint+typecheck+tests on every push/PR",
+        "Intentionally break something small and confirm CI catches it"
+      ],
+      "wisdom_prompt": "What is your rule of thumb for 'needs a test before merge' vs 'safe to ship directly'?",
+      "status": "not_started",
+      "notes": ""
+    },
+    {
+      "week": 4,
+      "theme": "Architecture for Reliability & Token Efficiency",
+      "focus": ["knowledge", "wisdom"],
+      "knowledge": [
+        "Structural token-reduction patterns: caching context, summarizing instead of re-passing, checkpointed resumable steps",
+        "Orchestrator/worker vs. pipeline vs. single-agent-with-tools trade-offs for a multi-tracker system"
+      ],
+      "skills": [
+        "Apply one architectural change to the Week 2 workflow",
+        "Re-measure token spend and record the delta",
+        "Write a one-page ADR: problem, alternatives, choice, rationale"
+      ],
+      "wisdom_prompt": "Are you shipping without fear yet? What's the next cycle's mission?",
+      "status": "not_started",
+      "notes": ""
+    }
+  ],
+  "session_log": []
+}

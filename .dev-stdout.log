@@ -1,0 +1,87 @@
+
+> a3ro@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.5
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1438ms
+ ○ Compiling / ...
+ ✓ Compiled / in 1840ms (1222 modules)
+ GET / 200 in 2129ms
+ ✓ Compiled in 203ms (618 modules)
+ ○ Compiling /api/leaderboard/earnings-beats ...
+ ✓ Compiled /api/leaderboard/earnings-beats in 853ms (739 modules)
+ ✓ Compiled (748 modules)
+ GET /api/gold/latest 404 in 1190ms
+ GET /api/gold/latest 404 in 1192ms
+ GET /api/oil/macro 200 in 1200ms
+ GET /api/oil/macro 200 in 29ms
+ GET /api/gold/latest 404 in 26ms
+ GET /api/leaderboard/earnings-beats?limit=100 200 in 1250ms
+ GET /api/leaderboard/earnings-beats?limit=100 200 in 77ms
+ GET /api/oil/macro 200 in 45ms
+ GET /api/bull/latest?strategy=ml-dw 200 in 72ms
+ GET /api/bull/latest?strategy=ml-dw 200 in 1302ms
+ GET /api/bull/latest?strategy=ml-dw 200 in 1306ms
+ GET /api/leaderboard/earnings-beats?limit=100 200 in 57ms
+ GET /api/gold/latest 404 in 55ms
+ GET /api/oil/macro 200 in 27ms
+ GET /api/bull/latest?strategy=ml-dw 200 in 57ms
+ GET /api/leaderboard/earnings-beats?limit=100 200 in 43ms
+ GET / 200 in 125ms
+ GET /api/oil/macro 200 in 29ms
+ ✓ Compiled /Projects/Regime-Shift in 202ms (1363 modules)
+ GET /Projects/Regime-Shift 200 in 256ms
+ ✓ Compiled /api/oil/tape in 66ms (757 modules)
+ GET /api/oil/macro 200 in 188ms
+ GET /api/oil/macro 200 in 185ms
+ GET /api/oil/tape 200 in 192ms
+ GET /api/oil/tape 200 in 188ms
+ GET / 200 in 96ms
+ GET /api/gold/latest 404 in 50ms
+ GET /api/gold/latest 404 in 60ms
+ GET /api/bull/latest?strategy=ml-dw 200 in 83ms
+ GET /api/bull/latest?strategy=ml-dw 200 in 97ms
+ GET /api/oil/macro 200 in 98ms
+ GET /api/leaderboard/earnings-beats?limit=100 200 in 106ms
+ GET /api/oil/macro 200 in 31ms
+ GET /api/gold/latest 404 in 37ms
+ GET /api/oil/macro 200 in 38ms
+ GET /api/bull/latest?strategy=ml-dw 200 in 50ms
+ GET /api/leaderboard/earnings-beats?limit=100 200 in 58ms
+ GET /api/gold/latest 404 in 30ms
+ GET /api/oil/macro 200 in 21ms
+ GET /api/bull/latest?strategy=ml-dw 200 in 27ms
+ GET /api/leaderboard/earnings-beats?limit=100 200 in 34ms
+ GET /api/leaderboard/earnings-beats?limit=100 200 in 66ms
+ GET /Projects/Regime-Shift 200 in 54ms
+ GET /api/oil/tape 200 in 12ms
+ GET /api/oil/tape 200 in 13ms
+ GET /api/oil/macro 200 in 16ms
+ GET /api/oil/macro 200 in 14ms
+ ✓ Compiled in 468ms (1233 modules)
+ ✓ Compiled /api/leaderboard/earnings-beats in 188ms (746 modules)
+ ✓ Compiled (755 modules)
+ GET /api/gold/latest 404 in 382ms
+ GET /api/gold/latest 404 in 386ms
+ GET /api/bull/latest?strategy=ml-dw 200 in 402ms
+ GET /api/oil/macro 200 in 407ms
+ GET /api/bull/latest?strategy=ml-dw 200 in 414ms
+ GET /api/leaderboard/earnings-beats?limit=100 200 in 419ms
+ GET /api/oil/macro 200 in 16ms
+ GET /api/gold/latest 404 in 22ms
+ GET /api/oil/macro 200 in 22ms
+ GET /api/leaderboard/earnings-beats?limit=100 200 in 37ms
+ GET /api/bull/latest?strategy=ml-dw 200 in 75ms
+ GET /api/gold/latest 404 in 64ms
+ GET /api/oil/macro 200 in 59ms
+ GET /api/bull/latest?strategy=ml-dw 200 in 75ms
+ GET /api/leaderboard/earnings-beats?limit=100 200 in 104ms
+ GET /api/leaderboard/earnings-beats?limit=100 200 in 69ms
+ ✓ Compiled in 162ms (611 modules)
+ ✓ Compiled in 170ms (622 modules)
+ ✓ Compiled in 92ms (622 modules)
+ ✓ Compiled in 123ms (622 modules)
