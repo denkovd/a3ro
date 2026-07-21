@@ -9,8 +9,8 @@
    req/month, ~3/day) — GOLDAPI_KEY must stay a server-only env var
    (never NEXT_PUBLIC_*, never shipped to the browser bundle) and the
    ingest cycle (ingest/goldCycle.ts) self-guards to at most one call
-   per day. Deep history/changes come from FRED instead (fredGold.ts);
-   this adapter's only job is today's live price.
+   per day. Deep history/changes come from Yahoo Finance instead
+   (yahooGold.ts); this adapter's only job is today's live price.
 
    Not a BaseSource/OilPriceSource — that contract is oil-specific
    (Benchmark, PriceRecord, USD/bbl). This reuses the shared HTTP

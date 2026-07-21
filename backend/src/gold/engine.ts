@@ -5,18 +5,20 @@
    Two data sources feed this, both already fetched elsewhere in the
    cycle (ingest/goldCycle.ts) so nothing here does IO:
    - `history`: gold_prices, a daily-close series sourced entirely from
-     FRED's keyless GOLDAMGBD228NLBM (sources/fredGold.ts). Deep,
-     free, decades available after one backfill — this is what makes
-     1Y/5Y/10Y changes and trend/momentum/volatility live from day
-     one instead of after years of accumulation.
+     Yahoo Finance's keyless GC=F chart endpoint (sources/yahooGold.ts —
+     replaced FRED's GOLDAMGBD228NLBM after FRED discontinued that
+     series in 2022). Deep, free, decades available after one backfill
+     — this is what makes 1Y/5Y/10Y changes and trend/momentum/
+     volatility live from day one instead of after years of
+     accumulation.
    - `macroPanel`: the same FRED macro panel sources/fredMacro.ts
      already fetches for P·06/Macro Override (dollar_broad, rates_10y,
      inflation_breakeven) — reused here, not re-fetched.
    - `live`: an optional GoldAPI.io tick (sources/goldapi.ts), used
      ONLY for the headline price/asOf and today's % change (genuinely
-     live, vs FRED's daily close). Deliberately never blended into
+     live, vs the daily close). Deliberately never blended into
      `history` — settlement-series math (w1/y1/y5/y10, trend,
-     momentum, volatility) always reads the FRED series alone, so a
+     momentum, volatility) always reads the Yahoo series alone, so a
      missing/failed GoldAPI call degrades the headline gracefully
      without ever corrupting the deep history.
 
@@ -82,7 +84,7 @@ export interface GoldEngineSnapshot {
 
 /* ── changes (d1/w1/y1/y5/y10) ────────────────────────────────────
    d1 prefers the live GoldAPI tick's own chp (a genuine intraday
-   read); everything else always comes from the FRED history series,
+   read); everything else always comes from the Yahoo history series,
    never the live tick — so a day GoldAPI fails still yields correct
    w1/y1/y5/y10. */
 
@@ -110,8 +112,8 @@ export function computeGoldChanges(
 }
 
 /* ── headline price/asOf ──────────────────────────────────────────
-   Live tick wins when present (freshest); else the newest FRED
-   close, with a nominal London-fix asOf for that date. */
+   Live tick wins when present (freshest); else the newest Yahoo
+   close, with a nominal asOf for that date. */
 
 export function resolveHeadlinePrice(
   history: GoldPricePoint[],

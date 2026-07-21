@@ -13,7 +13,7 @@
 
 import { SourceError } from "../core/types";
 import { computeMacroPressure, computeMacroRegime } from "../macro/engine";
-import { fetchMacroPanel } from "../sources/fredMacro";
+import { fetchMacroPanel, MacroSeries } from "../sources/fredMacro";
 import { getDailySeries } from "../storage/priceRepo";
 import { upsertMacroSnapshot } from "../storage/macroRepo";
 import { Queryable } from "../storage/db";
@@ -26,6 +26,10 @@ export interface MacroCycleReport {
   diverging?: boolean;
   written: number;
   error?: string;
+  /** The fetched FRED panel, exposed so goldCycle.ts can reuse it
+   *  instead of re-fetching all seven series itself. Undefined if the
+   *  fetch failed. */
+  panel?: MacroSeries[];
 }
 
 /** WTI % change over ~`days` from daily_prices, or null if unavailable. */
@@ -78,6 +82,7 @@ export async function runMacroCycle(
       pressureScore: pressure.score,
       diverging: pressure.diverging,
       written,
+      panel,
     };
   } catch (e) {
     if (e instanceof SourceError) {

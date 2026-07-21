@@ -84,7 +84,7 @@ export interface GoldSnapshotRow {
 export async function upsertGoldSnapshot(
   db: Queryable,
   snapshot: GoldEngineSnapshot,
-  priceSource: "goldapi" | "fred",
+  priceSource: "goldapi" | "yahoo",
 ): Promise<number> {
   const res = await db.query(
     `insert into gold_snapshots

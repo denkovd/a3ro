@@ -94,14 +94,20 @@ export async function GET(request: Request) {
     } catch (e) {
       macro = { error: e instanceof Error ? e.message : String(e) };
     }
+    // Panel is internal plumbing for goldCycle below (avoids a second
+    // 7-series FRED fetch) — stripped from the JSON response, not
+    // meant to be part of the cron's public report.
+    const macroPanel = "panel" in macro ? macro.panel : undefined;
+    const macroForResponse: MacroCycleReport | { error: string } =
+      "panel" in macro ? { ...macro, panel: undefined } : macro;
 
-    // Gold Tracker (P·02 live wiring) — FRED deep history (always,
-    // keyless) + freshness-guarded GoldAPI live tick (100 req/month
-    // budget). Own cycle + tables, never folded into the oil macro
-    // half even though it reuses the same fetched macro panel.
+    // Gold Tracker (P·02 live wiring) — Yahoo Finance deep history
+    // (always, keyless) + freshness-guarded GoldAPI live tick (100
+    // req/month budget). Own cycle + tables, never folded into the
+    // oil macro half even though it reuses the same fetched macro panel.
     let gold: GoldCycleReport | { error: string };
     try {
-      gold = await runGoldCycle(db);
+      gold = await runGoldCycle(db, { macroPanel });
     } catch (e) {
       gold = { error: e instanceof Error ? e.message : String(e) };
     }
@@ -126,7 +132,7 @@ export async function GET(request: Request) {
       scores = { error: e instanceof Error ? e.message : String(e) };
     }
 
-    return Response.json({ ...report, corridors, baselines, seasonal, macro, gold, positioning, scores });
+    return Response.json({ ...report, corridors, baselines, seasonal, macro: macroForResponse, gold, positioning, scores });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return Response.json(

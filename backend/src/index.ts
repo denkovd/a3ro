@@ -223,7 +223,7 @@ export type { RankingDataEntry } from "./storage/earningsRepo";
 
 // Gold Tracker — FRED deep history + GoldAPI live tick, pure engine over
 // trend/momentum/volatility/usdPressure/realYieldPressure
-export { fetchGoldPriceSeries, GOLD_SERIES, GOLD_INCREMENTAL_LOOKBACK_DAYS, GOLD_BACKFILL_LOOKBACK_DAYS } from "./sources/fredGold";
+export { fetchGoldPriceSeries, GOLD_INCREMENTAL_LOOKBACK_DAYS, GOLD_BACKFILL_LOOKBACK_DAYS } from "./sources/yahooGold";
 export { fetchGoldSpot } from "./sources/goldapi";
 export type { GoldSpotTick } from "./sources/goldapi";
 export {

@@ -1,8 +1,8 @@
 /* ────────────────────────────────────────────────────────────────
-   One-time backfill of gold_prices from FRED's keyless GOLDAMGBD228NLBM
-   series (~15y of daily closes) — run once before the daily cron so
-   1Y/5Y/10Y changes and trend/momentum/volatility are live from day
-   one instead of after years of cron-only accumulation:
+   One-time backfill of gold_prices from Yahoo Finance's keyless GC=F
+   chart endpoint (~15y of daily closes) — run once before the daily
+   cron so 1Y/5Y/10Y changes and trend/momentum/volatility are live
+   from day one instead of after years of cron-only accumulation:
 
      cd backend && npx tsx scripts/backfill-gold.ts
 
@@ -13,15 +13,15 @@ import { ensureDatabaseUrl } from "./loadEnv";
 ensureDatabaseUrl();
 
 import { createDb } from "../src/storage/db";
-import { fetchGoldPriceSeries, GOLD_BACKFILL_LOOKBACK_DAYS } from "../src/sources/fredGold";
+import { fetchGoldPriceSeries, GOLD_BACKFILL_LOOKBACK_DAYS } from "../src/sources/yahooGold";
 import { upsertGoldPrices } from "../src/storage/goldRepo";
 
 async function main(): Promise<void> {
   const db = await createDb();
   const series = await fetchGoldPriceSeries({ lookbackDays: GOLD_BACKFILL_LOOKBACK_DAYS });
-  const written = await upsertGoldPrices(db, series.observations, "fred");
+  const written = await upsertGoldPrices(db, series.observations, "yahoo");
 
-  console.log(`Gold backfill · ${series.observations.length} FRED observations, ${written} written`);
+  console.log(`Gold backfill · ${series.observations.length} Yahoo observations, ${written} written`);
   if (series.observations.length > 0) {
     const first = series.observations[0];
     const last = series.observations[series.observations.length - 1];
