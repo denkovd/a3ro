@@ -4,13 +4,13 @@
    Invoked by Vercel Cron per vercel.json schedule ("0 6 * * *").
    The ingestion cycle is idempotent — re-running it is safe.
 
-   Order: price ingestion (load-bearing) → corridor metrics →
-   baseline gates → seasonal norms → macro layer → gold →
-   positioning → scores (best-effort). Scores also have a dedicated
-   cron at /api/cron/scores (06:10 UTC) so they never starve when
-   this 60s Hobby budget is spent on PortWatch/FRED/gold.
-   Each cycle runs in its own try/catch so a failure in one can
-   NEVER take down price ingestion or any other cycle.
+   Order (oil path first so the 60s Hobby budget can't be eaten by
+   gold before scores land):
+     price → corridors → baselines → seasonal → macro →
+     positioning → scores → gold (last; not required for oil scores).
+   Scores also have a dedicated cron at /api/cron/scores (06:10 UTC)
+   as a second line of defence. Each cycle is isolated so a failure
+   in one can NEVER take down price ingestion or any other cycle.
    The regime scan (Module 4) was retired from this cron — the
    macro-30 lens now lives in the GitHub Actions bull scan as the
    unified Bull Market Finder's `ml-dw` strategy (all strategy
@@ -104,19 +104,8 @@ export async function GET(request: Request) {
     const macroForResponse: MacroCycleReport | { error: string } =
       "panel" in macro ? { ...macro, panel: undefined } : macro;
 
-    // Gold Tracker (P·02 live wiring) — Yahoo Finance deep history
-    // (always, keyless) + freshness-guarded GoldAPI live tick (100
-    // req/month budget). Own cycle + tables, never folded into the
-    // oil macro half even though it reuses the same fetched macro panel.
-    let gold: GoldCycleReport | { error: string };
-    try {
-      gold = await runGoldCycle(db, { macroPanel });
-    } catch (e) {
-      gold = { error: e instanceof Error ? e.message : String(e) };
-    }
-
     // CFTC managed-money positioning (Macro Override's other half, P7)
-    // — its own cycle + table, never folded into the FRED macro half.
+    // — before scores so tape can include crowded-long/short context.
     let positioning: PositioningCycleReport | { error: string };
     try {
       positioning = await runPositioningCycle(db);
@@ -124,10 +113,9 @@ export async function GET(request: Request) {
       positioning = { error: e instanceof Error ? e.message : String(e) };
     }
 
-    // Composite scores - computed FROM the data the cycles above just
-    // wrote (prices -> spread; stocks/gates/seasonal -> Flow Stress,
-    // Tightness), so it runs last and in its own try/catch: a score
-    // failure must never fail ingestion.
+    // Composite scores — after oil inputs (prices/corridors/seasonal/
+    // macro/positioning), BEFORE gold so a slow gold fetch can't starve
+    // the oil intel rail. Dedicated /api/cron/scores is the safety net.
     let scores: ScoreCycleReport | { error: string };
     try {
       scores = await runScoreCycle(db);
@@ -135,7 +123,15 @@ export async function GET(request: Request) {
       scores = { error: e instanceof Error ? e.message : String(e) };
     }
 
-    return Response.json({ ...report, corridors, baselines, seasonal, macro: macroForResponse, gold, positioning, scores });
+    // Gold Tracker last — not on the oil score critical path.
+    let gold: GoldCycleReport | { error: string };
+    try {
+      gold = await runGoldCycle(db, { macroPanel });
+    } catch (e) {
+      gold = { error: e instanceof Error ? e.message : String(e) };
+    }
+
+    return Response.json({ ...report, corridors, baselines, seasonal, macro: macroForResponse, positioning, scores, gold });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return Response.json(

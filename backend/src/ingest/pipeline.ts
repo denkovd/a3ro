@@ -35,7 +35,13 @@ import {
  *  multi-day EIA poll (and backfills) land in daily_prices — not just
  *  the single newest observation period. */
 const DAILY_RESOLVE_LOOKBACK_DAYS = 45;
-import { getAlertState, getEnabledRules, insertAlertEvent, saveAlertState } from "../storage/alertRepo";
+import {
+  ensureDefaultAlertRules,
+  getAlertState,
+  getEnabledRules,
+  insertAlertEvent,
+  saveAlertState,
+} from "../storage/alertRepo";
 import { checkGate, noteFailure, noteSuccess, withRetry } from "./rateGate";
 import { DescriptorLookup, resolveDailyClose, resolveLatestQuote } from "./resolve";
 import { evaluateRule } from "../alerts/rules";
@@ -70,6 +76,13 @@ export async function runIngestionCycle(
     resolved: [],
     alertsFired: [],
   };
+
+  // Starter rules (docs/RULES.md §4) — no-op when already seeded.
+  try {
+    await ensureDefaultAlertRules(db);
+  } catch {
+    /* non-fatal: alerting is optional relative to price ingestion */
+  }
 
   const lookup: DescriptorLookup = (id) => {
     const s = allSources.find((x) => x.descriptor.id === id);

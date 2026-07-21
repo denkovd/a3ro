@@ -63,6 +63,7 @@ export {
 } from "./storage/scoreRepo";
 export {
   getUndeliveredAlertEvents, markAlertEventDelivered, getRecentAlertEvents,
+  ensureDefaultAlertRules,
 } from "./storage/alertRepo";
 export type { AlertEvent, AlertEventView } from "./storage/alertRepo";
 // site domain — pro-tier lead capture (app/api/leads), unrelated to price/corridor ingestion
