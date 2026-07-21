@@ -25,10 +25,16 @@ import {
   getLatestDailyPrice,
   getNewestObservations,
   getObservationsForPeriod,
+  getSettlementPeriods,
   insertObservations,
   upsertDailyPrice,
   upsertLatestQuote,
 } from "../storage/priceRepo";
+
+/** Re-resolve this many calendar days of settlements each cycle so a
+ *  multi-day EIA poll (and backfills) land in daily_prices — not just
+ *  the single newest observation period. */
+const DAILY_RESOLVE_LOOKBACK_DAYS = 45;
 import { getAlertState, getEnabledRules, insertAlertEvent, saveAlertState } from "../storage/alertRepo";
 import { checkGate, noteFailure, noteSuccess, withRetry } from "./rateGate";
 import { DescriptorLookup, resolveDailyClose, resolveLatestQuote } from "./resolve";
@@ -97,10 +103,13 @@ export async function runIngestionCycle(
   for (const b of benchmarks) {
     const obs = await getNewestObservations(db, b);
 
-    // 3a. daily closes: (re-)resolve every period seen among newest settlement obs
-    const periods = [...new Set(
-      obs.filter((r) => r.periodDate).map((r) => r.periodDate as string),
-    )];
+    // 3a. daily closes: re-resolve every settlement period in the lookback
+    // window (not only the single newest obs — EIA now returns a trailing
+    // multi-day window so missed cron days self-heal).
+    const from = new Date(now().getTime() - DAILY_RESOLVE_LOOKBACK_DAYS * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+    const periods = await getSettlementPeriods(db, b, from);
     let dailyUpserts = 0;
     for (const period of periods) {
       const periodObs = await getObservationsForPeriod(db, b, period);

@@ -5,9 +5,12 @@
    The ingestion cycle is idempotent — re-running it is safe.
 
    Order: price ingestion (load-bearing) → corridor metrics →
-   baseline gates → seasonal norms → macro layer → positioning →
-   scores. Each cycle runs in its own try/catch so a failure in one
-   can NEVER take down price ingestion or any other cycle.
+   baseline gates → seasonal norms → macro layer → gold →
+   positioning → scores (best-effort). Scores also have a dedicated
+   cron at /api/cron/scores (06:10 UTC) so they never starve when
+   this 60s Hobby budget is spent on PortWatch/FRED/gold.
+   Each cycle runs in its own try/catch so a failure in one can
+   NEVER take down price ingestion or any other cycle.
    The regime scan (Module 4) was retired from this cron — the
    macro-30 lens now lives in the GitHub Actions bull scan as the
    unified Bull Market Finder's `ml-dw` strategy (all strategy

@@ -91,23 +91,20 @@ describe("FredSource", () => {
     }
   });
 
-  test("missing API key throws auth SourceError", async () => {
+  test("missing API key soft-skips (empty result, no network call)", async () => {
     setupTest();
     try {
       delete process.env.FRED_API_KEY;
-      global.fetch = async () => new Response(JSON.stringify(fredFixture), { status: 200 });
+      let fetchCalled = false;
+      global.fetch = async () => {
+        fetchCalled = true;
+        return new Response(JSON.stringify(fredFixture), { status: 200 });
+      };
 
       const source = new FredSource();
-
-      await assert.rejects(
-        () => source.fetchLatest(["WTI"]),
-        (err: unknown) => {
-          if (err instanceof SourceError) {
-            return err.kind === "auth";
-          }
-          return false;
-        }
-      );
+      const records = await source.fetchLatest(["WTI"]);
+      assert.equal(records.length, 0);
+      assert.equal(fetchCalled, false);
     } finally {
       teardownTest();
     }

@@ -45,7 +45,7 @@
    longer-lookback historical-statistics queries against this endpoint.
 ──────────────────────────────────────────────────────────────── */
 
-import { SourceErrorKind } from "../core/types";
+import { SourceError, SourceErrorKind } from "../core/types";
 import { CorridorId, CorridorMetricRecord } from "../core/corridorTypes";
 import { CorridorBaseSource, CorridorSourceDescriptor } from "./CorridorSource";
 
@@ -57,6 +57,8 @@ const RESULT_RECORD_COUNT = 40;
 export function tonsToMegatons(mt: number): number {
   return mt / 1_000_000;
 }
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 interface ChokepointConfig {
   corridor: CorridorId;
@@ -112,11 +114,38 @@ export class PortWatchSource extends CorridorBaseSource {
 
   async fetchLatest(): Promise<CorridorMetricRecord[]> {
     const records: CorridorMetricRecord[] = [];
-    // Sequential is fine: two calls, weekly cadence, no rate pressure.
+    const failures: { corridor: string; err: SourceError }[] = [];
+    // Per-chokepoint isolation: one gate failing (timeout / 429 / shape
+    // drift) must not discard records already fetched for the others.
+    // Sequential + short pause stays polite to the public ArcGIS endpoint
+    // (corridor pipeline has no DB-backed rate gate yet).
+    const pauseMs = process.env.NODE_ENV === "test" ? 0 : 250;
     for (const cfg of CHOKEPOINTS) {
-      const rows = await this.request(cfg);
-      records.push(...this.rowsToRecords(cfg, rows));
-      // A chokepoint returning zero usable rows is not an error.
+      try {
+        const rows = await this.request(cfg);
+        records.push(...this.rowsToRecords(cfg, rows));
+        // A chokepoint returning zero usable rows is not an error.
+      } catch (e) {
+        const err =
+          e instanceof SourceError
+            ? e
+            : new SourceError(this.descriptor.id, "bad_payload", String(e), { cause: e });
+        failures.push({ corridor: cfg.corridor, err });
+      }
+      if (pauseMs > 0) await sleep(pauseMs);
+    }
+    // Only fail the whole source when NOTHING was written — partial
+    // success is the common case under flaky AIS endpoints. Preserve the
+    // first error's kind so callers still see bad_payload / rate_limited.
+    if (records.length === 0 && failures.length > 0) {
+      const first = failures[0].err;
+      const detail = failures
+        .map((f) => `${f.corridor}: ${f.err.message.slice(0, 120)}`)
+        .join(" | ");
+      this.fail(
+        first.kind,
+        failures.length === 1 ? first.message : `all chokepoints failed — ${detail}`,
+      );
     }
     return records;
   }

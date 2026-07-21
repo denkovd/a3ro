@@ -8,6 +8,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "ingest": "tsx scripts/run-ingest.ts",
+    "backfill:oil-prices": "tsx scripts/backfill-oil-prices.ts",
+    "run:scores": "tsx scripts/run-scores.ts",
     "migrate": "psql \"$DATABASE_URL\" -f migrations/001_init.sql",
     "migrate:corridors": "psql \"$DATABASE_URL\" -f migrations/002_corridors.sql",
     "migrate:leads": "psql \"$DATABASE_URL\" -f migrations/003_leads.sql",

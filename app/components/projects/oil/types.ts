@@ -36,7 +36,10 @@ export type BenchmarkRow = {
   id: Benchmark;
   title: string;
   price: number | null;
+  /** Fraction change vs prior daily close (not necessarily day-over-day). */
   changePct: number | null;
+  /** YYYY-MM-DD of the prior close used for changePct, when known. */
+  changeVsDate: string | null;
   statusText: string;
   statusColor: string;
   suspect: boolean;

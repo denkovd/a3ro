@@ -76,12 +76,17 @@ function benchStatus(q: LatestQuote | undefined): { text: string; color: string 
   }
 }
 
-function changePct(q: LatestQuote | undefined, series: DailyPrice[] | undefined): number | null {
+/** Live/settlement price vs the most recent daily close strictly before
+ *  the quote's UTC calendar day. Not day-over-day when settlements lag. */
+function changeVsPriorClose(
+  q: LatestQuote | undefined,
+  series: DailyPrice[] | undefined,
+): { pct: number; priorDate: string } | null {
   if (!q || !series || series.length === 0) return null;
   const observedDate = q.observedAt.slice(0, 10);
   const prior = [...series].reverse().find((p) => p.periodDate < observedDate);
   if (!prior || prior.price <= 0) return null;
-  return (q.price - prior.price) / prior.price;
+  return { pct: (q.price - prior.price) / prior.price, priorDate: prior.periodDate };
 }
 
 function buildSpread(scores: ScoreSnapshot[] | null): SpreadView | null {
@@ -256,11 +261,13 @@ function buildBenchmarks(
   return TRACKED.map((id) => {
     const q = quotes?.find((x) => x.benchmark === id);
     const st = benchStatus(q);
+    const ch = changeVsPriorClose(q, series[id]);
     return {
       id,
       title: BENCH_TITLE[id],
       price: q ? q.price : null,
-      changePct: changePct(q, series[id]),
+      changePct: ch?.pct ?? null,
+      changeVsDate: ch?.priorDate ?? null,
       statusText: st.text,
       statusColor: st.color,
       suspect: !!q?.suspect,
@@ -277,6 +284,8 @@ function feedClockFrom(quotes: LatestQuote[] | null): string | null {
   return isUtcToday(newest) ? formatUtcTime(newest) : formatUtcDateTime(newest);
 }
 
+const TAPE_POLL_MS = 60 * 60 * 1000; // match slow oil feed cycle
+
 function useTapeStance(): StanceView {
   const [stance, setStance] = useState<StanceView>({
     status: "loading",
@@ -288,8 +297,9 @@ function useTapeStance(): StanceView {
 
   useEffect(() => {
     let alive = true;
-    fetch("/api/oil/tape", { cache: "no-store" })
-      .then(async (res) => {
+    const apply = async () => {
+      try {
+        const res = await fetch("/api/oil/tape", { cache: "no-store" });
         const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
         if (!alive) return;
         if (!res.ok || typeof body.error === "string") {
@@ -314,12 +324,20 @@ function useTapeStance(): StanceView {
           headline: t.headline,
           coverage: t.coverage,
         });
-      })
-      .catch(() => {
+      } catch {
         if (alive) setStance((s) => ({ ...s, status: "error" }));
-      });
+      }
+    };
+
+    void apply();
+    const timer = setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      void apply();
+    }, TAPE_POLL_MS);
+
     return () => {
       alive = false;
+      clearInterval(timer);
     };
   }, []);
 

@@ -76,6 +76,11 @@ export class FredSource extends BaseSource {
     const supported = benchmarks.filter((b) => b in SERIES);
     if (supported.length === 0) return [];
 
+    // Soft-skip when the key is missing: returning [] is "no data this cycle"
+    // and does NOT trip the permanent auth-disable path. Hard auth failures
+    // (invalid key) still throw from requestObservations.
+    if (!this.apiKey) return [];
+
     // Request both series in parallel, sorted descending to get latest first.
     // (Gate on whether the caller actually asked for that benchmark, not on
     // the meaningless "series id string is a key of SERIES" check that was

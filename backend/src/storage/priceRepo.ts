@@ -76,6 +76,49 @@ export async function getObservationsForPeriod(
   return res.rows.map(rowToRecord);
 }
 
+/**
+ * Distinct market days that have settlement/historical observations for
+ * a benchmark, optionally bounded to period_date >= fromYmd. Used by the
+ * ingest cycle so a multi-day EIA poll re-resolves every day it wrote —
+ * not only the single newest (source, kind) row.
+ */
+export async function getSettlementPeriods(
+  db: Queryable,
+  benchmark: Benchmark,
+  fromYmd?: string,
+): Promise<string[]> {
+  const res = fromYmd
+    ? await db.query(
+        `select distinct period_date
+           from price_observations
+          where benchmark = $1
+            and period_date is not null
+            and period_date >= $2
+            and kind in ('settlement','historical')
+          order by period_date asc`,
+        [benchmark, fromYmd],
+      )
+    : await db.query(
+        `select distinct period_date
+           from price_observations
+          where benchmark = $1
+            and period_date is not null
+            and kind in ('settlement','historical')
+          order by period_date asc`,
+        [benchmark],
+      );
+  return res.rows.map((r) => {
+    const v = r.period_date;
+    if (v instanceof Date) {
+      const y = v.getFullYear();
+      const m = String(v.getMonth() + 1).padStart(2, "0");
+      const d = String(v.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+    return String(v).slice(0, 10);
+  });
+}
+
 /* ── resolved outputs ─────────────────────────────────────────── */
 
 export async function upsertDailyPrice(db: Queryable, p: DailyPrice): Promise<void> {
@@ -261,6 +304,20 @@ export async function recordSourceFailure(
       opts.cooldownUntil?.toISOString() ?? null,
       opts.disable ?? false,
     ],
+  );
+}
+
+/** Clear permanent disable + breaker counters (e.g. after fixing an API key). */
+export async function reenableSource(db: Queryable, sourceId: string): Promise<void> {
+  await db.query(
+    `insert into source_health (source_id) values ($1)
+     on conflict (source_id) do update
+       set disabled = false,
+           consecutive_failures = 0,
+           cooldown_until = null,
+           next_allowed_at = null,
+           updated_at = now()`,
+    [sourceId],
   );
 }
 

@@ -80,28 +80,36 @@ export class EiaSource extends BaseSource {
     super();
   }
 
+  /**
+   * How many calendar days of settlements to keep on each daily poll.
+   * Previously we kept only the single newest row per series — any day
+   * the cron missed was permanently lost from daily_prices. Returning a
+   * short trailing window self-heals gaps (idempotent upserts).
+   */
+  static readonly LATEST_LOOKBACK_DAYS = 21;
+
   async fetchLatest(benchmarks: Benchmark[]): Promise<PriceRecord[]> {
     const supported = benchmarks.filter((b) => b in SERIES);
     if (supported.length === 0) return [];
 
-    // One request covers all series; rows interleave by period desc,
-    // so ~6 periods × series is plenty to find each series' newest row.
+    // ~business-days-in-window × series, with slack for holidays/nulls.
+    // Rows arrive period-desc; we keep every finite row in the lookback.
+    const length = supported.length * EiaSource.LATEST_LOOKBACK_DAYS * 2;
     const url = this.buildUrl({
       series: supported.map((b) => SERIES[b]),
-      length: supported.length * 6,
+      length,
     });
     const rows = await this.request(url);
 
-    const newestBySeries = new Map<string, EiaRow>();
-    for (const row of rows) {
-      const prev = newestBySeries.get(row.series);
-      if (!prev || row.period > prev.period) newestBySeries.set(row.series, row);
-    }
+    const cutoff = new Date();
+    cutoff.setUTCDate(cutoff.getUTCDate() - EiaSource.LATEST_LOOKBACK_DAYS);
+    const cutoffYmd = cutoff.toISOString().slice(0, 10);
 
     const records: PriceRecord[] = [];
-    for (const [series, row] of newestBySeries) {
-      const benchmark = SERIES_TO_BENCHMARK[series];
+    for (const row of rows) {
+      const benchmark = SERIES_TO_BENCHMARK[row.series];
       if (!benchmark || !supported.includes(benchmark)) continue;
+      if (row.period < cutoffYmd) continue;
       const rec = this.rowToRecord(benchmark, row, "settlement");
       if (rec) records.push(rec);
     }

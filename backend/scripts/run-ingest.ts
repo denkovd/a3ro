@@ -1,6 +1,9 @@
 /* Manual/dev entrypoint: `npm run ingest` (needs DATABASE_URL + EIA_API_KEY).
-   Production scheduling (Vercel cron route or systemd timer) is deferred —
-   whatever the wrapper is, it should do exactly this and nothing more. */
+   Production scheduling is the Vercel cron at /api/cron/ingest. */
+
+import { ensureDatabaseUrl, ensureEnvVar } from "./loadEnv";
+ensureDatabaseUrl();
+ensureEnvVar("EIA_API_KEY");
 
 import { createDb } from "../src/storage/db";
 import { runIngestionCycle } from "../src/ingest/pipeline";

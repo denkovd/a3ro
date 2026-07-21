@@ -86,8 +86,12 @@ export async function noteFailure(
   }
 
   if (err.kind === "auth") {
+    // Permanent disable only for a truly bad key — not for "env not set"
+    // (common on a misconfigured deploy). Missing-key messages should be
+    // fixed by setting the secret, not by latching the breaker forever.
+    const missingKey = /is not set|missing|not configured/i.test(err.message);
     await recordSourceFailure(db, d.id, err.kind, err.message, {
-      disable: true,
+      disable: !missingKey,
       countsAsFailure: true,
     });
     return;

@@ -51,8 +51,18 @@ export default function BenchmarkStrip({
                       <span
                         className="font-mono text-[9px] tracking-[0.1em]"
                         style={{ color: b.changePct < 0 ? "var(--ink-3)" : "var(--ink-2)" }}
+                        title={
+                          b.changeVsDate
+                            ? `vs settlement close ${b.changeVsDate}`
+                            : "vs prior settlement close"
+                        }
                       >
                         {formatPctSigned(b.changePct)}
+                        {b.changeVsDate ? (
+                          <span className="ml-1 text-[8px] text-[var(--ink-3)]">
+                            vs {b.changeVsDate.slice(5)}
+                          </span>
+                        ) : null}
                       </span>
                     )}
                     {b.suspect && (
