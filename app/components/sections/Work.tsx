@@ -7,15 +7,13 @@
    with inner parallax.
 
    Live surfaces: P·01 Oil Tracker (featured), P·02 Gold Tracker,
-   P·05 Bull Market Finder (whole-market, strategy lenses),
+   P·03 BTC Tracker (location + flow globe), P·05 Bull Market Finder,
    P·06 Regime Shift Finder (Darius-Dale GRID) and
    P·08 Earnings Beat Leaderboard (surprise → streak → rank).
    P·04 merged into P·05 (strategy lenses) — see
    bull-finder-unified-architecture.md.
 
-   ARCHIVED (hidden from main, not deleted — candidates for
-   remove/update later): P·03 BTC Tracker (module card def below,
-   MODULES kept empty to preserve the entry) and P·07 Thesis Lab
+   ARCHIVED (hidden from main, not deleted): P·07 Thesis Lab
    (import + render sites commented out below).
 
    TRAVERSE MATH — keep these three in sync when adding a card:
@@ -34,6 +32,7 @@ import {
 import { MaskText, Reveal, useFinePointer } from "../motion";
 import OilTracker from "../projects/OilTracker";
 import GoldTracker from "../projects/GoldTracker";
+import BtcTracker from "../projects/BtcTracker";
 import BullFinder from "../projects/BullFinder";
 import RegimeShiftFinder from "../projects/RegimeShiftFinder";
 // ARCHIVED — Thesis Lab hidden from main modules, not deleted (see note above).
@@ -63,24 +62,8 @@ const toPath = (vals: number[]) =>
     )
     .join(" ");
 
-/* ── preview modules rendered as cards; the rest are live components ──
-   ARCHIVED: BTC Tracker (P·03) hidden from main — kept here, commented,
-   as a candidate for remove/update later. MODULES stays empty (typed)
-   so the render map below still compiles unchanged.
-const MODULES = [
-  {
-    id: "P·03",
-    name: "BTC Tracker",
-    accent: "#e0873a",
-    desc: "Digital asset intelligence — price action, liquidity, and structural signals.",
-    detail:
-      "Tracking momentum, sentiment, and structural risk across the bitcoin market.",
-    stack: "BTC/USD · Funding · Liquidity depth",
-    footerMeta: "Digital asset intelligence — private preview",
-    trace: walk(5, 56, 0.16, 0.003),
-  },
-];
-*/
+/* Static placeholder module cards (none live today). Live components
+   are mounted explicitly below — Oil, Gold, BTC, Bull, Regime, Earnings. */
 const MODULES: {
   id: string;
   name: string;
@@ -93,9 +76,9 @@ const MODULES: {
 }[] = [];
 type Module = (typeof MODULES)[number];
 
-/* Featured Oil card + Gold + Bull Market Finder + Regime Shift + Earnings Beat
-   (BTC Tracker and Thesis Lab archived — see notes above) */
-const SURFACES = MODULES.length + 5;
+/* Oil + Gold + BTC + Bull + Regime Shift + Earnings Beat
+   (Thesis Lab archived — see notes above) */
+const SURFACES = MODULES.length + 6;
 /* 72vw featured + (SURFACES−1) × 62vw + 6vw gaps; travel ends with the
    last panel in frame: 248vw at 5 surfaces, +68vw per extra card. */
 const TRAVEL_VW = 248 + 68 * (SURFACES - 5);
@@ -301,7 +284,7 @@ function ModulesTraverse() {
   const counterText = useTransform(counter, (v) => String(Math.round(v)).padStart(2, "0"));
 
   return (
-    <div ref={ref} className="relative h-[840vh]">
+    <div ref={ref} className="relative h-[960vh]">
       <div className="sticky top-0 flex h-[100svh] flex-col justify-center overflow-hidden">
         <div className="mx-auto mb-10 flex w-full max-w-6xl items-end justify-between px-10">
           <div>
@@ -309,7 +292,7 @@ function ModulesTraverse() {
               03 / Modules
             </p>
             <h2 className="max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
-              <MaskText>One platform. Five intelligence surfaces.</MaskText>
+              <MaskText>One platform. Six intelligence surfaces.</MaskText>
             </h2>
           </div>
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--ink-3)]">
@@ -324,11 +307,12 @@ function ModulesTraverse() {
         >
           <OilTracker className="h-[62svh] w-[72vw] shrink-0" />
           <GoldTracker className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
+          <BtcTracker className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
           {MODULES.map((m, i) => (
             <ModuleFrame
               key={m.id}
               module={m}
-              index={i + 2}
+              index={i + 3}
               innerX={innerX}
               className="flex h-[52svh] w-[62vw] shrink-0 flex-col"
             />
@@ -375,7 +359,7 @@ function ModulesStack() {
         03 / Modules
       </p>
       <h2 className="mb-16 max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)]">
-        <MaskText>One platform. Five intelligence surfaces.</MaskText>
+        <MaskText>One platform. Six intelligence surfaces.</MaskText>
       </h2>
       <div className="flex flex-col gap-10">
         <Reveal>
@@ -384,8 +368,11 @@ function ModulesStack() {
         <Reveal delay={0.05}>
           <GoldTracker className="flex min-h-[560px] flex-col" />
         </Reveal>
+        <Reveal delay={0.1}>
+          <BtcTracker className="flex min-h-[560px] flex-col" />
+        </Reveal>
         {MODULES.map((m, i) => (
-          <StackedModule key={m.id} module={m} index={i + 2} />
+          <StackedModule key={m.id} module={m} index={i + 3} />
         ))}
         <Reveal delay={0.15}>
           <BullFinder className="flex min-h-[560px] flex-col" />
