@@ -1,6 +1,6 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
-   A3RO Intelligence — Regime Shift Finder · homepage module card (P·06)
+   A3RO Intelligence — Regime · homepage module card (P·06)
    The Darius-Dale-style GRID: growth × inflation on a rate-of-change
    basis → one of four quadrants. Reads /api/oil/macro via
    useMacroSnapshot; honest states (cycle pending / feed unreachable)
@@ -39,7 +39,7 @@ export default function RegimeShiftFinder({ className = "" }: { className?: stri
   return (
     <a
       href={ROUTE}
-      aria-label="Regime Shift Finder — Darius-Dale-style macro regime, open module"
+      aria-label="Regime — Darius-Dale-style macro regime, open module"
       className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-sm hairline bg-[var(--depth-1)] transition-colors duration-[var(--dur-base)] hover:border-[var(--line-2)] ${className}`}
     >
       <div className="relative flex-1 overflow-hidden" style={{ minHeight: 300 }}>
@@ -52,7 +52,7 @@ export default function RegimeShiftFinder({ className = "" }: { className?: stri
             A3RO Intelligence
           </p>
           <h3 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--ink)] md:text-3xl">
-            Regime Shift Finder
+            Regime
           </h3>
           <p className="mt-3 hidden text-[13px] leading-relaxed text-[var(--ink-2)] md:block">
             Top-down macro regime — growth × inflation on a rate-of-change basis.
@@ -104,7 +104,7 @@ export default function RegimeShiftFinder({ className = "" }: { className?: stri
       {/* card footer — directory grammar */}
       <div className="flex items-baseline justify-between gap-4 px-5 py-4 hairline-t">
         <h3 className="text-sm font-medium text-[var(--ink)]">
-          A3RO Intelligence — Regime Shift Finder
+          A3RO Intelligence — Regime
         </h3>
         <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
           Darius-Dale GRID · macro

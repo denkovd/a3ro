@@ -1,15 +1,16 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
-   Modules — a pinned lateral traverse across the platform's seven
+   Modules — a pinned lateral traverse across the platform's four
    intelligence surfaces. On desktop the section pins and vertical
    scroll drives horizontal travel, like moving along a corridor
    of monitors. On touch/mobile it degrades to a vertical stack
    with inner parallax.
 
-   Live surfaces: P·01 Oil Tracker (featured), P·02 Gold Tracker,
-   P·03 BTC Tracker (location + flow globe), P·05 Bull Market Finder,
-   P·06 Regime Shift Finder (Darius-Dale GRID) and
-   P·08 Earnings Beat Leaderboard (surprise → streak → rank).
+   Live surfaces: P·05 Trend Finder (featured, whole-market bullish-
+   state screener), P·06 Regime (Darius-Dale GRID), P·08 Earnings
+   Beat Leaderboard (surprise → streak → rank), and Commodity Watch —
+   a tabbed card merging P·01 Oil Tracker, P·02 Gold Tracker and P·03
+   BTC Tracker (each keeps its own route/id, switched via tabs).
    P·04 merged into P·05 (strategy lenses) — see
    bull-finder-unified-architecture.md.
 
@@ -30,14 +31,12 @@ import {
   type MotionValue,
 } from "framer-motion";
 import { MaskText, Reveal, useFinePointer } from "../motion";
-import OilTracker from "../projects/OilTracker";
-import GoldTracker from "../projects/GoldTracker";
-import BtcTracker from "../projects/BtcTracker";
 import BullFinder from "../projects/BullFinder";
 import RegimeShiftFinder from "../projects/RegimeShiftFinder";
+import EarningsBeat from "../projects/EarningsBeat";
 // ARCHIVED — Thesis Lab hidden from main modules, not deleted (see note above).
 // import ThesisLab from "../projects/ThesisLab";
-import EarningsBeat from "../projects/EarningsBeat";
+import CommodityWatch from "../projects/CommodityWatch";
 
 /* ── deterministic signal trace — seeded, so SSR and client agree ── */
 function walk(seed: number, n: number, vol: number, drift: number): number[] {
@@ -76,9 +75,9 @@ const MODULES: {
 }[] = [];
 type Module = (typeof MODULES)[number];
 
-/* Oil + Gold + BTC + Bull + Regime Shift + Earnings Beat
+/* Trend Finder + Regime + Earnings Beat + Commodity Watch
    (Thesis Lab archived — see notes above) */
-const SURFACES = MODULES.length + 6;
+const SURFACES = MODULES.length + 4;
 /* 72vw featured + (SURFACES−1) × 62vw + 6vw gaps; travel ends with the
    last panel in frame: 248vw at 5 surfaces, +68vw per extra card. */
 const TRAVEL_VW = 248 + 68 * (SURFACES - 5);
@@ -284,7 +283,7 @@ function ModulesTraverse() {
   const counterText = useTransform(counter, (v) => String(Math.round(v)).padStart(2, "0"));
 
   return (
-    <div ref={ref} className="relative h-[960vh]">
+    <div ref={ref} className="relative h-[640vh]">
       <div className="sticky top-0 flex h-[100svh] flex-col justify-center overflow-hidden">
         <div className="mx-auto mb-10 flex w-full max-w-6xl items-end justify-between px-10">
           <div>
@@ -292,7 +291,7 @@ function ModulesTraverse() {
               03 / Modules
             </p>
             <h2 className="max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
-              <MaskText>One platform. Six intelligence surfaces.</MaskText>
+              <MaskText>One platform. Four intelligence surfaces.</MaskText>
             </h2>
           </div>
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--ink-3)]">
@@ -305,9 +304,9 @@ function ModulesTraverse() {
           style={{ x }}
           className="flex items-center gap-[6vw] pl-[calc(max((100vw-72rem)/2,0px)+2.5rem)] will-change-transform"
         >
-          <OilTracker className="h-[62svh] w-[72vw] shrink-0" />
-          <GoldTracker className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
-          <BtcTracker className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
+          <BullFinder className="h-[62svh] w-[72vw] shrink-0" />
+          <RegimeShiftFinder className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
+          <EarningsBeat className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
           {MODULES.map((m, i) => (
             <ModuleFrame
               key={m.id}
@@ -317,12 +316,10 @@ function ModulesTraverse() {
               className="flex h-[52svh] w-[62vw] shrink-0 flex-col"
             />
           ))}
-          <BullFinder className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
-          <RegimeShiftFinder className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
           {/* ARCHIVED — Thesis Lab hidden from main, not deleted (see note at top of file).
           <ThesisLab className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
           */}
-          <EarningsBeat className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
+          <CommodityWatch className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
         </motion.div>
       </div>
     </div>
@@ -359,34 +356,28 @@ function ModulesStack() {
         03 / Modules
       </p>
       <h2 className="mb-16 max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)]">
-        <MaskText>One platform. Six intelligence surfaces.</MaskText>
+        <MaskText>One platform. Four intelligence surfaces.</MaskText>
       </h2>
       <div className="flex flex-col gap-10">
         <Reveal>
-          <OilTracker className="min-h-[560px] md:min-h-[620px]" />
+          <BullFinder className="min-h-[560px] md:min-h-[620px]" />
         </Reveal>
         <Reveal delay={0.05}>
-          <GoldTracker className="flex min-h-[560px] flex-col" />
+          <RegimeShiftFinder className="flex min-h-[560px] flex-col" />
         </Reveal>
         <Reveal delay={0.1}>
-          <BtcTracker className="flex min-h-[560px] flex-col" />
+          <EarningsBeat className="flex min-h-[560px] flex-col" />
         </Reveal>
         {MODULES.map((m, i) => (
           <StackedModule key={m.id} module={m} index={i + 3} />
         ))}
-        <Reveal delay={0.15}>
-          <BullFinder className="flex min-h-[560px] flex-col" />
-        </Reveal>
-        <Reveal delay={0.2}>
-          <RegimeShiftFinder className="flex min-h-[560px] flex-col" />
-        </Reveal>
         {/* ARCHIVED — Thesis Lab hidden from main, not deleted (see note at top of file).
-        <Reveal delay={0.25}>
+        <Reveal delay={0.15}>
           <ThesisLab className="flex min-h-[560px] flex-col" />
         </Reveal>
         */}
-        <Reveal delay={0.3}>
-          <EarningsBeat className="flex min-h-[560px] flex-col" />
+        <Reveal delay={0.15}>
+          <CommodityWatch className="flex min-h-[560px] flex-col" />
         </Reveal>
       </div>
     </div>
