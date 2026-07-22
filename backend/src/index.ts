@@ -241,3 +241,15 @@ export {
 export type { GoldSnapshotRow } from "./storage/goldRepo";
 export { runGoldCycle } from "./ingest/goldCycle";
 export type { GoldCycleReport } from "./ingest/goldCycle";
+export { runGoldFlowCycle } from "./ingest/goldFlowCycle";
+export type { GoldFlowCycleReport } from "./ingest/goldFlowCycle";
+export {
+  upsertGoldFlowMetrics, getLatestGoldFlowMetrics, getGoldFlowMetricSeries,
+} from "./storage/goldFlowRepo";
+export type { GoldFlowMetricInput } from "./storage/goldFlowRepo";
+export type { GoldFlowMetricRow, GoldLocusId, GoldFlowMetricId } from "./gold/flowTypes";
+export { GOLD_LOCI, GOLD_FLOW_METRICS, isGoldLocusId } from "./gold/flowTypes";
+export { fetchWgcEtfHoldings, parseWgcHoldingsChart, wgcHoldingsToMetrics } from "./sources/wgcEtf";
+export {
+  fetchComexGoldStocks, parseComexGoldStocksXls, comexReadingToMetrics,
+} from "./sources/comexGoldStocks";

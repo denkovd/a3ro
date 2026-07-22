@@ -138,8 +138,10 @@ export function createHttpGoldProvider(
 }
 
 export function getGoldProvider(): GoldDataProvider {
-  const url = process.env.NEXT_PUBLIC_GOLD_API_URL;
-  return url ? createHttpGoldProvider(url) : mockGoldProvider;
+  /* Prefer explicit env; else try the in-app snapshot API; mock only as
+     final fallback (SSR baseline still uses MOCK_SNAPSHOT for hydration). */
+  const url = process.env.NEXT_PUBLIC_GOLD_API_URL ?? "/api/gold/latest";
+  return createHttpGoldProvider(url);
 }
 
 /* ── hook: the card's single data entry point ──
@@ -153,11 +155,12 @@ export function useGoldSnapshot(): GoldSnapshot {
     provider
       .getSnapshot()
       .then((s) => alive && setSnap(s))
-      .catch(() => {}); // keep last good snapshot on failure
-    const un = provider.subscribe?.((s) => alive && setSnap(s));
+      .catch(() => {
+        /* API missing or empty — keep mock baseline, do not simulate drift */
+      });
+    /* No mock subscribe drift when using the live HTTP provider. */
     return () => {
       alive = false;
-      un?.();
     };
   }, []);
   return snap;

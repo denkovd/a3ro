@@ -25,12 +25,12 @@
 import {
   createDb, runIngestionCycle, runCorridorCycle, runBaselineCycle,
   runSeasonalCycle, runMacroCycle, runPositioningCycle, runScoreCycle,
-  runGoldCycle,
+  runGoldCycle, runGoldFlowCycle,
 } from "@a3ro/oil-backend";
 import type {
   CorridorCycleReport, BaselineCycleReport, SeasonalCycleReport,
   MacroCycleReport, PositioningCycleReport, ScoreCycleReport,
-  GoldCycleReport,
+  GoldCycleReport, GoldFlowCycleReport,
 } from "@a3ro/oil-backend";
 
 export const runtime = "nodejs";
@@ -131,7 +131,26 @@ export async function GET(request: Request) {
       gold = { error: e instanceof Error ? e.message : String(e) };
     }
 
-    return Response.json({ ...report, corridors, baselines, seasonal, macro: macroForResponse, positioning, scores, gold });
+    // Gold stock/flow (COMEX warehouse + WGC ETF holdings) — after price
+    // gold; isolated so a blocked CME host cannot fail the rest of cron.
+    let goldFlow: GoldFlowCycleReport | { error: string };
+    try {
+      goldFlow = await runGoldFlowCycle(db);
+    } catch (e) {
+      goldFlow = { error: e instanceof Error ? e.message : String(e) };
+    }
+
+    return Response.json({
+      ...report,
+      corridors,
+      baselines,
+      seasonal,
+      macro: macroForResponse,
+      positioning,
+      scores,
+      gold,
+      goldFlow,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return Response.json(

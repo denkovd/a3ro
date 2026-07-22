@@ -14,6 +14,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import OilTrackerPreview from "../../components/projects/OilTrackerPreview";
 import { AMBER_CSS, OT_SESSION, type OTView } from "../../components/projects/oilTrackerShared";
 import { ORANGE_CSS, BT_ROUTE } from "../../components/projects/btcTrackerShared";
+import { GOLD_CSS, GT_ROUTE } from "../../components/projects/goldTrackerShared";
 
 /* the heavy globe engine — loaded only on this route, after arrival */
 const OilTrackerCore = dynamic(() => import("../../components/projects/OilTrackerCore"), {
@@ -129,12 +130,14 @@ export default function OilTrackerView() {
             >
               Oil
             </span>
-            <span
-              className="cursor-not-allowed px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)] opacity-50"
-              title="Gold surface reserved"
+            <a
+              href={GT_ROUTE}
+              className="px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em] transition-colors hover:opacity-100"
+              style={{ color: GOLD_CSS, opacity: 0.55 }}
+              title="Open Gold Tracker"
             >
               Gold
-            </span>
+            </a>
             <a
               href={BT_ROUTE}
               className="px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em] transition-colors hover:opacity-100"

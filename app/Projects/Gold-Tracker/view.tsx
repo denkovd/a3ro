@@ -1,34 +1,34 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
-   /Projects/BTC-Tracker — fullscreen experience shell
-   Same handoff pattern as Oil: preview → lazy core, Esc → index.
+   /Projects/Gold-Tracker — fullscreen experience shell
+   Same handoff pattern as Oil/BTC: preview → lazy core, Esc → index.
 ──────────────────────────────────────────────────────────────── */
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
-import BtcTrackerPreview from "../../components/projects/BtcTrackerPreview";
+import GoldTrackerPreview from "../../components/projects/GoldTrackerPreview";
 import {
-  ORANGE_CSS,
-  BT_SESSION,
-  BT_ATMOSPHERE,
-  type BTView,
-} from "../../components/projects/btcTrackerShared";
+  GOLD_CSS,
+  GT_SESSION,
+  GT_ATMOSPHERE,
+  type GTView,
+} from "../../components/projects/goldTrackerShared";
 import { AMBER_CSS, OT_ROUTE } from "../../components/projects/oilTrackerShared";
-import { GOLD_CSS, GT_ROUTE } from "../../components/projects/goldTrackerShared";
+import { ORANGE_CSS, BT_ROUTE } from "../../components/projects/btcTrackerShared";
 
-const BtcTrackerCore = dynamic(
-  () => import("../../components/projects/BtcTrackerCore"),
+const GoldTrackerCore = dynamic(
+  () => import("../../components/projects/GoldTrackerCore"),
   { ssr: false, loading: () => null },
 );
 
-function readArrival(): BTView | null {
+function readArrival(): GTView | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = sessionStorage.getItem(BT_SESSION);
+    const raw = sessionStorage.getItem(GT_SESSION);
     if (!raw) return null;
-    sessionStorage.removeItem(BT_SESSION);
-    const p = JSON.parse(raw) as { v: BTView | null; ts: number };
+    sessionStorage.removeItem(GT_SESSION);
+    const p = JSON.parse(raw) as { v: GTView | null; ts: number };
     if (!p.v || Date.now() - p.ts > 15000) return null;
     return p.v;
   } catch {
@@ -36,11 +36,11 @@ function readArrival(): BTView | null {
   }
 }
 
-export default function BtcTrackerView() {
+export default function GoldTrackerView() {
   const router = useRouter();
   const reduced = useReducedMotion();
   const [mounted, setMounted] = useState(false);
-  const [arrive, setArrive] = useState<BTView | null>(null);
+  const [arrive, setArrive] = useState<GTView | null>(null);
   const [coreReady, setCoreReady] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [leaving, setLeaving] = useState(false);
@@ -75,11 +75,11 @@ export default function BtcTrackerView() {
         if (leaving) router.push("/#modules");
       }}
     >
-      <div aria-hidden className="absolute inset-0" style={{ background: BT_ATMOSPHERE }} />
+      <div aria-hidden className="absolute inset-0" style={{ background: GT_ATMOSPHERE }} />
 
       {mounted && arrive && showPreview && (
         <div className="absolute inset-0">
-          <BtcTrackerPreview initialView={arrive} />
+          <GoldTrackerPreview initialView={arrive} />
         </div>
       )}
 
@@ -90,7 +90,7 @@ export default function BtcTrackerView() {
           animate={{ opacity: coreReady ? 1 : 0 }}
           transition={{ duration: 0.45, ease: "easeOut" }}
         >
-          <BtcTrackerCore
+          <GoldTrackerCore
             className="h-full w-full"
             initialView={arrive}
             skipIntro={!!arrive}
@@ -105,7 +105,7 @@ export default function BtcTrackerView() {
           <button
             onClick={leave}
             className="sweep shrink-0 font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-2)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]"
-            aria-label="Close BTC Tracker and return to the index"
+            aria-label="Close Gold Tracker and return to the index"
           >
             ← Index
           </button>
@@ -127,21 +127,21 @@ export default function BtcTrackerView() {
             >
               Oil
             </a>
-            <a
-              href={GT_ROUTE}
-              className="px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em] transition-colors hover:opacity-100"
-              style={{ color: GOLD_CSS, opacity: 0.55 }}
-              title="Open Gold Tracker"
-            >
-              Gold
-            </a>
             <span
               className="px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em]"
-              style={{ color: ORANGE_CSS }}
+              style={{ color: GOLD_CSS }}
               aria-current="page"
             >
-              BTC
+              Gold
             </span>
+            <a
+              href={BT_ROUTE}
+              className="px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em] transition-colors hover:opacity-100"
+              style={{ color: ORANGE_CSS, opacity: 0.55 }}
+              title="Open BTC Tracker"
+            >
+              BTC
+            </a>
           </nav>
         </div>
         <p className="flex shrink-0 items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
@@ -149,7 +149,7 @@ export default function BtcTrackerView() {
             <motion.span
               aria-hidden
               className="inline-block h-[5px] w-[5px] rounded-full"
-              style={{ background: ORANGE_CSS }}
+              style={{ background: GOLD_CSS }}
               animate={{ opacity: [1, 0.25, 1] }}
               transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
             />
@@ -157,17 +157,17 @@ export default function BtcTrackerView() {
             <span
               aria-hidden
               className="inline-block h-[5px] w-[5px] rounded-full"
-              style={{ background: ORANGE_CSS }}
+              style={{ background: GOLD_CSS }}
             />
           )}
-          <span className="hidden sm:inline">Terminal · location & flow</span>
+          <span className="hidden sm:inline">Terminal · mines · holders · flows</span>
           <span className="sm:hidden">Live</span>
         </p>
       </header>
 
       <footer className="pointer-events-none absolute inset-x-0 bottom-0 z-20 hidden h-10 items-center justify-between border-t border-[var(--line)] bg-[rgba(6,7,7,0.55)] px-6 backdrop-blur-md md:flex md:px-10">
         <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-          P·03 — BTC Tracker
+          P·02 — Gold Tracker
         </p>
         <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
           Illustrative routes · live data where shown · not investment advice

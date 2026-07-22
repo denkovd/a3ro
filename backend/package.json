@@ -35,12 +35,15 @@
     "run:macro": "tsx scripts/run-macro.ts",
     "backfill:gold": "tsx scripts/backfill-gold.ts",
     "run:gold": "tsx scripts/run-gold.ts",
+    "run:gold-flow": "tsx scripts/run-gold-flow.ts",
+    "migrate:gold-flow": "tsx scripts/migrate.ts migrations/018_gold_flow.sql",
     "run:earnings-weekly": "tsx scripts/run-earnings-weekly.ts",
     "backfill:earnings": "tsx scripts/run-earnings-backfill.ts",
     "test": "tsx --test tests/**/*.test.ts"
   },
   "dependencies": {
-    "pg": "^8.12.0"
+    "pg": "^8.12.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^20",
