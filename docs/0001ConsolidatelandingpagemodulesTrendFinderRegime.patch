@@ -1,0 +1,1014 @@
+From f732f1293b085d8cb1c603a67adc809d6370538d Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 22 Jul 2026 09:26:13 +0000
+Subject: [PATCH] Consolidate landing page modules: Trend Finder, Regime,
+ Commodity Watch
+
+Renames Bull Market Finder to Trend Finder (now featured/1st) and Regime
+Shift Finder to Regime (2nd), per the repo's existing display-label-only
+rename convention (routes/APIs/P-numbers untouched). Merges the Oil, Gold,
+and BTC Tracker homepage cards into one tabbed Commodity Watch card (4th),
+reusing each asset's existing preview component, route, and accent while
+dropping the three redundant standalone cards. Earnings Beat Leaderboard
+moves to 3rd. Updates Work.tsx traverse math/headline for four surfaces.
+---
+ app/components/projects/BtcTracker.tsx        | 146 ----------
+ app/components/projects/BullFinder.tsx        |   8 +-
+ app/components/projects/CommodityWatch.tsx    | 275 ++++++++++++++++++
+ app/components/projects/GoldTracker.tsx       | 170 -----------
+ app/components/projects/OilTracker.tsx        | 149 ----------
+ app/components/projects/RegimeShiftFinder.tsx |   8 +-
+ app/components/sections/Work.tsx              |  55 ++--
+ 7 files changed, 306 insertions(+), 505 deletions(-)
+ delete mode 100644 app/components/projects/BtcTracker.tsx
+ create mode 100644 app/components/projects/CommodityWatch.tsx
+ delete mode 100644 app/components/projects/GoldTracker.tsx
+ delete mode 100644 app/components/projects/OilTracker.tsx
+
+diff --git a/app/components/projects/BtcTracker.tsx b/app/components/projects/BtcTracker.tsx
+deleted file mode 100644
+index fd1dba9..0000000
+--- a/app/components/projects/BtcTracker.tsx
++++ /dev/null
+@@ -1,146 +0,0 @@
+-"use client";
+-/* ────────────────────────────────────────────────────────────────
+-   A3RO Intelligence — BTC Tracker · homepage teaser (P·03)
+-   Lightweight card: orange-themed preview globe. Expands into
+-   /Projects/BTC-Tracker. Never imports BtcTrackerCore.
+-──────────────────────────────────────────────────────────────── */
+-import { useEffect, useRef, useState } from "react";
+-import { createPortal } from "react-dom";
+-import { useRouter } from "next/navigation";
+-import { motion, useReducedMotion } from "framer-motion";
+-import { EASE_INOUT } from "../motion";
+-import BtcTrackerPreview from "./BtcTrackerPreview";
+-import {
+-  ORANGE_CSS,
+-  BT_ROUTE,
+-  BT_SESSION,
+-  BT_ATMOSPHERE,
+-  type BTView,
+-} from "./btcTrackerShared";
+-
+-type Box = { top: number; left: number; width: number; height: number; vw: number; vh: number };
+-
+-export default function BtcTracker({ className = "" }: { className?: string }) {
+-  const router = useRouter();
+-  const reduced = useReducedMotion();
+-  const cardRef = useRef<HTMLAnchorElement>(null);
+-  const viewRef = useRef<BTView | null>(null);
+-  const [box, setBox] = useState<Box | null>(null);
+-  const [mounted, setMounted] = useState(false);
+-
+-  useEffect(() => {
+-    setMounted(true);
+-    router.prefetch(BT_ROUTE);
+-  }, [router]);
+-
+-  const open = () => {
+-    if (box) return;
+-    try {
+-      sessionStorage.setItem(BT_SESSION, JSON.stringify({ v: viewRef.current, ts: Date.now() }));
+-    } catch {
+-      /* private mode */
+-    }
+-    if (reduced) {
+-      router.push(BT_ROUTE);
+-      return;
+-    }
+-    const r = cardRef.current!.getBoundingClientRect();
+-    setBox({
+-      top: r.top,
+-      left: r.left,
+-      width: r.width,
+-      height: r.height,
+-      vw: window.innerWidth,
+-      vh: window.innerHeight,
+-    });
+-  };
+-
+-  return (
+-    <>
+-      <a
+-        ref={cardRef}
+-        href={BT_ROUTE}
+-        onClick={(e) => {
+-          e.preventDefault();
+-          open();
+-        }}
+-        aria-label="Open A3RO Intelligence — BTC Tracker, known stock and liquidity flows"
+-        className={`group/bt relative flex cursor-pointer flex-col overflow-hidden rounded-sm hairline bg-[var(--depth-1)] transition-colors duration-[var(--dur-base)] hover:border-[var(--line-2)] ${className}`}
+-      >
+-        <div className="relative flex-1 overflow-hidden">
+-          <div aria-hidden className="absolute inset-0" style={{ background: BT_ATMOSPHERE }} />
+-          <BtcTrackerPreview viewRef={viewRef} />
+-
+-          <span
+-            aria-hidden
+-            className="pointer-events-none absolute right-4 top-4 h-3 w-3 border-r border-t border-[var(--ink-3)] opacity-40 transition-all duration-[var(--dur-base)] group-hover/bt:opacity-100"
+-            style={{ borderColor: undefined }}
+-          />
+-          <span
+-            aria-hidden
+-            className="pointer-events-none absolute bottom-4 left-4 h-3 w-3 border-b border-l border-[var(--ink-3)] opacity-30"
+-          />
+-
+-          <div className="pointer-events-none absolute left-5 top-5 max-w-[50%] md:left-7 md:top-7">
+-            <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
+-              P·03 — <span style={{ color: ORANGE_CSS }}>BTC</span>
+-            </p>
+-            <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--ink-2)]">
+-              A3RO Intelligence
+-            </p>
+-            <h3 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--ink)] md:text-3xl">
+-              BTC Tracker
+-            </h3>
+-            <p className="mt-2 max-w-[16rem] text-[12px] leading-relaxed text-[var(--ink-2)]">
+-              Where known Bitcoin sits — exchanges, ETFs, mining — and how liquidity flows between hubs.
+-            </p>
+-          </div>
+-
+-          <span className="pointer-events-none absolute bottom-3 right-4 select-none font-mono text-[clamp(3.5rem,9vw,7rem)] font-medium leading-none text-[var(--depth-3)]">
+-            03
+-          </span>
+-        </div>
+-
+-        <div className="flex items-center justify-between border-t border-[var(--line)] px-5 py-3 md:px-7">
+-          <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+-            Venues · ETFs · Mining · Flows
+-          </p>
+-          <p
+-            className="font-mono text-[9px] uppercase tracking-[0.2em] transition-colors group-hover/bt:text-[var(--ink)]"
+-            style={{ color: ORANGE_CSS }}
+-          >
+-            Open →
+-          </p>
+-        </div>
+-      </a>
+-
+-      {mounted &&
+-        box &&
+-        createPortal(
+-          <motion.div
+-            className="fixed z-[100] overflow-hidden bg-[var(--depth-0)]"
+-            initial={{
+-              top: box.top,
+-              left: box.left,
+-              width: box.width,
+-              height: box.height,
+-              borderRadius: 2,
+-            }}
+-            animate={{
+-              top: 0,
+-              left: 0,
+-              width: box.vw,
+-              height: box.vh,
+-              borderRadius: 0,
+-            }}
+-            transition={{ duration: 0.55, ease: EASE_INOUT as unknown as number[] }}
+-            onAnimationComplete={() => router.push(BT_ROUTE)}
+-          >
+-            <div className="absolute inset-0" style={{ background: BT_ATMOSPHERE }} />
+-            <BtcTrackerPreview labels={false} />
+-          </motion.div>,
+-          document.body,
+-        )}
+-    </>
+-  );
+-}
+diff --git a/app/components/projects/BullFinder.tsx b/app/components/projects/BullFinder.tsx
+index 7bff963..a8b3eaa 100644
+--- a/app/components/projects/BullFinder.tsx
++++ b/app/components/projects/BullFinder.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ /* ────────────────────────────────────────────────────────────────
+-   A3RO Intelligence — Bull Market Finder · homepage module card (P·05)
++   A3RO Intelligence — Trend Finder · homepage module card (P·05)
+    The whole-market screener surface: ~650 assets in five tiers,
+    ranked by newly bullish state (Money Line, daily × weekly
+    confirmed). The card leads with what just double-confirmed and
+@@ -64,7 +64,7 @@ export default function BullFinder({ className = "" }: { className?: string }) {
+   return (
+     <a
+       href={BULL_ROUTE}
+-      aria-label="Bull Market Finder — whole-market bullish-state screener, open module"
++      aria-label="Trend Finder — whole-market bullish-state screener, open module"
+       className={`group/bf relative flex cursor-pointer flex-col overflow-hidden rounded-sm hairline bg-[var(--depth-1)] transition-colors duration-[var(--dur-base)] hover:border-[var(--line-2)] ${className}`}
+     >
+       <div className="relative flex-1 overflow-hidden">
+@@ -134,7 +134,7 @@ export default function BullFinder({ className = "" }: { className?: string }) {
+             A3RO Intelligence
+           </p>
+           <h3 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--ink)] md:text-3xl">
+-            Bull Market Finder
++            Trend Finder
+           </h3>
+           <p className="mt-3 hidden text-[13px] leading-relaxed text-[var(--ink-2)] md:block">
+             Whole-market bullish-state screener — double confirmation on
+@@ -263,7 +263,7 @@ export default function BullFinder({ className = "" }: { className?: string }) {
+       {/* card footer — directory grammar */}
+       <div className="flex items-baseline justify-between gap-4 px-5 py-4 hairline-t">
+         <h3 className="text-sm font-medium text-[var(--ink)]">
+-          A3RO Intelligence — Bull Market Finder
++          A3RO Intelligence — Trend Finder
+         </h3>
+         <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+           Money Line D×W · Weekly · Daily
+diff --git a/app/components/projects/CommodityWatch.tsx b/app/components/projects/CommodityWatch.tsx
+new file mode 100644
+index 0000000..ba86aff
+--- /dev/null
++++ b/app/components/projects/CommodityWatch.tsx
+@@ -0,0 +1,275 @@
++"use client";
++/* ────────────────────────────────────────────────────────────────
++   A3RO Intelligence — Commodity Watch · homepage module card
++   Consolidates the three single-asset teasers (Oil Tracker P·01,
++   Gold Tracker P·02, BTC Tracker P·03) into one tabbed card. Each
++   asset keeps its own route, session key, preview component and
++   accent — only the homepage teaser is merged. Switching tabs swaps
++   the preview, copy, accent and P-number; the card still expands
++   into whichever asset's dedicated route is active when clicked.
++──────────────────────────────────────────────────────────────── */
++import { useEffect, useRef, useState, type MouseEvent } from "react";
++import { createPortal } from "react-dom";
++import { useRouter } from "next/navigation";
++import { motion, useReducedMotion } from "framer-motion";
++import { EASE_INOUT } from "../motion";
++import OilTrackerPreview from "./OilTrackerPreview";
++import GoldTrackerPreview from "./GoldTrackerPreview";
++import BtcTrackerPreview from "./BtcTrackerPreview";
++import { AMBER_CSS, OT_ROUTE, OT_SESSION, type OTView } from "./oilTrackerShared";
++import { GOLD_CSS, GT_ROUTE, GT_SESSION, GT_ATMOSPHERE, type GTView } from "./goldTrackerShared";
++import { ORANGE_CSS, BT_ROUTE, BT_SESSION, BT_ATMOSPHERE, type BTView } from "./btcTrackerShared";
++import { useGoldSnapshot, formatPrice, formatPct, formatAsOf } from "./gold/goldData";
++
++const OIL_ATMOSPHERE =
++  "radial-gradient(90% 110% at 50% 65%, #101313 0%, var(--depth-1) 55%, #070808 100%)";
++
++type AssetKey = "oil" | "gold" | "btc";
++
++const ASSETS: Record<
++  AssetKey,
++  {
++    kicker: string;
++    pNumber: string;
++    ghostNumeral: string;
++    accent: string;
++    atmosphere: string;
++    route: string;
++    session: string;
++    desc: string;
++    footerMeta: string;
++    cta: string;
++    ariaDetail: string;
++  }
++> = {
++  oil: {
++    kicker: "Oil",
++    pNumber: "P·01",
++    ghostNumeral: "01",
++    accent: AMBER_CSS,
++    atmosphere: OIL_ATMOSPHERE,
++    route: OT_ROUTE,
++    session: OT_SESSION,
++    desc: "Live corridor intelligence for crude, products, and price-sensitive flows.",
++    footerMeta: "Corridor intelligence — live preview",
++    cta: "Enter live platform",
++    ariaDetail: "the live corridor intelligence preview",
++  },
++  gold: {
++    kicker: "Gold",
++    pNumber: "P·02",
++    ghostNumeral: "02",
++    accent: GOLD_CSS,
++    atmosphere: GT_ATMOSPHERE,
++    route: GT_ROUTE,
++    session: GT_SESSION,
++    desc: "Mines, holders, and metal/paper flows — where gold is produced and stock sits.",
++    footerMeta: "Mines · Holders · Flows",
++    cta: "Open",
++    ariaDetail: "mines, holders and flows",
++  },
++  btc: {
++    kicker: "BTC",
++    pNumber: "P·03",
++    ghostNumeral: "03",
++    accent: ORANGE_CSS,
++    atmosphere: BT_ATMOSPHERE,
++    route: BT_ROUTE,
++    session: BT_SESSION,
++    desc: "Where known Bitcoin sits — exchanges, ETFs, mining — and how liquidity flows between hubs.",
++    footerMeta: "Venues · ETFs · Mining · Flows",
++    cta: "Open",
++    ariaDetail: "known stock and liquidity flows",
++  },
++};
++
++const TABS: AssetKey[] = ["oil", "gold", "btc"];
++
++type Box = { top: number; left: number; width: number; height: number; vw: number; vh: number };
++
++function GoldPricePanel() {
++  const snap = useGoldSnapshot();
++  const d1 = snap.changes.d1;
++  const d1Color = d1 > 0 ? GOLD_CSS : d1 < 0 ? "var(--ink-2)" : "var(--ink-3)";
++  return (
++    <div className="pointer-events-none absolute right-5 top-5 text-right md:right-7 md:top-7">
++      <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
++        XAU · {snap.source === "live" ? "live" : "baseline"}
++      </p>
++      <p className="mt-1 font-mono text-2xl font-medium tabular-nums text-[var(--ink)] md:text-3xl">
++        {formatPrice(snap.price.value)}
++      </p>
++      <p className="mt-0.5 font-mono text-[10px] tabular-nums" style={{ color: d1Color }}>
++        {formatPct(d1)} · 1D
++      </p>
++      <p className="mt-1 font-mono text-[8px] uppercase tracking-[0.18em] text-[var(--ink-3)]">
++        As of {formatAsOf(snap.asOf)}
++      </p>
++    </div>
++  );
++}
++
++export default function CommodityWatch({ className = "" }: { className?: string }) {
++  const router = useRouter();
++  const reduced = useReducedMotion();
++  const cardRef = useRef<HTMLAnchorElement>(null);
++  const oilViewRef = useRef<OTView | null>(null);
++  const goldViewRef = useRef<GTView | null>(null);
++  const btcViewRef = useRef<BTView | null>(null);
++  const [tab, setTab] = useState<AssetKey>("oil");
++  const [box, setBox] = useState<Box | null>(null);
++  const [mounted, setMounted] = useState(false);
++
++  const active = ASSETS[tab];
++
++  useEffect(() => {
++    setMounted(true);
++    router.prefetch(OT_ROUTE);
++    router.prefetch(GT_ROUTE);
++    router.prefetch(BT_ROUTE);
++  }, [router]);
++
++  const open = () => {
++    if (box) return;
++    try {
++      const viewRef = tab === "oil" ? oilViewRef : tab === "gold" ? goldViewRef : btcViewRef;
++      sessionStorage.setItem(active.session, JSON.stringify({ v: viewRef.current, ts: Date.now() }));
++    } catch {
++      /* private mode — route falls back to its own intro */
++    }
++    if (reduced) {
++      router.push(active.route);
++      return;
++    }
++    const r = cardRef.current!.getBoundingClientRect();
++    setBox({
++      top: r.top, left: r.left, width: r.width, height: r.height,
++      vw: window.innerWidth, vh: window.innerHeight,
++    });
++  };
++
++  const selectTab = (e: MouseEvent, k: AssetKey) => {
++    e.preventDefault();
++    e.stopPropagation();
++    setTab(k);
++  };
++
++  return (
++    <>
++      <a
++        ref={cardRef}
++        href={active.route}
++        onClick={(e) => { e.preventDefault(); open(); }}
++        aria-label={`Open A3RO Intelligence — Commodity Watch, ${active.ariaDetail}`}
++        className={`group/cw relative flex cursor-pointer flex-col overflow-hidden rounded-sm hairline bg-[var(--depth-1)] transition-colors duration-[var(--dur-base)] hover:border-[var(--line-2)] ${className}`}
++      >
++        <div className="relative flex-1 overflow-hidden">
++          <div aria-hidden className="absolute inset-0" style={{ background: active.atmosphere }} />
++          {tab === "oil" && <OilTrackerPreview viewRef={oilViewRef} />}
++          {tab === "gold" && <GoldTrackerPreview viewRef={goldViewRef} />}
++          {tab === "btc" && <BtcTrackerPreview viewRef={btcViewRef} />}
++
++          {/* corner registration marks — directory grammar */}
++          <span
++            aria-hidden
++            className="pointer-events-none absolute right-4 top-4 h-3 w-3 border-r border-t border-[var(--ink-3)] opacity-40 transition-all duration-[var(--dur-base)] group-hover/cw:opacity-100"
++          />
++          <span
++            aria-hidden
++            className="pointer-events-none absolute bottom-4 left-4 h-3 w-3 border-b border-l border-[var(--ink-3)] opacity-30"
++          />
++
++          {/* identity */}
++          <div className="pointer-events-none absolute left-5 top-5 max-w-[50%] md:left-7 md:top-7">
++            <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
++              {active.pNumber} — <span style={{ color: active.accent }}>{active.kicker}</span>
++            </p>
++            <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--ink-2)]">
++              A3RO Intelligence
++            </p>
++            <h3 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--ink)] md:text-3xl">
++              Commodity Watch
++            </h3>
++            <p className="mt-3 max-w-[16rem] text-[13px] leading-relaxed text-[var(--ink-2)]">
++              {active.desc}
++            </p>
++
++            {/* tab control — pointer-events must be re-enabled over the identity block */}
++            <div className="pointer-events-auto mt-4 flex items-center gap-1">
++              {TABS.map((k) => {
++                const on = k === tab;
++                const a = ASSETS[k];
++                return (
++                  <button
++                    key={k}
++                    type="button"
++                    aria-pressed={on}
++                    aria-label={`Show ${a.kicker} tracker`}
++                    onClick={(e) => selectTab(e, k)}
++                    className="rounded-[2px] border px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em] transition-colors duration-[var(--dur-base)]"
++                    style={{
++                      borderColor: on ? a.accent : "var(--line)",
++                      color: on ? a.accent : "var(--ink-3)",
++                      background: on ? "var(--depth-2)" : "transparent",
++                    }}
++                  >
++                    {a.kicker}
++                  </button>
++                );
++              })}
++            </div>
++          </div>
++
++          {tab === "gold" && <GoldPricePanel />}
++
++          {/* ghost numeral — directory grammar, swaps with active tab */}
++          <span className="pointer-events-none absolute bottom-3 left-4 select-none font-mono text-[clamp(3.5rem,9vw,7rem)] font-medium leading-none text-[var(--depth-3)]">
++            {active.ghostNumeral}
++          </span>
++
++          {/* the one affordance */}
++          <p className="pointer-events-none absolute bottom-5 right-5 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-2)] transition-colors duration-[var(--dur-base)] group-hover/cw:text-[var(--ink)] md:bottom-6 md:right-7">
++            {active.cta}
++            <span
++              aria-hidden
++              className="inline-block transition-transform duration-[var(--dur-base)] ease-[var(--ease-out)] group-hover/cw:translate-x-1"
++              style={{ color: active.accent }}
++            >
++              →
++            </span>
++          </p>
++        </div>
++
++        {/* card footer — matches the directory grammar */}
++        <div className="flex items-baseline justify-between gap-4 px-5 py-4 hairline-t">
++          <h3 className="text-sm font-medium text-[var(--ink)]">
++            A3RO Intelligence — Commodity Watch
++          </h3>
++          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
++            {active.footerMeta}
++          </p>
++        </div>
++      </a>
++
++      {/* ── expansion: the card surface morphs into the active asset's route ── */}
++      {mounted && box && createPortal(
++        <motion.div
++          className="fixed z-[100] overflow-hidden"
++          style={{ background: active.atmosphere }}
++          initial={{
++            top: box.top, left: box.left, width: box.width, height: box.height,
++            borderRadius: 2, opacity: 1,
++          }}
++          animate={{ top: 0, left: 0, width: box.vw, height: box.vh, borderRadius: 0 }}
++          transition={{ duration: 0.6, ease: EASE_INOUT as unknown as number[] }}
++          onAnimationComplete={() => router.push(active.route)}
++        >
++          {tab === "oil" && <OilTrackerPreview initialView={oilViewRef.current} labels={false} />}
++          {tab === "gold" && <GoldTrackerPreview initialView={goldViewRef.current} labels={false} />}
++          {tab === "btc" && <BtcTrackerPreview initialView={btcViewRef.current} labels={false} />}
++        </motion.div>,
++        document.body
++      )}
++    </>
++  );
++}
+diff --git a/app/components/projects/GoldTracker.tsx b/app/components/projects/GoldTracker.tsx
+deleted file mode 100644
+index bffcb31..0000000
+--- a/app/components/projects/GoldTracker.tsx
++++ /dev/null
+@@ -1,170 +0,0 @@
+-"use client";
+-/* ────────────────────────────────────────────────────────────────
+-   A3RO Intelligence — Gold Tracker · homepage teaser (P·02)
+-   Gold-themed preview globe + price strip. Expands into
+-   /Projects/Gold-Tracker. Never imports GoldTrackerCore.
+-──────────────────────────────────────────────────────────────── */
+-import { useEffect, useRef, useState } from "react";
+-import { createPortal } from "react-dom";
+-import { useRouter } from "next/navigation";
+-import { motion, useReducedMotion } from "framer-motion";
+-import { EASE_INOUT } from "../motion";
+-import GoldTrackerPreview from "./GoldTrackerPreview";
+-import {
+-  GOLD_CSS,
+-  GT_ROUTE,
+-  GT_SESSION,
+-  GT_ATMOSPHERE,
+-  type GTView,
+-} from "./goldTrackerShared";
+-import {
+-  useGoldSnapshot,
+-  formatPrice,
+-  formatPct,
+-  formatAsOf,
+-} from "./gold/goldData";
+-
+-type Box = { top: number; left: number; width: number; height: number; vw: number; vh: number };
+-
+-export default function GoldTracker({ className = "" }: { className?: string }) {
+-  const router = useRouter();
+-  const reduced = useReducedMotion();
+-  const cardRef = useRef<HTMLAnchorElement>(null);
+-  const viewRef = useRef<GTView | null>(null);
+-  const [box, setBox] = useState<Box | null>(null);
+-  const [mounted, setMounted] = useState(false);
+-  const snap = useGoldSnapshot();
+-
+-  useEffect(() => {
+-    setMounted(true);
+-    router.prefetch(GT_ROUTE);
+-  }, [router]);
+-
+-  const open = () => {
+-    if (box) return;
+-    try {
+-      sessionStorage.setItem(GT_SESSION, JSON.stringify({ v: viewRef.current, ts: Date.now() }));
+-    } catch {
+-      /* private mode */
+-    }
+-    if (reduced) {
+-      router.push(GT_ROUTE);
+-      return;
+-    }
+-    const r = cardRef.current!.getBoundingClientRect();
+-    setBox({
+-      top: r.top,
+-      left: r.left,
+-      width: r.width,
+-      height: r.height,
+-      vw: window.innerWidth,
+-      vh: window.innerHeight,
+-    });
+-  };
+-
+-  const d1 = snap.changes.d1;
+-  const d1Color = d1 > 0 ? GOLD_CSS : d1 < 0 ? "var(--ink-2)" : "var(--ink-3)";
+-
+-  return (
+-    <>
+-      <a
+-        ref={cardRef}
+-        href={GT_ROUTE}
+-        onClick={(e) => {
+-          e.preventDefault();
+-          open();
+-        }}
+-        aria-label="Open A3RO Intelligence — Gold Tracker, mines holders and flows"
+-        className={`group/gt relative flex cursor-pointer flex-col overflow-hidden rounded-sm hairline bg-[var(--depth-1)] transition-colors duration-[var(--dur-base)] hover:border-[var(--line-2)] ${className}`}
+-      >
+-        <div className="relative flex-1 overflow-hidden">
+-          <div aria-hidden className="absolute inset-0" style={{ background: GT_ATMOSPHERE }} />
+-          <GoldTrackerPreview viewRef={viewRef} />
+-
+-          <span
+-            aria-hidden
+-            className="pointer-events-none absolute right-4 top-4 h-3 w-3 border-r border-t border-[var(--ink-3)] opacity-40 transition-all duration-[var(--dur-base)] group-hover/gt:opacity-100"
+-          />
+-          <span
+-            aria-hidden
+-            className="pointer-events-none absolute bottom-4 left-4 h-3 w-3 border-b border-l border-[var(--ink-3)] opacity-30"
+-          />
+-
+-          <div className="pointer-events-none absolute left-5 top-5 max-w-[50%] md:left-7 md:top-7">
+-            <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
+-              P·02 — <span style={{ color: GOLD_CSS }}>Gold</span>
+-            </p>
+-            <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--ink-2)]">
+-              A3RO Intelligence
+-            </p>
+-            <h3 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--ink)] md:text-3xl">
+-              Gold Tracker
+-            </h3>
+-            <p className="mt-2 max-w-[16rem] text-[12px] leading-relaxed text-[var(--ink-2)]">
+-              Mines, holders, and metal/paper flows — where gold is produced and stock sits.
+-            </p>
+-          </div>
+-
+-          <div className="pointer-events-none absolute right-5 top-5 text-right md:right-7 md:top-7">
+-            <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
+-              XAU · {snap.source === "live" ? "live" : "baseline"}
+-            </p>
+-            <p className="mt-1 font-mono text-2xl font-medium tabular-nums text-[var(--ink)] md:text-3xl">
+-              {formatPrice(snap.price.value)}
+-            </p>
+-            <p className="mt-0.5 font-mono text-[10px] tabular-nums" style={{ color: d1Color }}>
+-              {formatPct(d1)} · 1D
+-            </p>
+-            <p className="mt-1 font-mono text-[8px] uppercase tracking-[0.18em] text-[var(--ink-3)]">
+-              As of {formatAsOf(snap.asOf)}
+-            </p>
+-          </div>
+-
+-          <span className="pointer-events-none absolute bottom-3 left-4 select-none font-mono text-[clamp(3.5rem,9vw,7rem)] font-medium leading-none text-[var(--depth-3)]">
+-            02
+-          </span>
+-        </div>
+-
+-        <div className="flex items-center justify-between border-t border-[var(--line)] px-5 py-3 md:px-7">
+-          <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+-            Mines · Holders · Flows
+-          </p>
+-          <p
+-            className="font-mono text-[9px] uppercase tracking-[0.2em] transition-colors group-hover/gt:text-[var(--ink)]"
+-            style={{ color: GOLD_CSS }}
+-          >
+-            Open →
+-          </p>
+-        </div>
+-      </a>
+-
+-      {mounted &&
+-        box &&
+-        createPortal(
+-          <motion.div
+-            className="fixed z-[100] overflow-hidden bg-[var(--depth-0)]"
+-            initial={{
+-              top: box.top,
+-              left: box.left,
+-              width: box.width,
+-              height: box.height,
+-              borderRadius: 2,
+-            }}
+-            animate={{
+-              top: 0,
+-              left: 0,
+-              width: box.vw,
+-              height: box.vh,
+-              borderRadius: 0,
+-            }}
+-            transition={{ duration: 0.55, ease: EASE_INOUT as unknown as number[] }}
+-            onAnimationComplete={() => router.push(GT_ROUTE)}
+-          >
+-            <div className="absolute inset-0" style={{ background: GT_ATMOSPHERE }} />
+-            <GoldTrackerPreview labels={false} />
+-          </motion.div>,
+-          document.body,
+-        )}
+-    </>
+-  );
+-}
+diff --git a/app/components/projects/OilTracker.tsx b/app/components/projects/OilTracker.tsx
+deleted file mode 100644
+index 385679c..0000000
+--- a/app/components/projects/OilTracker.tsx
++++ /dev/null
+@@ -1,149 +0,0 @@
+-"use client";
+-/* ────────────────────────────────────────────────────────────────
+-   A3RO Intelligence — Oil Tracker · homepage teaser (P·01)
+-   A lightweight card: low-detail slow-rotating preview globe, no
+-   drag, no clickable sub-regions, no data panels. The whole card
+-   is one link. Clicking it expands the card surface into the
+-   fullscreen route /Projects/Oil-Tracker, where the heavy engine
+-   (OilTrackerCore) is lazy-loaded — that module is deliberately
+-   NOT imported here, so the landing bundle stays light.
+-──────────────────────────────────────────────────────────────── */
+-import { useEffect, useRef, useState } from "react";
+-import { createPortal } from "react-dom";
+-import { useRouter } from "next/navigation";
+-import { motion, useReducedMotion } from "framer-motion";
+-import { EASE_INOUT } from "../motion";
+-import OilTrackerPreview from "./OilTrackerPreview";
+-import { AMBER_CSS, OT_ROUTE, OT_SESSION, type OTView } from "./oilTrackerShared";
+-
+-const ATMOSPHERE =
+-  "radial-gradient(90% 110% at 50% 65%, #101313 0%, var(--depth-1) 55%, #070808 100%)";
+-
+-type Box = { top: number; left: number; width: number; height: number; vw: number; vh: number };
+-
+-export default function OilTracker({ className = "" }: { className?: string }) {
+-  const router = useRouter();
+-  const reduced = useReducedMotion();
+-  const cardRef = useRef<HTMLAnchorElement>(null);
+-  const viewRef = useRef<OTView | null>(null);
+-  const [box, setBox] = useState<Box | null>(null); // set = expansion in flight
+-  const [mounted, setMounted] = useState(false);
+-
+-  useEffect(() => {
+-    setMounted(true);
+-    router.prefetch(OT_ROUTE);
+-  }, [router]);
+-
+-  const open = () => {
+-    if (box) return;
+-    try {
+-      sessionStorage.setItem(OT_SESSION, JSON.stringify({ v: viewRef.current, ts: Date.now() }));
+-    } catch { /* private mode — route falls back to its own intro */ }
+-    if (reduced) {
+-      router.push(OT_ROUTE);
+-      return;
+-    }
+-    const r = cardRef.current!.getBoundingClientRect();
+-    setBox({
+-      top: r.top, left: r.left, width: r.width, height: r.height,
+-      vw: window.innerWidth, vh: window.innerHeight,
+-    });
+-  };
+-
+-  return (
+-    <>
+-      <a
+-        ref={cardRef}
+-        href={OT_ROUTE}
+-        onClick={(e) => { e.preventDefault(); open(); }}
+-        aria-label="Open A3RO Intelligence — Oil Tracker, the live corridor intelligence preview"
+-        className={`group/ot relative flex cursor-pointer flex-col overflow-hidden rounded-sm hairline bg-[var(--depth-1)] transition-colors duration-[var(--dur-base)] hover:border-[var(--line-2)] ${className}`}
+-      >
+-        {/* stage */}
+-        <div className="relative flex-1 overflow-hidden">
+-          <div aria-hidden className="absolute inset-0" style={{ background: ATMOSPHERE }} />
+-          <OilTrackerPreview viewRef={viewRef} />
+-
+-          {/* corner registration marks — directory grammar */}
+-          <span aria-hidden className="pointer-events-none absolute right-4 top-4 h-3 w-3 border-r border-t border-[var(--ink-3)] opacity-40 transition-all duration-[var(--dur-base)] group-hover/ot:border-[var(--acid)] group-hover/ot:opacity-100" />
+-          <span aria-hidden className="pointer-events-none absolute bottom-4 left-4 h-3 w-3 border-b border-l border-[var(--ink-3)] opacity-30" />
+-
+-          {/* identity */}
+-          <div className="pointer-events-none absolute left-5 top-5 max-w-[46%] md:left-7 md:top-7">
+-            <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
+-              P·01 — <span style={{ color: AMBER_CSS }}>Featured</span>
+-            </p>
+-            <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--ink-2)]">
+-              A3RO Intelligence
+-            </p>
+-            <h3 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--ink)] md:text-3xl">
+-              Oil Tracker
+-            </h3>
+-            <p className="mt-3 text-[13px] leading-relaxed text-[var(--ink-2)]">
+-              Live corridor intelligence for crude, products, and price-sensitive flows.
+-            </p>
+-            <p className="mt-2 hidden text-xs leading-relaxed text-[var(--ink-3)] md:block">
+-              Tracking strategic chokepoints, demand shifts, and price pressure
+-              across the global oil system.
+-            </p>
+-          </div>
+-
+-          {/* feed status */}
+-          <p className="pointer-events-none absolute right-5 top-5 flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)] md:right-7 md:top-7">
+-            {!reduced ? (
+-              <motion.span
+-                aria-hidden
+-                className="inline-block h-[5px] w-[5px] rounded-full"
+-                style={{ background: AMBER_CSS }}
+-                animate={{ opacity: [1, 0.25, 1] }}
+-                transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+-              />
+-            ) : (
+-              <span aria-hidden className="inline-block h-[5px] w-[5px] rounded-full" style={{ background: AMBER_CSS }} />
+-            )}
+-            Live monitor · simulated feed
+-          </p>
+-
+-          {/* the one affordance */}
+-          <p className="pointer-events-none absolute bottom-5 right-5 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-2)] transition-colors duration-[var(--dur-base)] group-hover/ot:text-[var(--ink)] md:bottom-6 md:right-7">
+-            Enter live platform
+-            <span
+-              aria-hidden
+-              className="inline-block transition-transform duration-[var(--dur-base)] ease-[var(--ease-out)] group-hover/ot:translate-x-1"
+-              style={{ color: AMBER_CSS }}
+-            >
+-              →
+-            </span>
+-          </p>
+-        </div>
+-
+-        {/* card footer — matches the directory grammar */}
+-        <div className="flex items-baseline justify-between px-5 py-4 hairline-t">
+-          <h3 className="text-sm font-medium text-[var(--ink)]">A3RO Intelligence — Oil Tracker</h3>
+-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+-            Corridor intelligence — live preview
+-          </p>
+-        </div>
+-      </a>
+-
+-      {/* ── expansion: the card surface morphs into the route ── */}
+-      {mounted && box && createPortal(
+-        <motion.div
+-          className="fixed z-[80] overflow-hidden"
+-          style={{ background: ATMOSPHERE }}
+-          initial={{
+-            top: box.top, left: box.left, width: box.width, height: box.height,
+-            borderRadius: 2, opacity: 1,
+-          }}
+-          animate={{ top: 0, left: 0, width: box.vw, height: box.vh, borderRadius: 0 }}
+-          transition={{ duration: 0.8, ease: EASE_INOUT as unknown as number[] }}
+-          onAnimationComplete={() => router.push(OT_ROUTE)}
+-        >
+-          {/* the same light globe rides along — the heavy scene loads on the route */}
+-          <OilTrackerPreview initialView={viewRef.current} />
+-        </motion.div>,
+-        document.body
+-      )}
+-    </>
+-  );
+-}
+diff --git a/app/components/projects/RegimeShiftFinder.tsx b/app/components/projects/RegimeShiftFinder.tsx
+index 91b9ae8..5e46c8b 100644
+--- a/app/components/projects/RegimeShiftFinder.tsx
++++ b/app/components/projects/RegimeShiftFinder.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ /* ────────────────────────────────────────────────────────────────
+-   A3RO Intelligence — Regime Shift Finder · homepage module card (P·06)
++   A3RO Intelligence — Regime · homepage module card (P·06)
+    The Darius-Dale-style GRID: growth × inflation on a rate-of-change
+    basis → one of four quadrants. Reads /api/oil/macro via
+    useMacroSnapshot; honest states (cycle pending / feed unreachable)
+@@ -39,7 +39,7 @@ export default function RegimeShiftFinder({ className = "" }: { className?: stri
+   return (
+     <a
+       href={ROUTE}
+-      aria-label="Regime Shift Finder — Darius-Dale-style macro regime, open module"
++      aria-label="Regime — Darius-Dale-style macro regime, open module"
+       className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-sm hairline bg-[var(--depth-1)] transition-colors duration-[var(--dur-base)] hover:border-[var(--line-2)] ${className}`}
+     >
+       <div className="relative flex-1 overflow-hidden" style={{ minHeight: 300 }}>
+@@ -52,7 +52,7 @@ export default function RegimeShiftFinder({ className = "" }: { className?: stri
+             A3RO Intelligence
+           </p>
+           <h3 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--ink)] md:text-3xl">
+-            Regime Shift Finder
++            Regime
+           </h3>
+           <p className="mt-3 hidden text-[13px] leading-relaxed text-[var(--ink-2)] md:block">
+             Top-down macro regime — growth × inflation on a rate-of-change basis.
+@@ -104,7 +104,7 @@ export default function RegimeShiftFinder({ className = "" }: { className?: stri
+       {/* card footer — directory grammar */}
+       <div className="flex items-baseline justify-between gap-4 px-5 py-4 hairline-t">
+         <h3 className="text-sm font-medium text-[var(--ink)]">
+-          A3RO Intelligence — Regime Shift Finder
++          A3RO Intelligence — Regime
+         </h3>
+         <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+           Darius-Dale GRID · macro
+diff --git a/app/components/sections/Work.tsx b/app/components/sections/Work.tsx
+index 5013422..4c54b4e 100644
+--- a/app/components/sections/Work.tsx
++++ b/app/components/sections/Work.tsx
+@@ -1,15 +1,16 @@
+ "use client";
+ /* ────────────────────────────────────────────────────────────────
+-   Modules — a pinned lateral traverse across the platform's seven
++   Modules — a pinned lateral traverse across the platform's four
+    intelligence surfaces. On desktop the section pins and vertical
+    scroll drives horizontal travel, like moving along a corridor
+    of monitors. On touch/mobile it degrades to a vertical stack
+    with inner parallax.
+ 
+-   Live surfaces: P·01 Oil Tracker (featured), P·02 Gold Tracker,
+-   P·03 BTC Tracker (location + flow globe), P·05 Bull Market Finder,
+-   P·06 Regime Shift Finder (Darius-Dale GRID) and
+-   P·08 Earnings Beat Leaderboard (surprise → streak → rank).
++   Live surfaces: P·05 Trend Finder (featured, whole-market bullish-
++   state screener), P·06 Regime (Darius-Dale GRID), P·08 Earnings
++   Beat Leaderboard (surprise → streak → rank), and Commodity Watch —
++   a tabbed card merging P·01 Oil Tracker, P·02 Gold Tracker and P·03
++   BTC Tracker (each keeps its own route/id, switched via tabs).
+    P·04 merged into P·05 (strategy lenses) — see
+    bull-finder-unified-architecture.md.
+ 
+@@ -30,14 +31,12 @@ import {
+   type MotionValue,
+ } from "framer-motion";
+ import { MaskText, Reveal, useFinePointer } from "../motion";
+-import OilTracker from "../projects/OilTracker";
+-import GoldTracker from "../projects/GoldTracker";
+-import BtcTracker from "../projects/BtcTracker";
+ import BullFinder from "../projects/BullFinder";
+ import RegimeShiftFinder from "../projects/RegimeShiftFinder";
++import EarningsBeat from "../projects/EarningsBeat";
+ // ARCHIVED — Thesis Lab hidden from main modules, not deleted (see note above).
+ // import ThesisLab from "../projects/ThesisLab";
+-import EarningsBeat from "../projects/EarningsBeat";
++import CommodityWatch from "../projects/CommodityWatch";
+ 
+ /* ── deterministic signal trace — seeded, so SSR and client agree ── */
+ function walk(seed: number, n: number, vol: number, drift: number): number[] {
+@@ -76,9 +75,9 @@ const MODULES: {
+ }[] = [];
+ type Module = (typeof MODULES)[number];
+ 
+-/* Oil + Gold + BTC + Bull + Regime Shift + Earnings Beat
++/* Trend Finder + Regime + Earnings Beat + Commodity Watch
+    (Thesis Lab archived — see notes above) */
+-const SURFACES = MODULES.length + 6;
++const SURFACES = MODULES.length + 4;
+ /* 72vw featured + (SURFACES−1) × 62vw + 6vw gaps; travel ends with the
+    last panel in frame: 248vw at 5 surfaces, +68vw per extra card. */
+ const TRAVEL_VW = 248 + 68 * (SURFACES - 5);
+@@ -284,7 +283,7 @@ function ModulesTraverse() {
+   const counterText = useTransform(counter, (v) => String(Math.round(v)).padStart(2, "0"));
+ 
+   return (
+-    <div ref={ref} className="relative h-[960vh]">
++    <div ref={ref} className="relative h-[640vh]">
+       <div className="sticky top-0 flex h-[100svh] flex-col justify-center overflow-hidden">
+         <div className="mx-auto mb-10 flex w-full max-w-6xl items-end justify-between px-10">
+           <div>
+@@ -292,7 +291,7 @@ function ModulesTraverse() {
+               03 / Modules
+             </p>
+             <h2 className="max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
+-              <MaskText>One platform. Six intelligence surfaces.</MaskText>
++              <MaskText>One platform. Four intelligence surfaces.</MaskText>
+             </h2>
+           </div>
+           <p className="font-mono text-xs tracking-[0.2em] text-[var(--ink-3)]">
+@@ -305,9 +304,9 @@ function ModulesTraverse() {
+           style={{ x }}
+           className="flex items-center gap-[6vw] pl-[calc(max((100vw-72rem)/2,0px)+2.5rem)] will-change-transform"
+         >
+-          <OilTracker className="h-[62svh] w-[72vw] shrink-0" />
+-          <GoldTracker className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
+-          <BtcTracker className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
++          <BullFinder className="h-[62svh] w-[72vw] shrink-0" />
++          <RegimeShiftFinder className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
++          <EarningsBeat className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
+           {MODULES.map((m, i) => (
+             <ModuleFrame
+               key={m.id}
+@@ -317,12 +316,10 @@ function ModulesTraverse() {
+               className="flex h-[52svh] w-[62vw] shrink-0 flex-col"
+             />
+           ))}
+-          <BullFinder className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
+-          <RegimeShiftFinder className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
+           {/* ARCHIVED — Thesis Lab hidden from main, not deleted (see note at top of file).
+           <ThesisLab className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
+           */}
+-          <EarningsBeat className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
++          <CommodityWatch className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
+         </motion.div>
+       </div>
+     </div>
+@@ -359,34 +356,28 @@ function ModulesStack() {
+         03 / Modules
+       </p>
+       <h2 className="mb-16 max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)]">
+-        <MaskText>One platform. Six intelligence surfaces.</MaskText>
++        <MaskText>One platform. Four intelligence surfaces.</MaskText>
+       </h2>
+       <div className="flex flex-col gap-10">
+         <Reveal>
+-          <OilTracker className="min-h-[560px] md:min-h-[620px]" />
++          <BullFinder className="min-h-[560px] md:min-h-[620px]" />
+         </Reveal>
+         <Reveal delay={0.05}>
+-          <GoldTracker className="flex min-h-[560px] flex-col" />
++          <RegimeShiftFinder className="flex min-h-[560px] flex-col" />
+         </Reveal>
+         <Reveal delay={0.1}>
+-          <BtcTracker className="flex min-h-[560px] flex-col" />
++          <EarningsBeat className="flex min-h-[560px] flex-col" />
+         </Reveal>
+         {MODULES.map((m, i) => (
+           <StackedModule key={m.id} module={m} index={i + 3} />
+         ))}
+-        <Reveal delay={0.15}>
+-          <BullFinder className="flex min-h-[560px] flex-col" />
+-        </Reveal>
+-        <Reveal delay={0.2}>
+-          <RegimeShiftFinder className="flex min-h-[560px] flex-col" />
+-        </Reveal>
+         {/* ARCHIVED — Thesis Lab hidden from main, not deleted (see note at top of file).
+-        <Reveal delay={0.25}>
++        <Reveal delay={0.15}>
+           <ThesisLab className="flex min-h-[560px] flex-col" />
+         </Reveal>
+         */}
+-        <Reveal delay={0.3}>
+-          <EarningsBeat className="flex min-h-[560px] flex-col" />
++        <Reveal delay={0.15}>
++          <CommodityWatch className="flex min-h-[560px] flex-col" />
+         </Reveal>
+       </div>
+     </div>
+-- 
+2.43.0
+
