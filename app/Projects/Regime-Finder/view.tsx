@@ -160,10 +160,10 @@ export default function RegimeFinderView() {
                 Bull Market Finder 1
               </h1>
               <p className="mt-3 max-w-xl text-[13px] leading-relaxed text-[var(--ink-2)]">
-                Money Line bullish-state screener across a 30-asset macro
+                Money Line bullish-state screener across a 45-asset macro
                 watchlist — Donchian&nbsp;20 close-flips, double-confirmed on
                 daily and weekly closes, ranked by how recently trends aligned.
-                (Variant 1 · macro-30 universe.)
+                (Variant 1 · macro-45 universe.)
               </p>
             </div>
             <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
