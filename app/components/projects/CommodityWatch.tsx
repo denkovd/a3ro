@@ -20,6 +20,7 @@ import { AMBER_CSS, OT_ROUTE, OT_SESSION, type OTView } from "./oilTrackerShared
 import { GOLD_CSS, GT_ROUTE, GT_SESSION, GT_ATMOSPHERE, type GTView } from "./goldTrackerShared";
 import { ORANGE_CSS, BT_ROUTE, BT_SESSION, BT_ATMOSPHERE, type BTView } from "./btcTrackerShared";
 import { useGoldSnapshot, formatPrice, formatPct, formatAsOf } from "./gold/goldData";
+import { useBtcSnapshot, formatBtcPrice } from "./btc/btcData";
 
 const OIL_ATMOSPHERE =
   "radial-gradient(90% 110% at 50% 65%, #101313 0%, var(--depth-1) 55%, #070808 100%)";
@@ -98,6 +99,28 @@ function GoldPricePanel() {
       </p>
       <p className="mt-1 font-mono text-2xl font-medium tabular-nums text-[var(--ink)] md:text-3xl">
         {formatPrice(snap.price.value)}
+      </p>
+      <p className="mt-0.5 font-mono text-[10px] tabular-nums" style={{ color: d1Color }}>
+        {formatPct(d1)} · 1D
+      </p>
+      <p className="mt-1 font-mono text-[8px] uppercase tracking-[0.18em] text-[var(--ink-3)]">
+        As of {formatAsOf(snap.asOf)}
+      </p>
+    </div>
+  );
+}
+
+function BtcPricePanel() {
+  const snap = useBtcSnapshot();
+  const d1 = snap.changes.d1;
+  const d1Color = d1 > 0 ? ORANGE_CSS : d1 < 0 ? "var(--ink-2)" : "var(--ink-3)";
+  return (
+    <div className="pointer-events-none absolute right-5 top-5 text-right md:right-7 md:top-7">
+      <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
+        BTC · {snap.source === "live" ? "live" : "baseline"}
+      </p>
+      <p className="mt-1 font-mono text-2xl font-medium tabular-nums text-[var(--ink)] md:text-3xl">
+        ${formatBtcPrice(snap.price.value)}
       </p>
       <p className="mt-0.5 font-mono text-[10px] tabular-nums" style={{ color: d1Color }}>
         {formatPct(d1)} · 1D
@@ -221,6 +244,7 @@ export default function CommodityWatch({ className = "" }: { className?: string 
           </div>
 
           {tab === "gold" && <GoldPricePanel />}
+          {tab === "btc" && <BtcPricePanel />}
 
           {/* ghost numeral — directory grammar, swaps with active tab */}
           <span className="pointer-events-none absolute bottom-3 left-4 select-none font-mono text-[clamp(3.5rem,9vw,7rem)] font-medium leading-none text-[var(--depth-3)]">

@@ -253,3 +253,36 @@ export { fetchWgcEtfHoldings, parseWgcHoldingsChart, wgcHoldingsToMetrics } from
 export {
   fetchComexGoldStocks, parseComexGoldStocksXls, comexReadingToMetrics,
 } from "./sources/comexGoldStocks";
+
+// BTC Tracker — keyless Coinbase price backbone (candles + spot tick) +
+// keyless SoSoValue US spot ETF daily flow/AUM API. Price + ETF flows
+// only this phase; no exchange netflow (no free-tier source qualified)
+// and no Gold-style indicator block yet.
+export {
+  fetchBtcPriceSeries, fetchBtcSpot, parseCoinbaseCandles,
+  BTC_INCREMENTAL_LOOKBACK_DAYS, BTC_BACKFILL_LOOKBACK_DAYS,
+} from "./sources/coinbaseBtc";
+export type { CoinbasePricePoint, BtcLiveTick } from "./sources/coinbaseBtc";
+export {
+  fetchSosoValueBtcFlows, parseSosoValueFlows, sosovalueFlowsToMetrics,
+} from "./sources/sosovalueBtcEtf";
+export type { SosoValueFlowRow } from "./sources/sosovalueBtcEtf";
+export {
+  computeBtcSnapshot, computeBtcChanges, resolveHeadlinePrice as resolveBtcHeadlinePrice,
+} from "./btc/engine";
+export type { BtcPricePoint, BtcChanges, BtcEngineSnapshot } from "./btc/engine";
+export {
+  upsertBtcPrice, upsertBtcPrices, getBtcPriceHistory,
+  upsertBtcSnapshot, getLatestBtcSnapshot,
+} from "./storage/btcRepo";
+export type { BtcSnapshotRow } from "./storage/btcRepo";
+export { runBtcCycle } from "./ingest/btcCycle";
+export type { BtcCycleReport } from "./ingest/btcCycle";
+export { runBtcFlowCycle } from "./ingest/btcFlowCycle";
+export type { BtcFlowCycleReport } from "./ingest/btcFlowCycle";
+export {
+  upsertBtcFlowMetrics, getLatestBtcFlowMetrics, getBtcFlowMetricSeries,
+} from "./storage/btcFlowRepo";
+export type { BtcFlowMetricInput } from "./storage/btcFlowRepo";
+export type { BtcFlowMetricRow, BtcLocusId, BtcFlowMetricId } from "./btc/flowTypes";
+export { BTC_LOCI, BTC_FLOW_METRICS, isBtcLocusId } from "./btc/flowTypes";

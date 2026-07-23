@@ -37,6 +37,10 @@
     "run:gold": "tsx scripts/run-gold.ts",
     "run:gold-flow": "tsx scripts/run-gold-flow.ts",
     "migrate:gold-flow": "tsx scripts/migrate.ts migrations/018_gold_flow.sql",
+    "migrate:btc": "tsx scripts/migrate.ts migrations/019_btc.sql",
+    "backfill:btc": "tsx scripts/backfill-btc.ts",
+    "run:btc": "tsx scripts/run-btc.ts",
+    "run:btc-flow": "tsx scripts/run-btc-flow.ts",
     "run:earnings-weekly": "tsx scripts/run-earnings-weekly.ts",
     "backfill:earnings": "tsx scripts/run-earnings-backfill.ts",
     "test": "tsx --test tests/**/*.test.ts"

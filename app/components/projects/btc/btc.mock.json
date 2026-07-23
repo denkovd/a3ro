@@ -1,0 +1,6 @@
+{
+  "source": "mock",
+  "asOf": "2026-07-03T07:30:00Z",
+  "price": { "value": 65000, "currency": "USD" },
+  "changes": { "d1": 0.8, "w1": 2.4, "m1": -3.1, "y1": 44.2 }
+}
