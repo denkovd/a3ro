@@ -8,6 +8,7 @@
    Reads a derived MacroBrief (see macroBrief.ts). Live-derived tiles
    carry a dot marker; editorial reads carry the brief date instead.
 ──────────────────────────────────────────────────────────────── */
+import TapeBanner from "../TapeBanner";
 import { MACRO_AMBER } from "./macroData";
 import {
   type MacroBrief,
@@ -145,6 +146,9 @@ export default function MacroBriefOverlay({ brief }: { brief: MacroBrief }) {
       </p>
       <div className="mt-2">
         <AssetStrip brief={brief} />
+      </div>
+      <div className="mt-4">
+        <TapeBanner />
       </div>
     </div>
   );
