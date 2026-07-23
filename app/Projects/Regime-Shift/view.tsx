@@ -10,7 +10,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import TapeBanner from "../../components/projects/TapeBanner";
 import {
   useMacroSnapshot,
   QUADRANT_META,
@@ -101,8 +100,6 @@ export default function RegimeShiftView() {
             inflation are measured on a rate-of-change basis (accelerating vs decelerating), placing
             the macro backdrop in one of four GRID quadrants. Free-tier FRED data. Not investment advice.
           </p>
-
-          <TapeBanner className="mt-8" />
 
           {snap.status === "loading" && (
             <p className="mt-16 text-center font-mono text-[11px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
