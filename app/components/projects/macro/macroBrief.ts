@@ -69,7 +69,7 @@ export type MacroBrief = {
    Only the fields the live feed can't observe (monetary, fiscal,
    liquidity), plus horizon tags, flags and asset tags. Revisit when
    the commentary changes. */
-const BRIEF_AS_OF = "2026-07-14";
+const BRIEF_AS_OF = "2026-07-22";
 
 type QuadrantBrief = {
   horizons: HorizonRead[];
@@ -108,13 +108,13 @@ const QUADRANT_BRIEF: Record<Exclude<MacroQuadrant, "PENDING">, QuadrantBrief> =
   },
   REFLATION: {
     horizons: [
-      H("near", "0–3M", "VOLATILE", "volatile"),
+      H("near", "0–3M", "VOLATILE", "volatile, squeeze risk"),
       H("medium", "3–12M", "BULLISH", "bullish"),
       H("long", "12M+", "BULLISH", "bullish, policy risk"),
     ],
     monetary: { score: "NEUTRAL", note: "on hold" },
     fiscal: { score: "TAILWIND", note: "expansive" },
-    liquidity: { score: "TAILWIND", note: "expanding" },
+    liquidity: { score: "NEUTRAL", note: "credit spreads turning" },
     riskFlags: ["rate repricing", "hot inflation prints"],
     assets: {
       stocks: { bias: "RISK_ON", tag: "cyclicals lead, buy dips" },
@@ -175,13 +175,36 @@ const QUADRANT_BRIEF: Record<Exclude<MacroQuadrant, "PENDING">, QuadrantBrief> =
    broadly later. */
 const AI_CAPEX_STRESS = {
   active: true,
-  asOf: "2026-07-21",
+  asOf: "2026-07-22",
   flag: "AI capex stress",
 };
 
 const REFLATION_STOCKS_AI_STRESS: { bias: AssetBias; tag: string } = {
   bias: "SELECTIVE",
   tag: "favor cyclicals/real assets, avoid crowded AI capex leaders",
+};
+
+/* ── unconditional risk overlays — editorial, dated, same manually-set
+   pattern as AI_CAPEX_STRESS above, but appended regardless of quadrant:
+   each is a cross-cutting risk orthogonal to the growth/inflation GRID
+   axes, not something that turns on or off with the quadrant. Flip
+   `active` by hand when the read changes. */
+const AI_REGULATION_RISK = {
+  active: true,
+  asOf: "2026-07-22",
+  flag: "AI regulation risk (midterms)",
+};
+
+const POSITIONING_EXTREMES_RISK = {
+  active: true,
+  asOf: "2026-07-21",
+  flag: "record short interest & margin debt",
+};
+
+const HORMUZ_RECYCLING_RISK = {
+  active: true,
+  asOf: "2026-07-22",
+  flag: "Hormuz dollar-recycling risk",
 };
 
 /* pending fallback — everything neutral, no directional calls */
@@ -278,6 +301,9 @@ export function deriveMacroBrief(snap: MacroSnapshot): MacroBrief {
   const riskFlags = [...brief.riskFlags];
   if (aiCapexStress) riskFlags.unshift(AI_CAPEX_STRESS.flag);
   if (snap.diverging) riskFlags.unshift("macro divergence");
+  if (POSITIONING_EXTREMES_RISK.active) riskFlags.push(POSITIONING_EXTREMES_RISK.flag);
+  if (HORMUZ_RECYCLING_RISK.active) riskFlags.push(HORMUZ_RECYCLING_RISK.flag);
+  if (AI_REGULATION_RISK.active) riskFlags.push(AI_REGULATION_RISK.flag);
 
   const portfolioBias: AssetRead[] = (Object.keys(ASSET_LABEL) as AssetKey[]).map((key) => {
     const read = aiCapexStress && key === "stocks" ? REFLATION_STOCKS_AI_STRESS : brief.assets[key];
