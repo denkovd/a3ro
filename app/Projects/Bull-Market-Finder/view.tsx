@@ -4,15 +4,13 @@
    The whole-market ranked table: ~650 assets across five tiers,
    Money Line state double-confirmed on daily × weekly, grouped
    newly-bullish → double confirmed → conflicted → bearish. Tier
-   tabs filter client-side; a transitions rail shows what changed
-   verdict recently. Esc or "Index" returns to the homepage.
+   tabs filter client-side. Esc or "Index" returns to the homepage.
 ──────────────────────────────────────────────────────────────── */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   useBullSnapshot,
-  useBullTransitions,
   withBullGroupBoundaries,
   bullDistribution,
   bullGroupLabelFor,
@@ -130,7 +128,6 @@ export default function BullMarketFinderView() {
   const reduced = useReducedMotion();
   const [strategy, setStrategy] = useState<string>(DEFAULT_STRATEGY_ID);
   const snap = useBullSnapshot(strategy);
-  const transitions = useBullTransitions(14, strategy);
   const [leaving, setLeaving] = useState(false);
   const [tab, setTab] = useState<TabKey>("all");
   const [disagreementOnly, setDisagreementOnly] = useState(false);
@@ -172,7 +169,6 @@ export default function BullMarketFinderView() {
   const dist = bullDistribution(visibleRows);
   const newlyCount = visibleRows.filter((r) => r.newlyBullish).length;
   const grouped = withBullGroupBoundaries(visibleRows);
-  const newlyBullishTransitions = transitions.rows.filter((t) => t.toVerdict === "BULLISH");
 
   return (
     <motion.main
@@ -253,32 +249,6 @@ export default function BullMarketFinderView() {
                     : "Connecting…"}
             </p>
           </div>
-
-          {/* transitions rail — what just turned */}
-          {live && newlyBullishTransitions.length > 0 && (
-            <div className="mt-8 overflow-hidden rounded-sm hairline bg-[var(--depth-1)] px-5 py-4">
-              <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
-                Turned bullish — last 14 days
-              </p>
-              <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
-                {newlyBullishTransitions.slice(0, 12).map((t) => (
-                  <p key={`${t.runDate}-${t.symbol}`} className="flex items-baseline gap-2.5">
-                    <span
-                      aria-hidden
-                      className="h-[5px] w-[5px] self-center rounded-full"
-                      style={{ background: BULL_ACCENT, boxShadow: `0 0 8px ${BULL_ACCENT}66` }}
-                    />
-                    <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-[var(--ink-2)]">
-                      {t.displayName}
-                    </span>
-                    <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-[var(--ink-3)]">
-                      {formatDate(t.runDate)}
-                    </span>
-                  </p>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* summary strip */}
           {live && (
