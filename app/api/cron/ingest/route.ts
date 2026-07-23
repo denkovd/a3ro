@@ -12,7 +12,7 @@
    as a second line of defence. Each cycle is isolated so a failure
    in one can NEVER take down price ingestion or any other cycle.
    The regime scan (Module 4) was retired from this cron — the
-   macro-30 lens now lives in the GitHub Actions bull scan as the
+   macro-45 lens now lives in the GitHub Actions bull scan as the
    unified Bull Market Finder's `ml-dw` strategy (all strategy
    lenses run there; see bull-finder-unified-architecture.md).
 

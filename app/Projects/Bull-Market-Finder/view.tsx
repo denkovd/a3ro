@@ -1,7 +1,7 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
    /Projects/Bull-Market-Finder — fullscreen experience shell (P·05)
-   The whole-market ranked table: ~650 assets across five tiers,
+   The whole-market ranked table: ~670 assets across five tiers,
    Money Line state double-confirmed on daily × weekly, grouped
    newly-bullish → double confirmed → conflicted → bearish. Tier
    tabs filter client-side; a transitions rail shows what changed

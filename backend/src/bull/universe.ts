@@ -1,7 +1,7 @@
 /* ────────────────────────────────────────────────────────────────
    Bull Market Finder — tiered universe builder.
 
-   Tiers (UI tabs): macro (Module 4's 30-asset cross-section, reused
+   Tiers (UI tabs): macro (Module 4's 45-asset cross-section, reused
    verbatim) · us_large (S&P 500) · ndx_extra (NDX minus S&P) ·
    crypto · etf. First tier wins on duplicates, so BTC-USD stays
    macro and never re-appears under crypto.
