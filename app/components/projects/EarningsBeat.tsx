@@ -7,6 +7,7 @@
    fallbacks, and a decorative surprise motif: quarterly result bars
    against a dashed estimate line — most clear it, one falls short.
 ──────────────────────────────────────────────────────────────── */
+import type { ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   useBeatLeaderboard,
@@ -16,6 +17,7 @@ import {
   BEAT_MISS,
   BEAT_ROUTE,
 } from "./earnings/earningsData";
+import ModuleCard from "./ModuleCard";
 
 const ATMOSPHERE =
   "radial-gradient(90% 110% at 50% 62%, #100c18 0%, var(--depth-1) 55%, #070808 100%)";
@@ -29,7 +31,13 @@ const BARS = [
 ];
 const ESTIMATE_Y = 46;
 
-export default function EarningsBeat({ className = "" }: { className?: string }) {
+export function EarningsBeatContent({
+  className = "",
+  switcher,
+}: {
+  className?: string;
+  switcher?: ReactNode;
+}) {
   const reduced = useReducedMotion();
   const board = useBeatLeaderboard(100);
 
@@ -124,6 +132,7 @@ export default function EarningsBeat({ className = "" }: { className?: string })
           <h3 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--ink)] md:text-3xl">
             Earnings Beat Leaderboard
           </h3>
+          {switcher}
           <p className="mt-3 hidden text-[13px] leading-relaxed text-[var(--ink-2)] md:block">
             Who keeps beating the street — watchlist companies ranked by the
             size, consistency, and recency of their EPS and revenue beats.
@@ -203,4 +212,8 @@ export default function EarningsBeat({ className = "" }: { className?: string })
       </div>
     </a>
   );
+}
+
+export default function EarningsBeat({ className = "" }: { className?: string }) {
+  return <ModuleCard initial="earnings" className={className} />;
 }
