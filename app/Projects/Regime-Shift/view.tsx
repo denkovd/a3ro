@@ -23,7 +23,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import TapeBanner from "../../components/projects/TapeBanner";
 import {
   useMacroSnapshot,
   QUADRANT_META,
@@ -128,8 +127,6 @@ export default function RegimeShiftView() {
             GRID, which regime cross-asset markets are actually pricing, and whether the six macro cycles
             support that regime continuing. Free-tier FRED and market data. Not investment advice.
           </p>
-
-          <TapeBanner className="mt-8" />
 
           {snap.status === "loading" && (
             <p className="mt-16 text-center font-mono text-[11px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
