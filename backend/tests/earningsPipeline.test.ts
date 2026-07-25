@@ -71,7 +71,13 @@ class FakeEarningsDb implements Queryable {
         .filter((r) => r.flow === flow && r.status === "success" && r.window_to != null)
         .sort((a, b) => String(b.finished_at).localeCompare(String(a.finished_at)));
       const row = matches[0];
-      return { rows: row ? [{ window_to: row.window_to }] : [], rowCount: row ? 1 : 0 };
+      if (!row) return { rows: [], rowCount: 0 };
+      // node-pg returns `date`-typed columns as JS Date objects, not
+      // strings, unless the query explicitly casts to text — mirror
+      // that here so a missing `::text` cast fails the same way it
+      // would against a real Postgres connection.
+      const windowTo = sql.includes("window_to::text") ? row.window_to : new Date(`${row.window_to}T00:00:00.000Z`);
+      return { rows: [{ window_to: windowTo }], rowCount: 1 };
     }
 
     /* ── earnings_surprises: fill-nulls-only upsert (§2.1) ────────── */
@@ -480,6 +486,32 @@ describe("runWeeklyIncremental (§2.2 Flow A)", () => {
 
       const second = await runWeeklyIncremental(db, { now: fixedNow });
       // from = last successful window_to (2026-06-01) - 2d overlap = 2026-05-30
+      assert.equal(second.windowFrom, "2026-05-30");
+    });
+  });
+
+  test("watermark: a real Postgres `date` column comes back as a JS Date, not a string — the second run must not crash on it", async () => {
+    // Regression for the 2026-07-25 scheduled run: getLastSuccessfulPipelineRun
+    // read window_to back as a Date object (pg's default `date` OID mapping)
+    // and passed it straight into template-literal ISO parsing, which threw
+    // "RangeError: Invalid time value" and left the dashboard stale.
+    await withFetchMock(async () => {
+      const db = new FakeEarningsDb();
+      db.addTicker("NVDA");
+      global.fetch = async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/calendar/earnings")) return new Response(JSON.stringify({ earningsCalendar: [] }), { status: 200 });
+        if (url.includes("/stock/earnings")) return new Response(JSON.stringify([]), { status: 200 });
+        throw new Error(`unexpected fetch: ${url}`);
+      };
+
+      const fixedNow = () => new Date("2026-06-01T12:00:00Z");
+      await runWeeklyIncremental(db, { now: fixedNow });
+
+      const watermark = await getLastSuccessfulPipelineRun(db, "weekly");
+      assert.equal(typeof watermark?.windowTo, "string");
+
+      const second = await runWeeklyIncremental(db, { now: fixedNow });
       assert.equal(second.windowFrom, "2026-05-30");
     });
   });
