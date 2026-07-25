@@ -25,12 +25,12 @@
 import {
   createDb, runIngestionCycle, runCorridorCycle, runBaselineCycle,
   runSeasonalCycle, runMacroCycle, runPositioningCycle, runScoreCycle,
-  runGoldCycle, runGoldFlowCycle,
+  runGoldCycle, runGoldFlowCycle, runBtcCycle, runBtcFlowCycle,
 } from "@a3ro/oil-backend";
 import type {
   CorridorCycleReport, BaselineCycleReport, SeasonalCycleReport,
   MacroCycleReport, PositioningCycleReport, ScoreCycleReport,
-  GoldCycleReport, GoldFlowCycleReport,
+  GoldCycleReport, GoldFlowCycleReport, BtcCycleReport, BtcFlowCycleReport,
 } from "@a3ro/oil-backend";
 
 export const runtime = "nodejs";
@@ -140,6 +140,24 @@ export async function GET(request: Request) {
       goldFlow = { error: e instanceof Error ? e.message : String(e) };
     }
 
+    // BTC Tracker — keyless Coinbase price backbone, same "last, not on
+    // the oil score critical path" posture as gold.
+    let btc: BtcCycleReport | { error: string };
+    try {
+      btc = await runBtcCycle(db);
+    } catch (e) {
+      btc = { error: e instanceof Error ? e.message : String(e) };
+    }
+
+    // BTC ETF flow (SoSoValue daily flow/AUM API) — after price, isolated
+    // so an outage there cannot fail the rest of cron.
+    let btcFlow: BtcFlowCycleReport | { error: string };
+    try {
+      btcFlow = await runBtcFlowCycle(db);
+    } catch (e) {
+      btcFlow = { error: e instanceof Error ? e.message : String(e) };
+    }
+
     return Response.json({
       ...report,
       corridors,
@@ -150,6 +168,8 @@ export async function GET(request: Request) {
       scores,
       gold,
       goldFlow,
+      btc,
+      btcFlow,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

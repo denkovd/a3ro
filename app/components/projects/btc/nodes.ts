@@ -82,10 +82,14 @@ export const VENUES: Venue[] = [
     kind: "etf",
     glyph: "diamond",
     zoom: 1.42,
+    // Static fallback only — BtcTrackerCore.tsx overrides this to "live"
+    // at render time once /api/btc/loci actually has an etf_us reading,
+    // so the badge degrades honestly back to "watchlist" if that feed
+    // ever goes dark rather than keeping a stale "live" claim.
     status: "watchlist",
     title: "US spot Bitcoin ETFs",
     note:
-      "Institutional stock analogue (IBIT/FBTC-class aggregate). Holdings and daily creation/redemption flow — watchlist until free issuer/tracker feed is wired.",
+      "Institutional stock analogue (IBIT/FBTC-class aggregate). Daily net flow (all funds) reads live via SoSoValue; fund AUM is in USD, not a BTC-count.",
     rank: 1,
   },
   {

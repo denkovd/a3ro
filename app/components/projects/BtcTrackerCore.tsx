@@ -32,6 +32,8 @@ import {
   type Venue,
   type MiningRegion,
 } from "./btc/nodes";
+import { useBtcSnapshot, formatBtcPrice, formatPct, formatAsOf } from "./btc/btcData";
+import useBtcFlowData, { findMetric, formatUsdMn } from "./btc/useBtcFlowData";
 
 type HitResult =
   | { type: "venue"; v: Venue }
@@ -142,6 +144,10 @@ export default function BtcTrackerCore({
   const lastMiningRef = useRef<Exclude<MiningLayerMode, "off">>("share");
   const [layersExpanded, setLayersExpanded] = useState(false);
   const [hoverId, setHoverId] = useState<string | null>(null);
+
+  const btcSnap = useBtcSnapshot();
+  const flowData = useBtcFlowData();
+  const etfFlowMetric = findMetric(flowData.metrics, "etf_us", "etf_flow_usd_mn");
 
   const sim = useRef<Sim>({
     lon: initialView?.lon ?? HOME.lon,
@@ -925,15 +931,25 @@ export default function BtcTrackerCore({
     return {
       title: v.title,
       lines: [
-        v.status === "connecting" ? "CONNECTING" : "WATCHLIST",
+        v.id === "etf_us" && etfFlowMetric
+          ? "LIVE"
+          : v.status === "connecting"
+            ? "CONNECTING"
+            : "WATCHLIST",
         v.kind.toUpperCase() + " LOCUS",
       ],
       click: true,
     };
   })();
 
-  const statusColor = (s: Venue["status"]) =>
-    s === "connecting" ? "var(--ink-2)" : "var(--ink-3)";
+  const statusColor = (s: string) =>
+    s === "live" ? ORANGE_CSS : s === "connecting" ? "var(--ink-2)" : "var(--ink-3)";
+
+  /** etf_us is the only venue with a wired live feed so far (SoSoValue
+   *  daily net flow) — every other venue stays honestly on its static
+   *  connecting/watchlist status until its own free feed is verified. */
+  const effectiveVenueStatus = (v: Venue): string =>
+    v.id === "etf_us" && etfFlowMetric ? "live" : v.status;
 
   return (
     <div ref={wrapRef} className={`relative h-full w-full ${className}`}>
@@ -1105,17 +1121,27 @@ export default function BtcTrackerCore({
 
         <div className="border-b border-[var(--line)] px-4 py-3">
           <p className="font-mono text-[8px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-            Tape
+            Price · {btcSnap.source === "live" ? "live" : "baseline"}
+          </p>
+          <p className="mt-1 font-mono text-xl tabular-nums text-[var(--ink)]">
+            ${formatBtcPrice(btcSnap.price.value)}
           </p>
           <p
-            className="mt-1 font-mono text-[12px] uppercase tracking-[0.18em]"
-            style={{ color: ORANGE_CSS }}
+            className="mt-1 font-mono text-[10px] tabular-nums"
+            style={{
+              color:
+                btcSnap.changes.d1 > 0
+                  ? ORANGE_CSS
+                  : btcSnap.changes.d1 < 0
+                    ? "var(--ink-2)"
+                    : "var(--ink-3)",
+            }}
           >
-            PENDING · FLOW COVERAGE
+            {formatPct(btcSnap.changes.d1)} · 1D · As of {formatAsOf(btcSnap.asOf)}
           </p>
           <p className="mt-1 text-[10px] text-[var(--ink-3)]">
-            Stance requires exchange stock / netflow series. Price + funding
-            rails ship next.
+            Composite tape needs exchange stock / netflow — still pending a
+            verified free feed. US spot ETF flow reads live below.
           </p>
         </div>
 
@@ -1144,9 +1170,9 @@ export default function BtcTrackerCore({
                   </span>
                   <span
                     className="shrink-0 font-mono text-[8px] uppercase tracking-[0.16em]"
-                    style={{ color: statusColor(v.status) }}
+                    style={{ color: statusColor(effectiveVenueStatus(v)) }}
                   >
-                    {v.status}
+                    {effectiveVenueStatus(v)}
                   </span>
                 </button>
               </li>
@@ -1177,19 +1203,32 @@ export default function BtcTrackerCore({
                       </h4>
                       <p
                         className="mt-2 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.22em]"
-                        style={{ color: statusColor(selVenue.status) }}
+                        style={{ color: statusColor(effectiveVenueStatus(selVenue)) }}
                       >
                         <span
                           aria-hidden
                           className="inline-block h-1 w-1 rounded-full"
                           style={{ background: "currentColor" }}
                         />
-                        {selVenue.status}
+                        {effectiveVenueStatus(selVenue)}
                       </p>
-                      <p className="mt-3 font-mono text-lg text-[var(--ink-3)]">—</p>
-                      <p className="mt-1 text-[11px] text-[var(--ink-3)]">
-                        No live stock/netflow on file yet
-                      </p>
+                      {selVenue.id === "etf_us" && etfFlowMetric ? (
+                        <>
+                          <p className="mt-3 font-mono text-lg text-[var(--ink)]">
+                            {formatUsdMn(etfFlowMetric.value)}
+                          </p>
+                          <p className="mt-1 text-[11px] text-[var(--ink-3)]">
+                            Net daily flow, all US spot ETFs · {etfFlowMetric.periodDate}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="mt-3 font-mono text-lg text-[var(--ink-3)]">—</p>
+                          <p className="mt-1 text-[11px] text-[var(--ink-3)]">
+                            No live stock/netflow on file yet
+                          </p>
+                        </>
+                      )}
                       <p className="mt-3 text-[11px] leading-relaxed text-[var(--ink-2)]">
                         {selVenue.note}
                       </p>
