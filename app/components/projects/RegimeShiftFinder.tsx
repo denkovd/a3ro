@@ -7,7 +7,6 @@
    with no modeled numbers. Distinct from P·04/P·05 (Bull Market Finder
    1/2), which are bottom-up price-trend screeners.
 ──────────────────────────────────────────────────────────────── */
-import type { ReactNode } from "react";
 import {
   useMacroSnapshot,
   QUADRANT_META,
@@ -19,17 +18,10 @@ import {
   type MacroQuadrant,
 } from "./macro/macroData";
 import { deriveMacroBrief } from "./macro/macroBrief";
-import ModuleCard from "./ModuleCard";
 
 const ORDER: Exclude<MacroQuadrant, "PENDING">[] = ["GOLDILOCKS", "REFLATION", "DEFLATION", "INFLATION"];
 
-export function RegimeContent({
-  className = "",
-  switcher,
-}: {
-  className?: string;
-  switcher?: ReactNode;
-}) {
+export default function RegimeShiftFinder({ className = "" }: { className?: string }) {
   const snap = useMacroSnapshot();
   const live = snap.status === "live" && snap.quadrant !== "PENDING";
   const active = live ? (snap.quadrant as Exclude<MacroQuadrant, "PENDING">) : null;
@@ -62,7 +54,6 @@ export function RegimeContent({
           <h3 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--ink)] md:text-3xl">
             Regime
           </h3>
-          {switcher}
           <p className="mt-3 hidden text-[13px] leading-relaxed text-[var(--ink-2)] md:block">
             Top-down macro regime — growth × inflation on a rate-of-change basis.
           </p>
@@ -121,8 +112,4 @@ export function RegimeContent({
       </div>
     </a>
   );
-}
-
-export default function RegimeShiftFinder({ className = "" }: { className?: string }) {
-  return <ModuleCard initial="regime" className={className} />;
 }

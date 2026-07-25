@@ -40,6 +40,7 @@ import { deriveMacroBrief } from "../../components/projects/macro/macroBrief";
 import MacroBriefOverlay, { HorizonRibbon } from "../../components/projects/macro/MacroBriefOverlay";
 import RiskMatrixPanel from "../../components/projects/macro/RiskMatrixPanel";
 import { LiquidityPanel, CostOfCapitalPanel } from "../../components/projects/macro/LiquidityPanel";
+import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
 
 const ATMOSPHERE =
   "radial-gradient(90% 110% at 50% 65%, #0e1020 0%, var(--depth-1) 55%, #070808 100%)";
@@ -103,6 +104,8 @@ export default function RegimeShiftView() {
           <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
             A3RO Intelligence — Regime Shift Finder
           </p>
+          <span aria-hidden className="text-[var(--ink-3)]">/</span>
+          <ModuleSwitcher current="regime" />
         </div>
         <p className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
           <span aria-hidden className="inline-block h-[5px] w-[5px] rounded-full" style={{ background: MACRO_ACCENT }} />

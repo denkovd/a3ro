@@ -8,7 +8,6 @@
    Same truth-pass posture as every module: before the first scan
    the card says so — no invented numbers.
 ──────────────────────────────────────────────────────────────── */
-import type { ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   useBullSnapshot,
@@ -22,7 +21,6 @@ import {
   BULL_ROUTE,
   type BullRow,
 } from "./bull/bullData";
-import ModuleCard from "./ModuleCard";
 
 const ATMOSPHERE =
   "radial-gradient(90% 110% at 50% 62%, #0c1018 0%, var(--depth-1) 55%, #070808 100%)";
@@ -45,13 +43,7 @@ function highlights(rows: BullRow[], max = 4): { rows: BullRow[]; fresh: boolean
   return { rows: rows.filter((r) => r.verdict === "BULLISH").slice(0, max), fresh: false };
 }
 
-export function TrendFinderContent({
-  className = "",
-  switcher,
-}: {
-  className?: string;
-  switcher?: ReactNode;
-}) {
+export default function BullFinder({ className = "" }: { className?: string }) {
   const snap = useBullSnapshot();
   const reduced = useReducedMotion();
 
@@ -144,7 +136,6 @@ export function TrendFinderContent({
           <h3 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--ink)] md:text-3xl">
             Trend Finder
           </h3>
-          {switcher}
           <p className="mt-3 hidden text-[13px] leading-relaxed text-[var(--ink-2)] md:block">
             Whole-market bullish-state screener — double confirmation on
             daily and weekly closes, ranked by recency and strength.
@@ -280,8 +271,4 @@ export function TrendFinderContent({
       </div>
     </a>
   );
-}
-
-export default function BullFinder({ className = "" }: { className?: string }) {
-  return <ModuleCard initial="trend" className={className} />;
 }

@@ -37,6 +37,7 @@ import {
   type BullVerdict,
   type StrategyTimeframe,
 } from "../../components/projects/bull/bullData";
+import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
 
 const ATMOSPHERE =
   "radial-gradient(90% 110% at 50% 65%, #0c1018 0%, var(--depth-1) 55%, #070808 100%)";
@@ -200,6 +201,8 @@ export default function BullMarketFinderView() {
           <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
             A3RO Intelligence — Bull Market Finder
           </p>
+          <span aria-hidden className="text-[var(--ink-3)]">/</span>
+          <ModuleSwitcher current="trend" />
         </div>
         <p className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
           {!reduced ? (

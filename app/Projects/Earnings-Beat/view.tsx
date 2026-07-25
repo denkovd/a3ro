@@ -25,6 +25,7 @@ import {
   BEAT_MISS,
   type BeatRow,
 } from "../../components/projects/earnings/earningsData";
+import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
 
 const ATMOSPHERE =
   "radial-gradient(90% 110% at 50% 65%, #100c18 0%, var(--depth-1) 55%, #070808 100%)";
@@ -119,6 +120,8 @@ export default function EarningsBeatView() {
           <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
             A3RO Intelligence — Earnings Beat Leaderboard
           </p>
+          <span aria-hidden className="text-[var(--ink-3)]">/</span>
+          <ModuleSwitcher current="earnings" />
         </div>
         <p className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
           {!reduced ? (
