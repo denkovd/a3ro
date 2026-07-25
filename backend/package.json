@@ -37,6 +37,9 @@
     "run:gold": "tsx scripts/run-gold.ts",
     "run:gold-flow": "tsx scripts/run-gold-flow.ts",
     "migrate:gold-flow": "tsx scripts/migrate.ts migrations/018_gold_flow.sql",
+    "migrate:macro-liquidity": "tsx scripts/migrate.ts migrations/019_macro_liquidity.sql",
+    "backtest:affinity": "tsx scripts/backtest-affinity.ts",
+    "backtest:allocation": "tsx scripts/backtest-allocation.ts",
     "run:earnings-weekly": "tsx scripts/run-earnings-weekly.ts",
     "backfill:earnings": "tsx scripts/run-earnings-backfill.ts",
     "test": "tsx --test tests/**/*.test.ts"

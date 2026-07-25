@@ -30,9 +30,38 @@ export { fetchSeasonalBaselines, groupByIsoWeek, SEASONAL_METRICS } from "./sour
 export { fetchFredSeries, fetchMacroPanel, parseFredCsv, MACRO_SERIES } from "./sources/fredMacro";
 export type { MacroSeries, MacroObservation, FredSeriesConfig } from "./sources/fredMacro";
 export { computeMacroRegime, computeMacroPressure, computePositioning, yoyAndMomentum } from "./macro/engine";
+export {
+  computeLiquidityStress, computeNominalGrowth, netLiquiditySeries,
+  realizedVol, rollingVol, percentileRank,
+} from "./macro/engine";
+export { computeVams, computeRiskMatrix, dailyLogVol, REGIME_AFFINITY, affinityFor } from "./macro/vams";
+export type { VamsRead, VamsState, RiskMatrixSnapshot, AffinityTable } from "./macro/vams";
+export {
+  buildRegimeTimeline, deriveAffinity, renderAffinityModule,
+  MIN_CELL, MIN_LIFT, MIN_SAMPLES, MAX_CONFIRMS,
+} from "./macro/affinityBacktest";
+export type { RegimeLabel, RegimeStat, AffinityEvidence } from "./macro/affinityBacktest";
+export { REGIME_AFFINITY_DERIVED, AFFINITY_GENERATED_AT } from "./macro/regimeAffinity.generated";
+export {
+  computeAllocation, weightOf, SLEEVES, SLEEVE_REGIME_SCORE,
+  VAMS_MULTIPLIER, RISK_SLEEVES, MAX_CYCLE_DRAG,
+} from "./macro/allocation";
+export type { Sleeve, SleeveKey, AllocationInput, SleeveWeight, Allocation } from "./macro/allocation";
+export { runAllocationBacktest, DEFAULT_BENCHMARKS, DEFAULT_COST_BPS } from "./macro/allocationBacktest";
+export type {
+  BacktestStep, BacktestMetrics, BacktestResult, BacktestOptions, PriceSeries,
+} from "./macro/allocationBacktest";
+export {
+  computeSixCycles, growthCycle, inflationCycle, policyCycle,
+  profitsCycle, liquidityCycle, positioningCycle,
+} from "./macro/cycles";
+export { fetchGlobalBondStress, readGlobalBonds, GLOBAL_BOND_SYMBOLS } from "./macro/globalBonds";
+export type { GlobalBondRead } from "./macro/globalBonds";
 export type {
   MacroRegimeSnapshot, MacroPressureSnapshot, MacroQuadrant, MacroAxisRead,
   PositioningSnapshot, PositioningStance,
+  LiquidityLeg, LiquidityStressSnapshot, NominalGrowthSnapshot,
+  CycleKey, CycleScore, CycleRead, SixCyclesSnapshot,
 } from "./macro/types";
 export { upsertMacroSnapshot, getLatestMacroSnapshot } from "./storage/macroRepo";
 export type { MacroSnapshotRow } from "./storage/macroRepo";

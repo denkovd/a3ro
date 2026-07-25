@@ -96,11 +96,19 @@ export function parseYahooDaily(body: YahooChartResponse, symbol: string): Regim
   return [...byDate.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
 }
 
-/** Fetch ~5y of daily bars for one symbol. Throws SourceError on
- *  network/HTTP problems (via getJsonForSource) or Error on payload
- *  problems — the cycle isolates failures per symbol either way. */
-export async function fetchDailyHistory(symbol: string): Promise<RegimeBar[]> {
-  const url = `${BASE_URL}/${encodeURIComponent(symbol)}?interval=1d&range=${HISTORY_RANGE}`;
+/** Fetch daily bars for one symbol. Defaults to HISTORY_RANGE (5y) —
+ *  the daily scan's need. `range` is overridable for the affinity
+ *  backtest, which wants "max": conditioning a regime affinity on five
+ *  years means conditioning it on roughly one and a half regime
+ *  cycles, which is not enough to separate signal from the particular
+ *  decade. Throws SourceError on network/HTTP problems (via
+ *  getJsonForSource) or Error on payload problems — the cycle isolates
+ *  failures per symbol either way. */
+export async function fetchDailyHistory(
+  symbol: string,
+  range: string = HISTORY_RANGE,
+): Promise<RegimeBar[]> {
+  const url = `${BASE_URL}/${encodeURIComponent(symbol)}?interval=1d&range=${range}`;
   const body = await getJsonForSource<YahooChartResponse>(REGIME_SOURCE_ID, url, {
     classifyHttpError: classifyYahooError,
   });

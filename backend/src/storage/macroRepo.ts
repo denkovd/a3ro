@@ -5,7 +5,15 @@
    chip read via getLatestMacroSnapshot. Mirrors regimeRepo's shape.
 ──────────────────────────────────────────────────────────────── */
 
-import { MacroPressureSnapshot, MacroRegimeSnapshot } from "../macro/types";
+import {
+  LiquidityStressSnapshot,
+  MacroPressureSnapshot,
+  MacroRegimeSnapshot,
+  NominalGrowthSnapshot,
+  SixCyclesSnapshot,
+} from "../macro/types";
+import { GlobalBondRead } from "../macro/globalBonds";
+import { RiskMatrixSnapshot } from "../macro/vams";
 import { Queryable } from "./db";
 
 export interface MacroSnapshotRow {
@@ -24,20 +32,70 @@ export interface MacroSnapshotRow {
   pressureHeadline: string;
   components: MacroPressureSnapshot["components"];
   computedAt: string;
+
+  /* ── liquidity / cost-of-capital layer (019_macro_liquidity.sql) ──
+     Optional on the type because a row written before that migration
+     ran has no values for them — readers must treat them as absent,
+     not as zero. */
+  liquidityScore: number | null;
+  liquidityStatus: string;
+  riskPremiumAlert: boolean;
+  liquidityHeadline: string;
+  liquidityLegs: LiquidityStressSnapshot["legs"];
+  liquidityCoverage: number;
+  nominalGdpYoy: number | null;
+  nominalTrend0307: number | null;
+  nominalTrend1519: number | null;
+  nominalGap: number | null;
+  nominalAsOf: string | null;
+  globalBonds: GlobalBondRead | null;
+
+  /* ── top-down layer: the regime the MARKET is pricing (VAMS) ──
+     Deliberately parallel to `quadrant` above, never merged with it. */
+  marketRegime: string;
+  marketShares: RiskMatrixSnapshot["shares"] | Record<string, never>;
+  marketRiskOn: number | null;
+  marketScored: number;
+  marketUniverse: number;
+  marketHeadline: string;
+  vamsReads: RiskMatrixSnapshot["reads"];
+
+  /* ── the six cycles ── */
+  cycles: SixCyclesSnapshot["cycles"];
+  cyclesTailwinds: number;
+  cyclesHeadwinds: number;
+  cyclesHeadline: string;
 }
 
-/** Upsert the combined regime + pressure snapshot for a run_date. */
+/** Upsert the combined regime + pressure + liquidity snapshot for a
+ *  run_date. All of it comes from one FRED fetch in one cycle, so it
+ *  is one row and one write. */
 export async function upsertMacroSnapshot(
   db: Queryable,
   regime: MacroRegimeSnapshot,
   pressure: MacroPressureSnapshot,
+  liquidity?: LiquidityStressSnapshot,
+  nominal?: NominalGrowthSnapshot,
+  globalBonds?: GlobalBondRead | null,
+  matrix?: RiskMatrixSnapshot,
+  sixCycles?: SixCyclesSnapshot,
 ): Promise<number> {
   const res = await db.query(
     `insert into macro_snapshots
        (run_date, quadrant, growth_yoy, growth_momentum, inflation_yoy, inflation_momentum,
         regime_headline, favored, regime_coverage,
-        pressure_score, pressure_status, diverging, pressure_headline, components, computed_at)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14, now())
+        pressure_score, pressure_status, diverging, pressure_headline, components,
+        liquidity_score, liquidity_status, risk_premium_alert, liquidity_headline,
+        liquidity_legs, liquidity_coverage,
+        nominal_gdp_yoy, nominal_trend_0307, nominal_trend_1519, nominal_gap, nominal_as_of,
+        global_bonds,
+        market_regime, market_shares, market_risk_on, market_scored, market_universe,
+        market_headline, vams_reads,
+        cycles, cycles_tailwinds, cycles_headwinds, cycles_headline,
+        computed_at)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,
+             $15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,
+             $27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37, now())
      on conflict (run_date) do update
        set quadrant = excluded.quadrant,
            growth_yoy = excluded.growth_yoy,
@@ -52,6 +110,29 @@ export async function upsertMacroSnapshot(
            diverging = excluded.diverging,
            pressure_headline = excluded.pressure_headline,
            components = excluded.components,
+           liquidity_score = excluded.liquidity_score,
+           liquidity_status = excluded.liquidity_status,
+           risk_premium_alert = excluded.risk_premium_alert,
+           liquidity_headline = excluded.liquidity_headline,
+           liquidity_legs = excluded.liquidity_legs,
+           liquidity_coverage = excluded.liquidity_coverage,
+           nominal_gdp_yoy = excluded.nominal_gdp_yoy,
+           nominal_trend_0307 = excluded.nominal_trend_0307,
+           nominal_trend_1519 = excluded.nominal_trend_1519,
+           nominal_gap = excluded.nominal_gap,
+           nominal_as_of = excluded.nominal_as_of,
+           global_bonds = excluded.global_bonds,
+           market_regime = excluded.market_regime,
+           market_shares = excluded.market_shares,
+           market_risk_on = excluded.market_risk_on,
+           market_scored = excluded.market_scored,
+           market_universe = excluded.market_universe,
+           market_headline = excluded.market_headline,
+           vams_reads = excluded.vams_reads,
+           cycles = excluded.cycles,
+           cycles_tailwinds = excluded.cycles_tailwinds,
+           cycles_headwinds = excluded.cycles_headwinds,
+           cycles_headline = excluded.cycles_headline,
            computed_at = now()`,
     [
       regime.runDate,
@@ -68,6 +149,29 @@ export async function upsertMacroSnapshot(
       pressure.diverging,
       pressure.headline,
       JSON.stringify(pressure.components),
+      liquidity?.score ?? null,
+      liquidity?.status ?? "insufficient",
+      liquidity?.riskPremiumAlert ?? false,
+      liquidity?.headline ?? "",
+      JSON.stringify(liquidity?.legs ?? []),
+      liquidity?.coverage.available ?? 0,
+      nominal?.yoy ?? null,
+      nominal?.trend0307 ?? null,
+      nominal?.trend1519 ?? null,
+      nominal?.gapToRecentTrend ?? null,
+      nominal?.asOf ?? null,
+      globalBonds ? JSON.stringify(globalBonds) : null,
+      matrix?.modalRegime ?? "PENDING",
+      JSON.stringify(matrix?.shares ?? {}),
+      matrix?.riskOnShare ?? null,
+      matrix?.scored ?? 0,
+      matrix?.universe ?? 0,
+      matrix?.headline ?? "",
+      JSON.stringify(matrix?.reads ?? []),
+      JSON.stringify(sixCycles?.cycles ?? []),
+      sixCycles?.tailwinds ?? 0,
+      sixCycles?.headwinds ?? 0,
+      sixCycles?.headline ?? "",
     ],
   );
   return res.rowCount ?? 0;
@@ -80,6 +184,18 @@ export async function getLatestMacroSnapshot(db: Queryable): Promise<MacroSnapsh
   );
   const r = res.rows[0];
   return r ? rowToMacro(r) : null;
+}
+
+/** jsonb comes back parsed from `pg`, but a text column holding JSON
+ *  does not — tolerate both, and never throw on malformed content. */
+function parseJson<T>(v: unknown, fallback: T): T {
+  if (v == null) return fallback;
+  if (typeof v === "object") return v as T;
+  try {
+    return JSON.parse(String(v)) as T;
+  } catch {
+    return fallback;
+  }
 }
 
 function rowToMacro(r: Record<string, unknown>): MacroSnapshotRow {
@@ -102,6 +218,32 @@ function rowToMacro(r: Record<string, unknown>): MacroSnapshotRow {
       ? (r.components as MacroPressureSnapshot["components"])
       : JSON.parse(String(r.components ?? "[]")),
     computedAt: r.computed_at instanceof Date ? r.computed_at.toISOString() : new Date(String(r.computed_at)).toISOString(),
+
+    liquidityScore: num(r.liquidity_score),
+    liquidityStatus: r.liquidity_status == null ? "insufficient" : String(r.liquidity_status),
+    riskPremiumAlert: Boolean(r.risk_premium_alert),
+    liquidityHeadline: r.liquidity_headline == null ? "" : String(r.liquidity_headline),
+    liquidityLegs: parseJson<MacroSnapshotRow["liquidityLegs"]>(r.liquidity_legs, []),
+    liquidityCoverage: r.liquidity_coverage == null ? 0 : Number(r.liquidity_coverage),
+    nominalGdpYoy: num(r.nominal_gdp_yoy),
+    nominalTrend0307: num(r.nominal_trend_0307),
+    nominalTrend1519: num(r.nominal_trend_1519),
+    nominalGap: num(r.nominal_gap),
+    nominalAsOf: r.nominal_as_of == null ? null : toDateStr(r.nominal_as_of),
+    globalBonds: parseJson<MacroSnapshotRow["globalBonds"]>(r.global_bonds, null),
+
+    marketRegime: r.market_regime == null ? "PENDING" : String(r.market_regime),
+    marketShares: parseJson<MacroSnapshotRow["marketShares"]>(r.market_shares, {}),
+    marketRiskOn: num(r.market_risk_on),
+    marketScored: r.market_scored == null ? 0 : Number(r.market_scored),
+    marketUniverse: r.market_universe == null ? 0 : Number(r.market_universe),
+    marketHeadline: r.market_headline == null ? "" : String(r.market_headline),
+    vamsReads: parseJson<MacroSnapshotRow["vamsReads"]>(r.vams_reads, []),
+
+    cycles: parseJson<MacroSnapshotRow["cycles"]>(r.cycles, []),
+    cyclesTailwinds: r.cycles_tailwinds == null ? 0 : Number(r.cycles_tailwinds),
+    cyclesHeadwinds: r.cycles_headwinds == null ? 0 : Number(r.cycles_headwinds),
+    cyclesHeadline: r.cycles_headline == null ? "" : String(r.cycles_headline),
   };
 }
 

@@ -1,17 +1,20 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
-   P·06 Regime Shift Finder — Macro Brief Overlay (view components).
-   Three signal-first elements, no prose blocks:
-   · HorizonRibbon   — 0–3M / 3–12M / 12M+ outlook strip
-   · CycleGrid       — six macro cycles as tailwind/neutral/headwind tiles
-   · AssetStrip      — directional bias tags for Stocks/Bonds/Gold/BTC/Energy
-   Reads a derived MacroBrief (see macroBrief.ts). Live-derived tiles
-   carry a dot marker; editorial reads carry the brief date instead.
+   P·06 — view components for the macro brief.
+
+   · HorizonRibbon    — 0–3M / 3–12M / 12M+ outlook strip (editorial)
+   · CycleGrid        — the SIX cycles, now fed by the live snapshot
+                        rather than derived in the browser
+   · AssetStrip       — directional bias tags (editorial)
+   · MacroBriefOverlay— cycles + flags + asset strip
+
+   Live-derived tiles carry a dot; editorial reads carry the brief
+   date. That distinction is the whole point of the marker — it must
+   never be decorative.
 ──────────────────────────────────────────────────────────────── */
-import { MACRO_AMBER } from "./macroData";
+import { MACRO_AMBER, type LiveCycleRead, type MacroSnapshot } from "./macroData";
 import {
   type MacroBrief,
-  type CycleRead,
   scoreLabel,
   scoreColor,
   toneColor,
@@ -43,8 +46,12 @@ export function HorizonRibbon({ brief }: { brief: MacroBrief }) {
   );
 }
 
-/* ── 2 · cycle attribution grid — 3×2 tailwind/headwind tiles ── */
-function CycleTile({ c }: { c: CycleRead }) {
+/* ── 2 · the six cycles ──
+   growth · inflation · policy · corporate profits · liquidity ·
+   positioning. Policy and positioning carry sub-reads (real policy
+   rate + fiscal impulse; equity + credit realized vol), shown inline
+   so a composite tile never hides what produced it. */
+function CycleTile({ c }: { c: LiveCycleRead }) {
   const color = scoreColor(c.score);
   return (
     <div className="rounded-[4px] border border-[var(--line)] bg-[var(--depth-1)] p-3">
@@ -63,21 +70,39 @@ function CycleTile({ c }: { c: CycleRead }) {
         {scoreLabel(c.score)}
       </p>
       <p className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.15em] text-[var(--ink-3)]">{c.note}</p>
+
+      {c.detail && c.detail.length > 0 && (
+        <div className="mt-2 space-y-1 border-t border-[var(--line)] pt-2">
+          {c.detail.map((d) => (
+            <div key={d.label} className="flex items-baseline justify-between gap-2">
+              <span className="truncate font-mono text-[8px] uppercase tracking-[0.12em] text-[var(--ink-3)]">
+                {d.label}
+              </span>
+              <span className="shrink-0 font-mono text-[9px] tabular-nums text-[var(--ink-2)]">
+                {d.value === null ? "—" : d.value} <span className="text-[var(--ink-3)]">{d.note}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-export function CycleGrid({ brief }: { brief: MacroBrief }) {
+export function CycleGrid({ cycles }: { cycles: LiveCycleRead[] }) {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" aria-label="Six macro cycles scored tailwind to headwind">
-      {brief.cycleScores.map((c) => (
+    <div
+      className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3"
+      aria-label="The six macro cycles scored tailwind to headwind"
+    >
+      {cycles.map((c) => (
         <CycleTile key={c.key} c={c} />
       ))}
     </div>
   );
 }
 
-/* ── 3 · asset implication strip — narrow directional-bias row ── */
+/* ── 3 · asset implication strip ── */
 export function AssetStrip({ brief }: { brief: MacroBrief }) {
   return (
     <div
@@ -108,20 +133,29 @@ export function AssetStrip({ brief }: { brief: MacroBrief }) {
   );
 }
 
-/* ── combined section: grid + asset strip + risk flags ── */
-export default function MacroBriefOverlay({ brief }: { brief: MacroBrief }) {
+/* ── combined section ── */
+export default function MacroBriefOverlay({
+  brief,
+  snap,
+}: {
+  brief: MacroBrief;
+  snap: MacroSnapshot;
+}) {
   return (
     <div className="mt-12 border-t border-[var(--line)] pt-8">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-          What&apos;s driving the regime
+          The six cycles — is this regime sustainable?
         </p>
         <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
           · live feed &nbsp;|&nbsp; unmarked — brief {brief.asOf}
         </p>
       </div>
 
-      {/* risk flags */}
+      {snap.cyclesHeadline && (
+        <p className="mt-3 text-[13px] leading-relaxed text-[var(--ink-2)]">{snap.cyclesHeadline}</p>
+      )}
+
       {brief.riskFlags.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1.5" aria-label="Risk flags">
           {brief.riskFlags.map((f) => (
@@ -137,7 +171,13 @@ export default function MacroBriefOverlay({ brief }: { brief: MacroBrief }) {
       )}
 
       <div className="mt-5">
-        <CycleGrid brief={brief} />
+        {snap.cycles.length > 0 ? (
+          <CycleGrid cycles={snap.cycles} />
+        ) : (
+          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+            Cycles pending — awaiting first run of the updated macro cycle
+          </p>
+        )}
       </div>
 
       <p className="mt-6 font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">

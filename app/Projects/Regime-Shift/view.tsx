@@ -1,10 +1,23 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
    /Projects/Regime-Shift — fullscreen experience shell (P·06)
-   The Darius-Dale-style GRID macro regime: growth × inflation on a
-   rate-of-change basis → one of four quadrants, plus the Macro
-   Override pressure read (headwind-for-oil + divergence). One data
-   hook (/api/oil/macro). Esc or "Index" returns to the homepage.
+
+   Dale's macro regime model, in his own three layers
+   (docs/regime-macro-refresh.md):
+
+     1 · bottom-up GRID      — what regime is the ECONOMY in
+                               (growth × inflation, rate-of-change)
+     2 · Global Macro Risk   — what regime is the MARKET PRICING
+         Matrix (VAMS)         (per-market vol-adjusted momentum →
+                               regime confirmation shares)
+     3 · the six cycles      — is that regime SUSTAINABLE
+                               (growth, inflation, policy, corporate
+                               profits, liquidity, positioning)
+
+   Plus the 24 Jul 2026 read — liquidity stress and cost of capital —
+   and, at the foot, the oil overlay this page used to lead with.
+
+   One data hook (/api/macro/latest). Esc or "Index" returns home.
    Distinct from P·04/P·05 (bottom-up price-trend screeners).
 ──────────────────────────────────────────────────────────────── */
 import { useCallback, useEffect, useState } from "react";
@@ -25,16 +38,26 @@ import {
 } from "../../components/projects/macro/macroData";
 import { deriveMacroBrief } from "../../components/projects/macro/macroBrief";
 import MacroBriefOverlay, { HorizonRibbon } from "../../components/projects/macro/MacroBriefOverlay";
+import RiskMatrixPanel from "../../components/projects/macro/RiskMatrixPanel";
+import { LiquidityPanel, CostOfCapitalPanel } from "../../components/projects/macro/LiquidityPanel";
 
 const ATMOSPHERE =
   "radial-gradient(90% 110% at 50% 65%, #0e1020 0%, var(--depth-1) 55%, #070808 100%)";
 
-const ORDER: Exclude<MacroQuadrant, "PENDING">[] = ["GOLDILOCKS", "REFLATION", "DEFLATION", "INFLATION"];
+const ORDER: Exclude<MacroQuadrant, "PENDING">[] = ["GOLDILOCKS", "REFLATION", "INFLATION", "DEFLATION"];
+
+/** Risk-on regimes sit on the top row of the GRID. Dale's point: it is
+ *  the HORIZONTAL crossing (risk-on ↔ risk-off) that forces wholesale
+ *  allocation pivots — vertical moves within a risk stance are
+ *  incremental. The dial marks that boundary rather than rendering all
+ *  four transitions as equivalent. */
+const RISK_ON: MacroQuadrant[] = ["GOLDILOCKS", "REFLATION"];
 
 export default function RegimeShiftView() {
   const router = useRouter();
   const snap = useMacroSnapshot();
   const [leaving, setLeaving] = useState(false);
+  const [oilOpen, setOilOpen] = useState(false);
 
   const leave = useCallback(() => {
     if (leaving) return;
@@ -52,6 +75,7 @@ export default function RegimeShiftView() {
   const live = snap.status === "live" && snap.quadrant !== "PENDING";
   const active = live ? (snap.quadrant as Exclude<MacroQuadrant, "PENDING">) : null;
   const brief = deriveMacroBrief(snap);
+  const riskStance = active ? (RISK_ON.includes(active) ? "risk-on" : "risk-off") : null;
 
   return (
     <motion.main
@@ -82,7 +106,7 @@ export default function RegimeShiftView() {
         </div>
         <p className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
           <span aria-hidden className="inline-block h-[5px] w-[5px] rounded-full" style={{ background: MACRO_ACCENT }} />
-          Macro cycle · FRED
+          Macro cycle · FRED + cross-asset
         </p>
       </header>
 
@@ -97,9 +121,9 @@ export default function RegimeShiftView() {
             Regime Shift Finder
           </h1>
           <p className="mt-3 max-w-2xl text-[13px] leading-relaxed text-[var(--ink-2)]">
-            A top-down macro regime read — where are we in the growth/inflation cycle? Growth and
-            inflation are measured on a rate-of-change basis (accelerating vs decelerating), placing
-            the macro backdrop in one of four GRID quadrants. Free-tier FRED data. Not investment advice.
+            A top-down macro regime read in three layers: where the economy sits on the growth/inflation
+            GRID, which regime cross-asset markets are actually pricing, and whether the six macro cycles
+            support that regime continuing. Free-tier FRED and market data. Not investment advice.
           </p>
 
           <TapeBanner className="mt-8" />
@@ -120,136 +144,184 @@ export default function RegimeShiftView() {
             </p>
           )}
 
+          {/* ── layer 1: the economic GRID ── */}
           {live && (
-            <div className="mt-10 grid gap-8 md:grid-cols-2">
-              {/* GRID dial */}
-              <div>
-                <div className="grid grid-cols-2 gap-1.5" style={{ aspectRatio: "1 / 1" }}>
-                  {ORDER.map((q) => {
-                    const meta = QUADRANT_META[q];
-                    const on = active === q;
-                    return (
-                      <div
-                        key={q}
-                        className="flex flex-col items-center justify-center rounded-[4px] p-3 text-center transition-colors"
-                        style={{
-                          background: on ? meta.color : "var(--depth-2)",
-                          border: `1px solid ${on ? meta.color : "var(--line)"}`,
-                          color: on ? "var(--depth-0)" : "var(--ink-2)",
-                        }}
-                      >
-                        <span className="text-sm font-semibold">{meta.label}</span>
-                        <span className="mt-1 font-mono text-[9px] uppercase tracking-[0.15em] opacity-80">
-                          {meta.short}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="mt-3 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-                  <span>← inflation cooling · accelerating →</span>
-                </div>
-              </div>
-
-              {/* axes + headline */}
-              <div className="flex flex-col justify-center gap-5">
-                {/* regime + horizon outlook — one block */}
-                <div
-                  className="rounded-[4px] border border-[var(--line)] bg-[var(--depth-1)] p-4"
-                  style={{ borderLeft: `2px solid ${active ? QUADRANT_META[active].color : "var(--line)"}` }}
-                >
-                  <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">Current regime</p>
-                  <p className="mt-1 flex flex-wrap items-baseline gap-x-2 text-2xl font-semibold" style={{ color: active ? QUADRANT_META[active].color : "var(--ink)" }}>
-                    <span>{active ? QUADRANT_META[active].label : "—"}</span>
-                    {brief.regimeTag && (
-                      <span className="font-mono text-[12px] font-normal uppercase tracking-[0.1em]" style={{ color: MACRO_AMBER }}>
-                        ({brief.regimeTag})
-                      </span>
-                    )}
+            <>
+              <p className="mt-10 font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
+                The GRID — what the economy is doing
+              </p>
+              <div className="mt-4 grid gap-8 md:grid-cols-2">
+                <div>
+                  <div className="grid grid-cols-2 gap-1.5" style={{ aspectRatio: "1 / 1" }}>
+                    {ORDER.map((q) => {
+                      const meta = QUADRANT_META[q];
+                      const on = active === q;
+                      const marketOn = snap.marketRegime === q;
+                      return (
+                        <div
+                          key={q}
+                          className="relative flex flex-col items-center justify-center rounded-[4px] p-3 text-center transition-colors"
+                          style={{
+                            background: on ? meta.color : "var(--depth-2)",
+                            border: `1px solid ${on ? meta.color : marketOn ? meta.color : "var(--line)"}`,
+                            color: on ? "var(--depth-0)" : "var(--ink-2)",
+                          }}
+                        >
+                          {/* where the MARKET is, when it differs from the economy */}
+                          {marketOn && !on && (
+                            <span
+                              className="absolute right-1.5 top-1.5 rounded-[2px] px-1 py-px font-mono text-[7px] uppercase tracking-[0.15em]"
+                              style={{ border: `1px solid ${meta.color}`, color: meta.color }}
+                            >
+                              mkt
+                            </span>
+                          )}
+                          <span className="text-sm font-semibold">{meta.label}</span>
+                          <span className="mt-1 font-mono text-[9px] uppercase tracking-[0.15em] opacity-80">
+                            {meta.short}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-3 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+                    <span>← inflation cooling · accelerating →</span>
+                  </div>
+                  <p className="mt-2 font-mono text-[9px] uppercase tracking-[0.15em] text-[var(--ink-3)]">
+                    Top row risk-on · bottom row risk-off — crossing that boundary is the consequential shift
                   </p>
-                  <p className="mt-2 text-[13px] leading-relaxed text-[var(--ink-2)]">{snap.regimeHeadline}</p>
-                  <p className="mt-2 text-[12px] leading-relaxed text-[var(--ink-3)]">{snap.favored}</p>
-                  <div className="mt-4 border-t border-[var(--line)] pt-3">
-                    <HorizonRibbon brief={brief} />
+                </div>
+
+                {/* axes + headline */}
+                <div className="flex flex-col justify-center gap-5">
+                  <div
+                    className="rounded-[4px] border border-[var(--line)] bg-[var(--depth-1)] p-4"
+                    style={{ borderLeft: `2px solid ${active ? QUADRANT_META[active].color : "var(--line)"}` }}
+                  >
+                    <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
+                      Economic regime {riskStance && <span className="text-[var(--ink-2)]">· {riskStance}</span>}
+                    </p>
+                    <p
+                      className="mt-1 flex flex-wrap items-baseline gap-x-2 text-2xl font-semibold"
+                      style={{ color: active ? QUADRANT_META[active].color : "var(--ink)" }}
+                    >
+                      <span>{active ? QUADRANT_META[active].label : "—"}</span>
+                      {brief.regimeTag && (
+                        <span
+                          className="font-mono text-[12px] font-normal uppercase tracking-[0.1em]"
+                          style={{ color: MACRO_AMBER }}
+                        >
+                          ({brief.regimeTag})
+                        </span>
+                      )}
+                    </p>
+                    <p className="mt-2 text-[13px] leading-relaxed text-[var(--ink-2)]">{snap.regimeHeadline}</p>
+                    <p className="mt-2 text-[12px] leading-relaxed text-[var(--ink-3)]">{snap.favored}</p>
+                    <div className="mt-4 border-t border-[var(--line)] pt-3">
+                      <HorizonRibbon brief={brief} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <AxisCard label="Growth (IP)" yoy={snap.growthYoy} momentum={snap.growthMomentum} />
+                    <AxisCard label="Inflation (CPI)" yoy={snap.inflationYoy} momentum={snap.inflationMomentum} />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <AxisCard label="Growth (IP)" yoy={snap.growthYoy} momentum={snap.growthMomentum} />
-                  <AxisCard label="Inflation (CPI)" yoy={snap.inflationYoy} momentum={snap.inflationMomentum} />
-                </div>
               </div>
-            </div>
+            </>
           )}
 
-          {/* Macro Brief Overlay · 2+3 — cycle attribution grid + asset implication strip */}
-          {live && <MacroBriefOverlay brief={brief} />}
+          {/* ── layer 2: what the market is pricing ── */}
+          {live && <RiskMatrixPanel snap={snap} />}
 
-          {/* Macro Override pressure */}
+          {/* ── layer 3: the six cycles + asset implications ── */}
+          {live && <MacroBriefOverlay brief={brief} snap={snap} />}
+
+          {/* ── the 24 Jul read: liquidity stress + cost of capital ── */}
+          {live && <LiquidityPanel snap={snap} />}
+          {live && <CostOfCapitalPanel brief={brief} snap={snap} />}
+
+          {/* ── oil overlay — demoted, collapsed, clearly labelled.
+               This page used to LEAD with this block. It is one
+               asset's view of the same macro panel and belongs at the
+               foot of a macro page, not the top. ── */}
           {live && (
             <div className="mt-12 border-t border-[var(--line)] pt-8">
-              <div className="flex items-baseline justify-between">
+              <button
+                onClick={() => setOilOpen((v) => !v)}
+                className="flex w-full flex-wrap items-baseline justify-between gap-2 text-left"
+                aria-expanded={oilOpen}
+              >
                 <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-                  Macro pressure on oil
+                  {oilOpen ? "−" : "+"} Oil overlay — macro pressure on crude
                 </p>
-                {snap.diverging && (
-                  <span
-                    className="rounded-[3px] px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.2em]"
-                    style={{ background: MACRO_AMBER, color: "var(--depth-0)" }}
-                  >
-                    Macro divergence
-                  </span>
-                )}
-              </div>
-              <p className="mt-3 text-[13px] leading-relaxed text-[var(--ink-2)]">{snap.pressureHeadline}</p>
-              <div className="mt-5 flex items-baseline gap-3">
-                <span className="text-3xl font-semibold text-[var(--ink)]">{snap.pressureScore ?? "—"}</span>
-                <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-                  / 100 · {snap.pressureStatus}
+                <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+                  {snap.pressureScore ?? "—"}/100 · {snap.pressureStatus}
+                  {snap.diverging && (
+                    <span
+                      className="rounded-[3px] px-2 py-0.5 text-[9px]"
+                      style={{ background: MACRO_AMBER, color: "var(--depth-0)" }}
+                    >
+                      divergence
+                    </span>
+                  )}
                 </span>
-              </div>
-              {/* legs */}
-              <div className="mt-5 space-y-2">
-                {snap.components.map((c) => (
-                  <div key={c.key} className="flex items-center gap-3">
-                    <span className="w-40 shrink-0 font-mono text-[10px] uppercase tracking-[0.15em] text-[var(--ink-3)]">
-                      {c.label}
-                    </span>
-                    <div className="h-1 flex-1 overflow-hidden rounded-full bg-[var(--depth-2)]">
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: `${Math.round((c.normalized ?? 0) * 100)}%`,
-                          background: c.normalized === null ? "var(--line)" : MACRO_ACCENT,
-                        }}
-                      />
-                    </div>
-                    <span className="w-24 shrink-0 text-right font-mono text-[10px] text-[var(--ink-2)]">
-                      {c.value === null ? "pending" : c.value}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              </button>
 
-              {/* Positioning — CFTC managed money (the other half, P7) */}
-              {snap.positioning && (
-                <div className="mt-6 border-t border-[var(--line)] pt-4">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
-                    Futures positioning
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-baseline gap-x-6 gap-y-1">
-                    <span className="text-lg font-semibold" style={{ color: stanceColor(snap.positioning.stance) }}>
-                      {stanceLabel(snap.positioning.stance)}
-                    </span>
-                    <span className="font-mono text-[11px] text-[var(--ink-2)]">
-                      net {snap.positioning.netLength === null ? "—" : snap.positioning.netLength.toLocaleString("en-US")}
-                    </span>
-                    <span className="font-mono text-[11px] text-[var(--ink-3)]">
-                      {snap.positioning.percentile1y === null
-                        ? "1y percentile pending"
-                        : `${Math.round(snap.positioning.percentile1y * 100)}th pctile · 1y`}
-                    </span>
+              {oilOpen && (
+                <>
+                  <p className="mt-3 text-[13px] leading-relaxed text-[var(--ink-2)]">{snap.pressureHeadline}</p>
+                  <div className="mt-5 space-y-2">
+                    {snap.components.map((c) => (
+                      <div key={c.key} className="flex items-center gap-3">
+                        <span className="w-40 shrink-0 font-mono text-[10px] uppercase tracking-[0.15em] text-[var(--ink-3)]">
+                          {c.label}
+                        </span>
+                        <div className="h-1 flex-1 overflow-hidden rounded-full bg-[var(--depth-2)]">
+                          <div
+                            className="h-full rounded-full"
+                            style={{
+                              width: `${Math.round((c.normalized ?? 0) * 100)}%`,
+                              background: c.normalized === null ? "var(--line)" : MACRO_AMBER,
+                            }}
+                          />
+                        </div>
+                        <span className="w-24 shrink-0 text-right font-mono text-[10px] text-[var(--ink-2)]">
+                          {c.value === null ? "pending" : c.value}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                </div>
+
+                  {snap.positioning && (
+                    <div className="mt-6 border-t border-[var(--line)] pt-4">
+                      <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
+                        WTI futures positioning
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-baseline gap-x-6 gap-y-1">
+                        <span className="text-lg font-semibold" style={{ color: stanceColor(snap.positioning.stance) }}>
+                          {stanceLabel(snap.positioning.stance)}
+                        </span>
+                        <span className="font-mono text-[11px] text-[var(--ink-2)]">
+                          net{" "}
+                          {snap.positioning.netLength === null
+                            ? "—"
+                            : snap.positioning.netLength.toLocaleString("en-US")}
+                        </span>
+                        <span className="font-mono text-[11px] text-[var(--ink-3)]">
+                          {snap.positioning.percentile1y === null
+                            ? "1y percentile pending"
+                            : `${Math.round(snap.positioning.percentile1y * 100)}th pctile · 1y`}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="mt-5 max-w-2xl text-xs leading-relaxed text-[var(--ink-3)]">
+                    Crude&apos;s own read on the same macro panel, kept for the Oil Tracker&apos;s Macro Override
+                    chip. The legs here are scaled as headwinds for oil specifically — the macro positioning cycle
+                    above uses realized-volatility crowding, not WTI managed money.
+                  </p>
+                </>
               )}
             </div>
           )}
@@ -259,7 +331,11 @@ export default function RegimeShiftView() {
       {/* ── bottom chrome ── */}
       <footer className="absolute inset-x-0 bottom-0 z-30 flex h-12 items-center justify-between border-t border-[var(--line)] bg-[rgba(6,7,7,0.55)] px-6 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)] backdrop-blur-md md:px-10">
         <span>P·06 — Regime Shift Finder</span>
-        <span>{live ? `Macro read ${formatDate(snap.runDate)}` : "Trend-state readouts on free data feeds · not investment advice"}</span>
+        <span>
+          {live
+            ? `Macro read ${formatDate(snap.runDate)}`
+            : "Trend-state readouts on free data feeds · not investment advice"}
+        </span>
       </footer>
     </motion.main>
   );

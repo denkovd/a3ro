@@ -1,12 +1,19 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
-   P·06 Regime Shift Finder + Macro Override — data layer.
-   One endpoint (/api/oil/macro), one snapshot shape mirroring the
+   P·06 Regime Shift Finder — data layer.
+   One endpoint (/api/macro/latest), one snapshot shape mirroring the
    backend's MacroSnapshotRow. Field-by-field normalisation: a partial
    or malformed payload degrades to an honest "awaiting first cycle"
    state (status), never a crash and never a modeled number shown as
-   live (A3RO truth-pass rule). Shared by the P·06 card/page and the
-   Macro Override chip in the oil tracker.
+   live (A3RO truth-pass rule).
+
+   Carries three layers after the macro refresh
+   (docs/regime-macro-refresh.md):
+     · the bottom-up GRID quadrant (what the economy is doing)
+     · the VAMS risk matrix (what the market is pricing) — kept in
+       separate fields, never reconciled with the quadrant
+     · the six cycles, now computed server-side rather than derived
+       here from hard-coded per-quadrant defaults
 ──────────────────────────────────────────────────────────────── */
 import { useEffect, useState } from "react";
 
@@ -40,6 +47,45 @@ export type PositioningRead = {
 
 export type MacroStatus = "loading" | "live" | "pending" | "error";
 
+/* ── liquidity / cost-of-capital layer ── */
+export type LiquidityLeg = {
+  key: string;
+  label: string;
+  value: number | null;
+  normalized: number | null;
+  note: string;
+  source: "fred" | "yahoo" | "derived";
+};
+
+/* ── top-down layer: the regime the MARKET is pricing (VAMS) ──
+   Kept as its own shape rather than folded into the quadrant, because
+   the economy and the market are allowed to disagree and that
+   disagreement is the interesting part. */
+export type VamsState = "BULLISH" | "BEARISH" | "NEUTRAL" | "PENDING";
+export type VamsRead = {
+  symbol: string;
+  displayName: string;
+  state: VamsState;
+  z: number | null;
+  return63: number | null;
+  confirms: string[];
+};
+export type RegimeShares = Partial<Record<Exclude<MacroQuadrant, "PENDING">, number>>;
+
+/* ── the six cycles (growth, inflation, policy, profits, liquidity,
+   positioning) — computed server-side now, not derived in the UI ── */
+export type CycleScore = "TAILWIND" | "NEUTRAL" | "HEADWIND";
+export type LiveCycleRead = {
+  key: string;
+  label: string;
+  score: CycleScore;
+  note: string;
+  value: number | null;
+  detail?: { label: string; value: number | null; note: string }[];
+  source: "live" | "brief";
+  asOf: string | null;
+};
+
 export type MacroSnapshot = {
   status: MacroStatus;
   runDate: string | null;
@@ -58,6 +104,34 @@ export type MacroSnapshot = {
   components: MacroComponent[];
   computedAt: string | null;
   positioning: PositioningRead | null;
+
+  /* liquidity / cost of capital */
+  liquidityScore: number | null;
+  liquidityStatus: string;
+  riskPremiumAlert: boolean;
+  liquidityHeadline: string;
+  liquidityLegs: LiquidityLeg[];
+  nominalGdpYoy: number | null;
+  nominalTrend0307: number | null;
+  nominalTrend1519: number | null;
+  nominalGap: number | null;
+  globalBondSymbol: string | null;
+
+  /* top-down market regime */
+  marketRegime: MacroQuadrant;
+  marketShares: RegimeShares;
+  marketRiskOn: number | null;
+  marketScored: number;
+  marketUniverse: number;
+  marketHeadline: string;
+  vamsReads: VamsRead[];
+
+  /* six cycles */
+  cycles: LiveCycleRead[];
+  cyclesTailwinds: number;
+  cyclesHeadwinds: number;
+  cyclesHeadline: string;
+
   errorMessage?: string;
 };
 
@@ -79,6 +153,30 @@ const EMPTY: MacroSnapshot = {
   components: [],
   computedAt: null,
   positioning: null,
+
+  liquidityScore: null,
+  liquidityStatus: "insufficient",
+  riskPremiumAlert: false,
+  liquidityHeadline: "",
+  liquidityLegs: [],
+  nominalGdpYoy: null,
+  nominalTrend0307: null,
+  nominalTrend1519: null,
+  nominalGap: null,
+  globalBondSymbol: null,
+
+  marketRegime: "PENDING",
+  marketShares: {},
+  marketRiskOn: null,
+  marketScored: 0,
+  marketUniverse: 0,
+  marketHeadline: "",
+  vamsReads: [],
+
+  cycles: [],
+  cyclesTailwinds: 0,
+  cyclesHeadwinds: 0,
+  cyclesHeadline: "",
 };
 
 const STANCES: PositioningStance[] = ["CROWDED_LONG", "CROWDED_SHORT", "NEUTRAL", "PENDING"];
@@ -114,7 +212,78 @@ function normalizeComponent(raw: unknown): MacroComponent | null {
   return { key, label, value: num(o.value), normalized: num(o.normalized), note: str(o.note) ?? "" };
 }
 
-/** Normalise /api/oil/macro ({ macro: row | null } | { error }). */
+const LEG_SOURCES: LiquidityLeg["source"][] = ["fred", "yahoo", "derived"];
+function normalizeLeg(raw: unknown): LiquidityLeg | null {
+  const o = (raw ?? {}) as Record<string, unknown>;
+  const key = str(o.key);
+  const label = str(o.label);
+  if (!key || !label) return null;
+  return {
+    key,
+    label,
+    value: num(o.value),
+    normalized: num(o.normalized),
+    note: str(o.note) ?? "",
+    source: LEG_SOURCES.includes(o.source as LiquidityLeg["source"])
+      ? (o.source as LiquidityLeg["source"])
+      : "derived",
+  };
+}
+
+const VAMS_STATES: VamsState[] = ["BULLISH", "BEARISH", "NEUTRAL", "PENDING"];
+function normalizeVams(raw: unknown): VamsRead | null {
+  const o = (raw ?? {}) as Record<string, unknown>;
+  const symbol = str(o.symbol);
+  if (!symbol) return null;
+  return {
+    symbol,
+    displayName: str(o.displayName) ?? symbol,
+    state: VAMS_STATES.includes(o.state as VamsState) ? (o.state as VamsState) : "PENDING",
+    z: num(o.z),
+    return63: num(o.return63),
+    confirms: Array.isArray(o.confirms) ? o.confirms.filter((c): c is string => typeof c === "string") : [],
+  };
+}
+
+const CYCLE_SCORES: CycleScore[] = ["TAILWIND", "NEUTRAL", "HEADWIND"];
+function normalizeCycle(raw: unknown): LiveCycleRead | null {
+  const o = (raw ?? {}) as Record<string, unknown>;
+  const key = str(o.key);
+  const label = str(o.label);
+  if (!key || !label) return null;
+  return {
+    key,
+    label,
+    score: CYCLE_SCORES.includes(o.score as CycleScore) ? (o.score as CycleScore) : "NEUTRAL",
+    note: str(o.note) ?? "",
+    value: num(o.value),
+    detail: Array.isArray(o.detail)
+      ? o.detail.map((d) => {
+          const dd = (d ?? {}) as Record<string, unknown>;
+          return { label: str(dd.label) ?? "", value: num(dd.value), note: str(dd.note) ?? "" };
+        })
+      : undefined,
+    source: o.source === "live" ? "live" : "brief",
+    asOf: str(o.asOf),
+  };
+}
+
+/** Regime shares arrive as a jsonb object; drop anything that isn't a
+ *  finite number so a malformed payload can't render a bar chart of
+ *  NaNs. */
+function normalizeShares(raw: unknown): RegimeShares {
+  const o = (raw ?? {}) as Record<string, unknown>;
+  const out: RegimeShares = {};
+  for (const q of ["GOLDILOCKS", "REFLATION", "INFLATION", "DEFLATION"] as const) {
+    const v = num(o[q]);
+    if (v !== null) out[q] = v;
+  }
+  return out;
+}
+
+/** Normalise the macro payload ({ macro: row | null, positioning } |
+ *  { error }). Shape is shared by /api/macro/latest and the legacy
+ *  /api/oil/macro, so either can back this hook. */
 export function normalizeMacro(raw: unknown): MacroSnapshot {
   const o = (raw ?? {}) as Record<string, unknown>;
   if (typeof o.error === "string") {
@@ -145,17 +314,55 @@ export function normalizeMacro(raw: unknown): MacroSnapshot {
     components,
     computedAt: str(m.computedAt),
     positioning: normalizePositioning(o.positioning),
+
+    liquidityScore: num(m.liquidityScore),
+    liquidityStatus: str(m.liquidityStatus) ?? "insufficient",
+    riskPremiumAlert: bool(m.riskPremiumAlert),
+    liquidityHeadline: str(m.liquidityHeadline) ?? "",
+    liquidityLegs: Array.isArray(m.liquidityLegs)
+      ? m.liquidityLegs.map(normalizeLeg).filter((l): l is LiquidityLeg => l !== null)
+      : [],
+    nominalGdpYoy: num(m.nominalGdpYoy),
+    nominalTrend0307: num(m.nominalTrend0307),
+    nominalTrend1519: num(m.nominalTrend1519),
+    nominalGap: num(m.nominalGap),
+    globalBondSymbol:
+      m.globalBonds && typeof m.globalBonds === "object"
+        ? str((m.globalBonds as Record<string, unknown>).symbol)
+        : null,
+
+    marketRegime: toQuadrant(m.marketRegime),
+    marketShares: normalizeShares(m.marketShares),
+    marketRiskOn: num(m.marketRiskOn),
+    marketScored: num(m.marketScored) ?? 0,
+    marketUniverse: num(m.marketUniverse) ?? 0,
+    marketHeadline: str(m.marketHeadline) ?? "",
+    vamsReads: Array.isArray(m.vamsReads)
+      ? m.vamsReads.map(normalizeVams).filter((v): v is VamsRead => v !== null)
+      : [],
+
+    cycles: Array.isArray(m.cycles)
+      ? m.cycles.map(normalizeCycle).filter((c): c is LiveCycleRead => c !== null)
+      : [],
+    cyclesTailwinds: num(m.cyclesTailwinds) ?? 0,
+    cyclesHeadwinds: num(m.cyclesHeadwinds) ?? 0,
+    cyclesHeadline: str(m.cyclesHeadline) ?? "",
   };
 }
 
 /** The module's single data entry point — SSR-safe loading, then
- *  live / pending / error. Never throws past this boundary. */
+ *  live / pending / error. Never throws past this boundary.
+ *
+ *  Reads the asset-neutral /api/macro/latest. The oil route still
+ *  exists and still serves the Oil Tracker's Macro Override chip off
+ *  the same row — a macro page just shouldn't be reading an oil
+ *  namespace to find out what the market is pricing. */
 export function useMacroSnapshot(): MacroSnapshot {
   const [snap, setSnap] = useState<MacroSnapshot>(EMPTY);
 
   useEffect(() => {
     let alive = true;
-    fetch("/api/oil/macro", { cache: "no-store" })
+    fetch("/api/macro/latest", { cache: "no-store" })
       .then(async (res) => {
         const body = await res.json().catch(() => ({}));
         if (!alive) return;
