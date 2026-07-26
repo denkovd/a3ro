@@ -9,14 +9,15 @@
 ──────────────────────────────────────────────────────────────── */
 import { useRouter } from "next/navigation";
 
-export type ModuleId = "trend" | "regime" | "earnings";
+export type ModuleId = "trend" | "regime" | "earnings" | "narrative";
 
-const MODULE_SEQUENCE: ModuleId[] = ["trend", "regime", "earnings"];
+const MODULE_SEQUENCE: ModuleId[] = ["trend", "regime", "earnings", "narrative"];
 
 const MODULE_META: Record<ModuleId, { label: string; route: string }> = {
   trend: { label: "Bull Market Finder", route: "/Projects/Bull-Market-Finder" },
   regime: { label: "Regime Shift Finder", route: "/Projects/Regime-Shift" },
   earnings: { label: "Earnings Beat Leaderboard", route: "/Projects/Earnings-Beat" },
+  narrative: { label: "Narrative Rotation", route: "/Projects/Narrative-Rotation" },
 };
 
 const switchButtonClass =

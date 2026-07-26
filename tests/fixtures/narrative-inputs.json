@@ -1,0 +1,17 @@
+{
+  "asOf": "2026-07-26",
+  "narrativeIds": ["ai", "uranium", "memes"],
+  "datapoints": [
+    { "narrativeId": "ai", "date": "2026-06-26", "metric": "google_trends", "value": 40, "source": "trends-export-1" },
+    { "narrativeId": "ai", "date": "2026-07-19", "metric": "google_trends", "value": 55, "source": "trends-export-2" },
+    { "narrativeId": "ai", "date": "2026-07-25", "metric": "google_trends", "value": 60, "source": "trends-export-3" },
+    { "narrativeId": "ai", "date": "2026-07-26", "metric": "google_trends", "value": 70, "source": "trends-export-4" },
+
+    { "narrativeId": "uranium", "date": "2026-06-26", "metric": "google_trends", "value": 50, "source": "trends-export-1" },
+    { "narrativeId": "uranium", "date": "2026-07-19", "metric": "google_trends", "value": 48, "source": "trends-export-2" },
+    { "narrativeId": "uranium", "date": "2026-07-25", "metric": "google_trends", "value": 45, "source": "trends-export-3" },
+    { "narrativeId": "uranium", "date": "2026-07-26", "metric": "google_trends", "value": 40, "source": "trends-export-4" },
+
+    { "narrativeId": "memes", "date": "2026-07-26", "metric": "google_trends", "value": 20, "source": "trends-export-4" }
+  ]
+}

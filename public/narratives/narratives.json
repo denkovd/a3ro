@@ -1,0 +1,46 @@
+{
+  "narratives": [
+    {
+      "id": "ai",
+      "label": "Artificial Intelligence",
+      "symbols": ["NVDA", "MSFT", "GOOGL", "AMD", "SMCI", "PLTR"],
+      "keywords": ["AI", "artificial intelligence", "GPU", "LLM", "chatgpt", "data center"],
+      "notes": "Mega-cap AI capex and compute buildout — the dominant equity narrative since 2023."
+    },
+    {
+      "id": "energy",
+      "label": "Energy",
+      "symbols": ["XOM", "CVX", "OXY", "SLB", "XLE"],
+      "keywords": ["oil", "energy", "opec", "crude", "natural gas"],
+      "notes": "Traditional upstream/integrated energy complex."
+    },
+    {
+      "id": "l2s",
+      "label": "Layer 2s",
+      "symbols": ["ARB-USD", "OP-USD"],
+      "keywords": ["layer 2", "rollup", "arbitrum", "optimism", "ethereum scaling"],
+      "notes": "Ethereum scaling narrative — thin member list, keep expectations honest until more L2 tokens enter the scan universe."
+    },
+    {
+      "id": "memes",
+      "label": "Meme Coins",
+      "symbols": ["DOGE-USD", "SHIB-USD", "PEPE-USD"],
+      "keywords": ["meme coin", "dogecoin", "shiba inu", "pepe"],
+      "notes": "Retail-driven speculative crypto, attention-led rather than fundamentals-led by design. PEPE-USD is not in the bull-scan universe today — it shows as unmatched in market corroboration until the scan universe grows."
+    },
+    {
+      "id": "uranium",
+      "label": "Uranium",
+      "symbols": ["URA", "CCJ", "UEC", "DNN"],
+      "keywords": ["uranium", "nuclear", "SMR", "enrichment"],
+      "notes": "Nuclear buildout / uranium supply-deficit narrative. Only URA is in the bull-scan universe today — CCJ/UEC/DNN show as unmatched in market corroboration until the scan universe grows."
+    },
+    {
+      "id": "gold-miners",
+      "label": "Gold Miners",
+      "symbols": ["GDX", "NEM", "GOLD", "AEM"],
+      "keywords": ["gold miner", "gold mining", "bullion producer"],
+      "notes": "Gold miner equities vs. bullion — leverage to the metal, not the metal itself. GOLD/AEM show as unmatched in market corroboration until the scan universe grows."
+    }
+  ]
+}
