@@ -315,3 +315,35 @@ export {
 export type { BtcFlowMetricInput } from "./storage/btcFlowRepo";
 export type { BtcFlowMetricRow, BtcLocusId, BtcFlowMetricId } from "./btc/flowTypes";
 export { BTC_LOCI, BTC_FLOW_METRICS, isBtcLocusId } from "./btc/flowTypes";
+
+// Module 8 — Bagholder Risk Map (P·08): narrative shock → trapped-cohort
+// scoring → trigger/invalidator state machine.
+// See bagholder-trigger-trade-architecture.md for the full spec.
+export {
+  computeMacroScore, computeNarrativeScore, computePositioningScore, computeOpportunityScore,
+  computeConfidenceScore, composeScore, bandFor, nextTriggerState, checkAutoInvalidation, buildTradeObject,
+  WEIGHTS_BY_TIMEFRAME, CONFIDENCE_PRIOR,
+} from "./bagholder/engine";
+export type { TriggerTransition } from "./bagholder/engine";
+export { assembleBagholderContext } from "./bagholder/marketContext";
+export type {
+  Narrative, NarrativeCategory, NarrativeStatus, PrimaryDirection,
+  NarrativeEvent, SourceType,
+  AssetRef, AssetClass as BagholderAssetClass, AssetRole, NarrativeAssetLink, ExposureType, ImpliedDirection,
+  Timeframe, LayerKey, ScoreComponent, LayerScore, CompositeBand, CompositeResult, BagholderAnalysis,
+  AssetPositioningRead, AssetPerformanceRead, BagholderContext,
+  TriggerTaxonomy, TriggerStateId, TriggerDirection, TriggerConditionSpec, InvalidationSpec,
+  Trigger, TriggerEvent, TradeObjectLeg, TradeObject, TriggerBoardEntry,
+} from "./bagholder/types";
+export { runBagholderCycle } from "./ingest/bagholderCycle";
+export type { BagholderCycleReport } from "./ingest/bagholderCycle";
+export {
+  insertNarrative, listActiveNarratives, listNarratives, getNarrative, getNarrativeBySlug, updateNarrativeStatus,
+  insertNarrativeEvent, listNarrativeEvents,
+  upsertAsset, listAssets, linkNarrativeAsset, listNarrativeAssets,
+  upsertPositioningIndicator, getLatestPositioningForSymbols,
+  upsertRegimeSnapshot, getLatestRegimeSnapshot, listRecentRegimeSnapshots,
+  insertTrigger, getTrigger, getOpenTriggerFor, listTriggersForNarrative, updateTriggerState,
+  insertTriggerEvent, listTriggerEvents, insertTradeObject, getTriggerBoard,
+} from "./storage/bagholderRepo";
+export type { NarrativeInput, NarrativeEventInput, PositioningIndicatorInput, RegimeSnapshotInput, RegimeSnapshotRow as BagholderRegimeSnapshotRow, TriggerInput, PositioningIndicatorRow } from "./storage/bagholderRepo";
