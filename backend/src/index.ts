@@ -46,7 +46,10 @@ export {
   computeAllocation, weightOf, SLEEVES, SLEEVE_REGIME_SCORE,
   VAMS_MULTIPLIER, RISK_SLEEVES, MAX_CYCLE_DRAG,
 } from "./macro/allocation";
-export type { Sleeve, SleeveKey, AllocationInput, SleeveWeight, Allocation } from "./macro/allocation";
+export type {
+  Sleeve, SleeveKey, AllocationInput, SleeveWeight, Allocation,
+  Quadrant as AllocationQuadrant,
+} from "./macro/allocation";
 export { runAllocationBacktest, DEFAULT_BENCHMARKS, DEFAULT_COST_BPS } from "./macro/allocationBacktest";
 export type {
   BacktestStep, BacktestMetrics, BacktestResult, BacktestOptions, PriceSeries,

@@ -34,6 +34,7 @@ import {
 } from "./btc/nodes";
 import { useBtcSnapshot, formatBtcPrice, formatPct, formatAsOf } from "./btc/btcData";
 import useBtcFlowData, { findMetric, formatUsdMn } from "./btc/useBtcFlowData";
+import BtcPriceChart from "./btc/BtcPriceChart";
 
 type HitResult =
   | { type: "venue"; v: Venue }
@@ -1001,6 +1002,9 @@ export default function BtcTrackerCore({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* weekly price chart + macro regime affinity, top-left */}
+      <BtcPriceChart />
 
       {/* left layers control */}
       <div className="absolute bottom-4 left-4 z-20 md:bottom-6 md:left-6">

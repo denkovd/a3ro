@@ -86,6 +86,23 @@ export type LiveCycleRead = {
   asOf: string | null;
 };
 
+/* ── KISS allocation target ──
+   Computed server-side in the macro cycle from the regime, the matrix
+   and the six cycles, then persisted — so the page renders the same
+   numbers the cycle derived rather than recomputing from a partial
+   view of the inputs. */
+export type SleeveKey = "stocks" | "gold" | "bitcoin";
+export type SleeveWeight = {
+  key: SleeveKey;
+  weight: number;
+  cap: number;
+  regimeScore: number;
+  vamsMultiplier: number;
+  cycleDrag: number;
+  state: VamsState;
+  available: boolean;
+};
+
 export type MacroSnapshot = {
   status: MacroStatus;
   runDate: string | null;
@@ -132,6 +149,13 @@ export type MacroSnapshot = {
   cyclesHeadwinds: number;
   cyclesHeadline: string;
 
+  /* allocation target */
+  allocationRegime: MacroQuadrant;
+  allocationRegimeSource: string;
+  allocationInvested: number | null;
+  allocationCash: number | null;
+  allocationWeights: SleeveWeight[];
+
   errorMessage?: string;
 };
 
@@ -177,6 +201,12 @@ const EMPTY: MacroSnapshot = {
   cyclesTailwinds: 0,
   cyclesHeadwinds: 0,
   cyclesHeadline: "",
+
+  allocationRegime: "PENDING",
+  allocationRegimeSource: "none",
+  allocationInvested: null,
+  allocationCash: null,
+  allocationWeights: [],
 };
 
 const STANCES: PositioningStance[] = ["CROWDED_LONG", "CROWDED_SHORT", "NEUTRAL", "PENDING"];
@@ -268,6 +298,27 @@ function normalizeCycle(raw: unknown): LiveCycleRead | null {
   };
 }
 
+const SLEEVE_KEYS: SleeveKey[] = ["stocks", "gold", "bitcoin"];
+function normalizeSleeve(raw: unknown): SleeveWeight | null {
+  const o = (raw ?? {}) as Record<string, unknown>;
+  if (!SLEEVE_KEYS.includes(o.key as SleeveKey)) return null;
+  // A weight that isn't a finite number is dropped entirely rather
+  // than coerced to 0 — a missing sleeve is visible, a silent zero
+  // reads as a deliberate "hold nothing".
+  const weight = num(o.weight);
+  if (weight === null) return null;
+  return {
+    key: o.key as SleeveKey,
+    weight,
+    cap: num(o.cap) ?? 0,
+    regimeScore: num(o.regimeScore) ?? 0,
+    vamsMultiplier: num(o.vamsMultiplier) ?? 0,
+    cycleDrag: num(o.cycleDrag) ?? 1,
+    state: VAMS_STATES.includes(o.state as VamsState) ? (o.state as VamsState) : "PENDING",
+    available: o.available !== false,
+  };
+}
+
 /** Regime shares arrive as a jsonb object; drop anything that isn't a
  *  finite number so a malformed payload can't render a bar chart of
  *  NaNs. */
@@ -347,6 +398,14 @@ export function normalizeMacro(raw: unknown): MacroSnapshot {
     cyclesTailwinds: num(m.cyclesTailwinds) ?? 0,
     cyclesHeadwinds: num(m.cyclesHeadwinds) ?? 0,
     cyclesHeadline: str(m.cyclesHeadline) ?? "",
+
+    allocationRegime: toQuadrant(m.allocationRegime),
+    allocationRegimeSource: str(m.allocationRegimeSource) ?? "none",
+    allocationInvested: num(m.allocationInvested),
+    allocationCash: num(m.allocationCash),
+    allocationWeights: Array.isArray(m.allocationWeights)
+      ? m.allocationWeights.map(normalizeSleeve).filter((s): s is SleeveWeight => s !== null)
+      : [],
   };
 }
 

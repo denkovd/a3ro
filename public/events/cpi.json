@@ -1,0 +1,14 @@
+[
+  { "id": "cpi-2026-01-13", "date": "2026-01-13", "label": "CPI release (December 2025 data)", "category": "cpi", "importance": "high", "source_url": "https://www.usinflationcalculator.com/inflation/consumer-price-index-release-schedule/" },
+  { "id": "cpi-2026-02-13", "date": "2026-02-13", "label": "CPI release (January 2026 data)", "category": "cpi", "importance": "high", "source_url": "https://www.usinflationcalculator.com/inflation/consumer-price-index-release-schedule/" },
+  { "id": "cpi-2026-03-11", "date": "2026-03-11", "label": "CPI release (February 2026 data)", "category": "cpi", "importance": "high", "source_url": "https://www.usinflationcalculator.com/inflation/consumer-price-index-release-schedule/" },
+  { "id": "cpi-2026-04-10", "date": "2026-04-10", "label": "CPI release (March 2026 data)", "category": "cpi", "importance": "high", "source_url": "https://www.usinflationcalculator.com/inflation/consumer-price-index-release-schedule/" },
+  { "id": "cpi-2026-05-12", "date": "2026-05-12", "label": "CPI release (April 2026 data)", "category": "cpi", "importance": "high", "source_url": "https://www.usinflationcalculator.com/inflation/consumer-price-index-release-schedule/" },
+  { "id": "cpi-2026-06-10", "date": "2026-06-10", "label": "CPI release (May 2026 data)", "category": "cpi", "importance": "high", "source_url": "https://www.usinflationcalculator.com/inflation/consumer-price-index-release-schedule/" },
+  { "id": "cpi-2026-07-14", "date": "2026-07-14", "label": "CPI release (June 2026 data)", "category": "cpi", "importance": "high", "source_url": "https://www.usinflationcalculator.com/inflation/consumer-price-index-release-schedule/" },
+  { "id": "cpi-2026-08-12", "date": "2026-08-12", "label": "CPI release (July 2026 data)", "category": "cpi", "importance": "high", "source_url": "https://www.usinflationcalculator.com/inflation/consumer-price-index-release-schedule/" },
+  { "id": "cpi-2026-09-11", "date": "2026-09-11", "label": "CPI release (August 2026 data)", "category": "cpi", "importance": "high", "source_url": "https://www.usinflationcalculator.com/inflation/consumer-price-index-release-schedule/" },
+  { "id": "cpi-2026-10-14", "date": "2026-10-14", "label": "CPI release (September 2026 data)", "category": "cpi", "importance": "high", "source_url": "https://www.usinflationcalculator.com/inflation/consumer-price-index-release-schedule/" },
+  { "id": "cpi-2026-11-10", "date": "2026-11-10", "label": "CPI release (October 2026 data)", "category": "cpi", "importance": "high", "source_url": "https://www.usinflationcalculator.com/inflation/consumer-price-index-release-schedule/" },
+  { "id": "cpi-2026-12-10", "date": "2026-12-10", "label": "CPI release (November 2026 data)", "category": "cpi", "importance": "high", "source_url": "https://www.usinflationcalculator.com/inflation/consumer-price-index-release-schedule/" }
+]

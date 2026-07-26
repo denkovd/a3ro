@@ -1,0 +1,6 @@
+[
+  { "id": "earnings-2026-q4-2025-kickoff", "date": "2026-01-13", "label": "Q4 2025 earnings season begins (big-bank kickoff — JPMorgan, BofA, Citi, Wells Fargo)", "category": "earnings", "importance": "medium", "source_url": "https://www.jpmorganchase.com/ir/news/2025/jpmc-to-host-fourth-quarter-and-full-year-2025-earnings-call" },
+  { "id": "earnings-2026-q1-kickoff", "date": "2026-04-14", "label": "Q1 2026 earnings season begins (big-bank kickoff — JPMorgan)", "category": "earnings", "importance": "medium", "source_url": "https://www.jpmorganchase.com/ir/news/2026/jpmc-to-host-first-quarter-2026-earnings-call" },
+  { "id": "earnings-2026-q2-kickoff", "date": "2026-07-14", "label": "Q2 2026 earnings season begins (big-bank kickoff — JPMorgan, BofA, Goldman Sachs, Wells Fargo, Citi)", "category": "earnings", "importance": "medium", "source_url": "https://earnings-watcher.com/wiki/when-is-earnings-season" },
+  { "id": "earnings-2026-q3-kickoff", "date": "2026-10-13", "label": "Q3 2026 earnings season begins (big-bank kickoff — JPMorgan)", "category": "earnings", "importance": "medium", "source_url": "https://marketchameleon.com/Overview/JPM/Earnings/Earnings-Dates/" }
+]
