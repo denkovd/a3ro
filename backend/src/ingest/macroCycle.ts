@@ -20,7 +20,15 @@ import {
   netLiquiditySeries,
 } from "../macro/engine";
 import { computeSixCycles } from "../macro/cycles";
-import { computeRiskMatrix, computeVams, VamsRead } from "../macro/vams";
+import { computeRiskMatrix, computeVams, RiskMatrixSnapshot, VamsRead } from "../macro/vams";
+import {
+  computeAllocation,
+  SLEEVES,
+  type AllocationInput,
+  type SleeveKey,
+  type Quadrant as AllocQuadrant,
+} from "../macro/allocation";
+import { MacroQuadrant } from "../macro/types";
 import { fetchGlobalBondStress } from "../macro/globalBonds";
 import { REGIME_UNIVERSE } from "../regime/universe";
 import { RegimeBar } from "../regime/types";
@@ -47,6 +55,8 @@ export interface MacroCycleReport {
   marketRegime?: string;
   marketScored?: number;
   cyclesHeadwinds?: number;
+  /** Fraction of the book the KISS rule targets today, 0..1. */
+  allocationInvested?: number;
   /** Optional FRED series that failed this run. Present = some legs
    *  read pending; the run still wrote a snapshot. */
   seriesErrors?: string[];
@@ -124,6 +134,49 @@ async function barsOrEmpty(db: Queryable, symbol: string): Promise<RegimeBar[]> 
   }
 }
 
+/**
+ * Build today's allocation input from reads the cycle already has.
+ *
+ * The three sleeve symbols (^GSPC, GC=F, BTC-USD) are all in
+ * REGIME_UNIVERSE, so their VAMS states are already in the matrix
+ * reads — no second scoring pass, and no chance of the sleeve's state
+ * disagreeing with the state the same asset shows in the matrix.
+ *
+ * "Unavailable" means NO PRICE HISTORY (asOf === null), not "state is
+ * PENDING". A sleeve with bars but too few for a 63-session window is
+ * available-but-unsignalled, which the VAMS multiplier already handles
+ * as neutral. Conflating the two would zero a sleeve that merely has a
+ * short history rather than no history.
+ */
+function buildAllocationInput(
+  runDate: string,
+  matrix: RiskMatrixSnapshot,
+  economicQuadrant: MacroQuadrant,
+  headwinds: number,
+): AllocationInput {
+  const bySymbol = new Map(matrix.reads.map((r) => [r.symbol, r]));
+  const states: AllocationInput["states"] = {};
+  const unavailable: SleeveKey[] = [];
+
+  for (const s of SLEEVES) {
+    const read = bySymbol.get(s.symbol);
+    if (!read || read.asOf === null) {
+      unavailable.push(s.key);
+      continue;
+    }
+    states[s.key] = read.state;
+  }
+
+  return {
+    date: runDate,
+    marketRegime: matrix.modalRegime === "PENDING" ? null : (matrix.modalRegime as AllocQuadrant),
+    economicQuadrant: economicQuadrant === "PENDING" ? null : (economicQuadrant as AllocQuadrant),
+    headwinds,
+    states,
+    unavailable,
+  };
+}
+
 export async function runMacroCycle(
   db: Queryable,
   opts: { now?: () => Date } = {},
@@ -177,8 +230,16 @@ export async function runMacroCycle(
       runDate,
     );
 
+    // ── the KISS expression: today's target sleeve weights ──
+    // Derived from the layers above, never from anything they didn't
+    // already see, so the page's allocation and its stated reasoning
+    // can't drift apart.
+    const allocation = computeAllocation(
+      buildAllocationInput(runDate, matrix, regime.quadrant, sixCycles.headwinds),
+    );
+
     const written = await upsertMacroSnapshot(
-      db, regime, pressure, liquidity, nominal, globalBonds, matrix, sixCycles,
+      db, regime, pressure, liquidity, nominal, globalBonds, matrix, sixCycles, allocation,
     );
     return {
       startedAt,
@@ -192,6 +253,7 @@ export async function runMacroCycle(
       marketRegime: matrix.modalRegime,
       marketScored: matrix.scored,
       cyclesHeadwinds: sixCycles.headwinds,
+      allocationInvested: allocation.invested,
       seriesErrors: seriesErrors.length > 0 ? seriesErrors : undefined,
       written,
       panel,

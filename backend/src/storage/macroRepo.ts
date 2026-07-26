@@ -14,6 +14,7 @@ import {
 } from "../macro/types";
 import { GlobalBondRead } from "../macro/globalBonds";
 import { RiskMatrixSnapshot } from "../macro/vams";
+import { Allocation } from "../macro/allocation";
 import { Queryable } from "./db";
 
 export interface MacroSnapshotRow {
@@ -65,6 +66,13 @@ export interface MacroSnapshotRow {
   cyclesTailwinds: number;
   cyclesHeadwinds: number;
   cyclesHeadline: string;
+
+  /* ── KISS allocation target (020_macro_allocation.sql) ── */
+  allocationRegime: string | null;
+  allocationRegimeSource: string;
+  allocationInvested: number | null;
+  allocationCash: number | null;
+  allocationWeights: Allocation["weights"];
 }
 
 /** Upsert the combined regime + pressure + liquidity snapshot for a
@@ -79,6 +87,7 @@ export async function upsertMacroSnapshot(
   globalBonds?: GlobalBondRead | null,
   matrix?: RiskMatrixSnapshot,
   sixCycles?: SixCyclesSnapshot,
+  allocation?: Allocation,
 ): Promise<number> {
   const res = await db.query(
     `insert into macro_snapshots
@@ -92,10 +101,13 @@ export async function upsertMacroSnapshot(
         market_regime, market_shares, market_risk_on, market_scored, market_universe,
         market_headline, vams_reads,
         cycles, cycles_tailwinds, cycles_headwinds, cycles_headline,
+        allocation_regime, allocation_regime_source, allocation_invested,
+        allocation_cash, allocation_weights,
         computed_at)
      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,
              $15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,
-             $27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37, now())
+             $27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,
+             $38,$39,$40,$41,$42, now())
      on conflict (run_date) do update
        set quadrant = excluded.quadrant,
            growth_yoy = excluded.growth_yoy,
@@ -133,6 +145,11 @@ export async function upsertMacroSnapshot(
            cycles_tailwinds = excluded.cycles_tailwinds,
            cycles_headwinds = excluded.cycles_headwinds,
            cycles_headline = excluded.cycles_headline,
+           allocation_regime = excluded.allocation_regime,
+           allocation_regime_source = excluded.allocation_regime_source,
+           allocation_invested = excluded.allocation_invested,
+           allocation_cash = excluded.allocation_cash,
+           allocation_weights = excluded.allocation_weights,
            computed_at = now()`,
     [
       regime.runDate,
@@ -172,6 +189,11 @@ export async function upsertMacroSnapshot(
       sixCycles?.tailwinds ?? 0,
       sixCycles?.headwinds ?? 0,
       sixCycles?.headline ?? "",
+      allocation?.regime ?? null,
+      allocation?.regimeSource ?? "none",
+      allocation?.invested ?? null,
+      allocation?.cash ?? null,
+      JSON.stringify(allocation?.weights ?? []),
     ],
   );
   return res.rowCount ?? 0;
@@ -244,6 +266,13 @@ function rowToMacro(r: Record<string, unknown>): MacroSnapshotRow {
     cyclesTailwinds: r.cycles_tailwinds == null ? 0 : Number(r.cycles_tailwinds),
     cyclesHeadwinds: r.cycles_headwinds == null ? 0 : Number(r.cycles_headwinds),
     cyclesHeadline: r.cycles_headline == null ? "" : String(r.cycles_headline),
+
+    allocationRegime: r.allocation_regime == null ? null : String(r.allocation_regime),
+    allocationRegimeSource:
+      r.allocation_regime_source == null ? "none" : String(r.allocation_regime_source),
+    allocationInvested: num(r.allocation_invested),
+    allocationCash: num(r.allocation_cash),
+    allocationWeights: parseJson<MacroSnapshotRow["allocationWeights"]>(r.allocation_weights, []),
   };
 }
 
