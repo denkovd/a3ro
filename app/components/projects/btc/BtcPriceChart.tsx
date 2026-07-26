@@ -16,6 +16,8 @@ import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useBtcWeeklyHistory, type WeeklyBar } from "./btcHistory";
 import { useMacroSnapshot, MACRO_AMBER, MACRO_PINK, type VamsState } from "../macro/macroData";
+import EventOverlay from "../EventOverlay";
+import { useMarketEvents, useEventCategoryToggles, positionEvents } from "../events/eventsData";
 
 const STATE_COLOR: Record<VamsState, string> = {
   BULLISH: "#5fc9a4",
@@ -63,6 +65,8 @@ export default function BtcPriceChart() {
   const [expanded, setExpanded] = useState(false);
   const { status, bars } = useBtcWeeklyHistory();
   const macro = useMacroSnapshot();
+  const { events } = useMarketEvents();
+  const { isEnabled } = useEventCategoryToggles();
 
   const affinity = macro.vamsReads.find((r) => r.symbol === "BTC-USD") ?? null;
   const color = affinity ? STATE_COLOR[affinity.state] : "var(--ink-3)";
@@ -76,6 +80,11 @@ export default function BtcPriceChart() {
     () => (view.length >= 2 ? buildPath(view, svgW, svgH) : null),
     [view, svgW, svgH],
   );
+  const positioned = useMemo(() => {
+    if (view.length < 2) return [];
+    const visible = events.filter((e) => isEnabled(e.category));
+    return positionEvents(view.map((b) => b.weekEnd), visible, { width: svgW, pad: 4 });
+  }, [view, events, isEnabled, svgW]);
 
   const latest = bars[bars.length - 1] ?? null;
   const first = view[0] ?? null;
@@ -123,10 +132,13 @@ export default function BtcPriceChart() {
           )}
           {status === "live" && path && (
             <>
-              <svg width={svgW} height={svgH} className="block">
-                <path d={path.area} fill={color} opacity={0.14} />
-                <path d={path.line} fill="none" stroke={color} strokeWidth={1.4} />
-              </svg>
+              <div className="relative" style={{ width: svgW, height: svgH }}>
+                <svg width={svgW} height={svgH} className="block">
+                  <path d={path.area} fill={color} opacity={0.14} />
+                  <path d={path.line} fill="none" stroke={color} strokeWidth={1.4} />
+                </svg>
+                <EventOverlay positioned={positioned} width={svgW} height={svgH} />
+              </div>
               <div className="mt-1.5 flex items-baseline justify-between">
                 <span className="font-mono text-[11px] tabular-nums text-[var(--ink)]">
                   ${Math.round(latest?.close ?? 0).toLocaleString("en-US")}

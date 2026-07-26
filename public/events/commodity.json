@@ -1,0 +1,5 @@
+[
+  { "id": "opec-2026-01-04", "date": "2026-01-04", "label": "OPEC+ eight-country ministerial meeting", "category": "commodity", "importance": "medium", "source_url": "https://www.opec.org/pr-detail/1574587-4-january-2026.html" },
+  { "id": "opec-2026-02-01", "date": "2026-02-01", "label": "OPEC+ eight-country ministerial meeting", "category": "commodity", "importance": "medium", "source_url": "https://www.opec.org/pr-detail/1574587-4-january-2026.html" },
+  { "id": "opec-2026-08-02", "date": "2026-08-02", "label": "OPEC+ ministerial meeting", "category": "commodity", "importance": "medium", "source_url": "https://www.gate.com/news/detail/opec-schedules-next-meeting-on-august-2-2026-22356451" }
+]

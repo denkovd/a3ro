@@ -30,6 +30,8 @@ import IntelRail from "./oil/IntelRail";
 import FlowHealthLegend from "./oil/FlowHealthLegend";
 import type { FocusTarget } from "./oil/types";
 import type { Benchmark, CorridorBaseline, CorridorId, CorridorMetricLatest, DailyPrice, LatestQuote, ScoreSnapshot } from "@a3ro/oil-backend";
+import EventOverlay from "./EventOverlay";
+import { useMarketEvents, useEventCategoryToggles, positionEvents } from "./events/eventsData";
 
 /* ══ route-only content: hotspot hierarchy + signal copy ══ */
 type HotspotKind = "live" | "demand" | "watch" | "reserved";
@@ -534,6 +536,8 @@ export default function OilTrackerCore({
   const lastProducerModeRef = useRef<Exclude<ProducerLayerMode, "off">>("production");
   const [layersExpanded, setLayersExpanded] = useState(false);
   const [hoverId, setHoverId] = useState<string | null>(null);
+  const { events: marketEvents } = useMarketEvents();
+  const { isEnabled: eventCategoryEnabled } = useEventCategoryToggles();
 
   const sim = useRef<Sim>({
     lon: initialView?.lon ?? 97,
@@ -1945,7 +1949,18 @@ export default function OilTrackerCore({
           )}
           {bs && bs.length >= 2 ? (
             <div className="mt-4">
-              <Spark values={bs.map((p) => p.price)} id={`bench-${benchSel}`} />
+              <div className="relative h-9 w-full">
+                <Spark values={bs.map((p) => p.price)} id={`bench-${benchSel}`} />
+                <EventOverlay
+                  positioned={positionEvents(
+                    bs.map((p) => p.periodDate),
+                    marketEvents.filter((e) => eventCategoryEnabled(e.category)),
+                    { width: 240, pad: 2 },
+                  )}
+                  width={240}
+                  height={36}
+                />
+              </div>
               <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
                 Daily close · 30d · live feed
               </p>

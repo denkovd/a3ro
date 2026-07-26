@@ -42,6 +42,7 @@ import MacroBriefOverlay, { HorizonRibbon } from "../../components/projects/macr
 import RiskMatrixPanel from "../../components/projects/macro/RiskMatrixPanel";
 import { LiquidityPanel, CostOfCapitalPanel } from "../../components/projects/macro/LiquidityPanel";
 import AllocationPanel from "../../components/projects/macro/AllocationPanel";
+import UpcomingEventsList from "../../components/projects/events/UpcomingEventsList";
 import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
 
 const ATMOSPHERE =
@@ -244,6 +245,12 @@ export default function RegimeShiftView() {
           {/* ── the 24 Jul read: liquidity stress + cost of capital ── */}
           {live && <LiquidityPanel snap={snap} />}
           {live && <CostOfCapitalPanel brief={brief} snap={snap} />}
+
+          {/* ── near-term catalysts that could move any of the three
+               layers above — FOMC/CPI/earnings/commodity dates, no
+               chart on this page for EventOverlay to attach to, so
+               the reusable list stands alone here. ── */}
+          {live && <UpcomingEventsList />}
 
           {/* ── the conclusion: what the rule targets today ──
                Sits last among the substantive panels: it is the only

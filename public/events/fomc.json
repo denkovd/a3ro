@@ -1,0 +1,10 @@
+[
+  { "id": "fomc-2026-01-28", "date": "2026-01-28", "label": "FOMC rate decision", "category": "fomc", "importance": "high", "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm" },
+  { "id": "fomc-2026-03-18", "date": "2026-03-18", "label": "FOMC rate decision + Summary of Economic Projections", "category": "fomc", "importance": "high", "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm" },
+  { "id": "fomc-2026-04-29", "date": "2026-04-29", "label": "FOMC rate decision", "category": "fomc", "importance": "high", "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm" },
+  { "id": "fomc-2026-06-17", "date": "2026-06-17", "label": "FOMC rate decision + Summary of Economic Projections", "category": "fomc", "importance": "high", "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm" },
+  { "id": "fomc-2026-07-29", "date": "2026-07-29", "label": "FOMC rate decision", "category": "fomc", "importance": "high", "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm" },
+  { "id": "fomc-2026-09-16", "date": "2026-09-16", "label": "FOMC rate decision + Summary of Economic Projections", "category": "fomc", "importance": "high", "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm" },
+  { "id": "fomc-2026-10-28", "date": "2026-10-28", "label": "FOMC rate decision", "category": "fomc", "importance": "high", "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm" },
+  { "id": "fomc-2026-12-09", "date": "2026-12-09", "label": "FOMC rate decision + Summary of Economic Projections", "category": "fomc", "importance": "high", "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm" }
+]
