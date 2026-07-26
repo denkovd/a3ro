@@ -38,6 +38,7 @@
     "run:gold-flow": "tsx scripts/run-gold-flow.ts",
     "migrate:gold-flow": "tsx scripts/migrate.ts migrations/018_gold_flow.sql",
     "migrate:macro-liquidity": "tsx scripts/migrate.ts migrations/019_macro_liquidity.sql",
+    "migrate:macro-allocation": "tsx scripts/migrate.ts migrations/020_macro_allocation.sql",
     "migrate:btc": "tsx scripts/migrate.ts migrations/020_btc.sql",
     "backfill:btc": "tsx scripts/backfill-btc.ts",
     "run:btc": "tsx scripts/run-btc.ts",

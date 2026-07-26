@@ -16,6 +16,8 @@ import {
   type PriceSeries,
 } from "../src/macro/allocationBacktest";
 import { RegimeBar } from "../src/regime/types";
+import { REGIME_UNIVERSE } from "../src/regime/universe";
+import { computeVams } from "../src/macro/vams";
 
 /* ── helpers ──────────────────────────────────────────────────── */
 
@@ -277,5 +279,48 @@ describe("runAllocationBacktest", () => {
   test("default benchmarks are the two that matter", () => {
     assert.deepEqual(Object.keys(DEFAULT_BENCHMARKS).sort(), ["100% S&P", "static 60/30/10"]);
     assert.equal(DEFAULT_BENCHMARKS["static 60/30/10"].stocks, 0.6);
+  });
+});
+
+/* ── the live wiring: sleeve symbols must exist in the universe ──
+   The daily cycle reads each sleeve's VAMS state out of the risk
+   matrix rather than scoring it twice. That only works if every sleeve
+   symbol is in REGIME_UNIVERSE — if someone renames a ticker there,
+   the sleeve silently becomes "no history" and drops to zero weight.
+   These pin that contract. */
+
+describe("sleeve / universe contract", () => {
+  test("every sleeve symbol is in the scanned universe", () => {
+    const universe = new Set(REGIME_UNIVERSE.map((e) => e.symbol));
+    for (const s of SLEEVES) {
+      assert.ok(
+        universe.has(s.symbol),
+        `${s.key} uses ${s.symbol}, which is not in REGIME_UNIVERSE — its VAMS state would never be found`,
+      );
+    }
+  });
+
+  test("sleeve symbols are the expected three", () => {
+    assert.deepEqual(
+      SLEEVES.map((s) => s.symbol),
+      ["^GSPC", "GC=F", "BTC-USD"],
+    );
+  });
+
+  test("a sleeve with no bar history is unavailable, not merely unsignalled", () => {
+    // asOf === null is the "no history" marker the cycle keys on; a
+    // short-but-present history yields PENDING with a real asOf and
+    // must stay available (VAMS multiplier handles it as neutral).
+    const noHistory = computeVams([], "GC=F", "Gold");
+    assert.equal(noHistory.asOf, null);
+    assert.equal(noHistory.state, "PENDING");
+
+    const shortHistory = computeVams(
+      monthlyBars("2025-01", 5, 100, 0.01),
+      "GC=F",
+      "Gold",
+    );
+    assert.notEqual(shortHistory.asOf, null, "has bars, so it is available");
+    assert.equal(shortHistory.state, "PENDING", "but carries no signal yet");
   });
 });

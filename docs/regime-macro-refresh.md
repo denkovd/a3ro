@@ -356,6 +356,30 @@ Decisions worth knowing:
 `SLEEVE_REGIME_SCORE` is reasoned, not backtested — the same status
 `REGIME_AFFINITY` had before §4.2, and the same candidate for the same treatment.
 
+### On the page
+
+`runMacroCycle` computes the target daily and persists it
+(`020_macro_allocation.sql`); `AllocationPanel` renders it at the foot of P·06,
+below cost of capital and above the oil overlay. It is the last substantive block
+because it is the only one that depends on all three layers above it.
+
+- **The sleeve VAMS states are read out of the risk matrix**, not scored a second
+  time — so a sleeve's state on the allocation panel can never disagree with the
+  same asset's state in the matrix above it. This only holds while every sleeve
+  symbol is in `REGIME_UNIVERSE`; there is a test pinning that contract, because
+  renaming a ticker there would silently drop a sleeve to zero weight.
+- **"Unavailable" means no price history at all** (`asOf === null`), not "state is
+  PENDING". A sleeve with bars but fewer than 63 sessions is
+  available-but-unsignalled, which the VAMS multiplier already treats as neutral.
+  Conflating the two would zero a sleeve for being young rather than for being
+  absent.
+- **The UI does no allocation maths.** It renders persisted weights and shows all
+  four factors behind each one. A number this close to a real decision has to be
+  traceable rather than arriving as an oracle.
+- The panel states plainly that this is a mechanical rule's output, not a
+  recommendation, and that the rule is unvalidated until `backtest:allocation`
+  has been run against real prices.
+
 ## 5 · Deliberate omissions
 
 - **No global aggregate is invented.** Dale quotes *global* nominal GDP and a

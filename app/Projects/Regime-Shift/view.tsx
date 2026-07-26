@@ -15,7 +15,8 @@
                                profits, liquidity, positioning)
 
    Plus the 24 Jul 2026 read — liquidity stress and cost of capital —
-   and, at the foot, the oil overlay this page used to lead with.
+   then the KISS allocation target the three layers imply, and at the
+   foot the oil overlay this page used to lead with.
 
    One data hook (/api/macro/latest). Esc or "Index" returns home.
    Distinct from P·04/P·05 (bottom-up price-trend screeners).
@@ -39,6 +40,7 @@ import { deriveMacroBrief } from "../../components/projects/macro/macroBrief";
 import MacroBriefOverlay, { HorizonRibbon } from "../../components/projects/macro/MacroBriefOverlay";
 import RiskMatrixPanel from "../../components/projects/macro/RiskMatrixPanel";
 import { LiquidityPanel, CostOfCapitalPanel } from "../../components/projects/macro/LiquidityPanel";
+import AllocationPanel from "../../components/projects/macro/AllocationPanel";
 import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
 
 const ATMOSPHERE =
@@ -239,6 +241,11 @@ export default function RegimeShiftView() {
           {/* ── the 24 Jul read: liquidity stress + cost of capital ── */}
           {live && <LiquidityPanel snap={snap} />}
           {live && <CostOfCapitalPanel brief={brief} snap={snap} />}
+
+          {/* ── the conclusion: what the rule targets today ──
+               Sits last among the substantive panels: it is the only
+               block that depends on all three layers above it. */}
+          {live && <AllocationPanel snap={snap} />}
 
           {/* ── oil overlay — demoted, collapsed, clearly labelled.
                This page used to LEAD with this block. It is one
