@@ -7,7 +7,7 @@
    tabs filter client-side; a transitions rail shows what changed
    verdict recently. Esc or "Index" returns to the homepage.
 ──────────────────────────────────────────────────────────────── */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import {
@@ -135,6 +135,12 @@ export default function BullMarketFinderView() {
   const [leaving, setLeaving] = useState(false);
   const [tab, setTab] = useState<TabKey>("all");
   const [disagreementOnly, setDisagreementOnly] = useState(false);
+  // Deep-link support for cross-module links (e.g. Narrative Rotation's
+  // "view in Bull Market Finder" chips): ?symbol=NVDA lands on the "all"
+  // tab with disagreement filter off so the row is guaranteed visible,
+  // then scrolls to and highlights it once the scan data is live.
+  const [highlightSymbol, setHighlightSymbol] = useState<string | null>(null);
+  const highlightRef = useRef<HTMLDivElement | null>(null);
 
   const strategies = snap.strategies;
   const activeStrategyMeta =
@@ -158,7 +164,21 @@ export default function BullMarketFinderView() {
     return () => window.removeEventListener("keydown", onKey);
   }, [leave]);
 
+  useEffect(() => {
+    const sym = new URLSearchParams(window.location.search).get("symbol");
+    if (!sym) return;
+    setHighlightSymbol(sym);
+    setTab("all");
+    setDisagreementOnly(false);
+  }, []);
+
   const live = snap.status === "live";
+
+  useEffect(() => {
+    if (live && highlightRef.current) {
+      highlightRef.current.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  }, [live, highlightSymbol]);
   const tierRows = useMemo(
     () => (tab === "all" ? snap.rows : snap.rows.filter((r) => r.tier === tab)),
     [snap.rows, tab],
@@ -452,11 +472,14 @@ export default function BullMarketFinderView() {
                       )}
 
                       <div
+                        ref={r.symbol === highlightSymbol ? highlightRef : undefined}
                         className={`${GRID} border-b border-[var(--line)] py-3 transition-colors duration-[var(--dur-micro)] hover:bg-[rgba(232,235,232,0.02)]`}
                         style={
-                          r.newlyBullish
-                            ? { background: "rgba(127, 158, 232, 0.05)" }
-                            : undefined
+                          r.symbol === highlightSymbol
+                            ? { background: "rgba(127, 158, 232, 0.14)", boxShadow: `inset 2px 0 0 ${BULL_ACCENT}` }
+                            : r.newlyBullish
+                              ? { background: "rgba(127, 158, 232, 0.05)" }
+                              : undefined
                         }
                       >
                         <p className="font-mono text-[10px] tabular-nums text-[var(--ink-3)]">
