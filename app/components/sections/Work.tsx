@@ -7,11 +7,12 @@
    with inner parallax.
 
    Live surfaces: P·05 Trend Finder (featured, whole-market bullish-
-   state screener), P·06 Regime (Darius-Dale GRID), P·08 Earnings
-   Beat Leaderboard (surprise → streak → rank), and Commodity Watch —
-   a tabbed card merging P·01 Oil Tracker, P·02 Gold Tracker and P·03
-   BTC Tracker (each keeps its own route/id, switched via tabs).
-   P·04 merged into P·05 (strategy lenses) — see
+   state screener), P·06 Regime (Darius-Dale GRID), Earnings
+   Beat Leaderboard (surprise → streak → rank), P·08 Bagholder Risk
+   Map (narrative shock → trapped-cohort → trigger state machine), and
+   Commodity Watch — a tabbed card merging P·01 Oil Tracker, P·02 Gold
+   Tracker and P·03 BTC Tracker (each keeps its own route/id, switched
+   via tabs). P·04 merged into P·05 (strategy lenses) — see
    bull-finder-unified-architecture.md.
 
    ARCHIVED (hidden from main, not deleted): P·07 Thesis Lab
@@ -34,6 +35,7 @@ import { MaskText, Reveal, useFinePointer } from "../motion";
 import BullFinder from "../projects/BullFinder";
 import RegimeShiftFinder from "../projects/RegimeShiftFinder";
 import EarningsBeat from "../projects/EarningsBeat";
+import BagholderRiskMapFinder from "../projects/BagholderRiskMapPreview";
 // ARCHIVED — Thesis Lab hidden from main modules, not deleted (see note above).
 // import ThesisLab from "../projects/ThesisLab";
 import CommodityWatch from "../projects/CommodityWatch";
@@ -75,9 +77,9 @@ const MODULES: {
 }[] = [];
 type Module = (typeof MODULES)[number];
 
-/* Trend Finder + Regime + Earnings Beat + Commodity Watch
-   (Thesis Lab archived — see notes above) */
-const SURFACES = MODULES.length + 4;
+/* Trend Finder + Regime + Earnings Beat + Bagholder Risk Map +
+   Commodity Watch (Thesis Lab archived — see notes above) */
+const SURFACES = MODULES.length + 5;
 /* 72vw featured + (SURFACES−1) × 62vw + 6vw gaps; travel ends with the
    last panel in frame: 248vw at 5 surfaces, +68vw per extra card. */
 const TRAVEL_VW = 248 + 68 * (SURFACES - 5);
@@ -291,7 +293,7 @@ function ModulesTraverse() {
               03 / Modules
             </p>
             <h2 className="max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
-              <MaskText>One platform. Four intelligence surfaces.</MaskText>
+              <MaskText>One platform. Five intelligence surfaces.</MaskText>
             </h2>
           </div>
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--ink-3)]">
@@ -307,11 +309,12 @@ function ModulesTraverse() {
           <BullFinder className="h-[62svh] w-[72vw] shrink-0" />
           <RegimeShiftFinder className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
           <EarningsBeat className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
+          <BagholderRiskMapFinder className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
           {MODULES.map((m, i) => (
             <ModuleFrame
               key={m.id}
               module={m}
-              index={i + 3}
+              index={i + 4}
               innerX={innerX}
               className="flex h-[52svh] w-[62vw] shrink-0 flex-col"
             />
@@ -356,7 +359,7 @@ function ModulesStack() {
         03 / Modules
       </p>
       <h2 className="mb-16 max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)]">
-        <MaskText>One platform. Four intelligence surfaces.</MaskText>
+        <MaskText>One platform. Five intelligence surfaces.</MaskText>
       </h2>
       <div className="flex flex-col gap-10">
         <Reveal>
@@ -368,15 +371,18 @@ function ModulesStack() {
         <Reveal delay={0.1}>
           <EarningsBeat className="flex min-h-[560px] flex-col" />
         </Reveal>
+        <Reveal delay={0.15}>
+          <BagholderRiskMapFinder className="flex min-h-[560px] flex-col" />
+        </Reveal>
         {MODULES.map((m, i) => (
-          <StackedModule key={m.id} module={m} index={i + 3} />
+          <StackedModule key={m.id} module={m} index={i + 4} />
         ))}
         {/* ARCHIVED — Thesis Lab hidden from main, not deleted (see note at top of file).
-        <Reveal delay={0.15}>
+        <Reveal delay={0.2}>
           <ThesisLab className="flex min-h-[560px] flex-col" />
         </Reveal>
         */}
-        <Reveal delay={0.15}>
+        <Reveal delay={0.2}>
           <CommodityWatch className="flex min-h-[560px] flex-col" />
         </Reveal>
       </div>

@@ -26,11 +26,13 @@ import {
   createDb, runIngestionCycle, runCorridorCycle, runBaselineCycle,
   runSeasonalCycle, runMacroCycle, runPositioningCycle, runScoreCycle,
   runGoldCycle, runGoldFlowCycle, runBtcCycle, runBtcFlowCycle,
+  runBagholderCycle,
 } from "@a3ro/oil-backend";
 import type {
   CorridorCycleReport, BaselineCycleReport, SeasonalCycleReport,
   MacroCycleReport, PositioningCycleReport, ScoreCycleReport,
   GoldCycleReport, GoldFlowCycleReport, BtcCycleReport, BtcFlowCycleReport,
+  BagholderCycleReport,
 } from "@a3ro/oil-backend";
 
 export const runtime = "nodejs";
@@ -158,6 +160,15 @@ export async function GET(request: Request) {
       btcFlow = { error: e instanceof Error ? e.message : String(e) };
     }
 
+    // Bagholder Risk Map (P·08) — narrative-shock rescoring, last since
+    // it's driven by hand-curated narratives (§6), not a critical feed.
+    let bagholder: BagholderCycleReport | { error: string };
+    try {
+      bagholder = await runBagholderCycle(db);
+    } catch (e) {
+      bagholder = { error: e instanceof Error ? e.message : String(e) };
+    }
+
     return Response.json({
       ...report,
       corridors,
@@ -170,6 +181,7 @@ export async function GET(request: Request) {
       goldFlow,
       btc,
       btcFlow,
+      bagholder,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
