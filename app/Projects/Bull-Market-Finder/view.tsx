@@ -38,6 +38,8 @@ import {
   type StrategyTimeframe,
 } from "../../components/projects/bull/bullData";
 import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
+import VerdictCountStrip from "../../components/projects/rs/VerdictCountStrip";
+import LeadershipStrip from "../../components/projects/rs/LeadershipStrip";
 
 const ATMOSPHERE =
   "radial-gradient(90% 110% at 50% 65%, #0c1018 0%, var(--depth-1) 55%, #070808 100%)";
@@ -257,6 +259,14 @@ export default function BullMarketFinderView() {
             </p>
           </div>
 
+          {/* per-tier regime strip — Regime-Monitor salvage (PLAN task 1),
+              shared with the Relative Strength module */}
+          {live && (
+            <div className="mt-8">
+              <VerdictCountStrip rows={snap.rows} />
+            </div>
+          )}
+
           {/* transitions rail — what just turned */}
           {live && newlyBullishTransitions.length > 0 && (
             <div className="mt-8 overflow-hidden rounded-sm hairline bg-[var(--depth-1)] px-5 py-4">
@@ -305,6 +315,14 @@ export default function BullMarketFinderView() {
                   </p>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* leadership strip — top/bottom-5 by RS momentum (Relative
+              Strength module, PLAN task 1) */}
+          {live && (
+            <div className="mt-8">
+              <LeadershipStrip rows={snap.rows} runDate={snap.runDate} />
             </div>
           )}
 

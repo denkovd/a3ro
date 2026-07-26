@@ -2,19 +2,21 @@
 /* ────────────────────────────────────────────────────────────────
    A3RO Intelligence — module switcher
    Sits in the top chrome of each full-page module (Bull Market
-   Finder, Regime Shift Finder, Earnings Beat Leaderboard) so a
-   visitor can step to the next/previous module without returning
-   to the homepage. Commodity Watch pages are intentionally excluded
+   Finder, Relative Strength Matrix, Regime Shift Finder, Earnings
+   Beat Leaderboard) so a visitor can step to the next/previous
+   module without returning to the homepage. Commodity Watch pages
+   are intentionally excluded
    (they already switch assets via their own tab row).
 ──────────────────────────────────────────────────────────────── */
 import { useRouter } from "next/navigation";
 
-export type ModuleId = "trend" | "regime" | "earnings";
+export type ModuleId = "trend" | "rs" | "regime" | "earnings";
 
-const MODULE_SEQUENCE: ModuleId[] = ["trend", "regime", "earnings"];
+const MODULE_SEQUENCE: ModuleId[] = ["trend", "rs", "regime", "earnings"];
 
 const MODULE_META: Record<ModuleId, { label: string; route: string }> = {
   trend: { label: "Bull Market Finder", route: "/Projects/Bull-Market-Finder" },
+  rs: { label: "Relative Strength Matrix", route: "/Projects/Relative-Strength" },
   regime: { label: "Regime Shift Finder", route: "/Projects/Regime-Shift" },
   earnings: { label: "Earnings Beat Leaderboard", route: "/Projects/Earnings-Beat" },
 };
