@@ -12,6 +12,7 @@
 ──────────────────────────────────────────────────────────────── */
 
 import { createDb, insertPosition, listPositions, markPositions } from "@a3ro/oil-backend";
+import { requireWriteAuth } from "../../_lib/writeAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,6 +41,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const unauthorized = requireWriteAuth(request);
+  if (unauthorized) return unauthorized;
   try {
     const raw = (await request.json().catch(() => null)) as Record<string, unknown> | null;
     if (!raw) return Response.json({ error: "json body required" }, { status: 400 });

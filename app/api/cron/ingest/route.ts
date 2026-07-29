@@ -16,10 +16,11 @@
    unified Bull Market Finder's `ml-dw` strategy (all strategy
    lenses run there; see bull-finder-unified-architecture.md).
 
-   Auth: If CRON_SECRET env var is set, verifies Authorization header
-   to prevent unauthorized calls. Vercel's own cron feature automatically
-   sends this header when CRON_SECRET is configured. Local dev without
-   CRON_SECRET is not guarded (allows iterating locally).
+   Auth: verifies Authorization header against CRON_SECRET (Vercel's
+   own cron feature sends this automatically when CRON_SECRET is
+   configured). Fails closed in production if CRON_SECRET is unset —
+   see app/api/_lib/cronAuth.ts. Local dev without CRON_SECRET is not
+   guarded (allows iterating locally).
 ──────────────────────────────────────────────────────────────── */
 
 import {
@@ -32,6 +33,7 @@ import type {
   MacroCycleReport, PositioningCycleReport, ScoreCycleReport,
   GoldCycleReport, GoldFlowCycleReport, BtcCycleReport, BtcFlowCycleReport,
 } from "@a3ro/oil-backend";
+import { requireCronAuth } from "../../_lib/cronAuth";
 
 export const runtime = "nodejs";
 // Never statically pre-render at build time — this route runs a full
@@ -42,20 +44,10 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function GET(request: Request) {
-  try {
-    // Auth guard: if CRON_SECRET is set, verify Authorization header.
-    const secret = process.env.CRON_SECRET;
-    if (secret) {
-      const auth = request.headers.get("Authorization");
-      const expected = `Bearer ${secret}`;
-      if (auth !== expected) {
-        return Response.json(
-          { error: "Unauthorized" },
-          { status: 401 }
-        );
-      }
-    }
+  const unauthorized = requireCronAuth(request);
+  if (unauthorized) return unauthorized;
 
+  try {
     const db = await createDb();
     const report = await runIngestionCycle(db);
 

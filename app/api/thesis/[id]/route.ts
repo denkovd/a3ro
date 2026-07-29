@@ -7,6 +7,7 @@
 ──────────────────────────────────────────────────────────────── */
 
 import { createDb, deleteThesis, getThesis } from "@a3ro/oil-backend";
+import { requireWriteAuth } from "../../_lib/writeAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,7 +30,9 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   }
 }
 
-export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  const unauthorized = requireWriteAuth(request);
+  if (unauthorized) return unauthorized;
   try {
     const id = parseId(params.id);
     if (id === null) return Response.json({ error: "invalid thesis id" }, { status: 400 });
