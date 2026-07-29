@@ -164,7 +164,7 @@ export default function RiskAudit({ pinnedThesisId }: { pinnedThesisId: number |
           <div className="mt-3 rounded-[5px] border border-dashed border-[var(--line)] p-6 text-center">
             <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">No positions on the book</p>
             <p className="mx-auto mt-2 max-w-md text-[12px] leading-relaxed text-[var(--ink-3)]">
-              Add what you actually hold. Marks come live from the price stores (WTI/BRENT quotes, the ~650-symbol daily scan);
+              Add what you actually hold. Marks come live from the price stores (WTI/BRENT quotes, the ~670-symbol daily scan);
               anything else takes a labeled manual mark.
             </p>
           </div>

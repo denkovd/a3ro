@@ -159,7 +159,7 @@ async function liveMarks(db: Queryable, symbols: string[]): Promise<Map<string, 
     }
   } catch { /* isolated */ }
 
-  // regime_snapshots verdict enrich (macro-30 trend for e.g. CL=F/GC=F)
+  // regime_snapshots verdict enrich (macro-45 trend for e.g. CL=F/GC=F)
   try {
     const res = await db.query(
       `select symbol, verdict from regime_snapshots

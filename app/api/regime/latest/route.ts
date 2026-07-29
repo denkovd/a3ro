@@ -18,7 +18,7 @@ export async function GET() {
       error: {
         code: "GONE",
         message:
-          "Retired — the macro-30 Money Line scan lives in the unified Bull Market Finder. Use /api/bull/latest?tier=macro (default strategy ml-dw is the same daily×weekly double confirmation).",
+          "Retired — the macro-45 Money Line scan lives in the unified Bull Market Finder. Use /api/bull/latest?tier=macro (default strategy ml-dw is the same daily×weekly double confirmation).",
       },
     },
     { status: 410 }

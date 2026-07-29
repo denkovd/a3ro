@@ -1,5 +1,5 @@
 /* ────────────────────────────────────────────────────────────────
-   Regime Shift Finder — curated cross-asset watchlist (30 symbols).
+   Regime Shift Finder — curated cross-asset watchlist (45 symbols).
    A deliberate macro cross-section, not a whole-market screener:
    crypto majors, metals, energy, equity indices, FX, rates/credit,
    commodity-linked equities, ags. All symbols are Yahoo Finance
@@ -44,11 +44,20 @@ export const REGIME_UNIVERSE: UniverseEntry[] = [
   { symbol: "USDJPY=X", displayName: "USD/JPY", assetClass: "fx" },
   { symbol: "GBPUSD=X", displayName: "GBP/USD", assetClass: "fx" },
   { symbol: "AUDUSD=X", displayName: "AUD/USD", assetClass: "fx" },
+  { symbol: "USDCAD=X", displayName: "USD/CAD", assetClass: "fx" },
+  { symbol: "USDCHF=X", displayName: "USD/CHF", assetClass: "fx" },
+  { symbol: "NZDUSD=X", displayName: "NZD/USD", assetClass: "fx" },
+  { symbol: "EURJPY=X", displayName: "EUR/JPY", assetClass: "fx" },
 
   // rates & credit (ETF proxies — price trend, i.e. inverse of yields)
   { symbol: "TLT", displayName: "20Y+ Treasuries", assetClass: "rates" },
   { symbol: "IEF", displayName: "7–10Y Treasuries", assetClass: "rates" },
+  { symbol: "SHY", displayName: "1–3Y Treasuries", assetClass: "rates" },
+  { symbol: "TIP", displayName: "TIPS", assetClass: "rates" },
   { symbol: "HYG", displayName: "High Yield Credit", assetClass: "rates" },
+  { symbol: "JNK", displayName: "High Yield Bonds", assetClass: "rates" },
+  { symbol: "LQD", displayName: "Investment Grade Credit", assetClass: "rates" },
+  { symbol: "BND", displayName: "Total Bond Market", assetClass: "rates" },
 
   // commodity-linked equities
   { symbol: "GDX", displayName: "Gold Miners", assetClass: "equity" },
@@ -56,4 +65,10 @@ export const REGIME_UNIVERSE: UniverseEntry[] = [
 
   // ags
   { symbol: "ZW=F", displayName: "Wheat", assetClass: "ags" },
+  { symbol: "ZC=F", displayName: "Corn", assetClass: "ags" },
+  { symbol: "ZS=F", displayName: "Soybeans", assetClass: "ags" },
+  { symbol: "KC=F", displayName: "Coffee", assetClass: "ags" },
+  { symbol: "SB=F", displayName: "Sugar", assetClass: "ags" },
+  { symbol: "CT=F", displayName: "Cotton", assetClass: "ags" },
+  { symbol: "LE=F", displayName: "Live Cattle", assetClass: "ags" },
 ];

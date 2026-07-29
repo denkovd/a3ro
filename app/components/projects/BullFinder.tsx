@@ -1,7 +1,7 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
    A3RO Intelligence — Trend Finder · homepage module card (P·05)
-   The whole-market screener surface: ~650 assets in five tiers,
+   The whole-market screener surface: ~670 assets in five tiers,
    ranked by newly bullish state (Money Line, daily × weekly
    confirmed). The card leads with what just double-confirmed and
    opens the ranked table at /Projects/Bull-Market-Finder.

@@ -4,7 +4,7 @@
    Same posture as regime/regimeData.ts: field-by-field
    normalisation, honest states (loading / live / pending / error),
    no modeled numbers. Two endpoints: /api/bull/latest (ranked
-   snapshot, ~650 assets in five tiers) and /api/bull/transitions
+   snapshot, ~670 assets in five tiers) and /api/bull/transitions
    (what changed verdict recently).
 
    Display naming lives HERE, per the module spec:
@@ -381,7 +381,7 @@ export const formatConsensus = (c: BullConsensus): string =>
   c.of > 0 ? `${c.bull}/${c.of}` : "—";
 
 export const TIER_LABEL: Record<BullTier, string> = {
-  macro: "Macro 30",
+  macro: "Macro 45",
   us_large: "US 500",
   ndx_extra: "NDX+",
   crypto: "Crypto",

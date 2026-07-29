@@ -2,9 +2,9 @@
 /* ────────────────────────────────────────────────────────────────
    A3RO Intelligence — Bull Market Finder 1 · homepage module card (P·04)
    (internal names stay "regime"/RegimeFinder to avoid route/API churn;
-    display label is Bull Market Finder 1 — the macro-30 Money Line variant)
+    display label is Bull Market Finder 1 — the macro-45 Money Line variant)
    A live intelligence surface: ranked regime shifts across a
-   30-asset macro watchlist, scored by the Money Line engine
+   45-asset macro watchlist, scored by the Money Line engine
    (Donchian 20 close-flip) on daily × weekly closes. The card
    leads with what just turned — newly bullish alignments — and
    opens the full ranked table at /Projects/Regime-Finder.
@@ -64,7 +64,7 @@ export default function RegimeFinder({ className = "" }: { className?: string })
   return (
     <a
       href={ROUTE}
-      aria-label="Bull Market Finder 1 — macro-30 bullish-state screener, open module"
+      aria-label="Bull Market Finder 1 — macro-45 bullish-state screener, open module"
       className={`group/rf relative flex cursor-pointer flex-col overflow-hidden rounded-sm hairline bg-[var(--depth-1)] transition-colors duration-[var(--dur-base)] hover:border-[var(--line-2)] ${className}`}
     >
       {/* stage */}
@@ -150,7 +150,7 @@ export default function RegimeFinder({ className = "" }: { className?: string })
             Bull Market Finder 1
           </h3>
           <p className="mt-3 hidden text-[13px] leading-relaxed text-[var(--ink-2)] md:block">
-            Macro-30 bullish-state screener — Money Line trend flips confirmed
+            Macro-45 bullish-state screener — Money Line trend flips confirmed
             on daily and weekly closes, ranked by recency.
           </p>
 
@@ -280,7 +280,7 @@ export default function RegimeFinder({ className = "" }: { className?: string })
           A3RO Intelligence — Bull Market Finder 1
         </h3>
         <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-          Macro-30 bullish state — daily × weekly confirm
+          Macro-45 bullish state — daily × weekly confirm
         </p>
       </div>
     </a>
