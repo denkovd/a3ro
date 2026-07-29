@@ -95,13 +95,13 @@ export default function RegimeShiftView() {
           <button
             onClick={leave}
             className="sweep font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-2)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]"
-            aria-label="Close Regime Shift Finder and return to the index"
+            aria-label="Close Regime and return to the index"
           >
             ← Index
           </button>
           <span aria-hidden className="text-[var(--ink-3)]">/</span>
           <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
-            A3RO Intelligence — Regime Shift Finder
+            A3RO Intelligence — Regime
           </p>
           <span aria-hidden className="text-[var(--ink-3)]">/</span>
           <ModuleSwitcher current="regime" />
@@ -120,7 +120,7 @@ export default function RegimeShiftView() {
             P·06 — Intelligence module
           </p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
-            Regime Shift Finder
+            Regime
           </h1>
           <p className="mt-3 max-w-2xl text-[13px] leading-relaxed text-[var(--ink-2)]">
             A top-down macro regime read in three layers: where the economy sits on the growth/inflation
@@ -330,7 +330,7 @@ export default function RegimeShiftView() {
 
       {/* ── bottom chrome ── */}
       <footer className="absolute inset-x-0 bottom-0 z-30 flex h-12 items-center justify-between border-t border-[var(--line)] bg-[rgba(6,7,7,0.55)] px-6 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)] backdrop-blur-md md:px-10">
-        <span>P·06 — Regime Shift Finder</span>
+        <span>P·06 — Regime</span>
         <span>
           {live
             ? `Macro read ${formatDate(snap.runDate)}`
