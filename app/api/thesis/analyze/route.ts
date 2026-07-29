@@ -21,6 +21,7 @@ import {
   parseThesis,
   THESIS_ENGINE_VERSION,
 } from "@a3ro/oil-backend";
+import { requireWriteAuth } from "../../_lib/writeAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,6 +38,8 @@ function migrationHint(message: string): string | null {
 }
 
 export async function POST(request: Request) {
+  const unauthorized = requireWriteAuth(request);
+  if (unauthorized) return unauthorized;
   try {
     const raw = (await request.json().catch(() => null)) as Record<string, unknown> | null;
     if (!raw || typeof raw.body !== "string" || raw.body.trim().length < 20) {

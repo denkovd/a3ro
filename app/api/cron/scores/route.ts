@@ -7,21 +7,17 @@
 ──────────────────────────────────────────────────────────────── */
 
 import { createDb, runScoreCycle } from "@a3ro/oil-backend";
+import { requireCronAuth } from "../../_lib/cronAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function GET(request: Request) {
-  try {
-    const secret = process.env.CRON_SECRET;
-    if (secret) {
-      const auth = request.headers.get("Authorization");
-      if (auth !== `Bearer ${secret}`) {
-        return Response.json({ error: "Unauthorized" }, { status: 401 });
-      }
-    }
+  const unauthorized = requireCronAuth(request);
+  if (unauthorized) return unauthorized;
 
+  try {
     const db = await createDb();
     const scores = await runScoreCycle(db);
     return Response.json({ scores });
