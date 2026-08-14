@@ -1,0 +1,40 @@
+Surface the KISS allocation target on P·06
+
+The allocation engine existed but nothing called it — it was a
+backtest-only module. This wires it into the daily cycle, persists the
+target, and renders it at the foot of the Regime Shift page.
+
+Backend
+- runMacroCycle now derives today's target from the layers it already
+  computed (market regime → economic quadrant fallback, six-cycle
+  headwind count, per-sleeve VAMS) and persists it.
+- Sleeve VAMS states are read OUT OF the risk matrix rather than scored
+  a second time, so a sleeve's state on the allocation panel can never
+  disagree with the same asset in the matrix above it. A test pins the
+  sleeve-symbol/REGIME_UNIVERSE contract, since renaming a ticker there
+  would silently drop a sleeve to zero weight.
+- "Unavailable" means no price history at all (asOf === null), not
+  "state is PENDING" — a sleeve with a short history is
+  available-but-unsignalled, which the VAMS multiplier already handles
+  as neutral. Conflating them would zero a sleeve for being young.
+- migrations/020_macro_allocation.sql: regime + source + invested +
+  cash + full per-sleeve jsonb. New file rather than editing 019, which
+  has already been applied.
+
+Frontend
+- AllocationPanel renders the persisted weights below cost of capital
+  and above the oil overlay — last substantive block, since it's the
+  only one depending on all three layers above it.
+- The UI does no allocation maths. Every sleeve shows all four factors
+  (cap, regime score, trend, cycle drag) so a number this close to a
+  real decision is traceable rather than oracular. Gold's cycle-drag
+  exemption is labelled inline.
+- Copy states it is a mechanical rule's output, not a recommendation,
+  and that the rule is unvalidated until backtest:allocation has run
+  against real prices.
+
+448/448 backend tests pass; backend and frontend typecheck clean.
+
+REQUIRES: npm run migrate:macro-allocation before deploying, or the
+insert throws, runMacroCycle catches it, and the macro layer silently
+freezes on the last good row.

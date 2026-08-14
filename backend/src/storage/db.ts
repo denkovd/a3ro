@@ -35,6 +35,10 @@ export async function createDb(connectionString = process.env.DATABASE_URL): Pro
   g.__a3roPgPools ??= new Map();
   const existing = g.__a3roPgPools.get(connectionString);
   if (existing) return existing;
+  // Prefer IPv4: GitHub-hosted runners often cannot route to the
+  // Supabase AAAA record (ENETUNREACH). Harmless on Vercel/local.
+  const { setDefaultResultOrder } = await import("node:dns");
+  setDefaultResultOrder("ipv4first");
   const { Pool } = await import("pg");
   const pool = new Pool({ connectionString, max: 5 });
   g.__a3roPgPools.set(connectionString, pool);
