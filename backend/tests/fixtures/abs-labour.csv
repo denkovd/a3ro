@@ -1,0 +1,3 @@
+STRUCTURE,STRUCTURE_ID,STRUCTURE_NAME,ACTION,MEASURE,Measure,SEX,Sex,AGE,Age,TSEST,Adjustment Type,REGION,Region,FREQ,Frequency,TIME_PERIOD,Time Period,OBS_VALUE,Observation Value,UNIT_MEASURE,Unit of Measure,UNIT_MULT,Unit of Multiplier,OBS_STATUS,Observation Status,OBS_COMMENT,Observation Comment,DECIMALS,Decimals
+DATAFLOW,ABS:LF(1.0.0),Labour Force,I,M13,Unemployment rate,3,Persons,1599,Total (age),20,Seasonally Adjusted,AUS,Australia,M,Monthly,2026-07,,4.48447608,,PCT,Percent,0,Units,,,,,1,One
+DATAFLOW,ABS:LF(1.0.0),Labour Force,I,M13,Unemployment rate,3,Persons,1599,Total (age),20,Seasonally Adjusted,AUS,Australia,M,Monthly,2026-08,,4.64629609,,PCT,Percent,0,Units,,,,,1,One

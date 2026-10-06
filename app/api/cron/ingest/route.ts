@@ -27,11 +27,13 @@ import {
   createDb, runIngestionCycle, runCorridorCycle, runBaselineCycle,
   runSeasonalCycle, runMacroCycle, runPositioningCycle, runScoreCycle,
   runGoldCycle, runGoldFlowCycle, runBtcCycle, runBtcFlowCycle,
+  runAustraliaWatchCycle,
 } from "@a3ro/oil-backend";
 import type {
   CorridorCycleReport, BaselineCycleReport, SeasonalCycleReport,
   MacroCycleReport, PositioningCycleReport, ScoreCycleReport,
   GoldCycleReport, GoldFlowCycleReport, BtcCycleReport, BtcFlowCycleReport,
+  AustraliaWatchCycleReport,
 } from "@a3ro/oil-backend";
 import { requireCronAuth } from "../../_lib/cronAuth";
 
@@ -150,6 +152,15 @@ export async function GET(request: Request) {
       btcFlow = { error: e instanceof Error ? e.message : String(e) };
     }
 
+    // Australia Watch (official ABS) is its own data family. A failed
+    // fetch records degraded source health and can never affect global macro.
+    let australiaWatch: AustraliaWatchCycleReport | { error: string };
+    try {
+      australiaWatch = await runAustraliaWatchCycle(db);
+    } catch (e) {
+      australiaWatch = { error: e instanceof Error ? e.message : String(e) };
+    }
+
     return Response.json({
       ...report,
       corridors,
@@ -162,6 +173,7 @@ export async function GET(request: Request) {
       goldFlow,
       btc,
       btcFlow,
+      australiaWatch,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

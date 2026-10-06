@@ -77,6 +77,12 @@ export type { TapeRow } from "./storage/tapeRepo";
 
 export { createDb } from "./storage/db";
 export type { Queryable } from "./storage/db";
+export { fetchAbsSeries, parseAbsCsv } from "./sources/abs";
+export { AUSTRALIA_SERIES, estimateFreshness, comparableChange, isRevision } from "./australia/watch";
+export type { AustraliaIndicator, AustraliaObservation, AustraliaFetchState, AustraliaFrequency, ObservationFreshness, FetchHealth } from "./australia/types";
+export { upsertAustraliaObservations, recordAustraliaFetchRun, getAustraliaObservations, getAustraliaFetchStates } from "./storage/australiaWatchRepo";
+export { runAustraliaWatchCycle } from "./ingest/australiaWatchCycle";
+export type { AustraliaWatchCycleReport } from "./ingest/australiaWatchCycle";
 export {
   getLatestQuotes, getDailySeries, getLatestDailyPrice,
   insertObservations,

@@ -34,6 +34,7 @@ import { MaskText, Reveal, useFinePointer } from "../motion";
 import BullFinder from "../projects/BullFinder";
 import RegimeShiftFinder from "../projects/RegimeShiftFinder";
 import EarningsBeat from "../projects/EarningsBeat";
+import AustraliaWatch from "../projects/AustraliaWatch";
 // ARCHIVED — Thesis Lab hidden from main modules, not deleted (see note above).
 // import ThesisLab from "../projects/ThesisLab";
 import CommodityWatch from "../projects/CommodityWatch";
@@ -77,7 +78,7 @@ type Module = (typeof MODULES)[number];
 
 /* Trend Finder + Regime + Earnings Beat + Commodity Watch
    (Thesis Lab archived — see notes above) */
-const SURFACES = MODULES.length + 4;
+const SURFACES = MODULES.length + 5;
 /* 72vw featured + (SURFACES−1) × 62vw + 6vw gaps; travel ends with the
    last panel in frame: 248vw at 5 surfaces, +68vw per extra card. */
 const TRAVEL_VW = 248 + 68 * (SURFACES - 5);
@@ -283,7 +284,7 @@ function ModulesTraverse() {
   const counterText = useTransform(counter, (v) => String(Math.round(v)).padStart(2, "0"));
 
   return (
-    <div ref={ref} className="relative h-[640vh]">
+    <div ref={ref} className="relative h-[760vh]">
       <div className="sticky top-0 flex h-[100svh] flex-col justify-center overflow-hidden">
         <div className="mx-auto mb-10 flex w-full max-w-6xl items-end justify-between px-10">
           <div>
@@ -291,7 +292,7 @@ function ModulesTraverse() {
               03 / Modules
             </p>
             <h2 className="max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
-              <MaskText>One platform. Four intelligence surfaces.</MaskText>
+              <MaskText>One platform. Five intelligence surfaces.</MaskText>
             </h2>
           </div>
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--ink-3)]">
@@ -307,6 +308,7 @@ function ModulesTraverse() {
           <BullFinder className="h-[62svh] w-[72vw] shrink-0" />
           <RegimeShiftFinder className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
           <EarningsBeat className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
+          <AustraliaWatch className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
           {MODULES.map((m, i) => (
             <ModuleFrame
               key={m.id}
@@ -356,7 +358,7 @@ function ModulesStack() {
         03 / Modules
       </p>
       <h2 className="mb-16 max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)]">
-        <MaskText>One platform. Four intelligence surfaces.</MaskText>
+        <MaskText>One platform. Five intelligence surfaces.</MaskText>
       </h2>
       <div className="flex flex-col gap-10">
         <Reveal>
@@ -367,6 +369,9 @@ function ModulesStack() {
         </Reveal>
         <Reveal delay={0.1}>
           <EarningsBeat className="flex min-h-[560px] flex-col" />
+        </Reveal>
+        <Reveal delay={0.15}>
+          <AustraliaWatch className="flex min-h-[560px] flex-col" />
         </Reveal>
         {MODULES.map((m, i) => (
           <StackedModule key={m.id} module={m} index={i + 3} />
