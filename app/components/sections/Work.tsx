@@ -23,6 +23,8 @@
    • runway h-[…vh] ≈ 120vh per surface (pacing of the pin)
 ──────────────────────────────────────────────────────────────── */
 import { useRef, type CSSProperties } from "react";
+import dynamic from "next/dynamic";
+import DeferredModule, { ModulePlaceholder } from "../DeferredModule";
 import {
   motion,
   useScroll,
@@ -31,13 +33,23 @@ import {
   type MotionValue,
 } from "framer-motion";
 import { MaskText, Reveal, useFinePointer } from "../motion";
-import BullFinder from "../projects/BullFinder";
-import RegimeShiftFinder from "../projects/RegimeShiftFinder";
-import EarningsBeat from "../projects/EarningsBeat";
-import AustraliaWatch from "../projects/AustraliaWatch";
+const BullFinder = dynamic(() => import("../projects/BullFinder"), {
+  ssr: false, loading: () => <ModulePlaceholder name="Trend Finder" href="/Projects/Bull-Market-Finder" />,
+});
+const RegimeShiftFinder = dynamic(() => import("../projects/RegimeShiftFinder"), {
+  ssr: false, loading: () => <ModulePlaceholder name="Regime" href="/Projects/Regime-Shift" />,
+});
+const EarningsBeat = dynamic(() => import("../projects/EarningsBeat"), {
+  ssr: false, loading: () => <ModulePlaceholder name="Earnings Beat" href="/Projects/Earnings-Beat" />,
+});
+const AustraliaWatch = dynamic(() => import("../projects/AustraliaWatch"), {
+  ssr: false, loading: () => <ModulePlaceholder name="Australia Watch" href="/Projects/Australia-Watch" />,
+});
 // ARCHIVED — Thesis Lab hidden from main modules, not deleted (see note above).
 // import ThesisLab from "../projects/ThesisLab";
-import CommodityWatch from "../projects/CommodityWatch";
+const CommodityWatch = dynamic(() => import("../projects/CommodityWatch"), {
+  ssr: false, loading: () => <ModulePlaceholder name="Commodity Watch" href="/Projects/Oil-Tracker" />,
+});
 
 /* ── deterministic signal trace — seeded, so SSR and client agree ── */
 function walk(seed: number, n: number, vol: number, drift: number): number[] {
@@ -305,10 +317,18 @@ function ModulesTraverse() {
           style={{ x }}
           className="flex items-center gap-[6vw] pl-[calc(max((100vw-72rem)/2,0px)+2.5rem)] will-change-transform"
         >
-          <BullFinder className="h-[62svh] w-[72vw] shrink-0" />
-          <RegimeShiftFinder className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
-          <EarningsBeat className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
-          <AustraliaWatch className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
+          <DeferredModule name="Trend Finder" href="/Projects/Bull-Market-Finder" className="h-[62svh] w-[72vw] shrink-0">
+            <BullFinder className="h-full w-full" />
+          </DeferredModule>
+          <DeferredModule name="Regime" href="/Projects/Regime-Shift" className="h-[52svh] w-[62vw] shrink-0">
+            <RegimeShiftFinder className="flex h-full w-full flex-col" />
+          </DeferredModule>
+          <DeferredModule name="Earnings Beat" href="/Projects/Earnings-Beat" className="h-[52svh] w-[62vw] shrink-0">
+            <EarningsBeat className="flex h-full w-full flex-col" />
+          </DeferredModule>
+          <DeferredModule name="Australia Watch" href="/Projects/Australia-Watch" className="h-[52svh] w-[62vw] shrink-0">
+            <AustraliaWatch className="flex h-full w-full flex-col" />
+          </DeferredModule>
           {MODULES.map((m, i) => (
             <ModuleFrame
               key={m.id}
@@ -321,7 +341,9 @@ function ModulesTraverse() {
           {/* ARCHIVED — Thesis Lab hidden from main, not deleted (see note at top of file).
           <ThesisLab className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
           */}
-          <CommodityWatch className="flex h-[52svh] w-[62vw] shrink-0 flex-col" />
+          <DeferredModule name="Commodity Watch" href="/Projects/Oil-Tracker" className="h-[52svh] w-[62vw] shrink-0">
+            <CommodityWatch className="flex h-full w-full flex-col" />
+          </DeferredModule>
         </motion.div>
       </div>
     </div>
@@ -362,16 +384,24 @@ function ModulesStack() {
       </h2>
       <div className="flex flex-col gap-10">
         <Reveal>
-          <BullFinder className="min-h-[560px] md:min-h-[620px]" />
+          <DeferredModule name="Trend Finder" href="/Projects/Bull-Market-Finder" className="min-h-[560px] md:min-h-[620px]">
+            <BullFinder className="min-h-[inherit]" />
+          </DeferredModule>
         </Reveal>
         <Reveal delay={0.05}>
-          <RegimeShiftFinder className="flex min-h-[560px] flex-col" />
+          <DeferredModule name="Regime" href="/Projects/Regime-Shift" className="min-h-[560px]">
+            <RegimeShiftFinder className="flex min-h-[inherit] flex-col" />
+          </DeferredModule>
         </Reveal>
         <Reveal delay={0.1}>
-          <EarningsBeat className="flex min-h-[560px] flex-col" />
+          <DeferredModule name="Earnings Beat" href="/Projects/Earnings-Beat" className="min-h-[560px]">
+            <EarningsBeat className="flex min-h-[inherit] flex-col" />
+          </DeferredModule>
         </Reveal>
         <Reveal delay={0.15}>
-          <AustraliaWatch className="flex min-h-[560px] flex-col" />
+          <DeferredModule name="Australia Watch" href="/Projects/Australia-Watch" className="min-h-[560px]">
+            <AustraliaWatch className="flex min-h-[inherit] flex-col" />
+          </DeferredModule>
         </Reveal>
         {MODULES.map((m, i) => (
           <StackedModule key={m.id} module={m} index={i + 3} />
@@ -382,7 +412,9 @@ function ModulesStack() {
         </Reveal>
         */}
         <Reveal delay={0.15}>
-          <CommodityWatch className="flex min-h-[560px] flex-col" />
+          <DeferredModule name="Commodity Watch" href="/Projects/Oil-Tracker" className="min-h-[560px]">
+            <CommodityWatch className="flex min-h-[inherit] flex-col" />
+          </DeferredModule>
         </Reveal>
       </div>
     </div>

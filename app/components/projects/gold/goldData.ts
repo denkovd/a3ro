@@ -1,4 +1,5 @@
 "use client";
+import { fetchMarketSnapshot } from "../marketFetch";
 /* ────────────────────────────────────────────────────────────────
    Gold Tracker — data layer
    One snapshot shape, swappable providers. The card renders a
@@ -130,7 +131,7 @@ export function createHttpGoldProvider(
 ): GoldDataProvider {
   return {
     async getSnapshot() {
-      const res = await fetch(url, { cache: "no-store" });
+      const res = await fetchMarketSnapshot(url);
       if (!res.ok) throw new Error(`gold api responded ${res.status}`);
       return { ...map(await res.json()), source: "live" };
     },

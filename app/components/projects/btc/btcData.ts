@@ -1,4 +1,5 @@
 "use client";
+import { fetchMarketSnapshot } from "../marketFetch";
 /* ────────────────────────────────────────────────────────────────
    BTC Tracker — price data layer. Mirrors gold/goldData.ts, minus
    the indicator block (no Gold-style Trend/Momentum/… legs this
@@ -62,7 +63,7 @@ export function createHttpBtcProvider(
 ): BtcDataProvider {
   return {
     async getSnapshot() {
-      const res = await fetch(url, { cache: "no-store" });
+      const res = await fetchMarketSnapshot(url);
       if (!res.ok) throw new Error(`btc api responded ${res.status}`);
       return { ...map(await res.json()), source: "live" };
     },

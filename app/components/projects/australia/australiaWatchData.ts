@@ -1,4 +1,5 @@
 "use client";
+import { fetchMarketSnapshot } from "../marketFetch";
 import { useEffect, useState } from "react";
 import { estimateFreshness } from "../../../../backend/src/australia/watch";
 
@@ -9,7 +10,7 @@ export const AU_ACCENT = "#d4a157";
 
 export function useAustraliaWatch() {
   const [state, setState] = useState<{ observations: AustraliaObservation[]; fetchStates: Record<string, FetchState>; status: "loading" | "ready" | "error"; testMode?: boolean }>({ observations: [], fetchStates: {}, status: "loading" });
-  useEffect(() => { let live = true; fetch("/api/australia-watch/latest", { cache: "no-store" }).then(async (r) => {
+  useEffect(() => { let live = true; fetchMarketSnapshot("/api/australia-watch/latest").then(async (r) => {
     if (!r.ok) throw new Error(`Australia Watch ${r.status}`); return r.json();
   }).then((v) => live && setState({ observations: Array.isArray(v.observations) ? v.observations : [], fetchStates: v.fetchStates ?? {}, status: "ready", testMode: v.testMode === true })).catch(() => live && setState((s) => ({ ...s, status: "error" }))); return () => { live = false; }; }, []);
   return state;

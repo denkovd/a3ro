@@ -1,4 +1,5 @@
 "use client";
+import { fetchMarketSnapshot } from "../marketFetch";
 /* ────────────────────────────────────────────────────────────────
    Regime Shift Finder (Module 4) — data layer
    One row shape, one endpoint (/api/regime/latest, already live on
@@ -178,7 +179,7 @@ export function useRegimeSnapshot(): RegimeSnapshot {
 
   useEffect(() => {
     let alive = true;
-    fetch("/api/regime/latest", { cache: "no-store" })
+    fetchMarketSnapshot("/api/regime/latest")
       .then(async (res) => {
         const body = await res.json().catch(() => ({}));
         if (!alive) return;

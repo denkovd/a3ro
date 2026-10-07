@@ -1,4 +1,5 @@
 "use client";
+import { fetchMarketSnapshot } from "../marketFetch";
 /* ────────────────────────────────────────────────────────────────
    Bull Market Finder (Module 5) — data layer
    Same posture as regime/regimeData.ts: field-by-field
@@ -238,7 +239,7 @@ export function useBullSnapshot(strategy: string = DEFAULT_STRATEGY_ID): BullSna
       status: "loading", runDate: null, count: 0, rows: [],
       strategy, strategies: prev.strategies,
     }));
-    fetch(`/api/bull/latest?strategy=${encodeURIComponent(strategy)}`, { cache: "no-store" })
+    fetchMarketSnapshot(`/api/bull/latest?strategy=${encodeURIComponent(strategy)}`)
       .then(async (res) => {
         const body = await res.json().catch(() => ({}));
         if (!alive) return;
@@ -292,10 +293,7 @@ export function useBullTransitions(
   useEffect(() => {
     let alive = true;
     setState({ status: "loading", rows: [] });
-    fetch(
-      `/api/bull/transitions?days=${days}&strategy=${encodeURIComponent(strategy)}`,
-      { cache: "no-store" },
-    )
+    fetchMarketSnapshot(`/api/bull/transitions?days=${days}&strategy=${encodeURIComponent(strategy)}`)
       .then(async (res) => {
         const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
         if (!alive) return;

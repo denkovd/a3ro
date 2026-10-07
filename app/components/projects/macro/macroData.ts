@@ -1,4 +1,5 @@
 "use client";
+import { fetchMarketSnapshot } from "../marketFetch";
 /* ────────────────────────────────────────────────────────────────
    P·06 Regime Shift Finder — data layer.
    One endpoint (/api/macro/latest), one snapshot shape mirroring the
@@ -421,7 +422,7 @@ export function useMacroSnapshot(): MacroSnapshot {
 
   useEffect(() => {
     let alive = true;
-    fetch("/api/macro/latest", { cache: "no-store" })
+    fetchMarketSnapshot("/api/macro/latest")
       .then(async (res) => {
         const body = await res.json().catch(() => ({}));
         if (!alive) return;

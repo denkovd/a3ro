@@ -1,4 +1,5 @@
 "use client";
+import { fetchMarketSnapshot } from "../marketFetch";
 /* ────────────────────────────────────────────────────────────────
    Earnings Beat Leaderboard (Module 8) — data layer
    Same posture as bull/bullData.ts: field-by-field normalisation,
@@ -167,7 +168,7 @@ export function useBeatLeaderboard(limit = 100): BeatLeaderboardState {
   const [state, setState] = useState<BeatLeaderboardState>(EMPTY);
   useEffect(() => {
     let alive = true;
-    fetch(`/api/leaderboard/earnings-beats?limit=${limit}`, { cache: "no-store" })
+    fetchMarketSnapshot(`/api/leaderboard/earnings-beats?limit=${limit}`)
       .then(async (res) => {
         const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
         if (!alive) return;

@@ -11,11 +11,12 @@
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { motion, useReducedMotion } from "framer-motion";
 import { EASE_INOUT } from "../motion";
-import OilTrackerPreview from "./OilTrackerPreview";
-import GoldTrackerPreview from "./GoldTrackerPreview";
-import BtcTrackerPreview from "./BtcTrackerPreview";
+const OilTrackerPreview = dynamic(() => import("./OilTrackerPreview"), { ssr: false });
+const GoldTrackerPreview = dynamic(() => import("./GoldTrackerPreview"), { ssr: false });
+const BtcTrackerPreview = dynamic(() => import("./BtcTrackerPreview"), { ssr: false });
 import { AMBER_CSS, OT_ROUTE, OT_SESSION, type OTView } from "./oilTrackerShared";
 import { GOLD_CSS, GT_ROUTE, GT_SESSION, GT_ATMOSPHERE, type GTView } from "./goldTrackerShared";
 import { ORANGE_CSS, BT_ROUTE, BT_SESSION, BT_ATMOSPHERE, type BTView } from "./btcTrackerShared";
@@ -147,10 +148,7 @@ export default function CommodityWatch({ className = "" }: { className?: string 
 
   useEffect(() => {
     setMounted(true);
-    router.prefetch(OT_ROUTE);
-    router.prefetch(GT_ROUTE);
-    router.prefetch(BT_ROUTE);
-  }, [router]);
+  }, []);
 
   const open = () => {
     if (box) return;
@@ -182,6 +180,8 @@ export default function CommodityWatch({ className = "" }: { className?: string 
       <a
         ref={cardRef}
         href={active.route}
+        onMouseEnter={() => router.prefetch(active.route)}
+        onFocus={() => router.prefetch(active.route)}
         onClick={(e) => { e.preventDefault(); open(); }}
         aria-label={`Open A3RO Intelligence — Commodity Watch, ${active.ariaDetail}`}
         className={`group/cw relative flex cursor-pointer flex-col overflow-hidden rounded-sm hairline bg-[var(--depth-1)] transition-colors duration-[var(--dur-base)] hover:border-[var(--line-2)] ${className}`}

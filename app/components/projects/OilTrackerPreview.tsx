@@ -1,4 +1,5 @@
 "use client";
+import { animateWhenVisible } from "./visibleAnimation";
 /* ────────────────────────────────────────────────────────────────
    Oil Tracker — lightweight teaser globe
    The ONLY globe the landing page ships. Low-detail, no
@@ -53,8 +54,6 @@ export default function OilTrackerPreview({
       phase = Math.asin(dv);
     }
 
-    let raf = 0;
-    let visible = true;
     let t0 = performance.now();
     let dpr = Math.min(1.5, window.devicePixelRatio || 1);
     const size = { w: 0, h: 0 };
@@ -230,29 +229,13 @@ export default function OilTrackerPreview({
       }
     };
 
-    if (reducedRef.current) {
-      draw(performance.now());
-    } else {
-      const loop = (now: number) => {
-        raf = requestAnimationFrame(loop);
-        if (!visible) return;
-        draw(now);
-      };
-      raf = requestAnimationFrame(loop);
-    }
-
-    const io = new IntersectionObserver(([e]) => {
-      visible = e.isIntersecting;
-    }, { threshold: 0.02 });
-    io.observe(wrap);
-    const onVis = () => { visible = document.visibilityState === "visible"; };
-    document.addEventListener("visibilitychange", onVis);
+    let stopAnimation = () => {};
+    if (reducedRef.current) draw(performance.now());
+    else stopAnimation = animateWhenVisible(wrap, draw);
 
     return () => {
-      cancelAnimationFrame(raf);
+      stopAnimation();
       ro.disconnect();
-      io.disconnect();
-      document.removeEventListener("visibilitychange", onVis);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
