@@ -33,7 +33,7 @@ export default function CommodityHero({ rotation, morph, animated, onUnavailable
 
   return <>
     <div ref={surface} className="commodity-field">
-      <OilTrackerPreview rotation={animated ? rotation : undefined} morph={animated ? morph : undefined} frozen={!animated} viewRef={view} onUnavailable={onUnavailable} />
+      <OilTrackerPreview rotation={animated ? rotation : undefined} morph={animated ? morph : undefined} autoRotate={!arrival} frozen={!animated} viewRef={view} onUnavailable={onUnavailable} />
       <motion.a href={OT_ROUTE} onClick={open} onMouseEnter={() => router.prefetch(OT_ROUTE)}
         onFocus={() => router.prefetch(OT_ROUTE)} aria-label="Open Commodity Watch live platform"
         className="commodity-globe-link" style={animated ? { opacity, pointerEvents } : { opacity: 1, pointerEvents: "auto" }} />

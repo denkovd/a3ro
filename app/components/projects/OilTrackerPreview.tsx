@@ -5,7 +5,7 @@ import { animateWhenVisible } from "./visibleAnimation";
    The ONLY globe the landing page ships. Low-detail, no
    interaction: reduced dot count, current oil routes and production
    markers. The landing stage controls rotation and spine compression;
-   route arrivals freeze an exact view. Ambient previews may pendulum.
+   route arrivals freeze an exact view. The hero adds slow idle rotation.
    The full engine lives in OilTrackerCore (route-only).
 ──────────────────────────────────────────────────────────────── */
 import { useEffect, useRef, type MutableRefObject } from "react";
@@ -41,6 +41,7 @@ export default function OilTrackerPreview({
   viewRef,
   rotation,
   morph,
+  autoRotate = false,
   frozen = false,
   onUnavailable,
 }: {
@@ -50,6 +51,7 @@ export default function OilTrackerPreview({
   viewRef?: MutableRefObject<OTView | null>;
   rotation?: MotionValue<number>;
   morph?: MotionValue<number>;
+  autoRotate?: boolean;
   frozen?: boolean;
   onUnavailable?: () => void;
 }) {
@@ -69,6 +71,9 @@ export default function OilTrackerPreview({
     const lat = initialView?.lat ?? 18;
     const origin = initialView?.lon ?? HOME.lon;
     const controlled = !!rotation || frozen || !!reduced;
+    const idleRotation = autoRotate && !frozen && !reduced;
+    let idleTime = 0;
+    let lastIdleFrame: number | null = null;
 
     const t0 = performance.now();
     let dpr = Math.min(1.5, window.devicePixelRatio || 1);
@@ -87,8 +92,11 @@ export default function OilTrackerPreview({
     resize();
     const draw = (now: number) => {
       const el = now - t0;
-      const lon = rotation ? HOME.lon + rotation.get()
-        : controlled ? origin : origin + 20 * Math.sin(el * 0.00008);
+      const scrollRotation = rotation?.get() ?? 0;
+      const idleWeight = idleRotation ? 1 - Math.max(0, Math.min(1, scrollRotation / 180)) : 0;
+      const lon = (rotation ? HOME.lon + scrollRotation
+        : controlled ? origin : origin + 20 * Math.sin(el * 0.00008))
+        + idleWeight * idleTime * 0.0011;
       const collapse = Math.max(0, Math.min(1, morph?.get() ?? 0));
       if (viewRef) viewRef.current = { lon, lat, zoom: 1 };
 
@@ -317,7 +325,7 @@ export default function OilTrackerPreview({
       }
     };
 
-    // Scroll mode redraws only on invalidation, never an independent animation loop.
+    // Frozen previews redraw on invalidation; the hero animates only while visible.
     let frame = 0;
     let visible = true;
     const invalidate = () => {
@@ -342,10 +350,24 @@ export default function OilTrackerPreview({
     };
     document.addEventListener("visibilitychange", visibility);
     const unsubscribeRotation = rotation?.on("change", invalidate);
-    const unsubscribeMorph = morph?.on("change", invalidate);
     let stopAnimation = () => {};
-    if (controlled || typeof IntersectionObserver === "undefined") draw(performance.now());
-    else stopAnimation = animateWhenVisible(wrap, draw);
+    let animating = false;
+    const syncAnimation = () => {
+      const shouldAnimate = (!controlled || idleRotation) && (morph?.get() ?? 0) < 0.35
+        && typeof IntersectionObserver !== "undefined";
+      if (shouldAnimate === animating) return;
+      stopAnimation();
+      animating = shouldAnimate;
+      lastIdleFrame = null;
+      if (shouldAnimate) stopAnimation = animateWhenVisible(wrap, (now) => {
+        if (idleRotation && lastIdleFrame !== null) idleTime += Math.min(64, now - lastIdleFrame);
+        lastIdleFrame = now;
+        draw(now);
+      });
+    };
+    const unsubscribeMorph = morph?.on("change", () => { syncAnimation(); invalidate(); });
+    draw(performance.now());
+    syncAnimation();
 
     return () => {
       stopAnimation();
@@ -358,7 +380,7 @@ export default function OilTrackerPreview({
       window.removeEventListener("resize", onResize);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rotation, morph, frozen, reduced, initialView, labels, viewRef, onUnavailable]);
+  }, [rotation, morph, autoRotate, frozen, reduced, initialView, labels, viewRef, onUnavailable]);
 
   return (
     <canvas
