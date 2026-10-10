@@ -400,7 +400,7 @@ export async function getLastSuccessfulPipelineRun(
   flow: PipelineFlow,
 ): Promise<{ windowTo: string } | null> {
   const res = await db.query(
-    `select window_to
+    `select window_to::text as window_to
        from pipeline_runs
       where flow = $1 and status = 'success' and window_to is not null
       order by finished_at desc nulls last, id desc
