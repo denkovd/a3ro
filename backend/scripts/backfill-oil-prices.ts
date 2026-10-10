@@ -100,7 +100,7 @@ async function main(): Promise<void> {
   }
 
   let written = 0;
-  for (const b of BENCHMARKS as Benchmark[]) {
+  for (const b of BENCHMARKS) {
     let fetched = 0;
     let inserted = 0;
     for (const chunk of chunks) {
@@ -116,7 +116,7 @@ async function main(): Promise<void> {
   }
 
   let resolved = 0;
-  for (const b of BENCHMARKS as Benchmark[]) {
+  for (const b of BENCHMARKS) {
     const periods = await getSettlementPeriods(db, b, from);
     for (const period of periods) {
       const periodObs = await getObservationsForPeriod(db, b, period);

@@ -1,5 +1,8 @@
 # REVIEW — autonomous session, 2026-07-12
 
+Historical review: Thesis Lab was removed on October 7, 2026. See
+[retirement verification](docs/thesis-retirement.md) for current status.
+
 Everything below was verified in an isolated build environment: `tsc --noEmit` clean, `next build` clean (all 29 routes), 23/23 new backend tests passing, and route smoke tests against a running `next start` (pages 200; APIs behave correctly with and without DB reachability). Nothing was committed and nothing was pushed — the working tree is yours to review.
 
 ## What changed

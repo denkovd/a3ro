@@ -1,5 +1,12 @@
 # A3RO unknowns register
 
+Update: Thesis Lab and its portfolio/read/write/login routes have been
+removed from active code. See [retirement verification](thesis-retirement.md).
+Items 1 and 7 below describe the pre-removal audit: the associated private
+read endpoints are now absent, and all 435 remaining backend tests have
+subsequently passed. Database records were not deleted. The other product,
+freshness, dependency, and validation unknowns remain open.
+
 Assessed October 7, 2026 from the local repository. This is an evidence-based
 list of decisions and measurements still needed, not a claim that production
 is broken. Production configuration, deployed versions, records, traffic,

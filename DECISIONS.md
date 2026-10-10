@@ -1,5 +1,8 @@
 # DECISIONS — Thesis Lab (P·07) autonomous session
 
+Historical notes: this feature was removed on October 7, 2026. See
+[retirement verification](docs/thesis-retirement.md) for current status.
+
 Major assumptions and tradeoffs from this session, shortest-first. Read REVIEW.md first for what changed; read this for **why**.
 
 ## 1. Deterministic rule-based engine, not an LLM

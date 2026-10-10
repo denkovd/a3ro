@@ -197,38 +197,6 @@ export {
 } from "./bull/strategies";
 export type { StrategyId, StrategyMeta, BullStrategySnapshot, StrategyConsensus } from "./bull/strategies";
 
-// Module 7 — Thesis Lab (P·07): pressure test → scenarios → portfolio risk
-export {
-  analyzeThesis, parseThesis, splitSentences, classifyKinds, readLanguage,
-  scoreClaim, contextChecks,
-  THESIS_ENGINE_VERSION, FAKE_STATED_MIN, FAKE_EVIDENCE_MAX,
-} from "./thesis/engine";
-export {
-  buildScenarios, tradingDaysIn, horizonReturns, empiricalProbabilities,
-  SCENARIO_SIGMA,
-} from "./thesis/scenarios";
-export {
-  buildRiskReport, pairwiseCorrelations, correlationClusters, pearson, betaTo,
-} from "./thesis/risk";
-export type { RiskInputs } from "./thesis/risk";
-export { assembleMarketContext, closeSeriesFor, realizedVolFrom } from "./thesis/marketContext";
-export type {
-  Assumption, ClaimKind, AssumptionOrigin, LanguageRead, ContextCheck,
-  ThesisAnalysis, ThesisVerdict, StrengthComponent, ParsedThesis,
-  MarketContext, RealizedVol, TrendRead,
-  Scenario, ScenarioId, ScenarioSet, AssumptionOutcome,
-  PositionInput, MarkedPosition, RiskFlag, RiskFlagKind, CorrelationPair,
-  PositionRisk, PortfolioRiskReport,
-} from "./thesis/types";
-export {
-  insertThesis, deleteThesis, listTheses, getThesis, getThesisMeta,
-} from "./storage/thesisRepo";
-export type { ThesisRow, ThesisSummary } from "./storage/thesisRepo";
-export {
-  insertPosition, updatePosition, deletePosition, listPositions, markPositions,
-} from "./storage/portfolioRepo";
-export type { PositionWrite } from "./storage/portfolioRepo";
-
 // Earnings-Beat Tracker — watchlist EPS/revenue surprise tracking
 // (see earnings-beat-tracker-architecture.md for the full spec, v2)
 export { fetchCalendarEarnings, fetchStockEarnings, safePct } from "./earnings/finnhub";

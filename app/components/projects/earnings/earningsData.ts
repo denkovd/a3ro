@@ -15,7 +15,7 @@ import { fetchMarketSnapshot } from "../marketFetch";
 import { useEffect, useState } from "react";
 
 /* ── palette: beat violet — distinct from oil amber, gold, BTC
-   orange, bull cobalt, regime mint and thesis cyan ── */
+   orange, bull cobalt and regime mint ── */
 export const BEAT_ACCENT = "#b48ee8";
 export const BEAT_BRIGHT = "#cdb2f2";
 export const BEAT_MISS = "#a8496b"; // missed estimate

@@ -1,6 +1,6 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
-   A3RO Intelligence — Trend Finder · homepage module card (P·05)
+   A3RO Intelligence — Trend Finder · homepage module card (P·02)
    The whole-market screener surface: ~650 assets in five tiers,
    ranked by newly bullish state (Money Line, daily × weekly
    confirmed). The card leads with what just double-confirmed and
@@ -8,7 +8,8 @@
    Same truth-pass posture as every module: before the first scan
    the card says so — no invented numbers.
 ──────────────────────────────────────────────────────────────── */
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
+import { useMotionPreference } from "../motion";
 import {
   useBullSnapshot,
   bullDistribution,
@@ -45,7 +46,7 @@ function highlights(rows: BullRow[], max = 4): { rows: BullRow[]; fresh: boolean
 
 export default function BullFinder({ className = "" }: { className?: string }) {
   const snap = useBullSnapshot();
-  const reduced = useReducedMotion();
+  const reduced = useMotionPreference();
 
   const live = snap.status === "live";
   const hero = highlights(snap.rows);
@@ -67,7 +68,7 @@ export default function BullFinder({ className = "" }: { className?: string }) {
       aria-label="Trend Finder — whole-market bullish-state screener, open module"
       className={`group/bf relative flex cursor-pointer flex-col overflow-hidden rounded-sm hairline bg-[var(--depth-1)] transition-colors duration-[var(--dur-base)] hover:border-[var(--line-2)] ${className}`}
     >
-      <div className="relative flex-1 overflow-hidden">
+      <div className="landing-card-body relative flex-1 overflow-hidden">
         <div aria-hidden className="absolute inset-0" style={{ background: ATMOSPHERE }} />
         <div
           aria-hidden
@@ -112,7 +113,7 @@ export default function BullFinder({ className = "" }: { className?: string }) {
 
         {/* ghost numeral */}
         <span className="pointer-events-none absolute bottom-3 left-4 select-none font-mono text-[clamp(4rem,10vw,8rem)] font-medium leading-none text-[var(--depth-3)]">
-          05
+          02
         </span>
 
         {/* corner registration marks */}
@@ -126,9 +127,9 @@ export default function BullFinder({ className = "" }: { className?: string }) {
         />
 
         {/* identity + highlights — left */}
-        <div className="pointer-events-none absolute left-5 top-5 max-w-[58%] md:left-7 md:top-7 md:max-w-[48%]">
+        <div className="landing-card-identity pointer-events-none absolute left-5 top-5 max-w-[58%] md:left-7 md:top-7 md:max-w-[48%]">
           <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-            P·05 — <span style={{ color: BULL_ACCENT }}>Module</span>
+            P·02 — <span style={{ color: BULL_ACCENT }}>Module</span>
           </p>
           <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--ink-2)]">
             A3RO Intelligence
@@ -194,7 +195,7 @@ export default function BullFinder({ className = "" }: { className?: string }) {
         </div>
 
         {/* scan readout — right */}
-        <div className="pointer-events-none absolute right-5 top-5 flex flex-col items-end text-right md:right-7 md:top-7">
+        <div className="landing-card-readout pointer-events-none absolute right-5 top-5 flex flex-col items-end text-right md:right-7 md:top-7">
           <p className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
             {!reduced ? (
               <motion.span

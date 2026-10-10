@@ -1,40 +1,16 @@
 "use client";
-/* ────────────────────────────────────────────────────────────────
-   A3RO — Market Intelligence Platform, landing page
-   A single vertical descent: arrival → platform → intelligence →
-   modules → method → resolution. One fixed atmosphere behind everything;
-   sections travel through it rather than stacking on top of it.
-   Motion rules live in docs/MOTION.md.
-──────────────────────────────────────────────────────────────── */
-import { useSmoothScroll } from "./components/motion";
+
 import Atmosphere from "./components/Atmosphere";
-import { Nav, ProgressThread, EntranceVeil } from "./components/Chrome";
-import Hero from "./components/sections/Hero";
-import Manifesto from "./components/sections/Manifesto";
-import Craft from "./components/sections/Craft";
-import Work from "./components/sections/Work";
-import Process from "./components/sections/Process";
-import FeatureLoop from "./components/sections/FeatureLoop";
+import { Nav, ProgressThread } from "./components/Chrome";
+import LandingExperience from "./components/landing/LandingExperience";
 import Contact from "./components/sections/Contact";
 
 export default function Home() {
-  useSmoothScroll();
-
-  return (
-    <main className="grain relative">
-      <EntranceVeil />
-      <Atmosphere />
-      <ProgressThread />
-      <Nav />
-
-      <Hero />
-      <Manifesto />
-      <Craft />
-      <Work />
-      <Process />
-      <FeatureLoop />
-      <Contact />
-    </main>
-  );
+  return <main className="grain relative">
+    <Atmosphere />
+    <ProgressThread />
+    <Nav />
+    <LandingExperience />
+    <Contact />
+  </main>;
 }
-

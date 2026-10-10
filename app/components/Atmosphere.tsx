@@ -9,7 +9,7 @@
    ≤42 mobile, paused off-tab, disabled for reduced motion.
 ──────────────────────────────────────────────────────────────── */
 import { useEffect, useRef } from "react";
-import { useReducedMotion } from "framer-motion";
+import { useMotionPreference } from "./motion";
 
 type Mote = {
   x: number;
@@ -24,7 +24,7 @@ type Mote = {
 
 export default function Atmosphere() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const reduced = useReducedMotion();
+  const reduced = useMotionPreference();
 
   useEffect(() => {
     if (reduced) return;

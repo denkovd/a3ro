@@ -1,13 +1,14 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
    A3RO Intelligence — Earnings Beat Leaderboard · homepage module
-   card (P·08). The surprise surface: watchlist companies ranked by
+   card (P·04). The surprise surface: watchlist companies ranked by
    size × consistency × recency of earnings beats. The card shows a
    live shelf readout (tracked count + current leader) with honest
    fallbacks, and a decorative surprise motif: quarterly result bars
    against a dashed estimate line — most clear it, one falls short.
 ──────────────────────────────────────────────────────────────── */
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
+import { useMotionPreference } from "../motion";
 import {
   useBeatLeaderboard,
   formatScore,
@@ -30,7 +31,7 @@ const BARS = [
 const ESTIMATE_Y = 46;
 
 export default function EarningsBeat({ className = "" }: { className?: string }) {
-  const reduced = useReducedMotion();
+  const reduced = useMotionPreference();
   const board = useBeatLeaderboard(100);
 
   const leader = board.rows[0] ?? null;
@@ -49,7 +50,7 @@ export default function EarningsBeat({ className = "" }: { className?: string })
       aria-label="Earnings Beat Leaderboard — companies ranked by earnings beats, open module"
       className={`group/eb relative flex cursor-pointer flex-col overflow-hidden rounded-sm hairline bg-[var(--depth-1)] transition-colors duration-[var(--dur-base)] hover:border-[var(--line-2)] ${className}`}
     >
-      <div className="relative flex-1 overflow-hidden">
+      <div className="landing-card-body relative flex-1 overflow-hidden">
         <div aria-hidden className="absolute inset-0" style={{ background: ATMOSPHERE }} />
         <div
           aria-hidden
@@ -100,7 +101,7 @@ export default function EarningsBeat({ className = "" }: { className?: string })
 
         {/* ghost numeral */}
         <span className="pointer-events-none absolute bottom-3 left-4 select-none font-mono text-[clamp(4rem,10vw,8rem)] font-medium leading-none text-[var(--depth-3)]">
-          08
+          04
         </span>
 
         {/* corner registration marks */}
@@ -114,9 +115,9 @@ export default function EarningsBeat({ className = "" }: { className?: string })
         />
 
         {/* identity — left */}
-        <div className="pointer-events-none absolute left-5 top-5 max-w-[58%] md:left-7 md:top-7 md:max-w-[48%]">
+        <div className="landing-card-identity pointer-events-none absolute left-5 top-5 max-w-[58%] md:left-7 md:top-7 md:max-w-[48%]">
           <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-            P·08 — <span style={{ color: BEAT_ACCENT }}>Module</span>
+            P·04 — <span style={{ color: BEAT_ACCENT }}>Module</span>
           </p>
           <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--ink-2)]">
             A3RO Intelligence
@@ -134,7 +135,7 @@ export default function EarningsBeat({ className = "" }: { className?: string })
         </div>
 
         {/* shelf readout — right */}
-        <div className="pointer-events-none absolute right-5 top-5 flex flex-col items-end text-right md:right-7 md:top-7">
+        <div className="landing-card-readout pointer-events-none absolute right-5 top-5 flex flex-col items-end text-right md:right-7 md:top-7">
           <p className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
             {!reduced ? (
               <motion.span

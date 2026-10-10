@@ -1,6 +1,6 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
-   A3RO Intelligence — Regime · homepage module card (P·06)
+   A3RO Intelligence — Regime · homepage module card (P·03)
    The Darius-Dale-style GRID: growth × inflation on a rate-of-change
    basis → one of four quadrants. Reads /api/oil/macro via
    useMacroSnapshot; honest states (cycle pending / feed unreachable)
@@ -42,11 +42,11 @@ export default function RegimeShiftFinder({ className = "" }: { className?: stri
       aria-label="Regime — Darius-Dale-style macro regime, open module"
       className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-sm hairline bg-[var(--depth-1)] transition-colors duration-[var(--dur-base)] hover:border-[var(--line-2)] ${className}`}
     >
-      <div className="relative flex-1 overflow-hidden" style={{ minHeight: 300 }}>
+      <div className="landing-card-body relative flex-1 overflow-hidden" style={{ minHeight: 300 }}>
         {/* label block */}
-        <div className="pointer-events-none absolute left-5 top-5 z-10 max-w-[56%] md:left-7 md:top-7">
+        <div className="landing-card-identity pointer-events-none absolute left-5 top-5 z-10 max-w-[56%] md:left-7 md:top-7">
           <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-            P·06 — <span style={{ color: MACRO_ACCENT }}>Module</span>
+            P·03 — <span style={{ color: MACRO_ACCENT }}>Module</span>
           </p>
           <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--ink-2)]">
             A3RO Intelligence
@@ -73,7 +73,7 @@ export default function RegimeShiftFinder({ className = "" }: { className?: stri
         </div>
 
         {/* GRID quadrant dial — bottom-right */}
-        <div className="absolute bottom-5 right-5 md:bottom-7 md:right-7">
+        <div className="landing-card-dial absolute bottom-5 right-5 md:bottom-7 md:right-7">
           <div className="relative grid grid-cols-2 gap-1" style={{ width: 148, height: 148 }}>
             {ORDER.map((q) => {
               const meta = QUADRANT_META[q];

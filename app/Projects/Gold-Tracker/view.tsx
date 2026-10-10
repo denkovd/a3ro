@@ -112,12 +112,12 @@ export default function GoldTrackerView() {
           <span aria-hidden className="text-[var(--ink-3)]">
             /
           </span>
-          <p className="truncate font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
+          <p className="hidden truncate font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)] sm:block">
             A3RO Intelligence
           </p>
           <nav
             aria-label="Market surface"
-            className="ml-1 hidden items-center gap-0.5 border-l border-[var(--line)] pl-3 sm:flex"
+            className="ml-1 flex items-center gap-0.5 border-l border-[var(--line)] pl-2 sm:pl-3"
           >
             <a
               href={OT_ROUTE}

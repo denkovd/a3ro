@@ -82,7 +82,7 @@ export default function OilTrackerView() {
       {/* light preview holds the frame while the engine loads (card arrivals) */}
       {mounted && arrive && showPreview && (
         <div className="absolute inset-0">
-          <OilTrackerPreview initialView={arrive} />
+          <OilTrackerPreview initialView={arrive} frozen />
         </div>
       )}
 
@@ -115,13 +115,13 @@ export default function OilTrackerView() {
             ← Index
           </button>
           <span aria-hidden className="text-[var(--ink-3)]">/</span>
-          <p className="truncate font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
+          <p className="hidden truncate font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)] sm:block">
             A3RO Intelligence
           </p>
-          {/* Asset surface switcher — oil live; gold/bitcoin reserved hooks */}
+          {/* Asset surface switcher — available on every screen size */}
           <nav
             aria-label="Market surface"
-            className="ml-1 hidden items-center gap-0.5 border-l border-[var(--line)] pl-3 sm:flex"
+            className="ml-1 flex items-center gap-0.5 border-l border-[var(--line)] pl-2 sm:pl-3"
           >
             <span
               className="px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em]"

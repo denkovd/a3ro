@@ -7,11 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:optimization": "node --test tests/optimization.test.mjs"
+    "test:optimization": "node --test tests/optimization.test.mjs",
+    "test:landing": "node --test tests/landing-sequence.test.mjs"
   },
   "dependencies": {
     "framer-motion": "^11.3.0",
-    "lenis": "^1.1.13",
     "next": "^14.2.35",
     "pg": "^8.11.5",
     "react": "^18",

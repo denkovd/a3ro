@@ -14,17 +14,24 @@ export function ModulePlaceholder({ name, href }: { name: string; href: string }
 
 /** Reserve the card's space and keep a working link before loading its preview. */
 export default function DeferredModule({
-  children, className, name, href,
+  children, className, name, href, preload, observe = true,
 }: {
   children: ReactNode;
   className: string;
   name: string;
   href: string;
+  preload?: boolean;
+  observe?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    if (preload) setReady(true);
+  }, [preload]);
+
+  useEffect(() => {
+    if (ready || !observe) return;
     if (!ref.current) return;
     if (!("IntersectionObserver" in window)) {
       setReady(true);
@@ -38,7 +45,7 @@ export default function DeferredModule({
     }, { rootMargin: "400px" });
     observer.observe(ref.current);
     return () => observer.disconnect();
-  }, []);
+  }, [observe, ready]);
 
   return (
     <div ref={ref} className={className}>

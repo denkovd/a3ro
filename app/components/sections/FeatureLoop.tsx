@@ -207,7 +207,7 @@ function LoopScene() {
           <div>
             <Reveal>
               <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-                05 / Index
+                03 / Index
               </p>
             </Reveal>
             <h2 className="max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
@@ -264,7 +264,7 @@ function StaticIndex() {
     <section id="index" className="relative z-10 py-[18vh]">
       <div className="mx-auto max-w-6xl px-6 md:px-10">
         <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-          05 / Index
+          03 / Index
         </p>
         <h2 className="mb-16 max-w-xl text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
           The feed never stops.
@@ -279,7 +279,7 @@ function StaticIndex() {
   );
 }
 
-export default function FeatureLoop() {
+export default function FeatureLoop({ staticMode = false }: { staticMode?: boolean }) {
   const reduced = useReducedMotion();
-  return reduced ? <StaticIndex /> : <LoopScene />;
+  return reduced || staticMode ? <StaticIndex /> : <LoopScene />;
 }

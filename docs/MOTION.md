@@ -1,64 +1,40 @@
 # A3RO Motion System
 
-The landing page is one continuous descent, not a stack of blocks. Every animated element follows the rules below. If a new element can't be expressed with these tokens, the element changes — not the system.
+The landing page is one native-scroll descent: Commodity Watch globe → module spine → Index. Canvas 2D and Framer Motion share the existing neutral/amber visual language. Acid green remains reserved for focus and progress. No WebGL, scroll interception, motion blur, or additional rendering framework.
 
-## Principles
+## Shared landing sequence
 
-Motion exists to guide attention, create hierarchy, and connect sections into a single journey. It should feel physically believable: things settle, they don't bounce or flash. If an animation would still make sense with the sound off in a film, it belongs; if it draws attention to itself, it doesn't. Transform and opacity only — no animated layout properties, no animation that blocks reading. One sanctioned filter exception: the hero title's exit defocus (desktop fine-pointer only, see Pinned scenes).
+`app/components/landing/sequence.ts` owns pure, reversible timeline math. One `useScroll` MotionValue controls longitude, geometry compression, card positions and the release. Distances use stable viewport heights and the actual module count.
 
-## Tokens
+| Phase | Desktop | Phone |
+| --- | --- | --- |
+| Globe half-turn | 120svh | 80svh |
+| Globe to spine | 60svh | 40svh |
+| Each module | 110svh | 90svh |
+| Release | 40svh | 30svh |
 
-Defined once in `app/globals.css` and mirrored in `app/components/motion.tsx`.
+The globe retains the Oil preview's land samples, graticule, artery and markers. Longitude advances from its existing opening view by exactly 180 degrees; latitude stays fixed. Horizontal projected coordinates contract while vertical coordinates extend, so the same canvas resolves into the card axis. Labels withdraw during compression. Scroll-controlled mode has no independent pendulum, tracing or pulse clock. Canvas drawing is coalesced into one animation frame when scroll, size or visibility changes.
 
-| Token | Value | Use |
-|---|---|---|
-| `--ease-out` | `cubic-bezier(0.22, 1, 0.36, 1)` | Reveals, entrances — fast arrival, long settle |
-| `--ease-inout` | `cubic-bezier(0.65, 0, 0.35, 1)` | Scene shifts (entrance veil, section dims) |
-| `--ease-snap` | `cubic-bezier(0.3, 0.7, 0.4, 1)` | Micro interactions |
-| `--dur-micro` | 160 ms | Hover color, focus |
-| `--dur-base` | 320 ms | Hover transforms, underline sweeps |
-| `--dur-reveal` | 800 ms | Scroll reveals |
-| `--dur-scene` | 1200 ms | Entrance, veil, hero staging |
-| Stagger | 80 ms | Sequential list/child reveals |
+Cards follow successive quarter-turn positions on a helix: X and Z describe the orbit, Y advances along the spine. Faces are billboarded (orbital orientation and its counter-rotation cancel before CSS compositing), keeping text upright. The middle 65% of each interval holds the foreground card still, at full opacity and scale. The remainder exchanges cards with smoothstep easing. Only the foreground card accepts pointer events. All links retain semantic order; keyboard focus moves the document to that card's reading interval.
 
-## Entrance (once per visit)
+The incoming Index overlaps the end of the runway by 60svh, allowing its heading to enter as the final card recedes. Its own timeline is independent and unchanged. Hash anchors use actual runway positions; `#modules` lands halfway through the first reading interval, while legacy `#platform` and `#method` remain usable.
 
-A black veil (`EntranceVeil`) opens the film: a 1 px acid thread draws across centre frame (600 ms, `--ease-out`), then the veil parts upward like a curtain (1200 ms, `--ease-inout`). Behind it the hero stages in: the eyebrow decodes glyph-by-glyph into place from +500 ms (`DecodeText` — the data-feed entrance for mono labels), the headline rises character by character out of clip masks (28 ms/char stagger, lines offset 250 ms), the perspective grid floor fades in under the horizon at +1100 ms, one soft scan band sweeps down the frame (+1000 ms, 1.6 s), the supporting line lands at +1350 ms, nav at +900 ms, and a seeded signal trace draws itself along the horizon (+1500 ms, 1.8 s, `pathLength`) before its terminal dot starts breathing. Total settle ≈ 3.3 s; the page is scrollable throughout.
+## Globe navigation
 
-## Pinned scenes (scroll-scrubbed)
+The hero opens the existing Oil Tracker route and stores its longitude/latitude/zoom in the existing arrival session record. The expansion and route preview freeze that exact view until the full engine is ready. Only Oil appears on the landing page; Oil, Gold and BTC navigation remains inside the platform and is visible on phones. Heavy engines stay route-only.
 
-Four sections pin and let scroll drive them directly — the scroll position is the timeline:
+## Responsive and static modes
 
-- **Hero** (170 vh): while pinned, the title recedes (scale 1 → 0.86, y −260) and defocuses (blur 0 → 10 px, desktop fine-pointer only — the one filter on a scroll path), meta rail lifts −90, horizon + grid floor −40, a ghost numeral drifts −340 in the far background. Planes separate at different velocities → depth. The title block tilts ≤ 4° toward the cursor on sprung values, and scroll velocity leans the headline ≤ 2.6° (`useVelocityLean`, sprung skew).
-- **Manifesto** (220 vh): the statement holds centre frame while words illuminate in scroll order (opacity 0.12 → 1, y 8 → 0); the scene settles from 0.965 → 1 scale on entry; a micro progress bar tracks the read-through.
-- **Work** (600 vh, desktop only): vertical scroll becomes lateral travel — the module corridor translates −248 vw while inner surfaces counter-drift ±28 px and a counter ticks 01→05. On touch/mobile it degrades to a vertical stack with per-card inner parallax.
-- **Index** (300 vh): the endless feature wall. Two columns of capabilities wrap seamlessly (three copies of each set, translate = offset modulo one set-height): scroll drives ~2,200 px of travel and an idle drift (26 px/s, `useAnimationFrame`) keeps the wall moving when the reader stops. Column A travels up, column B down at 0.75×. Rows surface from darkness and return to it through a vertical mask. One column on mobile; a static grid under reduced motion.
+The stage is measured below the fixed header. Phones use a shallower orbit and full-width cards with reflowed live readouts. If the usable height is below 650px on phones or 600px on larger screens, or a card's content overflows, the page uses normal flow. Re-measure on viewport changes. The list control preserves the selected module, and loading a card is permanent for that visit.
 
-## Scroll reveals
+Reduced motion, unavailable advanced rendering, and list mode show a static globe, normal-flow cards and the static Index. Server HTML starts in this same accessible layout with working module links. Canvas failure leaves the entry and CTA available. Dynamic module errors retain an accessible route placeholder and switch the sequence to normal flow.
 
-One grammar everywhere else: rise 24–34 px + fade, 800 ms, `--ease-out`, −12% viewport margin, **once only** — content never re-hides. Groups stagger at 80 ms. Section headlines use `MaskText` (line rises out of a clipped mask, 900 ms). Numbers use `CountUp` (rise to value over 1.6 s, quartic ease-out, once) — the Craft vitals band. Sections 02 and 04 carry ghost numerals on `Parallax` (depth −0.3), extending the hero's directory grammar down the page.
+## Preserved Index
 
-## Layered parallax
+The 300vh sticky wall retains the original 2,200px scroll contribution plus 26px/s idle drift. Desktop fine-pointer devices show opposing columns, with the second at 0.75 speed. Phones show one column. Seam copies remain presentation-only. Static mode displays all 14 features in normal flow.
 
-Named depths as scroll-linked transforms: **background** (dust far-layer 0.03 scroll / −10 px pointer), **midground** (dust near-layer 0.08 / −26 px pointer; card inner planes ±28 px), **foreground** (content, moves with scroll). The dust field leans away from the cursor with eased inertia (4%/frame). Depth comes from relative velocity, never blur.
+## Performance and cleanup
 
-## Section-to-section transitions
+MotionValues update transforms without React renders per scroll frame. React state changes only for phase-based preloading, layout, visibility and user interaction. Preload the current and following module; keep mounted previews and data state. The globe caps DPR at 1.5 and stops scheduling frames outside the viewport or while the tab is hidden. Dispose of observers, subscriptions, listeners and frames on unmount. Existing snapshot caching and data hooks remain intact.
 
-The fixed `Atmosphere` (gradient + pointer-reactive dust + vignette + grain) runs behind everything, so sections read as stations along one route. Continuity cues: the acid progress thread (scroll-sprung), pinned scenes handing off to free-scrolling ones, the process line drawing itself (`scaleY` = progress) with station dots snapping acid as it passes, and contact dimming back toward black — the page ends where it began.
-
-## Hover states
-
-Drawn, not glowed: text shifts `--ink-2 → --ink` (160 ms); 1 px acid underline sweeps left→right, exits right (320 ms); craft rows translate +12 px, light their index, and a preview plate trails the cursor on springs (desktop only); work slots draw an acid corner tick; the contact email is magnetic (sprung, strength 0.3). No scale-ups on cards, no shadows, no glow.
-
-## The accent
-
-Acid green (`--acid: #b8e62d`) appears only as: progress thread, scroll-cue dot, the hero signal trace (1 px, 50% opacity) and its breathing terminal dot, process progress line, hover underline/index/tick, focus ring, text selection. Never as a background, fill, or large area. If green is visible when nothing is happening, something is wrong (the progress thread, trace, and terminal dot are the ambient exceptions — all ≤ 1 px or 5 px dots).
-
-## Performance and accessibility budget
-
-- Canvas dust: single 2D canvas, DPR ≤ 1.5, ≤ 90 particles desktop / ≤ 42 mobile, paused when the tab is hidden. ~5% of near-layer motes are acid — the only ambient accent besides the progress thread.
-- Pinned scenes are `position: sticky` + transform scrubbing — no scroll hijacking, no JS-driven layout.
-- Grain: static SVG tile stepped by CSS (`steps(6)`), no JS.
-- No WebGL, no post-processing. One scroll-linked filter exists: the hero title exit blur, gated to fine-pointer devices on a composited layer — nothing else may animate a filter.
-- The grid floor and Index wall are transform-only loops (translate over repeating patterns / duplicated sets); no layout work per frame. Idle drift runs on `useAnimationFrame`, which pauses off-tab.
-- `prefers-reduced-motion`: veil removed, Lenis disabled, reveals render settled, parallax and scrubbing static, dust field off, decode/count-up render final values, the Index renders as a static grid. The page is fully legible with zero motion.
+Shared reveal, easing and focus tokens remain in `app/components/motion.tsx` and `app/globals.css`. Obsolete landing sections, entrance veil and Lenis initialization have been removed.
