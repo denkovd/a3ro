@@ -1384,7 +1384,12 @@ export default function OilTrackerCore({
     const p = local(e);
     s.pointers.set(e.pointerId, p);
     e.currentTarget.setPointerCapture(e.pointerId);
+    if (s.pointers.size > 2) return;
     if (s.pointers.size === 2) {
+      s.tween = null;
+      s.vlon = 0;
+      s.vlat = 0;
+      s.movedPx = 6;
       const [a, b] = Array.from(s.pointers.values());
       s.pinchD = Math.hypot(a.x - b.x, a.y - b.y);
       s.pinchZ = s.zoom;
@@ -1444,7 +1449,7 @@ export default function OilTrackerCore({
     lastPointerRef.current = p;
     if (s.pointers.has(e.pointerId)) s.pointers.set(e.pointerId, p);
 
-    if (s.pointers.size === 2) {
+    if (s.pointers.size >= 2) {
       const [a, b] = Array.from(s.pointers.values());
       const d = Math.hypot(a.x - b.x, a.y - b.y);
       if (s.pinchD > 0) s.zoom = clamp((s.pinchZ * d) / s.pinchD, 0.85, 2.4);
@@ -1488,11 +1493,11 @@ export default function OilTrackerCore({
     const s = sim.current;
     s.pointers.delete(e.pointerId);
     if (s.pointers.size < 2) s.pinchD = 0;
-    if (!s.dragging) return;
+    if (!s.dragging) { e.currentTarget.style.cursor = "grab"; return; }
     s.dragging = false;
     e.currentTarget.style.cursor = "grab";
     s.lastInteract = performance.now();
-    if (s.movedPx < 6) {
+    if (e.type !== "pointercancel" && s.movedPx < 6) {
       const p = local(e);
       const hit = (canvasRef.current as unknown as {
         __hit?: (x: number, y: number) => HitResult | null;
@@ -2052,6 +2057,15 @@ export default function OilTrackerCore({
     return null;
   })();
 
+  const changeZoom = (factor: number) => {
+    const s = sim.current;
+    s.tween = null;
+    s.zoom = clamp(s.zoom * factor, 0.85, 2.4);
+    s.lastInteract = performance.now();
+    hasMoved.current = true;
+    setTouched(true);
+  };
+
   const railProps = {
     intel,
     selectedCorridorId,
@@ -2089,6 +2103,12 @@ export default function OilTrackerCore({
           role="img"
         />
 
+        {narrow && (
+          <div role="group" aria-label="Globe zoom" className="absolute right-3 top-4 z-10 flex flex-col border border-[var(--line)] bg-[rgba(11,13,13,0.92)]">
+            <button type="button" aria-label="Zoom in" onClick={() => changeZoom(1.2)} className="h-11 w-11 text-xl text-[var(--ink)]">+</button>
+            <button type="button" aria-label="Zoom out" onClick={() => changeZoom(1 / 1.2)} className="h-11 w-11 border-t border-[var(--line)] text-xl text-[var(--ink)]">−</button>
+          </div>
+        )}
         {/* slim map title — shell header owns brand; avoid competing copy stack */}
         <div className="pointer-events-none absolute left-5 top-4 md:left-6 md:top-5">
           <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--ink-3)]">
@@ -2097,7 +2117,7 @@ export default function OilTrackerCore({
         </div>
 
         {/* layers control — map chrome, not rail (lifted on mobile above the sheet) */}
-        <div className={`pointer-events-none absolute z-10 flex flex-col items-end ${narrow ? "bottom-[min(54vh,360px)] right-4" : "bottom-5 right-5"}`}>
+        <div className={`pointer-events-none absolute z-10 flex flex-col items-end ${narrow ? (hasFocus ? "bottom-[min(54vh,360px)] right-4" : "bottom-4 right-4") : "bottom-5 right-5"}`}>
           {narrow ? (
             <div className="relative">
               <AnimatePresence>
@@ -2211,7 +2231,7 @@ export default function OilTrackerCore({
       </div>
 
       {/* Mobile intelligence sheet */}
-      {narrow && (
+      {narrow && hasFocus && (
         <div className="absolute inset-x-0 bottom-0 z-30 md:hidden">
           <IntelRail {...railProps} variant="mobile" />
         </div>

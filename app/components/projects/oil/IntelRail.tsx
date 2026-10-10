@@ -89,7 +89,10 @@ export default function IntelRail({
         aria-label="Oil intelligence rail"
         className={`flex max-h-[52vh] flex-col border-t border-[var(--line)] bg-[rgba(11,13,13,0.94)] px-4 pb-3 pt-3 backdrop-blur-md ${className}`}
       >
-        {body}
+        <div className="mb-2 flex shrink-0 justify-end">
+          <button type="button" onClick={onCloseFocus} aria-label="Close oil details" className="min-h-11 px-3 py-2 text-[10px] text-[#d4a157]">Close ×</button>
+        </div>
+        <div className="min-h-0 overflow-y-auto">{focusSlot}</div>
       </aside>
     );
   }
