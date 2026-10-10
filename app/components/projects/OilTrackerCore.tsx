@@ -527,7 +527,7 @@ export default function OilTrackerCore({
   const [layers, setLayers] = useState<{ flows: boolean; gates: boolean; producers: ProducerLayerMode }>({
     flows: true,
     gates: true,
-    producers: "off",
+    producers: "production",
   });
   /* remembers the last non-"off" producer sub-mode so the LAYERS toggle
      can restore it (off↔last-nonoff-mode), defaulting to "production". */
@@ -556,7 +556,7 @@ export default function OilTrackerCore({
   const layersRef = useRef<{ flows: boolean; gates: boolean; producers: ProducerLayerMode }>({
     flows: true,
     gates: true,
-    producers: "off",
+    producers: "production",
   });
   /* hover-card screen position — set imperatively on every pointer move
      while something is hovered (Section §4b), so the card can track the

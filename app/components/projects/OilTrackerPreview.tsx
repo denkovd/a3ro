@@ -3,8 +3,8 @@ import { animateWhenVisible } from "./visibleAnimation";
 /* ────────────────────────────────────────────────────────────────
    Oil Tracker — lightweight teaser globe
    The ONLY globe the landing page ships. Low-detail, no
-   interaction: reduced dot count, one amber artery, two primary
-   marks. The landing stage controls rotation and spine compression;
+   interaction: reduced dot count, current oil routes and production
+   markers. The landing stage controls rotation and spine compression;
    route arrivals freeze an exact view. Ambient previews may pendulum.
    The full engine lives in OilTrackerCore (route-only).
 ──────────────────────────────────────────────────────────────── */
@@ -12,12 +12,27 @@ import { useEffect, useRef, type MutableRefObject } from "react";
 import { useReducedMotion, type MotionValue } from "framer-motion";
 import {
   AMB, AMB_HI, DOT, INK,
-  HOME, MAJOR_PTS, PRIMARY_MARKS,
+  HOME, PRIMARY_MARKS,
   bakeCorridor, getDots, rotator, vec,
   type OTView,
 } from "./oilTrackerShared";
+import { FLOW_ROUTES } from "./flowRoutes";
+import { PRODUCERS } from "./producers";
 
-let ARTERY: { samples: Float32Array; n: number } | null = null;
+const ROUTES = FLOW_ROUTES.map((route) => ({ ...route, ...bakeCorridor(route.pts) }));
+const RANKED_PRODUCERS = [...PRODUCERS].sort((a, b) => b.productionMbd - a.productionMbd);
+const MARKS = [
+  ...PRIMARY_MARKS.map((mark) => ({ ...mark, sub: mark.glyph === "diamond" ? "WATCHLIST" : "OIL TRANSIT" })),
+  { label: "SINGAPORE STRAIT", sub: "OIL TRANSIT", lon: 104.2, lat: 1.1, side: 1 as const, glyph: "ring" as const },
+  { label: "ARA · ROTTERDAM", sub: "WATCHLIST", lon: 4.3, lat: 51.9, side: 1 as const, glyph: "ring" as const },
+  { label: "US GULF", sub: "OIL EXPORTS", lon: -94.5, lat: 28.6, side: -1 as const, glyph: "ring" as const },
+];
+const GATES = [
+  { label: "BAB EL-MANDEB", lon: 43.4, lat: 12.6 },
+  { label: "SUEZ", lon: 32.4, lat: 30 },
+  { label: "CAPE", lon: 19, lat: -35 },
+  { label: "PANAMA", lon: -79.5, lat: 9 },
+];
 
 export default function OilTrackerPreview({
   className = "",
@@ -49,8 +64,6 @@ export default function OilTrackerPreview({
     if (!ctx) { onUnavailable?.(); return; }
 
     const dots = getDots(9000); // low-detail: ~2,600 land dots
-    if (!ARTERY) ARTERY = bakeCorridor(MAJOR_PTS);
-    const artery = ARTERY;
     const o = [0, 0, 0];
 
     const lat = initialView?.lat ?? 18;
@@ -137,57 +150,119 @@ export default function OilTrackerPreview({
       ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
       ctx.stroke();
 
-      /* the major artery — the one line the teaser needs */
-      const S = artery.samples, N = artery.n;
-      ctx.beginPath();
-      let pen = false;
-      for (let i = 0; i < N; i++) {
-        rot(S[i * 3], S[i * 3 + 1], S[i * 3 + 2], o);
-        if (o[2] <= 0) { pen = false; continue; }
-        const sx = cx + o[0] * rx, sy = cy - o[1] * ry;
-        if (!pen) { ctx.moveTo(sx, sy); pen = true; } else ctx.lineTo(sx, sy);
-      }
-      ctx.strokeStyle = AMB(0.38);
-      ctx.lineWidth = 1.6;
-      ctx.stroke();
-
-      // The artery's amber resolves onto the axis even when its geography
-      // has rotated onto the far hemisphere during the half-turn.
-      if (collapse > 0) {
-        ctx.strokeStyle = AMB(collapse * 0.55);
-        ctx.lineWidth = 1;
+      /* Shared route geometry keeps the preview aligned with the watch. */
+      for (const route of ROUTES) {
+        const artery = route;
+        const S = artery.samples, N = artery.n;
         ctx.beginPath();
-        ctx.moveTo(cx, cy - ry * 0.7);
-        ctx.lineTo(cx, cy - ry * 0.48);
+        let pen = false;
+        for (let i = 0; i < N; i++) {
+          rot(S[i * 3], S[i * 3 + 1], S[i * 3 + 2], o);
+          if (o[2] <= 0) { pen = false; continue; }
+          const sx = cx + o[0] * rx, sy = cy - o[1] * ry;
+          if (!pen) { ctx.moveTo(sx, sy); pen = true; } else ctx.lineTo(sx, sy);
+        }
+        ctx.strokeStyle = AMB((route.tier === "major" ? 0.48 : route.tier === "medium" ? 0.3 : 0.18) * (1 - collapse));
+        ctx.lineWidth = route.tier === "major" ? 1.6 : route.tier === "medium" ? 1.1 : 0.7;
         ctx.stroke();
-      }
 
-      if (!controlled) {
-        const head = ((now / 1000) * 0.05) % 1;
-        const len = 0.1;
-        for (const pass of [[3.4, AMB(0.12)], [1.6, AMB_HI(0.85)]] as const) {
+        // The artery's amber resolves onto the axis even when its geography
+        // has rotated onto the far hemisphere during the half-turn.
+        if (collapse > 0 && route.tier === "major") {
+          ctx.strokeStyle = AMB(collapse * 0.55);
+          ctx.lineWidth = 1;
           ctx.beginPath();
-          pen = false;
-          for (let i = 0; i < N; i++) {
-            const u = i / (N - 1);
-            const d = head - u;
-            if (d < 0 || d > len) { pen = false; continue; }
-            rot(S[i * 3], S[i * 3 + 1], S[i * 3 + 2], o);
-            if (o[2] <= 0) { pen = false; continue; }
-            const sx = cx + o[0] * rx, sy = cy - o[1] * ry;
-            if (!pen) { ctx.moveTo(sx, sy); pen = true; } else ctx.lineTo(sx, sy);
-          }
-          ctx.lineWidth = pass[0];
-          ctx.strokeStyle = pass[1];
-          ctx.lineCap = "round";
+          ctx.moveTo(cx, cy - ry * 0.7);
+          ctx.lineTo(cx, cy - ry * 0.48);
           ctx.stroke();
+        }
+
+        if (!controlled && route.tier === "major") {
+          const head = ((now / 1000) * 0.05) % 1;
+          const len = 0.1;
+          for (const pass of [[3.4, AMB(0.12)], [1.6, AMB_HI(0.85)]] as const) {
+            ctx.beginPath();
+            pen = false;
+            for (let i = 0; i < N; i++) {
+              const u = i / (N - 1);
+              const d = head - u;
+              if (d < 0 || d > len) { pen = false; continue; }
+              rot(S[i * 3], S[i * 3 + 1], S[i * 3 + 2], o);
+              if (o[2] <= 0) { pen = false; continue; }
+              const sx = cx + o[0] * rx, sy = cy - o[1] * ry;
+              if (!pen) { ctx.moveTo(sx, sy); pen = true; } else ctx.lineTo(sx, sy);
+            }
+            ctx.lineWidth = pass[0];
+            ctx.strokeStyle = pass[1];
+            ctx.lineCap = "round";
+            ctx.stroke();
+          }
         }
       }
 
-      /* two primary marks */
+      /* Gate crosshairs use the watch's neutral appearance. */
+      if (collapse < 0.6) {
+        ctx.font = '500 8px "JetBrains Mono", ui-monospace, monospace';
+        for (const gate of GATES) {
+          rot(...vec(gate.lon, gate.lat), o);
+          if (o[2] < 0.35) continue;
+          const sx = cx + o[0] * rx, sy = cy - o[1] * ry;
+          const fade = o[2] * (1 - collapse / 0.6);
+          ctx.strokeStyle = INK(0.3 * fade);
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(sx - 3, sy);
+          ctx.lineTo(sx + 3, sy);
+          ctx.moveTo(sx, sy - 3);
+          ctx.lineTo(sx, sy + 3);
+          ctx.stroke();
+          if (labels) {
+            ctx.fillStyle = INK(0.24 * fade);
+            ctx.fillText(gate.label, sx + 6, sy + 2.5);
+          }
+        }
+      }
+
+      /* Production is the watch's default producer layer. */
+      if (collapse < 0.6) {
+        const labelRects: [number, number, number, number][] = [];
+        const scale = Math.min(1.25, Math.max(0.8, R / 260));
+        ctx.font = '500 8px "JetBrains Mono", ui-monospace, monospace';
+        for (const [rank, producer] of RANKED_PRODUCERS.entries()) {
+          rot(...vec(producer.lon, producer.lat), o);
+          if (o[2] <= 0.15) continue;
+          const sx = cx + o[0] * rx, sy = cy - o[1] * ry;
+          const fade = Math.min(1, (o[2] - 0.15) / 0.3) * (1 - collapse / 0.6);
+          const radius = (3 + Math.sqrt(producer.productionMbd) * 2.3) * scale;
+          ctx.strokeStyle = AMB(0.45 * fade);
+          ctx.fillStyle = AMB(0.054 * fade);
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.fill();
+          ctx.fillStyle = AMB(0.63 * fade);
+          ctx.beginPath();
+          ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+          if (!labels || rank > 8) continue;
+          const label = `${producer.name} · ${producer.productionMbd.toFixed(1)} MB/D`;
+          const lx = sx + radius + 5, ly = sy + 3;
+          const width = ctx.measureText(label).width;
+          if (lx + width > w - 8 || labelRects.some(([x, y, rw, rh]) => lx < x + rw && lx + width > x && ly - 8 < y + rh && ly + 2 > y)) continue;
+          labelRects.push([lx, ly - 8, width, 10]);
+          ctx.strokeStyle = "rgba(10,12,11,0.8)";
+          ctx.lineWidth = 3;
+          ctx.strokeText(label, lx, ly);
+          ctx.fillStyle = INK(0.75 * fade);
+          ctx.fillText(label, lx, ly);
+        }
+      }
+
+      /* Current corridor and demand markers. */
       if (labels && collapse < 0.6) {
         ctx.font = '500 9px "JetBrains Mono", ui-monospace, monospace';
-        for (const m of PRIMARY_MARKS) {
+        for (const m of MARKS) {
           rot(...vec(m.lon, m.lat), o);
           if (o[2] < 0.12) continue;
           const sx = cx + o[0] * rx, sy = cy - o[1] * ry;
