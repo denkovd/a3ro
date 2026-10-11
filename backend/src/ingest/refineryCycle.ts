@@ -3,7 +3,9 @@ import type { Queryable } from "../storage/db";
 import { upsertRefineryEvents, recordRefineryCheck, type StoredRefineryEvent } from "../storage/refineryRepo";
 import { extractOfficialEvent, officialArticleLinks, type SourceRule } from "../refineries/sourceRules";
 
-const CHECKS: SourceRule[] = REFINERIES.flatMap(r => r.events.map(e => ({
+// Only these HTML statements have reviewed extraction rules. PDF history is
+// manually reviewed and never renewed through a generic/default text match.
+const CHECKS: SourceRule[] = REFINERIES.filter(r => ["grangemouth", "benicia", "los-angeles-p66", "bapco"].includes(r.id)).flatMap(r => r.events.map(e => ({
   id: e.id ?? `${r.id}:${e.kind}:${e.date}`, refineryId: r.id, url: e.sourceUrl, event: e,
   required: r.id === "grangemouth" ? [/April 2025/i, /operations ceased/i]
     : r.id === "benicia" ? [/full idling/i, /April 2026/i]

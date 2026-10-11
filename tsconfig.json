@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "lib": [
       "dom",
       "dom.iterable",
@@ -36,7 +37,8 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next-optimization/types/**/*.ts"
+    ".next-optimization/types/**/*.ts",
+    ".next-oil-review/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

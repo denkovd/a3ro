@@ -17,9 +17,42 @@ export type Refinery = {
   lon: number; lat: number; capacityKbd: number | null;
   capacityBasis: string; sourceUrl: string; reviewedAt: string;
   context: string; corridorId?: string; events: RefineryEvent[];
+  units?: { name: string; capacityKbd: number; sourceUrl: string; basis: string }[];
 };
 const reviewedAt = "2026-10-10";
+const bazanReport = "https://media.bazan.co.il/bazan/media/qlhn0z05/bazan-q4-2025.pdf";
 export const REFINERIES: Refinery[] = [
+  { id: "al-zour", name: "Al-Zour", operator: "KIPIC", country: "Kuwait", lon: 48.31, lat: 28.74,
+    capacityKbd: 615, capacityBasis: "Operator-published maximum refining capacity · February 2025 reference",
+    sourceUrl: "https://kipic.com.kw/wp-content/uploads/2025/02/Kipic-2025-Feb-eng.pdf", reviewedAt: "2026-10-11", corridorId: "hormuz",
+    context: "Coastal fuel export refinery. The operator's 2025 capacity milestone does not establish present runs or export availability.", events: [] },
+  { id: "yasref", name: "Yanbu · YASREF", operator: "YASREF · Aramco / Sinopec", country: "Saudi Arabia", lon: 38.26, lat: 23.96,
+    capacityKbd: 400, capacityBasis: "Operator-published Arabian heavy crude processing design reference",
+    sourceUrl: "https://www.yasref.com/about-us", reviewedAt: "2026-10-11",
+    context: "Red Sea refinery supplying domestic and international fuel markets. Its coastal location does not establish available bypass or export capacity.", events: [] },
+  { id: "dangote", name: "Dangote · Lekki", operator: "Dangote Petroleum Refinery", country: "Nigeria", lon: 3.86, lat: 6.43,
+    capacityKbd: 650, capacityBasis: "Operator-published crude processing nameplate · single train",
+    sourceUrl: "https://www.refinery-dangote.com/", reviewedAt: "2026-10-11",
+    context: "Atlantic coast refinery serving Nigerian and international product markets. Nameplate capacity and expansion plans do not establish current throughput.", events: [] },
+  { id: "sarroch", name: "Sarroch", operator: "Sarlux · Saras", country: "Italy", lon: 9.01, lat: 39.07,
+    capacityKbd: 300, capacityBasis: "Operator-published processing capacity · 15 million tonnes per year; daily reference calculated on calendar days",
+    sourceUrl: "https://www.saras.it/en/what-we-do/refining", reviewedAt: "2026-10-11",
+    context: "Sardinian refinery and storage complex in the Mediterranean fuel supply system. Storage capacity does not establish current stocks or available fuel exports.", events: [] },
+  { id: "haifa-bazan", name: "Haifa · Bazan", operator: "Bazan", country: "Israel", lon: 35.05, lat: 32.80,
+    capacityKbd: 197, capacityBasis: "Operator 2025 annual report · crude distillation reference; PDF page 55",
+    sourceUrl: bazanReport, reviewedAt: "2026-10-11",
+    context: "Conflict-damaged complex dependent on steam, electricity and external infrastructure. Historical recovery reports do not establish current operating status.",
+    units: [
+      { name: "CDU 1", capacityKbd: 27, basis: "Published crude processing reference", sourceUrl: `${bazanReport}#page=55` },
+      { name: "CDU 3", capacityKbd: 57, basis: "Published crude processing reference", sourceUrl: `${bazanReport}#page=55` },
+      { name: "CDU 4", capacityKbd: 113, basis: "Published crude processing reference", sourceUrl: `${bazanReport}#page=55` },
+      { name: "Hydrocracker (HCU)", capacityKbd: 36, basis: "Published conversion-unit reference · overlaps crude processing", sourceUrl: `${bazanReport}#page=55` },
+    ],
+    events: [
+      { id: "bazan-maintenance-2025-q1", date: "2025-01", kind: "maintenance", scope: "unit", confidence: "operator", title: "Q1 2025 unit maintenance", detail: "Hydrocracker, hydrogen facilities and CDU 3 underwent maintenance in Q1 2025. Month denotes quarter start; lost throughput and restart dates were not quantified.", affectedUnits: ["Hydrocracker (HCU)", "Hydrogen production", "CDU 3"], sourceUrl: `${bazanReport}#page=56` },
+      { id: "bazan-conflict-2025-06", incidentId: "bazan-conflict-2025", date: "2025-06", kind: "outage", scope: "facility", confidence: "operator", title: "June 2025 conflict shutdown", detail: "Missile damage to the Energy Center and connections halted refining. The report describes a gradual return towards full activity in Q3/Q4 2025.", affectedUnits: ["Energy Center", "Inter-facility pipelines and transmission"], sourceUrl: `${bazanReport}#page=170` },
+      { id: "bazan-conflict-2026-03-19", incidentId: "bazan-conflict-2026", date: "2026-03-19", kind: "disruption", scope: "group", confidence: "operator", title: "March 2026 damage and recovery", detail: "The annual report records local damage and interruption to third-party infrastructure, subsequently reactivated; most production facilities were active at report approval. Facility throughput was not quantified.", sourceUrl: `${bazanReport}#page=204` },
+    ] },
   { id: "jamnagar", name: "Jamnagar complex", operator: "Reliance Industries", country: "India", lon: 69.85, lat: 22.35,
     capacityKbd: 1400, capacityBasis: "Operator-published crude processing capacity · combined complex",
     sourceUrl: "https://www.ril.com/businesses/energy/refining-marketing", reviewedAt,

@@ -20,6 +20,15 @@ test("group and unit reports do not establish a facility outage", () => {
   for (const scope of ["group", "unit"] as const) assert.equal(refineryCondition({ ...base, events: [event("outage", { scope })] }, now).status, "unknown");
 });
 
+test("Bazan unit references never become quantified unavailable capacity or a current outage", () => {
+  const bazan = REFINERIES.find(r => r.id === "haifa-bazan")!;
+  assert.equal(bazan.capacityKbd, 197);
+  assert.equal(bazan.units?.find(u => u.name === "Hydrocracker (HCU)")?.capacityKbd, 36);
+  assert.ok(bazan.events.every(e => e.affectedCapacityKbd == null));
+  assert.ok(bazan.events.every(e => !e.publishedAt));
+  assert.equal(refineryCondition(bazan, Date.parse("2026-10-11T12:00:00Z")).status, "unknown");
+});
+
 test("closure/idling remain structural until a later facility report supersedes them", () => {
   const closure = event("closure", { id: "old", date: "2025-04", verifiedAt: "2025-04" });
   assert.equal(refineryCondition({ ...base, events: [closure] }, now).status, "closed");
@@ -59,6 +68,7 @@ test("one unavailable official statement cannot prevent other evidence from bein
   assert.ok(writes.some(id => id.startsWith("grangemouth")));
   assert.ok(report.polled.some(p => p.ok));
   assert.ok(report.polled.some(p => !p.ok));
+  assert.ok(report.polled.every(p => !p.sourceId.startsWith("bazan-")), "manual PDF evidence must not be renewed with an unrelated default rule");
 });
 
 test("public EIA serial dates are timezone-independent and wrong series are rejected", () => {

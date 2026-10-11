@@ -131,3 +131,43 @@ weakened. `.vercelignore` excludes local credentials, build caches and old workt
 Global coverage remains partial. The next layers are product export flows and
 terminals, broader regional throughput, processing-unit/crude compatibility, and
 pipeline/bypass capacity.
+
+## Continuation · 11 October 2026
+
+The prior implementation is preserved in commit `569d6f0`. A public check found
+that a later production deployment (`dpl_9CTdQ9X8v4WYDDZo9FNECDgxPNEH`) had
+replaced the oil release: `/api/oil/refineries`, `/api/cron/oil` and
+`/api/cron/refineries` returned 404. The domain was reachable, but the isolated
+jobs could not run from that deployment. Existing database checks were last
+updated by the 10 October manual refresh; they do not prove scheduled execution.
+The user authorized publication of the validated continuation build.
+
+Coverage expands to 15 references with Al-Zour, YASREF, Dangote, Sarroch and Haifa
+Bazan. New references were reviewed on 11 October. Sources:
+[KIPIC February 2025 magazine](https://kipic.com.kw/wp-content/uploads/2025/02/Kipic-2025-Feb-eng.pdf),
+[YASREF](https://www.yasref.com/about-us),
+[Dangote](https://www.refinery-dangote.com/),
+[Saras](https://www.saras.it/en/what-we-do/refining), and
+[Bazan 2025 annual report](https://media.bazan.co.il/bazan/media/qlhn0z05/bazan-q4-2025.pdf).
+
+Bazan history covers Q1 2025 unit maintenance, the June conflict shutdown, and a
+March 2026 group disruption/recovery statement. Publication dates remain null:
+the report's approval date is not asserted as its publication date. The Q1
+maintenance month marks the start of the reported quarter. Unit nameplate
+references are separate from reported unavailable capacity; conversion and
+distillation capacities overlap and must not be added. Product impacts and
+restart dates remain unconfirmed where the source does not quantify them.
+These PDF entries are manually reviewed history, excluded from automated HTML
+verification rules. `seed-reviewed-refineries.ts` stores them with their original
+review date, without recording a successful live source poll.
+
+Oil and refinery cron responses and logs now report provider counts, skipped
+polls and healthy/degraded/failed outcomes. A resolved cycle with failed providers
+is degraded; all failed providers return 503. Operational logs omit raw upstream
+errors and credentials. `verify-oil-refresh.ts` queries existing database health
+read-only. New source periods remain separate from fetch timestamps.
+
+Local build repair: `baseUrl` is explicitly set to the project root so Next.js
+resolves the existing backend path alias. Dependencies use the existing lockfile
+(Next.js 14.2.35). Regional throughput beyond the US, product export/terminal
+feeds, crude compatibility and pipeline/bypass capacities remain next stages.

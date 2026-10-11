@@ -16,11 +16,13 @@ export default function RefineryWatchlist({ refineries, feed, onFocus }: { refin
     if (filter === "closures") return status === "closed" || status === "idled";
     if (filter === "outages") return status === "outage" || status === "maintenance";
     if (filter === "recent") return r.events.some(e => isRecent(e.publishedAt ?? e.date));
+    if (filter === "units") return r.events.some(e => e.scope === "unit");
+    if (filter === "disruptions") return r.events.some(e => e.kind === "disruption" || e.incidentId?.includes("conflict"));
     return true;
   });
   const recent = refineries.flatMap(r => r.events.map(e => ({ r,e }))).filter(({ e }) => isRecent(e.publishedAt ?? e.date)).sort((a,b) => b.e.date.localeCompare(a.e.date)).slice(0,3);
   return <section aria-label="Refinery coverage">
-    <div className="flex items-center justify-between gap-2"><h3 className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">Refineries · {refineries.length} sites</h3><label className="sr-only" htmlFor="refinery-filter">Filter refinery coverage</label><select id="refinery-filter" value={filter} onChange={e => setFilter(e.target.value)} className="border border-[var(--line)] bg-[var(--depth-1)] p-1 text-[10px] text-[var(--ink-2)]"><option value="all">All sites</option><option value="outages">Current outages</option><option value="closures">Closed / idled</option><option value="recent">Recent reports</option></select></div>
+    <div className="flex items-center justify-between gap-2"><h3 className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">Refineries · {refineries.length} sites</h3><label className="sr-only" htmlFor="refinery-filter">Filter refinery coverage</label><select id="refinery-filter" value={filter} onChange={e => setFilter(e.target.value)} className="border border-[var(--line)] bg-[var(--depth-1)] p-1 text-[10px] text-[var(--ink-2)]"><option value="all">All sites</option><option value="outages">Facility outages</option><option value="closures">Closed / idled</option><option value="recent">Recent reports</option><option value="units">Unit history</option><option value="disruptions">Disruption history</option></select></div>
     <p className="mt-2 text-[10px] leading-relaxed text-[var(--ink-3)]">Source-backed events. Coverage is partial; missing reports do not establish normal operation.</p>
     {feed.status === "error" && <p className="mt-2 text-[10px] text-[#d4a157]">Evidence feed unavailable · showing reviewed references.</p>}
     {feed.checks.some(c => c.status === "error") && <p className="mt-2 text-[10px] text-[#d4a157]">Some official sources could not be refreshed. Event dates remain visible.</p>}
