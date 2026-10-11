@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test:optimization": "node --test tests/optimization.test.mjs",
-    "test:landing": "node --test tests/landing-sequence.test.mjs"
+    "test:landing": "node --test tests/landing-sequence.test.mjs",
+    "test:oil": "node --test tests/oil-intelligence.test.mjs"
   },
   "dependencies": {
     "framer-motion": "^11.3.0",

@@ -8,6 +8,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "ingest": "tsx scripts/run-ingest.ts",
+    "run:refineries": "tsx scripts/run-refineries.ts",
+    "refresh:oil": "tsx scripts/refresh-oil.ts",
     "backfill:oil-prices": "tsx scripts/backfill-oil-prices.ts",
     "run:scores": "tsx scripts/run-scores.ts",
     "run:positioning": "tsx scripts/run-positioning.ts",

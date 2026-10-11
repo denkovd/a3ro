@@ -20,7 +20,7 @@ export default function CorridorWatchlist({
           const isSel = selectedId === c.id;
           const healthColor =
             c.healthRatio != null && Number.isFinite(c.healthRatio) ? flowHealth(c.healthRatio) : null;
-          const mute = c.status === "watchlist" || c.status === "connecting";
+          const mute = c.status !== "live";
           return (
             <li key={c.id}>
               <button
@@ -78,7 +78,7 @@ export default function CorridorWatchlist({
         })}
       </ul>
       <p className="mt-1 border-l border-[var(--line)] px-2.5 py-[6px] font-mono text-[8px] uppercase tracking-[0.16em] text-[var(--ink-3)]">
-        + corridors onboarding · pro feeds on request
+        Observations are dated by corridor · select for history
       </p>
     </section>
   );

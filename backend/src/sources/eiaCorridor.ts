@@ -52,6 +52,7 @@
 import { SourceErrorKind } from "../core/types";
 import { CorridorMetricRecord } from "../core/corridorTypes";
 import { CorridorBaseSource, CorridorSourceDescriptor } from "./CorridorSource";
+import { fetchPublicEiaSeries } from "./eiaPublic";
 
 const BASE_URL = "https://api.eia.gov/v2/";
 const LOOKBACK_DAYS = 45; // bound payload size; weekly series ⇒ ~6 rows
@@ -155,6 +156,10 @@ export class EiaUsGulfSource extends CorridorBaseSource {
   }
 
   private async request(cfg: EiaCorridorSeriesConfig): Promise<EiaCorridorRow[]> {
+    if (!this.apiKey) {
+      const start = new Date(Date.now() - LOOKBACK_DAYS * 86_400_000).toISOString().slice(0,10);
+      return fetchPublicEiaSeries(cfg.seriesId, "weekly", start);
+    }
     const url = this.buildUrl(cfg);
     const body = await this.getJson<EiaCorridorResponse>(url, {
       classifyHttpError: (status, text) => this.classify403(status, text),

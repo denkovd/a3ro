@@ -12,13 +12,13 @@
    backend's benchmark list.
 ──────────────────────────────────────────────────────────────── */
 import { useEffect, useRef, useState } from "react";
-import type { Benchmark, CorridorBaseline, CorridorMetricLatest, DailyPrice, LatestQuote, ScoreSnapshot } from "@a3ro/oil-backend";
+import type { Benchmark, CorridorBaseline, CorridorMetricLatest, DailyPrice, LatestQuote } from "@a3ro/oil-backend";
 
 /** Local mirror of the backend's BENCHMARKS — see bundle-safety note above. */
 const TRACKED = ["WTI", "BRENT"] as const satisfies readonly Benchmark[];
 
 const DEFAULT_POLL_MS = 60_000;
-const DEFAULT_SERIES_DAYS = 30;
+const DEFAULT_SERIES_DAYS = 180;
 const SLOW_CYCLE_REFRESH_MS = 60 * 60 * 1000; // 60 minutes
 
 export type OilFeedStatus = "loading" | "ready" | "error";
@@ -31,12 +31,12 @@ export interface OilData {
   corridors: CorridorMetricLatest[] | null;
   /** null until the first successful /baselines fetch. */
   baselines: CorridorBaseline[] | null;
-  /** null until the first successful /scores fetch. */
-  scores: ScoreSnapshot[] | null;
-  /** "error" ONLY if we have never received quotes. Corridors/baselines/scores never affect this. */
+  /** Initial quote availability; refresh failures are reported separately per feed. */
   status: OilFeedStatus;
   /** Date.now() of the last successful /latest fetch. */
   lastFetchedAt: number | null;
+  quoteFailed: boolean;
+  physicalFailed: boolean;
 }
 
 function todayUtcMinusDays(days: number): string {
@@ -88,14 +88,6 @@ async function fetchBaselines(signal: AbortSignal): Promise<CorridorBaseline[] |
   return json as CorridorBaseline[];
 }
 
-async function fetchScores(signal: AbortSignal): Promise<ScoreSnapshot[] | null> {
-  const res = await fetch("/api/oil/scores", { cache: "no-store", signal });
-  if (!res.ok) return null;
-  const json: unknown = await res.json();
-  if (!Array.isArray(json)) return null;
-  return json as ScoreSnapshot[];
-}
-
 export default function useOilData(opts?: { pollMs?: number; seriesDays?: number }): OilData {
   const pollMs = opts?.pollMs ?? DEFAULT_POLL_MS;
   const seriesDays = opts?.seriesDays ?? DEFAULT_SERIES_DAYS;
@@ -104,9 +96,10 @@ export default function useOilData(opts?: { pollMs?: number; seriesDays?: number
   const [series, setSeries] = useState<Partial<Record<Benchmark, DailyPrice[]>>>({});
   const [corridors, setCorridors] = useState<CorridorMetricLatest[] | null>(null);
   const [baselines, setBaselines] = useState<CorridorBaseline[] | null>(null);
-  const [scores, setScores] = useState<ScoreSnapshot[] | null>(null);
   const [status, setStatus] = useState<OilFeedStatus>("loading");
   const [lastFetchedAt, setLastFetchedAt] = useState<number | null>(null);
+  const [quoteFailed, setQuoteFailed] = useState(false);
+  const [physicalFailed, setPhysicalFailed] = useState(false);
 
   /* mutable mirrors read inside async callbacks/timers, avoiding stale closures */
   const mountedRef = useRef(true);
@@ -136,6 +129,7 @@ export default function useOilData(opts?: { pollMs?: number; seriesDays?: number
         const result = await fetchLatest(ac.signal);
         if (!mountedRef.current || ac.signal.aborted) return;
         if (result !== null) {
+          setQuoteFailed(false);
           setQuotes(result);
           hasQuotesRef.current = true;
           const now = Date.now();
@@ -143,12 +137,14 @@ export default function useOilData(opts?: { pollMs?: number; seriesDays?: number
           setLastFetchedAt(now);
           setStatus("ready");
         } else {
+          setQuoteFailed(true);
           // failure: stale-while-error — keep previously held data
           setStatus(hasQuotesRef.current ? "ready" : "error");
         }
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
         if (!mountedRef.current) return;
+        setQuoteFailed(true);
         setStatus(hasQuotesRef.current ? "ready" : "error");
       } finally {
         inFlight.delete(ac);
@@ -163,16 +159,15 @@ export default function useOilData(opts?: { pollMs?: number; seriesDays?: number
       const ac = new AbortController();
       inFlight.add(ac);
       try {
-        const [seriesResults, corridorsResult, baselinesResult, scoresResult] = await Promise.all([
+        const [seriesResults, corridorsResult, baselinesResult] = await Promise.all([
           Promise.all(
             TRACKED.map(async (b) => {
-              const s = await fetchSeries(b, seriesDaysRef.current, ac.signal);
+              const s = await fetchSeries(b, seriesDaysRef.current, ac.signal).catch(() => null);
               return [b, s] as const;
             })
           ),
-          fetchCorridors(ac.signal),
-          fetchBaselines(ac.signal),
-          fetchScores(ac.signal),
+          fetchCorridors(ac.signal).catch(() => null),
+          fetchBaselines(ac.signal).catch(() => null),
         ]);
         if (!mountedRef.current || ac.signal.aborted) return;
         setSeries((prev) => {
@@ -186,15 +181,14 @@ export default function useOilData(opts?: { pollMs?: number; seriesDays?: number
         // failure: stale-while-error — keep previously held corridors.
         // Corridors never affect `status`.
         if (corridorsResult !== null) setCorridors(corridorsResult);
+        setPhysicalFailed(corridorsResult === null);
         // failure: stale-while-error — keep previously held baselines.
         // Baselines never affect `status`.
         if (baselinesResult !== null) setBaselines(baselinesResult);
-        // failure: stale-while-error — keep previously held scores.
-        // Scores never affect `status`.
-        if (scoresResult !== null) setScores(scoresResult);
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
         // stale-while-error: swallow, keep previously held series/corridors/baselines
+        if (mountedRef.current) setPhysicalFailed(true);
       } finally {
         inFlight.delete(ac);
       }
@@ -234,5 +228,5 @@ export default function useOilData(opts?: { pollMs?: number; seriesDays?: number
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { quotes, series, corridors, baselines, scores, status, lastFetchedAt };
+  return { quotes, series, corridors, baselines, status, lastFetchedAt, quoteFailed, physicalFailed };
 }

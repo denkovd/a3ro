@@ -160,8 +160,8 @@ export default function OilTrackerView() {
           ) : (
             <span aria-hidden className="inline-block h-[5px] w-[5px] rounded-full" style={{ background: AMBER_CSS }} />
           )}
-          <span className="hidden sm:inline">Terminal · live feeds</span>
-          <span className="sm:hidden">Live</span>
+          <span className="hidden sm:inline">Terminal · sourced data</span>
+          <span className="sm:hidden">Sourced</span>
         </p>
       </header>
 

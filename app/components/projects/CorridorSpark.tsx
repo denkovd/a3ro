@@ -31,8 +31,10 @@ export default function CorridorSpark({
 
   useEffect(() => {
     let alive = true;
+    const controller = new AbortController();
+    setS({ status: "loading", points: [] });
     const url = `/api/oil/corridors/series?corridor=${encodeURIComponent(corridor)}&metric=${encodeURIComponent(metric)}&days=${days}`;
-    fetch(url, { cache: "no-store" })
+    fetch(url, { cache: "no-store", signal: controller.signal })
       .then(async (res) => {
         const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
         if (!alive) return;
@@ -44,7 +46,9 @@ export default function CorridorSpark({
         const points = raw
           .map((p) => p as Record<string, unknown>)
           .filter((p) => typeof p.value === "number" && Number.isFinite(p.value as number))
-          .map((p) => ({ date: String(p.date), value: p.value as number }));
+          .filter(p => typeof p.date === "string" && Number.isFinite(Date.parse(p.date)))
+          .map((p) => ({ date: String(p.date), value: p.value as number }))
+          .sort((a, b) => a.date.localeCompare(b.date));
         setS({ status: points.length >= 2 ? "live" : "pending", points });
       })
       .catch(() => {
@@ -52,16 +56,21 @@ export default function CorridorSpark({
       });
     return () => {
       alive = false;
+      controller.abort();
     };
   }, [corridor, metric, days]);
 
   if (s.status === "live") {
+    const first = s.points[0], last = s.points[s.points.length - 1];
+    const change = first.value === 0 ? null : (last.value - first.value) / Math.abs(first.value) * 100;
     return (
       <div className="mt-6">
         <MiniSpark values={s.points.map((p) => p.value)} id={`${corridor}-${metric}`} />
         <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-          {caption ?? "Accumulated corridor history · live feed"} · {s.points.length} pts
+          {caption ?? "Reported observation history"} · {s.points.length} pts
         </p>
+        <div className="mt-2 flex justify-between gap-2 font-mono text-[8px] text-[var(--ink-3)]"><span>{first.date.slice(0, 10)}</span><span>{last.date.slice(0, 10)}</span></div>
+        <p className="mt-2 text-[10px] text-[var(--ink-2)]">{change === null ? "Change unavailable from zero baseline" : `${change >= 0 ? "+" : ""}${change.toFixed(1)}% across displayed observations`}</p>
       </div>
     );
   }

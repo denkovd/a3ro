@@ -4,8 +4,8 @@
    Invoked by Vercel Cron per vercel.json schedule ("0 6 * * *").
    The ingestion cycle is idempotent — re-running it is safe.
 
-   Order (oil path first so the 60s Hobby budget can't be eaten by
-   gold before scores land):
+   Order (oil path first so slower downstream feeds cannot consume
+   the function budget before oil scores land):
      price → corridors → baselines → seasonal → macro →
      positioning → scores → gold (last; not required for oil scores).
    Scores also have a dedicated cron at /api/cron/scores (06:10 UTC)
@@ -42,8 +42,8 @@ export const runtime = "nodejs";
 // ingestion against the live DB. Runtime-only (fixes build timeouts).
 export const dynamic = "force-dynamic";
 // Price + corridor cycles plus baselines/seasonal/macro/positioning
-// need headroom over the 10s default. 60s is the Hobby ceiling.
-export const maxDuration = 60;
+// need a five-minute budget for the independent source cycles.
+export const maxDuration = 300;
 
 export async function GET(request: Request) {
   const unauthorized = requireCronAuth(request);

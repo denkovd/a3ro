@@ -1,3 +1,4 @@
+import { publicEiaFixture } from "./helpers/eiaPublicFixture";
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { EiaInventorySource, thousandBblToMillionBbl } from "../src/sources/eiaInventory";
@@ -101,18 +102,18 @@ describe("EiaInventorySource", () => {
     }
   });
 
-  test("fails with auth when EIA_API_KEY is not set", async () => {
+  test("missing API key uses official public workbook downloads", async () => {
     setupTest();
     try {
       delete process.env.EIA_API_KEY;
+      const urls: string[] = [];
+      global.fetch = async url => { urls.push(String(url)); return publicEiaFixture(String(url)); };
       const source = new EiaInventorySource();
-      await assert.rejects(
-        () => source.fetchLatest(),
-        (e: unknown) => e instanceof SourceError && e.kind === "auth",
-      );
-    } finally {
-      teardownTest();
-    }
+      const records = await source.fetchLatest();
+      assert.equal(records.length, 6);
+      assert.ok(urls.every(url => url.startsWith("https://www.eia.gov/dnav/pet/hist_xls/")));
+      assert.ok(records.every(r => r.source === source.descriptor.id));
+    } finally { teardownTest(); }
   });
 
   test("classifies 403 throttle-text as rate_limited", async () => {

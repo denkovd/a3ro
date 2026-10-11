@@ -1,101 +1,28 @@
 "use client";
-/* Always-visible WTI / Brent / spread strip. */
+import type { Benchmark, DailyPrice } from "@a3ro/oil-backend";
 import { formatPctSigned, formatUsdBbl } from "../oilFormat";
-import { AMBER_CSS } from "../oilTrackerShared";
-import type { BenchmarkRow, SpreadView } from "./types";
-import type { Benchmark } from "@a3ro/oil-backend";
+import type { BenchmarkRow } from "./types";
 
-export default function BenchmarkStrip({
-  benchmarks,
-  spread,
-  selected,
-  onSelect,
-}: {
-  benchmarks: BenchmarkRow[];
-  spread: SpreadView | null;
-  selected: Benchmark | null;
-  onSelect: (b: Benchmark) => void;
+export default function BenchmarkStrip({ benchmarks, series, selected, onSelect }: {
+  benchmarks: BenchmarkRow[]; series: Partial<Record<Benchmark, DailyPrice[]>>;
+  selected: Benchmark | null; onSelect: (b: Benchmark) => void;
 }) {
-  return (
-    <section aria-label="Oil benchmarks">
-      <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">Benchmarks</p>
-      <ul className="mt-1.5 flex flex-col">
-        {benchmarks.map((b) => {
-          const isSel = selected === b.id;
-          return (
-            <li key={b.id}>
-              <button
-                type="button"
-                onClick={() => onSelect(b.id)}
-                aria-label={`Open ${b.title} detail`}
-                aria-pressed={isSel}
-                className={`flex w-full items-center justify-between gap-2 border-l px-2.5 py-[7px] text-left transition-colors duration-[var(--dur-micro)] ${
-                  isSel
-                    ? "border-[#d4a157] bg-[rgba(212,161,87,0.08)]"
-                    : "border-[var(--line)] hover:border-[var(--line-2)] hover:bg-[rgba(232,235,232,0.03)]"
-                }`}
-              >
-                <div className="min-w-0">
-                  <p
-                    className={`font-mono text-[10px] uppercase tracking-[0.18em] ${
-                      isSel ? "text-[var(--ink)]" : "text-[var(--ink-2)]"
-                    }`}
-                  >
-                    {b.id}
-                  </p>
-                  <p className="mt-0.5 flex items-baseline gap-2">
-                    <span className="font-mono text-[13px] text-[var(--ink)]">
-                      {b.price != null ? formatUsdBbl(b.price) : "—"}
-                    </span>
-                    {b.changePct != null && (
-                      <span
-                        className="font-mono text-[9px] tracking-[0.1em]"
-                        style={{ color: b.changePct < 0 ? "var(--ink-3)" : "var(--ink-2)" }}
-                        title={
-                          b.changeVsDate
-                            ? `vs settlement close ${b.changeVsDate}`
-                            : "vs prior settlement close"
-                        }
-                      >
-                        {formatPctSigned(b.changePct)}
-                        {b.changeVsDate ? (
-                          <span className="ml-1 text-[8px] text-[var(--ink-3)]">
-                            vs {b.changeVsDate.slice(5)}
-                          </span>
-                        ) : null}
-                      </span>
-                    )}
-                    {b.suspect && (
-                      <span className="font-mono text-[8px] uppercase tracking-[0.12em]" style={{ color: AMBER_CSS }}>
-                        SUS
-                      </span>
-                    )}
-                  </p>
-                </div>
-                <span
-                  className="shrink-0 font-mono text-[8px] uppercase tracking-[0.18em]"
-                  style={{ color: b.statusColor }}
-                >
-                  {b.statusText}
-                </span>
-              </button>
-            </li>
-          );
-        })}
-        {spread && (
-          <li>
-            <div className="flex items-center justify-between gap-2 border-l border-[var(--line)] px-2.5 py-[7px]">
-              <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-[var(--ink-3)]">Spread B–W</p>
-              <p
-                className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--ink)]"
-                style={spread.label !== "NORMAL" ? { color: AMBER_CSS } : undefined}
-              >
-                {spread.value >= 0 ? "+" : "−"}${Math.abs(spread.value).toFixed(2)} · {spread.label}
-              </p>
-            </div>
-          </li>
-        )}
-      </ul>
-    </section>
-  );
+  return <section aria-label="Oil benchmark prices" className="w-[min(320px,calc(100vw-96px))] border border-[var(--line)] bg-[rgba(11,13,13,0.92)] backdrop-blur-md">
+    <div className="flex items-center justify-between border-b border-[var(--line)] px-3 py-2 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]"><span>Crude benchmarks</span><span>USD / bbl</span></div>
+    <div className="grid grid-cols-2 divide-x divide-[var(--line)]">{benchmarks.map(b => {
+      const values = (series[b.id] ?? []).filter(p => Number.isFinite(p.price)).map(p => p.price);
+      const min = Math.min(...values), range = Math.max(...values) - min;
+      const points = values.map((v, i) => `${(i / (values.length - 1) * 120).toFixed(1)},${(22 - (v - min) / (range || 1) * 20).toFixed(1)}`).join(" ");
+      return <button key={b.id} type="button" aria-pressed={selected === b.id} aria-label={`Open ${b.title} price history`} onClick={() => onSelect(b.id)} className={`min-w-0 px-3 py-2 text-left hover:bg-white/5 ${selected === b.id ? "bg-[#d4a157]/10" : ""}`}>
+        <span className="flex items-center justify-between gap-1 font-mono text-[9px]"><span className="text-[#d4a157]">{b.id}</span><span className="text-[8px] text-[var(--ink-3)]">{b.statusText}</span></span>
+        <span className="mt-1 block font-mono text-lg text-[var(--ink)]">{b.price === null ? "—" : formatUsdBbl(b.price)}</span>
+        <span className="block text-[8px] text-[var(--ink-3)]">{b.basis}</span>
+        <span className="block font-mono text-[9px] text-[var(--ink-2)]" title={b.changeVsDate ? `Versus close ${b.changeVsDate}` : "No comparable prior close for this quote basis"}>{b.changePct === null ? "Daily spot history" : `${formatPctSigned(b.changePct)} vs ${b.changeVsDate?.slice(5)}`}</span>
+        {values.length > 1 && <svg viewBox="0 0 120 24" className="mt-1 h-5 w-full" aria-label={`${b.id} daily close trend`} role="img"><polyline points={points} fill="none" stroke="#d4a157" strokeWidth="1.2" /></svg>}
+        <span className="mt-1 block truncate text-[8px] text-[var(--ink-3)]" title={b.observedAt ?? undefined}>{b.observedAt ? b.observedAt.slice(0, 16).replace("T", " ") + " UTC" : "Awaiting price"}</span>
+        {b.suspect && <span className="block text-[8px] text-[#d4a157]">Source discrepancy</span>}
+        {b.refreshFailed && <span className="block text-[8px] text-[#d4a157]">Price refresh failed</span>}
+      </button>;
+    })}</div>
+  </section>;
 }

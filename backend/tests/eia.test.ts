@@ -1,3 +1,4 @@
+import { publicEiaFixture } from "./helpers/eiaPublicFixture";
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { EiaSource } from "../src/sources/eia";
@@ -159,26 +160,18 @@ describe("EiaSource", () => {
     }
   });
 
-  test("missing API key throws auth SourceError", async () => {
+  test("missing API key uses official public workbook downloads", async () => {
     setupTest();
     try {
       delete process.env.EIA_API_KEY;
-      global.fetch = async () => new Response(JSON.stringify(eiaFixture), { status: 200 });
-
+      const urls: string[] = [];
+      global.fetch = async url => { urls.push(String(url)); return publicEiaFixture(String(url)); };
       const source = new EiaSource();
-
-      await assert.rejects(
-        () => source.fetchLatest(["WTI"]),
-        (err: unknown) => {
-          if (err instanceof SourceError) {
-            return err.kind === "auth";
-          }
-          return false;
-        }
-      );
-    } finally {
-      teardownTest();
-    }
+      const records = await source.fetchLatest(["WTI", "BRENT"]);
+      assert.equal(records.length, 2);
+      assert.ok(urls.every(url => url.startsWith("https://www.eia.gov/dnav/pet/hist_xls/")));
+      assert.ok(records.every(r => r.source === source.descriptor.id));
+    } finally { teardownTest(); }
   });
 
   test("HTTP 403 with rate limit text throws rate_limited SourceError", async () => {

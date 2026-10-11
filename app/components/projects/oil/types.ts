@@ -3,34 +3,17 @@
    Client-safe: no backend value imports.
 ──────────────────────────────────────────────────────────────── */
 
-import type { Benchmark } from "@a3ro/oil-backend";
+import type { Benchmark, CorridorId } from "@a3ro/oil-backend";
 
-/** Multi-asset shell hook — only oil is live in this ship. */
-export type AssetSurface = "oil" | "gold" | "bitcoin";
-
-export type CorridorStatus = "live" | "connecting" | "watchlist";
+export type CorridorStatus = "live" | "connecting" | "watchlist" | "stale";
 
 export type FocusTarget =
   | { kind: "corridor"; id: string }
   | { kind: "benchmark"; id: Benchmark }
+  | { kind: "refinery"; id: string }
+  | { kind: "route"; id: string }
+  | { kind: "gate"; id: CorridorId }
   | { kind: "producer"; id: string };
-
-export type StanceView = {
-  status: "loading" | "live" | "pending" | "error";
-  stance: string;
-  label: string;
-  headline: string;
-  coverage: number;
-};
-
-export type RailDriver = {
-  id: string;
-  label: string;
-  value: string;
-  color?: string;
-  /** Optional map/rail focus when the chip is clicked. */
-  focus?: FocusTarget;
-};
 
 export type BenchmarkRow = {
   id: Benchmark;
@@ -43,6 +26,9 @@ export type BenchmarkRow = {
   statusText: string;
   statusColor: string;
   suspect: boolean;
+  observedAt: string | null;
+  refreshFailed: boolean;
+  basis: string;
 };
 
 export type CorridorWatchRow = {
@@ -55,18 +41,9 @@ export type CorridorWatchRow = {
   rankScore: number;
 };
 
-export type SpreadView = {
-  value: number;
-  label: string;
-};
-
 export type OilIntelligence = {
-  stance: StanceView;
-  drivers: RailDriver[];
   benchmarks: BenchmarkRow[];
-  spread: SpreadView | null;
   corridors: CorridorWatchRow[];
-  feedClock: string | null;
   feedStatus: "loading" | "ready" | "error";
 };
 
@@ -94,14 +71,6 @@ export const CORRIDOR_META: CorridorMeta[] = [
 export const BENCH_TITLE: Record<Benchmark, string> = {
   WTI: "WTI Crude",
   BRENT: "Brent Crude",
-};
-
-export const STANCE_COLOR: Record<string, string> = {
-  SUPPLY_TIGHT: "#d4a157",
-  SUPPLY_AMPLE: "#5fc9a4",
-  MACRO_DRIVEN: "#8b9dff",
-  BALANCED: "var(--ink-2)",
-  PENDING: "var(--ink-3)",
 };
 
 /** Desktop intel rail width (px) — map stage pads by this amount. */

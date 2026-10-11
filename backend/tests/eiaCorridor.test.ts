@@ -1,3 +1,4 @@
+import { publicEiaFixture } from "./helpers/eiaPublicFixture";
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { EiaUsGulfSource, mbblPerDayToMbPerDay } from "../src/sources/eiaCorridor";
@@ -151,26 +152,18 @@ describe("EiaUsGulfSource", () => {
     }
   });
 
-  test("missing API key throws auth SourceError", async () => {
+  test("missing API key uses official public workbook downloads", async () => {
     setupTest();
     try {
       delete process.env.EIA_API_KEY;
-      stubFetchBySeries();
-
+      const urls: string[] = [];
+      global.fetch = async url => { urls.push(String(url)); return publicEiaFixture(String(url)); };
       const source = new EiaUsGulfSource();
-
-      await assert.rejects(
-        () => source.fetchLatest(),
-        (err: unknown) => {
-          if (err instanceof SourceError) {
-            return err.kind === "auth";
-          }
-          return false;
-        },
-      );
-    } finally {
-      teardownTest();
-    }
+      const records = await source.fetchLatest();
+      assert.equal(records.length, 2);
+      assert.ok(urls.every(url => url.startsWith("https://www.eia.gov/dnav/pet/hist_xls/")));
+      assert.ok(records.every(r => r.source === source.descriptor.id));
+    } finally { teardownTest(); }
   });
 
   test("HTTP 200 with error body throws the classified SourceError kind", async () => {

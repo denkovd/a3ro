@@ -32,6 +32,8 @@
 import { Benchmark, PriceRecord, SourceDescriptor, SourceErrorKind } from "../core/types";
 import { BaseSource } from "./OilPriceSource";
 
+import { fetchPublicEiaSeries } from "./eiaPublic";
+
 const BASE_URL = "https://api.eia.gov/v2/petroleum/pri/spt/data/";
 const MAX_PAGE = 5000; // EIA hard cap per request
 const MAX_PAGES = 20; // backfill safety valve (~100k rows)
@@ -91,6 +93,15 @@ export class EiaSource extends BaseSource {
   async fetchLatest(benchmarks: Benchmark[]): Promise<PriceRecord[]> {
     const supported = benchmarks.filter((b) => b in SERIES);
     if (supported.length === 0) return [];
+    if (!this.apiKey) {
+      const from = new Date(Date.now() - EiaSource.LATEST_LOOKBACK_DAYS * 86_400_000).toISOString().slice(0,10);
+      const groups = await Promise.all(supported.map(async benchmark => {
+        const rows = await fetchPublicEiaSeries(SERIES[benchmark], "daily", from);
+        return rows.map(row => this.rowToRecord(benchmark, { ...row, units: "$/BBL" }, "settlement")).filter((r): r is PriceRecord => r !== null);
+      }));
+      return groups.flat();
+    }
+
 
     // ~business-days-in-window × series, with slack for holidays/nulls.
     // Rows arrive period-desc; we keep every finite row in the lookback.
@@ -123,6 +134,11 @@ export class EiaSource extends BaseSource {
   ): Promise<PriceRecord[]> {
     const series = SERIES[benchmark];
     if (!series) return [];
+    if (!this.apiKey) {
+      const rows = await fetchPublicEiaSeries(series, "daily", fromDate, toDate);
+      return rows.map(row => this.rowToRecord(benchmark, { ...row, units: "$/BBL" }, "historical")).filter((r): r is PriceRecord => r !== null);
+    }
+
 
     const records: PriceRecord[] = [];
     for (let page = 0; page < MAX_PAGES; page++) {

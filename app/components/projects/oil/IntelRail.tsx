@@ -1,120 +1,38 @@
 "use client";
-/* ────────────────────────────────────────────────────────────────
-   Persistent intelligence rail — always on. Focus detail docks in
-   the lower half without unmounting stance / drivers / benchmarks.
-──────────────────────────────────────────────────────────────── */
 import type { ReactNode } from "react";
-import type { Benchmark } from "@a3ro/oil-backend";
-import StanceBlock from "./StanceBlock";
-import WhyNowDrivers from "./WhyNowDrivers";
-import BenchmarkStrip from "./BenchmarkStrip";
+import type { CorridorMetricLatest } from "@a3ro/oil-backend";
 import CorridorWatchlist from "./CorridorWatchlist";
-import FlowHealthLegend from "./FlowHealthLegend";
+import PhysicalOverview from "./PhysicalOverview";
+import { FLOW_ROUTES } from "../flowRoutes";
+import { PRODUCERS } from "../producers";
+import type { Refinery } from "./refineries";
+import type { RefineryFeed } from "./useRefineries";
+import RefineryWatchlist from "./RefineryWatchlist";
 import { RAIL_WIDTH_PX, type FocusTarget, type OilIntelligence } from "./types";
 
-export default function IntelRail({
-  intel,
-  selectedCorridorId,
-  selectedBenchmark,
-  hasFocus,
-  focusSlot,
-  onFocus,
-  onSelectCorridor,
-  onSelectBenchmark,
-  onCloseFocus,
-  className = "",
-  /** Mobile bottom-sheet vs desktop side rail */
-  variant = "desktop",
-}: {
-  intel: OilIntelligence;
-  selectedCorridorId: string | null;
-  selectedBenchmark: Benchmark | null;
-  hasFocus: boolean;
-  focusSlot?: ReactNode;
-  onFocus: (target: FocusTarget) => void;
-  onSelectCorridor: (id: string) => void;
-  onSelectBenchmark: (b: Benchmark) => void;
-  onCloseFocus?: () => void;
-  className?: string;
-  variant?: "desktop" | "mobile";
+export default function IntelRail({ intel, metrics, physicalFailed, refineries, refineryFeed, focusKey, hasFocus, focusSlot, onFocus, onSelectCorridor, onCloseFocus, variant = "desktop" }: {
+  intel: OilIntelligence; metrics: CorridorMetricLatest[] | null; physicalFailed: boolean;
+  hasFocus: boolean; focusSlot?: ReactNode; onFocus: (target: FocusTarget) => void;
+  focusKey: string; refineries: Refinery[]; refineryFeed: RefineryFeed;
+  onSelectCorridor: (id: string) => void; onCloseFocus: () => void; variant?: "desktop" | "mobile";
 }) {
-  const body = (
-    <>
-      {/* System context — never unmounts when focus opens */}
-      <div className={`shrink-0 space-y-4 ${hasFocus ? "pb-3 border-b border-[var(--line)]" : ""}`}>
-        <StanceBlock stance={intel.stance} />
-        <WhyNowDrivers drivers={intel.drivers} onFocus={onFocus} />
-        <BenchmarkStrip
-          benchmarks={intel.benchmarks}
-          spread={intel.spread}
-          selected={selectedBenchmark}
-          onSelect={onSelectBenchmark}
-        />
-      </div>
-
-      {/* Watchlist collapses visually when focus is open but stays reachable via scroll */}
-      <div className={`min-h-0 ${hasFocus ? "max-h-[28%] overflow-y-auto py-3 border-b border-[var(--line)]" : "flex-1 overflow-y-auto py-4"}`}>
-        <CorridorWatchlist
-          corridors={intel.corridors}
-          selectedId={selectedCorridorId}
-          onSelect={onSelectCorridor}
-        />
-        {!hasFocus && <FlowHealthLegend className="mt-3 px-0.5" />}
-      </div>
-
-      {/* Focus detail dock */}
-      {hasFocus && focusSlot && (
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pt-3">
-          {onCloseFocus && (
-            <div className="mb-2 flex justify-end">
-              <button
-                type="button"
-                onClick={onCloseFocus}
-                aria-label="Close detail"
-                className="font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]"
-              >
-                Close ×
-              </button>
-            </div>
-          )}
-          {focusSlot}
-        </div>
-      )}
-    </>
-  );
-
-  if (variant === "mobile") {
-    return (
-      <aside
-        aria-label="Oil intelligence rail"
-        className={`flex max-h-[52vh] flex-col border-t border-[var(--line)] bg-[rgba(11,13,13,0.94)] px-4 pb-3 pt-3 backdrop-blur-md ${className}`}
-      >
-        {body}
-      </aside>
-    );
-  }
-
-  return (
-    <aside
-      aria-label="Oil intelligence rail"
-      className={`flex h-full flex-col border-l border-[var(--line)] bg-[rgba(11,13,13,0.92)] px-4 py-4 backdrop-blur-md ${className}`}
-      style={{ width: RAIL_WIDTH_PX }}
-    >
-      <div className="mb-3 flex items-baseline justify-between gap-2 shrink-0">
-        <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
-          Intelligence
-        </p>
-        <p className="font-mono text-[8px] uppercase tracking-[0.18em] text-[var(--ink-3)]">
-          {intel.feedStatus === "error"
-            ? "Offline"
-            : intel.feedClock
-              ? intel.feedClock
-              : "—"}
-        </p>
-      </div>
-      <div className="flex min-h-0 flex-1 flex-col">{body}</div>
-    </aside>
-  );
+  return <aside aria-label="Oil intelligence rail" className={variant === "mobile"
+    ? "flex h-full min-h-0 flex-col border-t border-[var(--line)] bg-[rgba(11,13,13,0.96)] px-4 py-3"
+    : "flex h-full min-h-0 flex-col border-l border-[var(--line)] bg-[rgba(11,13,13,0.92)] px-5 py-4"}
+    style={variant === "desktop" ? { width: RAIL_WIDTH_PX } : undefined}>
+    <div className="mb-4 flex shrink-0 items-center justify-between border-b border-[var(--line)] pb-3">
+      <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">Intelligence · {hasFocus ? "Selected" : "Overview"}</p>
+      {hasFocus && <button type="button" onClick={onCloseFocus} aria-label={variant === "mobile" ? "Close oil details" : "Return to oil overview"} className="min-h-11 px-3 py-2 text-[10px] text-[#d4a157] hover:bg-white/5">{variant === "mobile" ? "Close ×" : "Overview ×"}</button>}
+    </div>
+    <div key={focusKey} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-1" aria-live="polite">
+      {hasFocus ? focusSlot : <div className="space-y-6">
+        <PhysicalOverview metrics={metrics} failed={physicalFailed} />
+        <RefineryWatchlist refineries={refineries} feed={refineryFeed} onFocus={onFocus} />
+        <CorridorWatchlist corridors={intel.corridors} selectedId={null} onSelect={onSelectCorridor} />
+        <details><summary className="cursor-pointer font-mono text-[9px] uppercase tracking-wide text-[var(--ink-3)]">Explore flow routes</summary><ul className="mt-2 divide-y divide-[var(--line)]">{FLOW_ROUTES.map(route => <li key={route.id}><button type="button" onClick={() => onFocus({ kind: "route", id: route.id })} className="w-full py-3 text-left text-[10px] text-[var(--ink-2)] hover:bg-white/5">{route.name}</button></li>)}</ul></details>
+        <details><summary className="cursor-pointer font-mono text-[9px] uppercase tracking-wide text-[var(--ink-3)]">Producer references</summary><ul className="mt-2 divide-y divide-[var(--line)]">{PRODUCERS.map(p => <li key={p.id}><button type="button" onClick={() => onFocus({ kind: "producer", id: p.id })} className="w-full py-3 text-left text-[10px] text-[var(--ink-2)] hover:bg-white/5">{p.name} · annual reference</button></li>)}</ul></details>
+      </div>}
+    </div>
+  </aside>;
 }
-
 export { RAIL_WIDTH_PX };

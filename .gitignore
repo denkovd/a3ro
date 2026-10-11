@@ -11,6 +11,8 @@ backend/node_modules
 # next.js
 /.next/
 /.next-optimization/
+/.next-oil-review/
+/supabase/.temp/
 /out/
 
 # production

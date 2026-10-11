@@ -4,7 +4,7 @@ import OilTrackerView from "./view";
 export const metadata: Metadata = {
   title: "Oil Tracker — A3RO Intelligence",
   description:
-    "Live corridor intelligence for crude, products, and price-sensitive flows. A modeled preview of strategic chokepoints, demand shifts, and price pressure across the global oil system.",
+    "Explore refinery capacity, sourced operating events, fuel inventories, crude benchmarks and shipping corridors with dated observations and trends.",
 };
 
 export default function OilTrackerPage() {

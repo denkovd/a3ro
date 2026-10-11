@@ -1,0 +1,14 @@
+.claude/
+.claude
+.agents/
+.agents
+.codex/
+.codex
+.git/
+.vercel/
+**/.env*
+**/node_modules/
+.next/
+.next-*/
+supabase/.temp/
+*.tsbuildinfo
