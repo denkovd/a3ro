@@ -171,3 +171,33 @@ Local build repair: `baseUrl` is explicitly set to the project root so Next.js
 resolves the existing backend path alias. Dependencies use the existing lockfile
 (Next.js 14.2.35). Regional throughput beyond the US, product export/terminal
 feeds, crude compatibility and pipeline/bypass capacities remain next stages.
+
+### Production and provider verification
+
+Restoration deployment `dpl_7WxiHc7DQdX69Mkb7MPnf1cKD69q` reached READY and
+served the public domain. Public refinery reads returned eight events; both
+unauthenticated cron routes returned 401. Vercel's native `crons run` triggered
+the existing jobs, without retrieving or rotating `CRON_SECRET` and without a
+deployment-protection bypass.
+
+- Oil: invoked at 00:11:22 UTC on 11 October and completed at 00:13:08 UTC.
+  All three price providers (Yahoo, FRED, EIA) passed; zero new observations
+  reflects deduplication of already-stored prices. All five physical providers
+  passed: EIA US Gulf 12, EIA spot products 18, MPA Singapore 18, EIA inventories
+  36, PortWatch 492; 576 records upserted. Runtime log status: healthy / HTTP 200.
+- Refineries: invoked at 00:11:24 UTC and completed at 00:11:30 UTC. Four checks
+  passed (Grangemouth, Benicia, Phillips 66 LA, Bapco disruption). Bapco recovery
+  and update discovery failed and retained their previous verification dates.
+  Runtime log status: degraded / HTTP 200, with two failed providers exposed.
+- The cron definitions are daily UTC schedules. These platform-triggered runs
+  prove authenticated execution and provider/storage results; they do not prove
+  the first automatic daily invocation. The next oil/refinery schedule times
+  are 17:05 and 17:15 Sydney time on 11 October, respectively (Hobby scheduling
+  may run within the scheduled hour).
+- 49 focused tests and TypeScript passed; local and remote production builds
+  passed. Browser selection showed Bazan's four unit references and three
+  historical events; mobile zoom controls and detail closing were checked.
+- Merge `095be77` preserves remote mobile-fix commit `d089f9d` and the daily scan
+  cache update. The restored UI already implemented the equivalent gesture,
+  zoom and detail-close behavior; resolving duplicate additions retained one
+  control set and the newer map/sheet layout. No remote work was discarded.
