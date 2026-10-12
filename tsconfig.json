@@ -38,7 +38,8 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next-optimization/types/**/*.ts",
-    ".next-oil-review/types/**/*.ts"
+    ".next-oil-review/types/**/*.ts",
+    ".next-btc-review/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

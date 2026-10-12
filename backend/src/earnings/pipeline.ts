@@ -19,6 +19,7 @@ import { SourceError } from "../core/types";
 import { fetchCalendarEarnings, fetchStockEarnings, safePct } from "./finnhub";
 import { FinnhubCalendarEntry, FinnhubStockEarningsEntry, ReportHour, UpsertOutcome, UpsertQuarterInput } from "./types";
 import { Queryable } from "../storage/db";
+import { revenueComparisonStatus } from "../../../lib/earningsQuality";
 import {
   finishPipelineRun,
   getActiveQuarterCounts,
@@ -129,7 +130,10 @@ export async function upsertQuarter(db: Queryable, input: UpsertQuarterInput): P
     input.epsSurprisePercentOverride !== undefined && input.epsSurprisePercentOverride !== null
       ? input.epsSurprisePercentOverride
       : safePct(input.epsActual, input.epsEstimate);
-  const revenueSurprisePercent = safePct(input.revenueActual, input.revenueEstimate);
+  const revenueSurprise = safePct(input.revenueActual, input.revenueEstimate);
+  const revenueSurprisePercent = revenueComparisonStatus(
+    input.ticker, "finnhub", input.revenueActual, input.revenueEstimate, revenueSurprise,
+  ) === "available" ? revenueSurprise : null;
 
   return upsertQuarterRow(db, {
     ticker: input.ticker,

@@ -13,6 +13,7 @@ import { fetchMarketSnapshot } from "../marketFetch";
    that could outrank a genuine miss.
 ──────────────────────────────────────────────────────────────── */
 import { useEffect, useState } from "react";
+import type { RevenueComparisonStatus } from "../../../../lib/earningsQuality";
 
 /* ── palette: beat violet — distinct from oil amber, gold, BTC
    orange, bull cobalt and regime mint ── */
@@ -30,6 +31,7 @@ export type BeatQuarter = {
   fiscalQuarter: number;
   epsSurprisePercent: number | null;
   revenueSurprisePercent: number | null;
+  revenueComparisonStatus: RevenueComparisonStatus;
 };
 
 export type BeatLatest = {
@@ -44,6 +46,7 @@ export type BeatLatest = {
   epsSurprisePercent: number | null;
   reportedRevenue: number | null;
   revenueSurprisePercent: number | null;
+  revenueComparisonStatus: RevenueComparisonStatus;
 };
 
 export type BeatRow = {
@@ -60,12 +63,18 @@ export type BeatRow = {
   epsSurpriseAvg: number | null;
   revenueSurpriseAvg: number | null;
   quartersAvailable: number;
+  dataQuality: {
+    windowQuarters: number;
+    epsQuarters: number;
+    revenueQuarters: number;
+    revenueExcludedQuarters: number;
+  };
   latest: BeatLatest | null;
   /** Newest-first full cached history. */
   quarters: BeatQuarter[];
 };
 
-export type BeatStatus = "loading" | "live" | "pending" | "error";
+export type BeatStatus = "loading" | "live" | "stale" | "pending" | "error";
 
 export type BeatLeaderboardState = {
   status: BeatStatus;
@@ -90,6 +99,9 @@ const toConfidence = (v: unknown): BeatConfidence =>
 const toHour = (v: unknown): "bmo" | "amc" | "dmh" | null =>
   v === "bmo" || v === "amc" || v === "dmh" ? v : null;
 
+const toRevenueStatus = (v: unknown, surprise: unknown): RevenueComparisonStatus =>
+  v === "basis_unverified" ? v : v === "missing" ? v : num(surprise) !== null ? "available" : "missing";
+
 function normalizeQuarter(raw: unknown): BeatQuarter | null {
   const o = (raw ?? {}) as Record<string, unknown>;
   const fy = num(o.fiscal_year);
@@ -100,6 +112,7 @@ function normalizeQuarter(raw: unknown): BeatQuarter | null {
     fiscalQuarter: fq,
     epsSurprisePercent: num(o.eps_surprise_percent),
     revenueSurprisePercent: num(o.revenue_surprise_percent),
+    revenueComparisonStatus: toRevenueStatus(o.revenue_comparison_status, o.revenue_surprise_percent),
   };
 }
 
@@ -119,6 +132,7 @@ function normalizeLatest(raw: unknown): BeatLatest | null {
     epsSurprisePercent: num(o.eps_surprise_percent),
     reportedRevenue: num(o.reported_revenue),
     revenueSurprisePercent: num(o.revenue_surprise_percent),
+    revenueComparisonStatus: toRevenueStatus(o.revenue_comparison_status, o.revenue_surprise_percent),
   };
 }
 
@@ -127,6 +141,8 @@ function normalizeRow(raw: unknown): BeatRow | null {
   const ticker = str(o.ticker);
   if (!ticker) return null;
   const rawQuarters = Array.isArray(o.quarters) ? o.quarters : [];
+  const quarters = rawQuarters.map(normalizeQuarter).filter((q): q is BeatQuarter => q !== null);
+  const window = quarters.slice(0, 4);
   return {
     ticker,
     companyName: str(o.company_name),
@@ -138,25 +154,34 @@ function normalizeRow(raw: unknown): BeatRow | null {
     epsSurpriseAvg: num(o.eps_surprise_avg),
     revenueSurpriseAvg: num(o.revenue_surprise_avg),
     quartersAvailable: int(o.quarters_available),
+    dataQuality: {
+      windowQuarters: window.length,
+      epsQuarters: window.filter((q) => q.epsSurprisePercent !== null).length,
+      revenueQuarters: window.filter((q) => q.revenueSurprisePercent !== null).length,
+      revenueExcludedQuarters: window.filter((q) => q.revenueComparisonStatus === "basis_unverified").length,
+    },
     latest: normalizeLatest(o.latest),
-    quarters: rawQuarters
-      .map(normalizeQuarter)
-      .filter((q): q is BeatQuarter => q !== null),
+    quarters,
   };
 }
 
-export function normalizeBeatLeaderboard(raw: unknown): BeatLeaderboardState {
+// Weekly pulls get three days of grace before the cache is marked overdue.
+const STALE_AFTER_MS = 10 * 24 * 60 * 60 * 1000;
+
+export function normalizeBeatLeaderboard(raw: unknown, now = Date.now()): BeatLeaderboardState {
   const o = (raw ?? {}) as Record<string, unknown>;
   const rawResults = Array.isArray(o.results) ? o.results : [];
   const rows = rawResults
     .map(normalizeRow)
     .filter((r): r is BeatRow => r !== null);
-  if (rows.length === 0) {
-    return { status: "pending", dataAsOf: str(o.data_as_of), count: 0, rows: [] };
+  const dataAsOf = str(o.data_as_of);
+  if (!rows.some((row) => row.rankScore !== null)) {
+    return { status: "pending", dataAsOf, count: rows.length, rows };
   }
+  const refreshedAt = dataAsOf === null ? NaN : Date.parse(dataAsOf);
   return {
-    status: "live",
-    dataAsOf: str(o.data_as_of),
+    status: !Number.isFinite(refreshedAt) || now - refreshedAt > STALE_AFTER_MS ? "stale" : "live",
+    dataAsOf,
     count: rows.length,
     rows, // API order IS the leaderboard order (§3.3) — never re-sorted here
   };
@@ -211,6 +236,20 @@ export const CONFIDENCE_META: Record<
 export const confidenceMeta = (c: BeatConfidence): { label: string; color: string } =>
   c === null ? { label: "—", color: "var(--ink-3)" } : CONFIDENCE_META[c];
 
+export function coverageMeta(row: BeatRow): { label: string; color: string; description: string } {
+  const q = row.dataQuality;
+  const label = q.revenueQuarters === 0 ? (q.epsQuarters > 0 ? "EPS only" : "No signal")
+    : q.epsQuarters === 0 ? "Rev only"
+      : q.revenueQuarters === q.windowQuarters ? "EPS + rev" : "Partial rev";
+  const excluded = q.revenueExcludedQuarters > 0
+    ? " Revenue excluded where the actual and estimate bases are unverified." : "";
+  return {
+    label,
+    color: q.revenueQuarters === q.windowQuarters && q.windowQuarters > 0 ? BEAT_ACCENT : BEAT_MUTED,
+    description: `Trailing ${q.windowQuarters} quarters: ${q.epsQuarters} EPS comparisons, ${q.revenueQuarters} revenue comparisons.${excluded} Coverage does not certify the source values.`,
+  };
+}
+
 /** Streak cell: "4+" when the streak runs off the edge of the cache
  *  (streak_is_capped) — the honest "at least" rendering (§3.1). */
 export const formatStreak = (r: Pick<BeatRow, "beatStreak" | "streakIsCapped">): string =>
@@ -240,11 +279,11 @@ export const formatScore = (v: number | null): string =>
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-export const formatDate = (iso: string | null): string => {
+export const formatDate = (iso: string | null, includeYear = false): string => {
   if (!iso) return "—";
   const d = new Date(iso.length <= 10 ? `${iso}T00:00:00Z` : iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
+  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}${includeYear ? `, ${d.getUTCFullYear()}` : ""}`;
 };
 
 export const formatQuarterLabel = (fy: number, fq: number): string => `FY${String(fy).slice(-2)} Q${fq}`;

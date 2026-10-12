@@ -58,9 +58,9 @@ export async function getCorridorMetricSeries(
   metric: string,
   from: string,
   to: string,
-): Promise<{ periodDate: string; value: number }[]> {
+): Promise<{ periodDate: string; value: number; periodStart?: string }[]> {
   const res = await db.query(
-    `select period_date, value
+    `select period_date, value, meta
        from corridor_metrics
       where corridor = $1 and metric = $2
         and period_date between $3 and $4
@@ -70,6 +70,7 @@ export async function getCorridorMetricSeries(
   return res.rows.map((r: Record<string, unknown>) => ({
     periodDate: toDateStr(r.period_date),
     value: Number(r.value),
+    ...(corridor === "china" && typeof (r.meta as Record<string, unknown> | null)?.periodStart === "string" ? { periodStart: String((r.meta as Record<string, unknown>).periodStart) } : {}),
   }));
 }
 
@@ -95,7 +96,14 @@ function rowToLatest(r: Record<string, unknown>): CorridorMetricLatest {
     source: String(r.source_id),
     observedAt: toIso(r.observed_at),
     updatedAt: toIso(r.updated_at),
+    ...(r.corridor === "china" ? { meta: publicChinaMeta(r.meta) } : {}),
   };
+}
+
+function publicChinaMeta(meta: unknown): Record<string, string> {
+  if (!meta || typeof meta !== "object") return {};
+  const allowed = ["sourceUrl", "periodStart", "periodEnd", "publishedDate", "cadence", "dailyKt", "yoyPct", "yoyBasis", "preliminary"];
+  return Object.fromEntries(Object.entries(meta).filter(([key, value]) => allowed.includes(key) && typeof value === "string")) as Record<string, string>;
 }
 
 function toIso(v: unknown): string {

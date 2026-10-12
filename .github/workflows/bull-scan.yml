@@ -45,3 +45,8 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
         run: npx tsx scripts/run-bull-scan.ts
+      # Recompute the market regime only after this run's bars are stored.
+      - name: Refresh US regime from latest market bars
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/run-macro.ts

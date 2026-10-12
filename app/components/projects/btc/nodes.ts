@@ -70,7 +70,7 @@ export const VENUES: Venue[] = [
     status: "connecting",
     title: "Coinbase · US spot hub",
     note:
-      "US spot and prime liquidity locus. Reserve / on-exchange stock and ETF-adjacent custody read when feeds land — never invent balances.",
+      "US spot liquidity hub. Public BTC-USD price, 24h volume and bid/ask spread; these market readings are not reserve or custody balances.",
     rank: 1,
   },
   {
@@ -119,7 +119,7 @@ export const VENUES: Venue[] = [
     status: "watchlist",
     title: "Bybit · derivatives hub",
     note:
-      "Perp-heavy liquidity locus. Funding / OI rails first; on-exchange reserve series when a verified free source exists.",
+      "BTCUSDT perpetual market. Public funding, open interest, turnover and spread; these readings do not measure exchange reserves.",
     rank: 2,
   },
   {

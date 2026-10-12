@@ -34,6 +34,7 @@ import CorridorDetail from "./oil/CorridorDetail";
 import { refineryStatus, refineryCondition, capacityLabel, type Refinery } from "./oil/refineries";
 import { currentMetrics, quoteStatus, quoteBasis, comparablePriorClose } from "./oil/dataQuality";
 import type { FocusTarget } from "./oil/types";
+import { chinaLead, chinaMapText } from "./oil/china";
 import type { Benchmark, CorridorBaseline, CorridorId, CorridorMetricLatest, DailyPrice, LatestQuote } from "@a3ro/oil-backend";
 
 /* ══ route-only content: hotspot hierarchy + signal copy ══ */
@@ -62,9 +63,9 @@ const HOTSPOTS: Hotspot[] = [
     corridor: "Corridor 01", title: "Strait of Hormuz", status: "Connecting",
   },
   {
-    id: "china", label: "CHINA · DEMAND",
+    id: "china", label: "CHINA · CRUDE",
     glyph: "diamond", lon: 122.2, lat: 29.9, kind: "demand", zoom: 1.32,
-    corridor: "Demand · 01", title: "China · East Coast", status: "Watchlist",
+    corridor: "Monthly oil activity", title: "China · Crude buying & refining", status: "Unavailable",
   },
   {
     id: "sg", label: "SINGAPORE STRAIT",
@@ -181,11 +182,12 @@ function baselineFor(baselines: CorridorBaseline[] | null, corridor: string, met
 
 type CorridorPanelContent = { metric: string; statusText: string };
 function buildCorridorPanel(hotspotId: string, metrics: CorridorMetricLatest[]): CorridorPanelContent | null {
+  if (hotspotId === "china") return chinaLead(metrics) ? { metric: chinaMapText(metrics), statusText: "Reported monthly" } : null;
   const corridor = hotspotId === "sg" ? "singapore" : hotspotId === "usgc" ? "usgulf" : hotspotId;
   const metric = metrics.find(m => m.corridor === corridor && m.metric === (hotspotId === "usgc" ? "crude_exports" : "tanker_transits_7d"));
   return metric ? { metric: `${metric.value.toFixed(1)} ${metric.unit} · ${metric.periodDate}`, statusText: "Reported observation" } : null;
 }
-const WATCHLIST_IDS = new Set(["china", "ara"]);
+const WATCHLIST_IDS = new Set(["ara"]);
 
 /* ══ component ══ */
 export default function OilTrackerCore({
@@ -397,7 +399,7 @@ export default function OilTrackerCore({
      when a corridor has no live datapoint yet. live=true only when a
      real feed value backs the sub (amber in the canvas draw); false
      for the neutral CONNECTING/WATCHLIST placeholders. */
-  const hotspotSubsRef = useRef<Record<string, { text: string; live: boolean }>>({});
+  const hotspotSubsRef = useRef<Record<string, { text: string; compactText?: string; live: boolean }>>({});
   /* per-hotspot flow-health ratio (7d transits ÷ 1y norm), or null when no
      baseline is on file. Drives the gate-dot colour in the draw loop — the
      visual layer of Flow Stress. Only gate-capable hotspots get a value. */
@@ -433,7 +435,7 @@ export default function OilTrackerCore({
       usgc: usgcExports
         ? { text: `EXPORTS ${usgcExports.value.toFixed(2)} MB/D`, live: true }
         : { text: absent("usgulf"), live: false },
-      china: { text: "WATCHLIST", live: false },
+      china: { text: chinaMapText(feed.corridors), compactText: chinaMapText(feed.corridors, true), live: !!chinaLead(metrics.filter(m => m.corridor === "china")) },
       ara: { text: "WATCHLIST", live: false },
     };
 
@@ -1038,7 +1040,7 @@ export default function OilTrackerCore({
           // amber only when a real feed value backs this sub (Section C7);
           // the neutral CONNECTING/WATCHLIST placeholders stay ink.
           ctx.fillStyle = sub.live ? AMB(0.8 * fade) : INK(0.55 * fade);
-          haloText(sub.text, lx, ly + 11);
+          haloText(narrowRef.current ? sub.compactText ?? sub.text : sub.text, lx, ly + 11);
         } else if (isHover && !isSel) {
           ctx.fillStyle = INK(0.45 * fade);
           haloText(sub?.text ?? "OPEN", lx, ly + 11);
@@ -1375,7 +1377,7 @@ export default function OilTrackerCore({
      "watchlist" (no live source at all) state — never modeled data. */
   const liveFor = (hid: string) =>
     buildCorridorPanel(hid, freshMetrics);
-  const LIVE_CAPABLE = new Set(["hormuz", "sg", "usgc"]);
+  const LIVE_CAPABLE = new Set(["hormuz", "sg", "usgc", "china"]);
 
   /* generalized version of the selIsWatchlist/selIsConnecting derivation
      above, for any hotspot id — reused by the hover card (Section §4c)

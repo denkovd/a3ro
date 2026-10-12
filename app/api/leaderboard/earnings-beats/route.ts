@@ -21,6 +21,7 @@
 
 import { createPool, getDataAsOf, loadLeaderboardData, type TickerData } from "./db";
 import { computeTickerMetrics, RANKING_CONFIG, round2, type QuarterSurprise } from "./engine";
+import type { RevenueComparisonStatus } from "../../../../lib/earningsQuality";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -123,6 +124,12 @@ interface ResultEntry {
   eps_surprise_avg: number | null;
   revenue_surprise_avg: number | null;
   quarters_available: number;
+  data_quality: {
+    window_quarters: number;
+    eps_quarters: number;
+    revenue_quarters: number;
+    revenue_excluded_quarters: number;
+  };
   latest: {
     fiscal_year: number;
     fiscal_quarter: number;
@@ -137,6 +144,7 @@ interface ResultEntry {
     reported_revenue: number | null;
     estimated_revenue: number | null;
     revenue_surprise_percent: number | null;
+    revenue_comparison_status: RevenueComparisonStatus;
     pulled_at: string;
   } | null;
   quarters: {
@@ -144,6 +152,7 @@ interface ResultEntry {
     fiscal_quarter: number;
     eps_surprise_percent: number | null;
     revenue_surprise_percent: number | null;
+    revenue_comparison_status: RevenueComparisonStatus;
   }[];
 }
 
@@ -166,6 +175,7 @@ function buildResultEntry(data: TickerData): ResultEntry {
   }
 
   const latestRow = data.quarters[0] ?? null;
+  const window = data.quarters.slice(0, RANKING_CONFIG.TRAILING_QUARTERS);
 
   return {
     ticker: data.watchlist.ticker,
@@ -178,6 +188,12 @@ function buildResultEntry(data: TickerData): ResultEntry {
     eps_surprise_avg: metrics.epsSurpriseAvg === null ? null : round2(metrics.epsSurpriseAvg),
     revenue_surprise_avg: metrics.revenueSurpriseAvg === null ? null : round2(metrics.revenueSurpriseAvg),
     quarters_available: metrics.quartersAvailable,
+    data_quality: {
+      window_quarters: window.length,
+      eps_quarters: window.filter((q) => q.epsSurprisePercent !== null).length,
+      revenue_quarters: window.filter((q) => q.revenueSurprisePercent !== null).length,
+      revenue_excluded_quarters: window.filter((q) => q.revenueComparisonStatus === "basis_unverified").length,
+    },
     latest: latestRow
       ? {
           fiscal_year: latestRow.fiscalYear,
@@ -191,6 +207,7 @@ function buildResultEntry(data: TickerData): ResultEntry {
           reported_revenue: latestRow.reportedRevenue,
           estimated_revenue: latestRow.estimatedRevenue,
           revenue_surprise_percent: latestRow.revenueSurprisePercent,
+          revenue_comparison_status: latestRow.revenueComparisonStatus,
           pulled_at: latestRow.pulledAt,
         }
       : null,
@@ -203,6 +220,7 @@ function buildResultEntry(data: TickerData): ResultEntry {
       fiscal_quarter: q.fiscalQuarter,
       eps_surprise_percent: q.epsSurprisePercent,
       revenue_surprise_percent: q.revenueSurprisePercent,
+      revenue_comparison_status: q.revenueComparisonStatus,
     })),
   };
 }

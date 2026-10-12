@@ -19,6 +19,8 @@ export type BtcFlowMetric = {
 
 export type BtcFlowData = {
   metrics: BtcFlowMetric[];
+  series: BtcFlowMetric[];
+  seriesError: string | null;
   status: "loading" | "ready" | "empty" | "error";
   error: string | null;
   lastFetchedAt: number | null;
@@ -26,6 +28,8 @@ export type BtcFlowData = {
 
 const EMPTY: BtcFlowData = {
   metrics: [],
+  series: [],
+  seriesError: null,
   status: "loading",
   error: null,
   lastFetchedAt: null,
@@ -51,42 +55,38 @@ export default function useBtcFlowData(): BtcFlowData {
 
   useEffect(() => {
     let alive = true;
+    let busy = false;
+    const controller = new AbortController();
     const load = async () => {
+      if (busy) return;
+      busy = true;
+      const from = new Date(Date.now() - 120 * 86_400_000).toISOString().slice(0, 10);
       try {
-        const res = await fetch("/api/btc/loci", { cache: "no-store" });
-        if (!res.ok) {
-          if (!alive) return;
-          setData((d) => ({
-            ...d,
-            status: d.metrics.length ? "ready" : "error",
-            error: `loci ${res.status}`,
-          }));
-          return;
-        }
-        const body = (await res.json()) as { metrics?: BtcFlowMetric[] };
-        const metrics = Array.isArray(body.metrics) ? body.metrics : [];
+        const [latest, history] = await Promise.allSettled([
+          fetch("/api/btc/loci", { cache: "no-store", signal: controller.signal }).then(async (res) => {
+            if (!res.ok) throw new Error(`ETF feed ${res.status}`);
+            return res.json() as Promise<{ metrics?: BtcFlowMetric[] }>;
+          }),
+          fetch(`/api/btc/loci/series?locus=etf_us&metric=etf_flow_usd_mn&from=${from}`, { cache: "no-store", signal: controller.signal }).then(async (res) => {
+            if (!res.ok) throw new Error(`ETF history ${res.status}`);
+            return res.json() as Promise<{ series?: BtcFlowMetric[] }>;
+          }),
+        ]);
         if (!alive) return;
-        setData({
-          metrics,
-          status: metrics.length ? "ready" : "empty",
-          error: null,
-          lastFetchedAt: Date.now(),
+        setData((previous) => {
+          const metrics = latest.status === "fulfilled" && Array.isArray(latest.value.metrics) ? latest.value.metrics : previous.metrics;
+          const series = history.status === "fulfilled" && Array.isArray(history.value.series) ? history.value.series : previous.series;
+          return { metrics, series,
+            status: metrics.length ? "ready" : latest.status === "rejected" ? "error" : "empty",
+            error: latest.status === "rejected" ? "ETF refresh unavailable. Retrying automatically." : null,
+            seriesError: history.status === "rejected" ? "Flow history unavailable" : null,
+            lastFetchedAt: latest.status === "fulfilled" ? Date.now() : previous.lastFetchedAt };
         });
-      } catch (e) {
-        if (!alive) return;
-        setData((d) => ({
-          ...d,
-          status: d.metrics.length ? "ready" : "error",
-          error: e instanceof Error ? e.message : String(e),
-        }));
-      }
+      } finally { busy = false; }
     };
-    load();
-    const id = setInterval(load, 60 * 60 * 1000);
-    return () => {
-      alive = false;
-      clearInterval(id);
-    };
+    void load();
+    const id = setInterval(load, 5 * 60 * 1000);
+    return () => { alive = false; controller.abort(); clearInterval(id); };
   }, []);
 
   return data;

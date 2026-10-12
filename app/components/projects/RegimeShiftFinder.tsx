@@ -17,7 +17,7 @@ import {
   trendArrow,
   type MacroQuadrant,
 } from "./macro/macroData";
-import { deriveMacroBrief } from "./macro/macroBrief";
+import { macroFreshness, formatMacroUpdated } from "./macro/macroFreshness";
 
 const ORDER: Exclude<MacroQuadrant, "PENDING">[] = ["GOLDILOCKS", "REFLATION", "DEFLATION", "INFLATION"];
 
@@ -25,7 +25,7 @@ export default function RegimeShiftFinder({ className = "" }: { className?: stri
   const snap = useMacroSnapshot();
   const live = snap.status === "live" && snap.quadrant !== "PENDING";
   const active = live ? (snap.quadrant as Exclude<MacroQuadrant, "PENDING">) : null;
-  const regimeTag = live ? deriveMacroBrief(snap).regimeTag : null;
+  const freshness = macroFreshness(snap);
 
   const stateLine =
     snap.status === "loading"
@@ -39,7 +39,7 @@ export default function RegimeShiftFinder({ className = "" }: { className?: stri
   return (
     <a
       href={ROUTE}
-      aria-label="Regime — Darius-Dale-style macro regime, open module"
+      aria-label="US regime — current growth and inflation regime, open module"
       className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-sm hairline bg-[var(--depth-1)] transition-colors duration-[var(--dur-base)] hover:border-[var(--line-2)] ${className}`}
     >
       <div className="landing-card-body relative flex-1 overflow-hidden" style={{ minHeight: 300 }}>
@@ -52,15 +52,20 @@ export default function RegimeShiftFinder({ className = "" }: { className?: stri
             A3RO Intelligence
           </p>
           <h3 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--ink)] md:text-3xl">
-            Regime
+            US regime
           </h3>
           <p className="mt-3 hidden text-[13px] leading-relaxed text-[var(--ink-2)] md:block">
-            Top-down macro regime — growth × inflation on a rate-of-change basis.
+            US growth × inflation — automatically updated from the latest FRED releases.
           </p>
           <p className="mt-4 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
-            {stateLine}
-            {regimeTag && <span style={{ color: MACRO_AMBER }}> · {regimeTag}</span>}
+            {live ? `${freshness === "current" && !snap.refreshError ? "Current" : "Last available"} · ${stateLine}` : stateLine}
           </p>
+          {live && (
+            <p className="mt-2 font-mono text-[8px] leading-relaxed tracking-[0.1em] text-[var(--ink-3)]" style={freshness === "stale" || snap.refreshError ? { color: MACRO_AMBER } : undefined}>
+              {formatMacroUpdated(snap.computedAt)}
+              {snap.refreshError ? " · refresh unavailable" : freshness === "stale" ? " · stale data" : freshness === "unknown" ? " · freshness unverified" : ""}
+            </p>
+          )}
           {/* Macro Override chip — pressure + divergence flag */}
           {snap.pressureScore !== null && (
             <p className="mt-2 flex flex-wrap items-center gap-x-2 font-mono text-[9px] uppercase tracking-[0.2em]">
@@ -104,7 +109,7 @@ export default function RegimeShiftFinder({ className = "" }: { className?: stri
       {/* card footer — directory grammar */}
       <div className="flex items-baseline justify-between gap-4 px-5 py-4 hairline-t">
         <h3 className="text-sm font-medium text-[var(--ink)]">
-          A3RO Intelligence — Regime
+          A3RO Intelligence — US regime
         </h3>
         <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
           Darius-Dale GRID · macro

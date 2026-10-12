@@ -47,6 +47,8 @@ export interface CorridorMetricLatest {
   source: string;
   observedAt: string;
   updatedAt: string;
+  /** Published China period/provenance; absent on legacy corridor observations. */
+  meta?: Record<string, string>;
 }
 
 /** Historical baseline lookback windows for chokepoint gates. */

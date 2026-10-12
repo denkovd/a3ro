@@ -4,6 +4,7 @@
 ──────────────────────────────────────────────────────────────── */
 
 import { useEffect, useState } from "react";
+import { validMetric } from "./dataQuality";
 
 export type GoldFlowMetric = {
   locus: string;
@@ -35,7 +36,8 @@ export function findMetric(
   locus: string,
   metric: string,
 ): GoldFlowMetric | null {
-  return metrics.find((m) => m.locus === locus && m.metric === metric) ?? null;
+  return metrics.filter((m) => m.locus === locus && m.metric === metric && validMetric(m))
+    .reduce<GoldFlowMetric | null>((latest, m) => !latest || m.periodDate > latest.periodDate ? m : latest, null);
 }
 
 export function formatTonnes(v: number): string {
@@ -55,16 +57,23 @@ export function formatFlowT(v: number): string {
   return `${sign}${formatTonnes(Math.abs(v))}`;
 }
 
-export default function useGoldFlowData(): GoldFlowData {
+export default function useGoldFlowData(): GoldFlowData & { retry: () => void } {
   const [data, setData] = useState<GoldFlowData>(EMPTY);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let alive = true;
+    let controller: AbortController | null = null;
     const load = async () => {
+      controller?.abort();
+      const request = new AbortController();
+      controller = request;
+      const timeout = setTimeout(() => request.abort(), 15000);
+      setData((d) => ({ ...d, status: d.metrics.length ? "ready" : "loading", error: null }));
       try {
-        const res = await fetch("/api/gold/loci", { cache: "no-store" });
+        const res = await fetch("/api/gold/loci", { cache: "no-store", signal: request.signal });
         if (!res.ok) {
-          if (!alive) return;
+          if (!alive || controller !== request) return;
           setData((d) => ({
             ...d,
             status: d.metrics.length ? "ready" : "error",
@@ -73,8 +82,9 @@ export default function useGoldFlowData(): GoldFlowData {
           return;
         }
         const body = (await res.json()) as { metrics?: GoldFlowMetric[] };
-        const metrics = Array.isArray(body.metrics) ? body.metrics : [];
-        if (!alive) return;
+        if (!Array.isArray(body.metrics)) throw new Error("Invalid metrics response");
+        const metrics = body.metrics.filter(validMetric);
+        if (!alive || controller !== request) return;
         setData({
           metrics,
           status: metrics.length ? "ready" : "empty",
@@ -82,21 +92,24 @@ export default function useGoldFlowData(): GoldFlowData {
           lastFetchedAt: Date.now(),
         });
       } catch (e) {
-        if (!alive) return;
+        if (!alive || controller !== request) return;
         setData((d) => ({
           ...d,
           status: d.metrics.length ? "ready" : "error",
           error: e instanceof Error ? e.message : String(e),
         }));
+      } finally {
+        clearTimeout(timeout);
       }
     };
     load();
     const id = setInterval(load, 60 * 60 * 1000);
     return () => {
       alive = false;
+      controller?.abort();
       clearInterval(id);
     };
-  }, []);
+  }, [attempt]);
 
-  return data;
+  return { ...data, retry: () => setAttempt((v) => v + 1) };
 }

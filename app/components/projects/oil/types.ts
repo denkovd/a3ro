@@ -64,7 +64,7 @@ export const CORRIDOR_META: CorridorMeta[] = [
   { id: "hormuz", title: "Strait of Hormuz", liveCapable: true, watchlist: false, gateCorridor: "hormuz" },
   { id: "sg", title: "Singapore Strait", liveCapable: true, watchlist: false, gateCorridor: "singapore" },
   { id: "usgc", title: "US Gulf Exports", liveCapable: true, watchlist: false, gateCorridor: "usgulf" },
-  { id: "china", title: "China · East Coast", liveCapable: false, watchlist: true },
+  { id: "china", title: "China · Crude buying & refining", liveCapable: true, watchlist: false },
   { id: "ara", title: "ARA · Rotterdam", liveCapable: false, watchlist: true },
 ];
 

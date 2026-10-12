@@ -15,6 +15,7 @@ import {
   formatStreak,
   BEAT_ACCENT,
   BEAT_MISS,
+  BEAT_MUTED,
   BEAT_ROUTE,
 } from "./earnings/earningsData";
 
@@ -34,15 +35,18 @@ export default function EarningsBeat({ className = "" }: { className?: string })
   const reduced = useMotionPreference();
   const board = useBeatLeaderboard(100);
 
-  const leader = board.rows[0] ?? null;
+  const ranked = board.status === "live" || board.status === "stale";
+  const leader = board.rows.find((row) => row.rankScore !== null) ?? null;
   const monitorText =
-    board.status === "live"
-      ? "Monitor · weekly pull"
-      : board.status === "pending"
-        ? "Monitor · awaiting first pull"
-        : board.status === "error"
-          ? "Monitor · feed unreachable"
-          : "Monitor · connecting";
+    board.status === "stale"
+      ? "Monitor · refresh overdue"
+      : board.status === "live"
+        ? "Monitor · weekly pull"
+        : board.status === "pending"
+          ? "Monitor · awaiting earnings data"
+          : board.status === "error"
+            ? "Monitor · feed unreachable"
+            : "Monitor · connecting";
 
   return (
     <a
@@ -130,7 +134,7 @@ export default function EarningsBeat({ className = "" }: { className?: string })
             size, consistency, and recency of their EPS and revenue beats.
           </p>
           <p className="mt-4 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
-            Surprise · streak · confidence
+            Surprise · streak · coverage
           </p>
         </div>
 
@@ -141,12 +145,12 @@ export default function EarningsBeat({ className = "" }: { className?: string })
               <motion.span
                 aria-hidden
                 className="inline-block h-[5px] w-[5px] rounded-full"
-                style={{ background: BEAT_ACCENT }}
+                style={{ background: board.status === "stale" ? BEAT_MUTED : BEAT_ACCENT }}
                 animate={{ opacity: [1, 0.25, 1] }}
                 transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
               />
             ) : (
-              <span aria-hidden className="inline-block h-[5px] w-[5px] rounded-full" style={{ background: BEAT_ACCENT }} />
+              <span aria-hidden className="inline-block h-[5px] w-[5px] rounded-full" style={{ background: board.status === "stale" ? BEAT_MUTED : BEAT_ACCENT }} />
             )}
             {monitorText}
           </p>
@@ -155,19 +159,19 @@ export default function EarningsBeat({ className = "" }: { className?: string })
             Tickers ranked
           </p>
           <p className="mt-1 font-mono text-3xl font-medium tabular-nums tracking-tight text-[var(--ink)] md:text-5xl">
-            {board.status === "live" ? String(board.count).padStart(2, "0") : "——"}
+            {ranked ? String(board.count).padStart(2, "0") : "——"}
           </p>
           <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-            {board.status === "live" && leader
-              ? "Current leader"
+            {ranked && leader
+              ? board.status === "stale" ? "Cached leader" : "Current leader"
               : board.status === "pending"
-                ? "Watchlist empty"
+                ? "Awaiting earnings data"
                 : board.status === "error"
                   ? "Feed unreachable"
                   : "Connecting"}
           </p>
 
-          {board.status === "live" && leader && (
+          {ranked && leader && (
             <div className="mt-4 w-40 md:mt-5 md:w-48">
               <p className="truncate text-right font-mono text-[10px] uppercase tracking-[0.15em] text-[var(--ink-2)]">
                 {leader.ticker}

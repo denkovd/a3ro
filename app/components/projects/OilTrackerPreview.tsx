@@ -22,7 +22,7 @@ import { PRODUCERS } from "./producers";
 const ROUTES = FLOW_ROUTES.map((route) => ({ ...route, ...bakeCorridor(route.pts) }));
 const RANKED_PRODUCERS = [...PRODUCERS].sort((a, b) => b.productionMbd - a.productionMbd);
 const MARKS = [
-  ...PRIMARY_MARKS.map((mark) => ({ ...mark, sub: mark.glyph === "diamond" ? "WATCHLIST" : "OIL TRANSIT" })),
+  ...PRIMARY_MARKS.map((mark) => ({ ...mark, sub: mark.glyph === "diamond" ? "IMPORTS & REFINING" : "OIL TRANSIT" })),
   { label: "SINGAPORE STRAIT", sub: "OIL TRANSIT", lon: 104.2, lat: 1.1, side: 1 as const, glyph: "ring" as const },
   { label: "ARA · ROTTERDAM", sub: "WATCHLIST", lon: 4.3, lat: 51.9, side: 1 as const, glyph: "ring" as const },
   { label: "US GULF", sub: "OIL EXPORTS", lon: -94.5, lat: 28.6, side: -1 as const, glyph: "ring" as const },

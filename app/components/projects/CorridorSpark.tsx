@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 
 const AMBER = "#d4a157";
 
-type Point = { date: string; value: number };
+type Point = { date: string; value: number; periodStart?: string };
 type SparkState = { status: "loading" | "live" | "pending" | "error"; points: Point[] };
 
 export default function CorridorSpark({
@@ -21,11 +21,14 @@ export default function CorridorSpark({
   metric,
   caption,
   days = 120,
+  monthly = false,
 }: {
   corridor: string;
   metric: string;
   caption?: string;
   days?: number;
+  /** Monthly China totals are charted as daily averages to compare Jan–Feb fairly. */
+  monthly?: boolean;
 }) {
   const [s, setS] = useState<SparkState>({ status: "loading", points: [] });
 
@@ -47,7 +50,7 @@ export default function CorridorSpark({
           .map((p) => p as Record<string, unknown>)
           .filter((p) => typeof p.value === "number" && Number.isFinite(p.value as number))
           .filter(p => typeof p.date === "string" && Number.isFinite(Date.parse(p.date)))
-          .map((p) => ({ date: String(p.date), value: p.value as number }))
+          .map((p) => ({ date: String(p.date), value: p.value as number, ...(typeof p.periodStart === "string" ? { periodStart: p.periodStart } : {}) }))
           .sort((a, b) => a.date.localeCompare(b.date));
         setS({ status: points.length >= 2 ? "live" : "pending", points });
       })
@@ -63,14 +66,23 @@ export default function CorridorSpark({
   if (s.status === "live") {
     const first = s.points[0], last = s.points[s.points.length - 1];
     const change = first.value === 0 ? null : (last.value - first.value) / Math.abs(first.value) * 100;
+    const chartPoints = monthly ? s.points.map(p => {
+      const end = new Date(Date.UTC(Number(p.date.slice(0, 4)), Number(p.date.slice(5, 7)), 0));
+      const start = Date.parse(`${p.periodStart ?? p.date}T00:00:00Z`);
+      const count = (end.getTime() - start) / 86_400_000 + 1;
+      return { ...p, value: p.value * 1000 / count };
+    }).filter(p => Number.isFinite(p.value)) : s.points;
+    const firstChart = chartPoints[0], lastChart = chartPoints[chartPoints.length - 1];
+    const chartChange = monthly ? (firstChart?.value ? (lastChart.value / firstChart.value - 1) * 100 : null) : change;
     return (
       <div className="mt-6">
-        <MiniSpark values={s.points.map((p) => p.value)} id={`${corridor}-${metric}`} />
+        {chartPoints.length >= 2 && <MiniSpark values={chartPoints.map((p) => p.value)} dates={monthly ? chartPoints.map(p => p.date) : undefined} id={`${corridor}-${metric}`} />}
         <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-          {caption ?? "Reported observation history"} · {s.points.length} pts
+          {caption ?? "Reported observation history"} · {s.points.length} pts{monthly ? " · daily average, kt/day" : ""}
         </p>
         <div className="mt-2 flex justify-between gap-2 font-mono text-[8px] text-[var(--ink-3)]"><span>{first.date.slice(0, 10)}</span><span>{last.date.slice(0, 10)}</span></div>
-        <p className="mt-2 text-[10px] text-[var(--ink-2)]">{change === null ? "Change unavailable from zero baseline" : `${change >= 0 ? "+" : ""}${change.toFixed(1)}% across displayed observations`}</p>
+        <p className="mt-2 text-[10px] text-[var(--ink-2)]">{chartChange === null ? "Change unavailable from zero baseline" : `${chartChange >= 0 ? "+" : ""}${chartChange.toFixed(1)}% across displayed observations${monthly ? " · daily average" : ""}`}</p>
+        {monthly && <p className="mt-2 text-[10px] text-[var(--ink-3)]">Jan–Feb totals use both months’ calendar days. Dates follow actual reporting periods.</p>}
       </div>
     );
   }
@@ -88,14 +100,15 @@ export default function CorridorSpark({
 
 /* tiny sparkline — mirrors OilTrackerCore's benchmark Spark, kept local
    so this component is fully self-contained. */
-function MiniSpark({ values, id }: { values: number[]; id: string }) {
+function MiniSpark({ values, dates, id }: { values: number[]; dates?: string[]; id: string }) {
   const w = 240,
     h = 36,
     pad = 2;
   const min = Math.min(...values),
     max = Math.max(...values);
   const pts = values.map((v, i) => {
-    const x = pad + (i / (values.length - 1)) * (w - pad * 2);
+    const fraction = dates ? (Date.parse(dates[i]) - Date.parse(dates[0])) / (Date.parse(dates[dates.length - 1]) - Date.parse(dates[0]) || 1) : i / (values.length - 1);
+    const x = pad + fraction * (w - pad * 2);
     const y = h - pad - ((v - min) / (max - min || 1)) * (h - pad * 2);
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   });

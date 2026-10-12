@@ -3,6 +3,7 @@
     { "path": "/api/cron/ingest", "schedule": "0 6 * * *" },
     { "path": "/api/cron/oil", "schedule": "5 6 * * *" },
     { "path": "/api/cron/scores", "schedule": "10 6 * * *" },
-    { "path": "/api/cron/refineries", "schedule": "15 6 * * *" }
+    { "path": "/api/cron/refineries", "schedule": "15 6 * * *" },
+    { "path": "/api/cron/macro", "schedule": "15 7 * * *" }
   ]
 }

@@ -85,7 +85,7 @@ export default function BtcPriceChart() {
       : null;
 
   return (
-    <div className="absolute left-4 top-4 z-20 md:left-6 md:top-6">
+    <div>
       <div
         className="rounded-sm border border-[var(--line)] bg-[rgba(8,9,9,0.85)] backdrop-blur-md transition-[width] duration-200"
         style={{ width: containerW }}
@@ -138,6 +138,7 @@ export default function BtcPriceChart() {
                   </span>
                 )}
               </div>
+              <p className="mt-1 text-[9px] text-[var(--ink-3)]">Last daily close · {latest?.weekEnd}</p>
             </>
           )}
         </div>

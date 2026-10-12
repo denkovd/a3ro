@@ -32,8 +32,11 @@ import {
   type Venue,
   type MiningRegion,
 } from "./btc/nodes";
-import { useBtcSnapshot, formatBtcPrice, formatPct, formatAsOf } from "./btc/btcData";
-import useBtcFlowData, { findMetric, formatUsdMn } from "./btc/useBtcFlowData";
+import { useBtcSnapshot } from "./btc/btcData";
+import useBtcFlowData from "./btc/useBtcFlowData";
+import useBtcMarkets from "./btc/useBtcMarkets";
+import BtcIntelRail, { venueStatus } from "./btc/BtcIntelRail";
+import { GLOBE_MODES, venueInMode, type GlobeMode } from "./btc/marketData";
 import BtcPriceChart from "./btc/BtcPriceChart";
 
 type HitResult =
@@ -145,10 +148,15 @@ export default function BtcTrackerCore({
   const lastMiningRef = useRef<Exclude<MiningLayerMode, "off">>("share");
   const [layersExpanded, setLayersExpanded] = useState(false);
   const [hoverId, setHoverId] = useState<string | null>(null);
+  const [mode, setMode] = useState<GlobeMode>("overview");
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
 
   const btcSnap = useBtcSnapshot();
   const flowData = useBtcFlowData();
-  const etfFlowMetric = findMetric(flowData.metrics, "etf_us", "etf_flow_usd_mn");
+  const markets = useBtcMarkets();
+  const statusRef = useRef<Record<string, string>>({});
+  statusRef.current = Object.fromEntries(VENUES.map((v) => [v.id, venueStatus(v, markets, flowData)]));
 
   const sim = useRef<Sim>({
     lon: initialView?.lon ?? HOME.lon,
@@ -204,6 +212,8 @@ export default function BtcTrackerCore({
 
   const focusVenue = useCallback(
     (v: Venue) => {
+      if (!venueInMode(v.kind, v.id, modeRef.current)) setMode("overview");
+      setLayers((previous) => ({ ...previous, venues: true, mining: "off" }));
       setSelected(v.id);
       setTouched(true);
       hasMoved.current = true;
@@ -223,6 +233,8 @@ export default function BtcTrackerCore({
 
   const focusMining = useCallback(
     (m: MiningRegion) => {
+      setMode("mining");
+      setLayers({ venues: false, flows: false, mining: "share" });
       setSelected("mine:" + m.id);
       setTouched(true);
       hasMoved.current = true;
@@ -245,6 +257,16 @@ export default function BtcTrackerCore({
     sim.current.lastInteract = performance.now();
     tweenTo({ zoom: 1, off: 0, lat: clamp(sim.current.lat, -34, 34) }, 900);
   }, [tweenTo]);
+
+  const changeMode = (next: GlobeMode) => {
+    setMode(next);
+    setSelected(null);
+    setHoverId(null);
+    setLayers({ venues: next !== "mining", flows: next === "overview", mining: next === "mining" ? "share" : "off" });
+    const destination = next === "spot" ? VENUES.find((v) => v.id === "coinbase") : next === "derivatives" ? VENUES.find((v) => v.id === "bybit") : next === "etfs" ? VENUES.find((v) => v.id === "etf_us") : null;
+    tweenTo({ lon: destination?.lon ?? HOME.lon, lat: destination?.lat ?? HOME.lat, zoom: 1, off: 0 }, 800);
+    setTouched(true);
+  };
 
   /* ── engine ── */
   useEffect(() => {
@@ -301,6 +323,7 @@ export default function BtcTrackerCore({
 
       if (L.venues) {
         for (const v of VENUES) {
+          if (!venueInMode(v.kind, v.id, modeRef.current)) continue;
           const p = project(rot, vec(v.lon, v.lat), cx, cy, R);
           if (p.z < 0.12) continue;
           const d = Math.hypot(p.x - mx, p.y - my);
@@ -480,7 +503,7 @@ export default function BtcTrackerCore({
       const flowsOn = layersRef.current.flows;
       const routeMidpoints: { c: Baked; sx: number; sy: number; z: number }[] = [];
       for (const c of corridors) {
-        if (c.rank !== "tertiary" && !flowsOn) continue;
+        if (!flowsOn) continue;
         const S = c.samples,
           N = c.n;
         const rev =
@@ -640,6 +663,7 @@ export default function BtcTrackerCore({
         const hotspotFontPx = Math.max(9, Math.min(12, R / 55)).toFixed(0);
         ctx.font = `500 ${hotspotFontPx}px "JetBrains Mono", ui-monospace, monospace`;
         for (const v of VENUES) {
+          if (!venueInMode(v.kind, v.id, modeRef.current)) continue;
           rot(...vec(v.lon, v.lat), o);
           if (o[2] < 0.12) continue;
           const sx = cx + o[0] * R,
@@ -702,12 +726,7 @@ export default function BtcTrackerCore({
           ctx.textAlign = side < 0 ? "right" : "left";
           ctx.fillStyle = INK(0.85 * fade);
           haloText(v.label, lx, ly);
-          const sub =
-            v.status === "connecting"
-              ? "CONNECTING"
-              : v.status === "watchlist"
-                ? "WATCHLIST"
-                : "REFERENCE";
+          const sub = (statusRef.current[v.id] ?? "watchlist").toUpperCase();
           ctx.fillStyle = ORG(0.75 * fade);
           haloText(sub, lx, ly + 11);
           ctx.textAlign = "left";
@@ -852,7 +871,7 @@ export default function BtcTrackerCore({
         setHoverId(nextHovered);
       }
       if (nextHovered) positionHoverCard(p.x, p.y);
-      const opensPanel = hit != null && (hit.type === "venue" || hit.type === "mining");
+      const opensPanel = hit != null;
       e.currentTarget.style.cursor = opensPanel ? "pointer" : "grab";
     }
   };
@@ -875,6 +894,10 @@ export default function BtcTrackerCore({
       if (hit) {
         if (hit.type === "venue") focusVenue(hit.v);
         else if (hit.type === "mining") focusMining(hit.m);
+        else {
+          setSelected("route:" + hit.routeId);
+          setTouched(true);
+        }
       }
     }
   };
@@ -898,12 +921,6 @@ export default function BtcTrackerCore({
     setTouched(true);
   };
 
-  const selVenue = VENUES.find((v) => v.id === selected) ?? null;
-  const selMine = selected?.startsWith("mine:")
-    ? MINING_REGIONS.find((m) => m.id === selected.slice(5)) ?? null
-    : null;
-  const hasFocus = selVenue !== null || selMine !== null;
-
   const hoverCard = (() => {
     if (!hoverId) return null;
     if (hoverId.startsWith("mine:")) {
@@ -923,8 +940,8 @@ export default function BtcTrackerCore({
       if (!route) return null;
       return {
         title: route.name,
-        lines: ["ILLUSTRATIVE LIQUIDITY PATH", "INTENSITY PENDING · FREE FEED"],
-        click: false,
+        lines: ["ILLUSTRATIVE LIQUIDITY PATH", "CLICK TO EXPLORE ENDPOINTS"],
+        click: true,
       };
     }
     const v = VENUES.find((x) => x.id === hoverId);
@@ -932,25 +949,12 @@ export default function BtcTrackerCore({
     return {
       title: v.title,
       lines: [
-        v.id === "etf_us" && etfFlowMetric
-          ? "LIVE"
-          : v.status === "connecting"
-            ? "CONNECTING"
-            : "WATCHLIST",
+        (statusRef.current[v.id] ?? "watchlist").toUpperCase(),
         v.kind.toUpperCase() + " LOCUS",
       ],
       click: true,
     };
   })();
-
-  const statusColor = (s: string) =>
-    s === "live" ? ORANGE_CSS : s === "connecting" ? "var(--ink-2)" : "var(--ink-3)";
-
-  /** etf_us is the only venue with a wired live feed so far (SoSoValue
-   *  daily net flow) — every other venue stays honestly on its static
-   *  connecting/watchlist status until its own free feed is verified. */
-  const effectiveVenueStatus = (v: Venue): string =>
-    v.id === "etf_us" && etfFlowMetric ? "live" : v.status;
 
   return (
     <div ref={wrapRef} className={`relative h-full w-full ${className}`}>
@@ -1004,12 +1008,20 @@ export default function BtcTrackerCore({
       </AnimatePresence>
 
       {/* weekly price chart + macro regime affinity, top-left */}
+      <div className="absolute left-4 top-4 z-20 flex max-w-[calc(100%-2rem)] flex-col items-start gap-2 md:left-6 md:top-6">
       <BtcPriceChart />
+
+      <nav aria-label="Bitcoin globe modes" className="flex max-w-full flex-wrap gap-1 rounded-sm border border-[var(--line)] bg-[rgba(8,9,9,0.94)] p-1">
+        {GLOBE_MODES.map((item) => <button key={item.id} type="button" aria-pressed={mode === item.id} onClick={() => changeMode(item.id)} className="rounded-sm px-2 py-2 font-mono text-[9px] uppercase tracking-[0.12em] transition-colors focus-visible:outline focus-visible:outline-[#e0873a]" style={{ color: mode === item.id ? ORANGE_CSS : "var(--ink-2)", background: mode === item.id ? "rgba(224,135,58,0.1)" : undefined }}>{item.label}</button>)}
+      </nav>
+      <p className="max-w-[300px] rounded-sm bg-[rgba(8,9,9,0.7)] px-2 py-1 text-[9px] text-[var(--ink-3)]">{mode === "mining" ? "Circles: illustrative mining share · 2024 reference" : mode === "overview" ? "Pins: liquidity hubs · arcs: illustrative relationships" : mode === "etfs" ? "Diamond: US spot ETF aggregate · daily reports" : "Rings: market venues · select for available metrics"}</p>
+      </div>
 
       {/* left layers control */}
       <div className="absolute bottom-4 left-4 z-20 md:bottom-6 md:left-6">
         <button
           type="button"
+          aria-expanded={layersExpanded}
           onClick={() => setLayersExpanded((v) => !v)}
           className="rounded-sm border border-[var(--line)] bg-[rgba(8,9,9,0.85)] px-3 py-2 font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-2)] backdrop-blur-md transition-colors hover:text-[var(--ink)]"
         >
@@ -1032,6 +1044,7 @@ export default function BtcTrackerCore({
                 <button
                   key={key}
                   type="button"
+                  aria-pressed={on}
                   onClick={() =>
                     setLayers((L) => ({
                       ...L,
@@ -1093,6 +1106,11 @@ export default function BtcTrackerCore({
         </AnimatePresence>
       </div>
 
+      <div className="absolute bottom-4 right-4 z-20 flex gap-1 md:bottom-6 md:left-[110px] md:right-auto" role="group" aria-label="Globe navigation">
+        {[{ label: "+", name: "Zoom in", factor: 1.15 }, { label: "−", name: "Zoom out", factor: 1 / 1.15 }].map((item) => <button key={item.name} type="button" aria-label={item.name} onClick={() => { sim.current.zoom = clamp(sim.current.zoom * item.factor, 0.85, 2.4); sim.current.lastInteract = performance.now(); setTouched(true); }} className="h-8 w-8 rounded-sm border border-[var(--line)] bg-[rgba(8,9,9,0.92)] text-[var(--ink-2)]">{item.label}</button>)}
+        <button type="button" onClick={() => changeMode("overview")} className="rounded-sm border border-[var(--line)] bg-[rgba(8,9,9,0.92)] px-2 font-mono text-[9px] uppercase text-[var(--ink-2)]">Reset</button>
+      </div>
+
       {/* intro hint */}
       {!touched && (
         <p className="pointer-events-none absolute bottom-4 left-1/2 z-10 -translate-x-1/2 font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)] md:bottom-6">
@@ -1100,187 +1118,7 @@ export default function BtcTrackerCore({
         </p>
       )}
 
-      {/* intel rail / focus panel */}
-      <aside
-        className={`absolute z-20 flex flex-col border border-[var(--line)] bg-[rgba(8,9,9,0.9)] backdrop-blur-md ${
-          narrow
-            ? "inset-x-3 bottom-14 max-h-[42vh] overflow-y-auto rounded-sm"
-            : "bottom-6 right-6 top-4 w-[340px] rounded-sm"
-        }`}
-      >
-        <div className="border-b border-[var(--line)] px-4 py-3">
-          <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
-            P·03 — BTC Tracker
-          </p>
-          <h3 className="mt-1 text-sm font-medium text-[var(--ink)]">
-            Known stock · liquidity flow
-          </h3>
-          <p className="mt-2 text-[11px] leading-relaxed text-[var(--ink-2)]">
-            Where known Bitcoin concentrates (exchanges, ETFs, mining regions)
-            and the illustrative paths liquidity takes between hubs. Live
-            reserve and netflow metrics connect as free feeds are verified —
-            never invented.
-          </p>
-        </div>
-
-        <div className="border-b border-[var(--line)] px-4 py-3">
-          <p className="font-mono text-[8px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-            Price · {btcSnap.source === "live" ? "live" : "baseline"}
-          </p>
-          <p className="mt-1 font-mono text-xl tabular-nums text-[var(--ink)]">
-            ${formatBtcPrice(btcSnap.price.value)}
-          </p>
-          <p
-            className="mt-1 font-mono text-[10px] tabular-nums"
-            style={{
-              color:
-                btcSnap.changes.d1 > 0
-                  ? ORANGE_CSS
-                  : btcSnap.changes.d1 < 0
-                    ? "var(--ink-2)"
-                    : "var(--ink-3)",
-            }}
-          >
-            {formatPct(btcSnap.changes.d1)} · 1D · As of {formatAsOf(btcSnap.asOf)}
-          </p>
-          <p className="mt-1 text-[10px] text-[var(--ink-3)]">
-            Composite tape needs exchange stock / netflow — still pending a
-            verified free feed. US spot ETF flow reads live below.
-          </p>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-4 py-3">
-          <p className="font-mono text-[8px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-            Venue watchlist
-          </p>
-          <ul className="mt-2 flex flex-col gap-1.5">
-            {VENUES.map((v) => (
-              <li key={v.id}>
-                <button
-                  type="button"
-                  onClick={() =>
-                    selected === v.id ? closePanel() : focusVenue(v)
-                  }
-                  className="flex w-full items-baseline justify-between gap-2 rounded-sm px-1 py-1 text-left transition-colors hover:bg-[var(--depth-2)]"
-                  style={{
-                    outline:
-                      selected === v.id
-                        ? `1px solid ${ORANGE_CSS}55`
-                        : undefined,
-                  }}
-                >
-                  <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--ink)]">
-                    {v.name}
-                  </span>
-                  <span
-                    className="shrink-0 font-mono text-[8px] uppercase tracking-[0.16em]"
-                    style={{ color: statusColor(effectiveVenueStatus(v)) }}
-                  >
-                    {effectiveVenueStatus(v)}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* focus dock */}
-        <AnimatePresence mode="wait">
-          {hasFocus && (
-            <motion.div
-              key={selected ?? "focus"}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 8 }}
-              transition={{ duration: DUR.micro, ease: EASE_OUT as unknown as number[] }}
-              className="border-t border-[var(--line)] px-4 py-3"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  {selVenue && (
-                    <>
-                      <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-                        {selVenue.kind} · {selVenue.label}
-                      </p>
-                      <h4 className="mt-1 text-base font-medium text-[var(--ink)]">
-                        {selVenue.title}
-                      </h4>
-                      <p
-                        className="mt-2 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.22em]"
-                        style={{ color: statusColor(effectiveVenueStatus(selVenue)) }}
-                      >
-                        <span
-                          aria-hidden
-                          className="inline-block h-1 w-1 rounded-full"
-                          style={{ background: "currentColor" }}
-                        />
-                        {effectiveVenueStatus(selVenue)}
-                      </p>
-                      {selVenue.id === "etf_us" && etfFlowMetric ? (
-                        <>
-                          <p className="mt-3 font-mono text-lg text-[var(--ink)]">
-                            {formatUsdMn(etfFlowMetric.value)}
-                          </p>
-                          <p className="mt-1 text-[11px] text-[var(--ink-3)]">
-                            Net daily flow, all US spot ETFs · {etfFlowMetric.periodDate}
-                          </p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="mt-3 font-mono text-lg text-[var(--ink-3)]">—</p>
-                          <p className="mt-1 text-[11px] text-[var(--ink-3)]">
-                            No live stock/netflow on file yet
-                          </p>
-                        </>
-                      )}
-                      <p className="mt-3 text-[11px] leading-relaxed text-[var(--ink-2)]">
-                        {selVenue.note}
-                      </p>
-                    </>
-                  )}
-                  {selMine && (
-                    <>
-                      <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-                        Mining region
-                      </p>
-                      <h4 className="mt-1 text-base font-medium text-[var(--ink)]">
-                        {selMine.name}
-                      </h4>
-                      <p
-                        className="mt-2 font-mono text-[9px] uppercase tracking-[0.22em]"
-                        style={{ color: ORANGE_CSS }}
-                      >
-                        Reference · {selMine.asOf}
-                      </p>
-                      <p className="mt-3 font-mono text-2xl text-[var(--ink)]">
-                        ~{(selMine.hashrateShare * 100).toFixed(0)}%
-                      </p>
-                      <p className="mt-1 text-[11px] text-[var(--ink-3)]">
-                        Estimated hashrate share
-                      </p>
-                      <p className="mt-3 text-[11px] leading-relaxed text-[var(--ink-2)]">
-                        Supply-side geography — where hashpower concentrates,
-                        not where coins are stored. {MINING_SOURCE}.
-                      </p>
-                    </>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={closePanel}
-                  className="shrink-0 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)] hover:text-[var(--ink)]"
-                  aria-label="Close panel"
-                >
-                  Esc
-                </button>
-              </div>
-              <p className="mt-4 border-t border-[var(--line)] pt-3 font-mono text-[8px] uppercase tracking-[0.18em] text-[var(--ink-3)]">
-                Not investment advice · illustrative until live feeds connect
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </aside>
+      <BtcIntelRail narrow={narrow} mode={mode} selected={selected} onVenue={focusVenue} onMining={focusMining} onRoute={(id) => { setSelected("route:" + id); setTouched(true); }} onClose={closePanel} snapshot={btcSnap} flows={flowData} markets={markets} />
     </div>
   );
 }

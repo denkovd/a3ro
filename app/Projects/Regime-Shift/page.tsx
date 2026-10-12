@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import RegimeShiftView from "./view";
 
 export const metadata: Metadata = {
-  title: "Regime Shift Finder — A3RO Intelligence",
+  title: "US regime — A3RO Intelligence",
   description:
-    "Top-down macro regime — the Darius-Dale-style growth × inflation GRID (Goldilocks / Reflation / Inflation / Deflation) from free-tier FRED data, plus the Macro Override pressure read.",
+    "The current US growth × inflation regime (Goldilocks / Reflation / Inflation / Deflation), automatically updated from FRED releases, with cross-asset market confirmation and source dates.",
 };
 
 export default function RegimeShiftPage() {

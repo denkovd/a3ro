@@ -42,6 +42,7 @@ import RiskMatrixPanel from "../../components/projects/macro/RiskMatrixPanel";
 import { LiquidityPanel, CostOfCapitalPanel } from "../../components/projects/macro/LiquidityPanel";
 import AllocationPanel from "../../components/projects/macro/AllocationPanel";
 import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
+import { macroFreshness, formatMacroUpdated, formatMacroPeriod } from "../../components/projects/macro/macroFreshness";
 
 const ATMOSPHERE =
   "radial-gradient(90% 110% at 50% 65%, #0e1020 0%, var(--depth-1) 55%, #070808 100%)";
@@ -77,6 +78,7 @@ export default function RegimeShiftView() {
   const live = snap.status === "live" && snap.quadrant !== "PENDING";
   const active = live ? (snap.quadrant as Exclude<MacroQuadrant, "PENDING">) : null;
   const brief = deriveMacroBrief(snap);
+  const freshness = macroFreshness(snap);
   const riskStance = active ? (RISK_ON.includes(active) ? "risk-on" : "risk-off") : null;
 
   return (
@@ -97,13 +99,13 @@ export default function RegimeShiftView() {
           <button
             onClick={leave}
             className="sweep font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-2)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]"
-            aria-label="Close Regime Shift Finder and return to the index"
+            aria-label="Close US regime and return to the index"
           >
             ← Index
           </button>
           <span aria-hidden className="text-[var(--ink-3)]">/</span>
           <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
-            A3RO Intelligence — Regime Shift Finder
+            A3RO Intelligence — US regime
           </p>
           <span aria-hidden className="text-[var(--ink-3)]">/</span>
           <ModuleSwitcher current="regime" />
@@ -122,13 +124,24 @@ export default function RegimeShiftView() {
             P·03 — Intelligence module
           </p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
-            Regime Shift Finder
+            US regime
           </h1>
           <p className="mt-3 max-w-2xl text-[13px] leading-relaxed text-[var(--ink-2)]">
-            A top-down macro regime read in three layers: where the economy sits on the growth/inflation
+            A US macro regime read in three layers: where the economy sits on the growth/inflation
             GRID, which regime cross-asset markets are actually pricing, and whether the six macro cycles
             support that regime continuing. Free-tier FRED and market data. Not investment advice.
           </p>
+          {live && (
+            <div className="mt-4 text-[12px] leading-relaxed text-[var(--ink-3)]" role="status">
+              <p>{formatMacroUpdated(snap.computedAt)} · Checks for updates every 5 minutes.</p>
+              <p>Growth data: {formatMacroPeriod(snap.cycles.find((c) => c.key === "growth")?.asOf)} · Inflation data: {formatMacroPeriod(snap.cycles.find((c) => c.key === "inflation")?.asOf)}. The economic regime changes when new monthly releases change the growth or inflation trend.</p>
+              {(freshness !== "current" || snap.refreshError) && (
+                <p style={{ color: MACRO_AMBER }}>
+                  {snap.refreshError ? "Refresh unavailable — showing the last successful reading. Retrying automatically." : freshness === "stale" ? "Stale data — showing the last available regime while awaiting a fresh snapshot." : "Freshness unverified — source dates or update time are unavailable."}
+                </p>
+              )}
+            </div>
+          )}
 
           {snap.status === "loading" && (
             <p className="mt-16 text-center font-mono text-[11px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
@@ -201,25 +214,18 @@ export default function RegimeShiftView() {
                     style={{ borderLeft: `2px solid ${active ? QUADRANT_META[active].color : "var(--line)"}` }}
                   >
                     <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
-                      Economic regime {riskStance && <span className="text-[var(--ink-2)]">· {riskStance}</span>}
+                      {freshness === "current" && !snap.refreshError ? "Current US economic regime" : "Last available US economic regime"} {riskStance && <span className="text-[var(--ink-2)]">· {riskStance}</span>}
                     </p>
                     <p
                       className="mt-1 flex flex-wrap items-baseline gap-x-2 text-2xl font-semibold"
                       style={{ color: active ? QUADRANT_META[active].color : "var(--ink)" }}
                     >
                       <span>{active ? QUADRANT_META[active].label : "—"}</span>
-                      {brief.regimeTag && (
-                        <span
-                          className="font-mono text-[12px] font-normal uppercase tracking-[0.1em]"
-                          style={{ color: MACRO_AMBER }}
-                        >
-                          ({brief.regimeTag})
-                        </span>
-                      )}
                     </p>
                     <p className="mt-2 text-[13px] leading-relaxed text-[var(--ink-2)]">{snap.regimeHeadline}</p>
                     <p className="mt-2 text-[12px] leading-relaxed text-[var(--ink-3)]">{snap.favored}</p>
                     <div className="mt-4 border-t border-[var(--line)] pt-3">
+                      <p className="mb-2 font-mono text-[9px] uppercase tracking-[0.15em] text-[var(--ink-3)]">Editorial outlook · {formatMacroPeriod(brief.asOf)}</p>
                       <HorizonRibbon brief={brief} />
                     </div>
                   </div>
@@ -337,7 +343,7 @@ export default function RegimeShiftView() {
 
       {/* ── bottom chrome ── */}
       <footer className="absolute inset-x-0 bottom-0 z-30 flex h-12 items-center justify-between border-t border-[var(--line)] bg-[rgba(6,7,7,0.55)] px-6 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)] backdrop-blur-md md:px-10">
-        <span>P·03 — Regime Shift Finder</span>
+        <span>P·03 — US regime</span>
         <span>
           {live
             ? `Macro read ${formatDate(snap.runDate)}`

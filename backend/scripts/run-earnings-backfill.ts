@@ -5,8 +5,8 @@
    waiting ~4 quarters for the weekly cron to accumulate history.
 
    With no args, reconciles every active ticker under 4 cached
-   quarters (the "nightly reconcile" variant of Flow B) — the same
-   thing app/api/cron/earnings runs after the weekly pull. */
+   quarters (the reconcile variant of Flow B). Production runs this
+   script through the manually dispatched earnings-backfill workflow. */
 
 import { createDb } from "../src/storage/db";
 import { backfillTicker, reconcileUnderfilledTickers } from "../src/earnings/pipeline";

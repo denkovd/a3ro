@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   useBeatLeaderboard,
-  confidenceMeta,
+  coverageMeta,
   formatDate,
   formatPct,
   formatQuarterLabel,
@@ -23,6 +23,7 @@ import {
   quarterGlyph,
   BEAT_ACCENT,
   BEAT_MISS,
+  BEAT_MUTED,
   type BeatRow,
 } from "../../components/projects/earnings/earningsData";
 import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
@@ -78,7 +79,7 @@ export default function EarningsBeatView() {
     return () => window.removeEventListener("keydown", onKey);
   }, [leave]);
 
-  const live = board.status === "live";
+  const live = board.status === "live" || board.status === "stale";
 
   const stats = useMemo(() => {
     const onStreak = board.rows.filter((r) => r.beatStreak > 0);
@@ -90,7 +91,8 @@ export default function EarningsBeatView() {
       tracked: board.rows.length,
       onStreak: onStreak.length,
       longest,
-      high: board.rows.filter((r) => r.confidence === "high").length,
+      epsOnly: board.rows.filter((r) => r.dataQuality.epsQuarters > 0 && r.dataQuality.revenueQuarters === 0).length,
+      excludedRevenue: board.rows.filter((r) => r.dataQuality.revenueExcludedQuarters > 0).map((r) => r.ticker),
     };
   }, [board.rows]);
 
@@ -167,7 +169,7 @@ export default function EarningsBeatView() {
             </div>
             <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
               {live
-                ? `Data as of ${formatDate(board.dataAsOf)} · ${board.count} tickers`
+                ? `Last refresh ${formatDate(board.dataAsOf, true)} · ${board.count} tickers`
                 : board.status === "pending"
                   ? "Awaiting first pull"
                   : board.status === "error"
@@ -175,6 +177,48 @@ export default function EarningsBeatView() {
                     : "Connecting…"}
             </p>
           </div>
+
+          <section aria-labelledby="earnings-seasons-title" className="mt-7 rounded-sm hairline bg-[var(--depth-1)] px-5 py-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 id="earnings-seasons-title" className="font-mono text-[10px] uppercase tracking-[0.25em]" style={{ color: BEAT_ACCENT }}>
+                U.S. earnings seasons
+              </h2>
+              <p className="text-[11px] text-[var(--ink-3)]">Typical reporting windows · company fiscal calendars vary</p>
+            </div>
+            <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+              {[
+                { quarter: "Q4 results", window: "Jan–Feb" },
+                { quarter: "Q1 results", window: "Apr–May" },
+                { quarter: "Q2 results", window: "Jul–Aug" },
+                { quarter: "Q3 results", window: "Oct–Nov" },
+              ].map(({ quarter, window }) => (
+                <div key={quarter}>
+                  <dt className="font-mono text-[9px] uppercase tracking-[0.15em] text-[var(--ink-3)]">{quarter}</dt>
+                  <dd className="mt-1 text-[13px] text-[var(--ink)]">{window}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-3 text-[11px] leading-relaxed text-[var(--ink-2)]">
+              Reporting usually begins in early to mid-January, April, July, and October and lasts around six weeks.
+              {" "}<a href="https://www.schwab.com/learn/story/earnings-season-what-to-look" target="_blank" rel="noreferrer" className="underline decoration-[var(--line-2)] underline-offset-4 hover:text-[var(--ink)]">Season guide ↗</a>
+            </p>
+          </section>
+
+          {board.status === "stale" && (
+            <p role="status" className="mt-4 border-l-2 pl-3 text-[12px] leading-relaxed" style={{ borderColor: BEAT_MUTED, color: BEAT_MUTED }}>
+              {board.dataAsOf
+                ? `Refresh overdue — showing cached rankings from ${formatDate(board.dataAsOf, true)}. The weekly update has not refreshed this feed.`
+                : "Showing cached rankings. The last refresh date is unavailable."}
+            </p>
+          )}
+
+          {live && (
+            <p className="mt-4 max-w-3xl text-[12px] leading-relaxed text-[var(--ink-2)]">
+              {stats.epsOnly} of {board.count} scores use EPS only. Revenue contributes where a usable comparison is available.
+              {stats.excludedRevenue.length > 0 && ` ${stats.excludedRevenue.join(", ")}: revenue excluded because the actual and estimate bases are unverified.`}
+              {" "}A recent refresh does not mean every report has complete data.
+            </p>
+          )}
 
           {/* summary strip */}
           {live && (
@@ -187,7 +231,7 @@ export default function EarningsBeatView() {
                   value: stats.longest ? formatStreak(stats.longest) : "—",
                   color: BEAT_ACCENT,
                 },
-                { label: "High confidence", value: String(stats.high).padStart(2, "0"), color: "var(--ink)" },
+                { label: "EPS-only scores", value: String(stats.epsOnly).padStart(2, "0"), color: BEAT_MUTED },
               ].map(({ label, value, color }) => (
                 <div key={label} className="bg-[var(--depth-1)] px-5 py-4">
                   <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
@@ -211,7 +255,7 @@ export default function EarningsBeatView() {
               <div className={`${GRID} border-b border-[var(--line)] pb-3`}>
                 {[
                   "Rank", "Company", "Score", "Streak", "Beat map",
-                  "Conf", "EPS avg", "Rev avg", "Latest report",
+                  "Data", "EPS avg", "Rev avg", "Latest report",
                 ].map((h, i) => (
                   <p
                     key={h}
@@ -245,7 +289,7 @@ export default function EarningsBeatView() {
                   </p>
                   <p className="max-w-md text-[13px] leading-relaxed text-[var(--ink-3)]">
                     {board.status === "pending"
-                      ? "No watchlist tickers have cached earnings yet. Add tickers to the watchlist and run the earnings-backfill workflow; the weekly pull runs Saturdays 12:00 UTC."
+                      ? "Rankings will appear once reported earnings with usable surprise data are available. Results update weekly after companies report."
                       : board.errorMessage ?? "The leaderboard feed did not respond — reload to retry."}
                   </p>
                 </div>
@@ -254,7 +298,7 @@ export default function EarningsBeatView() {
               {/* rows — API order is the leaderboard order */}
               {live &&
                 board.rows.map((r, idx) => {
-                  const conf = confidenceMeta(r.confidence);
+                  const coverage = coverageMeta(r);
                   return (
                     <div
                       key={r.ticker}
@@ -307,9 +351,11 @@ export default function EarningsBeatView() {
 
                       <p
                         className="font-mono text-[10px] uppercase tracking-[0.15em]"
-                        style={{ color: conf.color }}
+                        style={{ color: coverage.color }}
+                        title={coverage.description}
+                        aria-label={coverage.description}
                       >
-                        {conf.label}
+                        {coverage.label}
                       </p>
 
                       <p
@@ -325,10 +371,10 @@ export default function EarningsBeatView() {
                         {formatPct(r.revenueSurpriseAvg)}
                       </p>
 
-                      <p className="text-right font-mono text-[10px] tabular-nums text-[var(--ink-2)]">
+                      <p className="text-right font-mono text-[10px] tabular-nums text-[var(--ink-2)]" title={r.latest && !r.latest.reportDate ? "Announcement date unavailable from the feed; fiscal quarter shown." : undefined}>
                         {r.latest
                           ? `${formatQuarterLabel(r.latest.fiscalYear, r.latest.fiscalQuarter)}${
-                              r.latest.reportDate ? ` · ${formatDate(r.latest.reportDate)}` : ""
+                              r.latest.reportDate ? ` · ${formatDate(r.latest.reportDate)}` : " · date —"
                             }`
                           : "—"}
                       </p>
@@ -341,7 +387,8 @@ export default function EarningsBeatView() {
           {/* methodology footnote */}
           <p className="mt-10 max-w-2xl text-xs leading-relaxed text-[var(--ink-3)]">
             Score = recency-weighted composite of EPS and revenue surprise
-            percentages over the trailing four quarters, winsorized so one
+            percentages over the trailing four quarters, using EPS only when
+            revenue is missing or its comparison basis is unverified, winsorized so one
             blowout quarter can&apos;t dominate. Streak counts consecutive EPS
             beats from the newest quarter over <em>all</em> cached history; an
             unknown surprise breaks the streak — a data gap never extends it —
@@ -351,7 +398,9 @@ export default function EarningsBeatView() {
             history older than ~30 days is EPS-only (the free-tier calendar
             can&apos;t see further back); revenue accrues forward from the
             weekly Saturday pull. Every number traces to a real Finnhub field
-            or a deterministic formula — nothing synthetic.
+            or a deterministic formula — nothing synthetic. EPS uses the
+            provider&apos;s actual/consensus pair, which may be adjusted rather
+            than GAAP. Data labels describe coverage, not independent verification.
           </p>
         </div>
       </div>

@@ -100,13 +100,11 @@ async function oilMomentum(db: Queryable, to: string, days: number): Promise<num
  * to re-fetch data we hold would add a large new failure surface to a
  * cycle whose whole job is to be cheap and keyless.
  *
- * TIMING — this reads one session behind. The Vercel ingest cron runs
- * at 06:00 UTC; the bull scan that writes these bars runs at 06:20.
- * So the matrix scores yesterday's closes, which is correct for a
- * close-based signal but means the matrix is NOT intraday-fresh. It
- * also means the matrix reads PENDING until the first bull scan has
- * run on a new database. Both are fine; both are invisible without
- * this note.
+ * TIMING — the 06:00 UTC ingestion precedes the 06:20 bull scan.
+ * The scan now refreshes macro after storing its bars, and the
+ * independent 07:15 UTC macro cron also reads the latest stored bars.
+ * These are close-based signals, not intraday prices. The matrix
+ * reads PENDING until the first bull scan has seeded a new database.
  *
  * Symbols missing from the store are simply unscored, which the matrix
  * reports as coverage rather than hiding.

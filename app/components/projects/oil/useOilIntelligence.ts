@@ -3,6 +3,7 @@ import type { Benchmark, DailyPrice, LatestQuote } from "@a3ro/oil-backend";
 import useOilData from "../useOilData";
 import { currentMetrics, metricFreshness, quoteStatus, quoteBasis, comparablePriorClose } from "./dataQuality";
 import { BENCH_TITLE, CORRIDOR_META, type OilIntelligence, type CorridorWatchRow } from "./types";
+import { chinaLead, chinaMapText } from "./china";
 
 const TRACKED = ["WTI", "BRENT"] as const;
 
@@ -17,6 +18,11 @@ export default function useOilIntelligence() {
   // Small derived lists intentionally recompute on each feed tick, including age checks.
   const current = currentMetrics(feed.corridors);
   const corridors = CORRIDOR_META.map((meta): CorridorWatchRow => {
+    if (meta.id === "china") {
+      const row = chinaLead(feed.corridors);
+      const stale = row ? metricFreshness(row) === "stale" : false;
+      return { id: meta.id, title: meta.title, status: stale ? "stale" : row ? "live" : "connecting", statusText: stale ? "Historical" : row ? "Monthly" : "Unavailable", railMetric: row ? chinaMapText(feed.corridors) : undefined, healthRatio: null, rankScore: row && !stale ? 300 : 0 };
+    }
     const raw = feed.corridors?.find(m => m.corridor === meta.gateCorridor && m.metric === (meta.id === "usgc" ? "crude_exports" : "tanker_transits_7d"));
     const stale = raw ? metricFreshness(raw) === "stale" : false;
     const row = current.find(m => m === raw);

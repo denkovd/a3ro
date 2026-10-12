@@ -14,6 +14,7 @@
 ──────────────────────────────────────────────────────────────── */
 
 import type { Pool } from "pg";
+import { revenueComparisonStatus, type RevenueComparisonStatus } from "../../../../lib/earningsQuality";
 
 // NOTE ON `pg`'s TYPES: under this repo's tsconfig ("moduleResolution":
 // "bundler"), @types/pg's ESM entry point (index.d.mts) does not
@@ -45,6 +46,7 @@ export interface EarningsQuarterRow {
   reportedRevenue: number | null;
   estimatedRevenue: number | null;
   revenueSurprisePercent: number | null;
+  revenueComparisonStatus: RevenueComparisonStatus;
   pulledAt: string;
 }
 
@@ -102,6 +104,7 @@ interface EarningsDbRow {
   reported_revenue: unknown;
   estimated_revenue: unknown;
   revenue_surprise_percent: unknown;
+  source: string;
   pulled_at: string;
 }
 
@@ -110,6 +113,10 @@ function rowToWatchlist(r: WatchlistDbRow): WatchlistRow {
 }
 
 function rowToQuarter(r: EarningsDbRow): EarningsQuarterRow {
+  const actual = numOrNull(r.reported_revenue);
+  const estimate = numOrNull(r.estimated_revenue);
+  const surprise = numOrNull(r.revenue_surprise_percent);
+  const comparison = revenueComparisonStatus(r.ticker, r.source, actual, estimate, surprise);
   return {
     fiscalYear: r.fiscal_year,
     fiscalQuarter: r.fiscal_quarter,
@@ -119,9 +126,10 @@ function rowToQuarter(r: EarningsDbRow): EarningsQuarterRow {
     reportedEps: numOrNull(r.reported_eps),
     estimatedEps: numOrNull(r.estimated_eps),
     epsSurprisePercent: numOrNull(r.eps_surprise_percent),
-    reportedRevenue: numOrNull(r.reported_revenue),
-    estimatedRevenue: numOrNull(r.estimated_revenue),
-    revenueSurprisePercent: numOrNull(r.revenue_surprise_percent),
+    reportedRevenue: actual,
+    estimatedRevenue: estimate,
+    revenueSurprisePercent: comparison === "available" ? surprise : null,
+    revenueComparisonStatus: comparison,
     pulledAt: r.pulled_at,
   };
 }
@@ -161,9 +169,12 @@ export async function loadLeaderboardData(
 
   const tickers = watchlistRows.map((w) => w.ticker);
   const quartersRes = await pool.query(
-    `select ticker, fiscal_year, fiscal_quarter, fiscal_date_ending, report_date,
+    // SQL DATE has no timezone. Text casts prevent pg from converting local
+    // midnight to a timestamp that JSON/UTC formatting shifts to yesterday.
+    `select ticker, fiscal_year, fiscal_quarter,
+            fiscal_date_ending::text as fiscal_date_ending, report_date::text as report_date,
             report_hour, reported_eps, estimated_eps, eps_surprise_percent,
-            reported_revenue, estimated_revenue, revenue_surprise_percent, pulled_at
+            reported_revenue, estimated_revenue, revenue_surprise_percent, source, pulled_at
        from earnings_surprises
       where ticker = any($1::text[])
       order by ticker, fiscal_year desc, fiscal_quarter desc`,

@@ -14,6 +14,7 @@ import { EiaInventorySource } from "./eiaInventory";
 import { EiaSpotProductsSource } from "./eiaSpotProducts";
 import { MpaSingaporeSource } from "./mpaSingapore";
 import { PortWatchSource } from "./portwatch";
+import { NbsChinaSource, CustomsChinaSource } from "./chinaOil";
 
 export function buildCorridorSources(): CorridorSource[] {
   return [
@@ -22,6 +23,8 @@ export function buildCorridorSources(): CorridorSource[] {
     new EiaSpotProductsSource(),
     new PortWatchSource(),
     new MpaSingaporeSource(),
+    new NbsChinaSource(),
+    new CustomsChinaSource(),
   ];
 }
 

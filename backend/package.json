@@ -11,6 +11,7 @@
     "run:refineries": "tsx scripts/run-refineries.ts",
     "refresh:oil": "tsx scripts/refresh-oil.ts",
     "backfill:oil-prices": "tsx scripts/backfill-oil-prices.ts",
+    "backfill:china-oil": "tsx scripts/backfill-china-oil.ts",
     "run:scores": "tsx scripts/run-scores.ts",
     "run:positioning": "tsx scripts/run-positioning.ts",
     "migrate:alerts": "tsx scripts/migrate.ts migrations/017_alert_rules_seed.sql",

@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     if (!isCorridorId(corridor)) {
       return Response.json({ error: `unknown corridor "${corridor}"` }, { status: 400 });
     }
-    const days = Math.min(Math.max(Number(searchParams.get("days")) || 120, 7), 400);
+    const days = Math.min(Math.max(Number(searchParams.get("days")) || 120, 7), corridor === "china" ? 800 : 400);
     const to = new Date().toISOString().slice(0, 10);
     const from = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
 
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     return Response.json({
       corridor,
       metric,
-      points: rows.map((r) => ({ date: r.periodDate, value: r.value })),
+      points: rows.map((r) => ({ date: r.periodDate, value: r.value, ...(r.periodStart ? { periodStart: r.periodStart } : {}) })),
     });
   } catch (err) {
     return Response.json(

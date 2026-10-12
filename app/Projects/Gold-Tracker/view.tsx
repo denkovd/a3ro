@@ -161,7 +161,7 @@ export default function GoldTrackerView() {
             />
           )}
           <span className="hidden sm:inline">Terminal · mines · holders · flows</span>
-          <span className="sm:hidden">Live</span>
+          <span className="sm:hidden">Gold</span>
         </p>
       </header>
 

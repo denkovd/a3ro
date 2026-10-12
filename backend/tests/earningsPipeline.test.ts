@@ -14,6 +14,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import { types as pgTypes } from "pg";
 import { QueryResultLike, Queryable } from "../src/storage/db";
 import { backfillTicker, reconcileUnderfilledTickers, runWeeklyIncremental, upsertQuarter } from "../src/earnings/pipeline";
 import { getCachedQuarters, getLastSuccessfulPipelineRun } from "../src/storage/earningsRepo";
@@ -184,6 +185,25 @@ function withFetchMock<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 describe("upsertQuarter (§2.1 fill-nulls-only upsert)", () => {
+  test("Alphabet revenue is retained for audit but excluded from surprise calculations", async () => {
+    const db = new FakeEarningsDb();
+    db.addTicker("GOOGL");
+    await upsertQuarter(db, {
+      ticker: "GOOGL", fiscalYear: 2026, fiscalQuarter: 2,
+      reportDate: "2026-07-22", reportHour: "amc", epsActual: 9.11, epsEstimate: 2.9753,
+      revenueActual: 103617000000, revenueEstimate: 120361387510,
+      raw: { calendar: { revenueActual: 103617000000 } },
+    });
+    assert.equal(db.quarters[0].reported_revenue, 103617000000);
+    assert.equal(db.quarters[0].estimated_revenue, 120361387510);
+    assert.equal(db.quarters[0].revenue_surprise_percent, null);
+    // Existing first-write-wins rows must also be excluded on read.
+    db.quarters[0].revenue_surprise_percent = -13.911760122081365;
+    const [cached] = await getCachedQuarters(db, "GOOGL");
+    assert.equal(cached.revenueSurprisePercent, null);
+    assert.equal(cached.reportedRevenue, 103617000000);
+  });
+
   test("inserts once; identical re-run is a true no-op (idempotent, no churn)", async () => {
     await withFetchMock(async () => {
       const db = new FakeEarningsDb();
@@ -517,6 +537,31 @@ describe("runWeeklyIncremental (§2.2 Flow A)", () => {
         `expected a cap warning mentioning the EPS-only recovery path, got: ${JSON.stringify(logs)}`,
       );
     });
+  });
+});
+
+test("weekly watermark accepts node-postgres DATE values and preserves the calendar day", async () => {
+  await withFetchMock(async () => {
+    const db = new FakeEarningsDb();
+    // Use pg's actual DATE parser: previous mocks only returned strings,
+    // hiding the production crash after the first successful weekly run.
+    const watermark = pgTypes.getTypeParser(1082)("2026-07-23");
+    assert.ok(watermark instanceof Date);
+    db.pipelineRuns.push({
+      id: 0, flow: "weekly", status: "success", window_to: watermark,
+      finished_at: "2026-07-23T09:17:53.509Z",
+    });
+    const saved = await getLastSuccessfulPipelineRun(db, "weekly");
+    assert.deepEqual(saved, { windowTo: "2026-07-23" });
+    global.fetch = async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      assert.equal(url.searchParams.get("from"), "2026-07-21");
+      assert.equal(url.searchParams.get("to"), "2026-07-25");
+      return Response.json({ earningsCalendar: [] });
+    };
+    const report = await runWeeklyIncremental(db, { now: () => new Date("2026-07-25T12:00:00Z") });
+    assert.equal(report.status, "success");
+    assert.equal(db.pipelineRuns.at(-1)?.status, "success");
   });
 });
 

@@ -11,6 +11,7 @@ import {
   UpsertOutcome, WatchlistEntry,
 } from "../earnings/types";
 import { Queryable } from "./db";
+import { revenueComparisonStatus } from "../../../lib/earningsQuality";
 
 /* ── watchlist ────────────────────────────────────────────────── */
 
@@ -225,6 +226,9 @@ interface EarningsSurpriseDbRow {
 }
 
 function rowToQuarter(r: EarningsSurpriseDbRow): EarningsQuarterRow {
+  const actual = numOrNull(r.reported_revenue);
+  const estimate = numOrNull(r.estimated_revenue);
+  const surprise = numOrNull(r.revenue_surprise_percent);
   return {
     ticker: r.ticker,
     fiscalYear: r.fiscal_year,
@@ -235,9 +239,9 @@ function rowToQuarter(r: EarningsSurpriseDbRow): EarningsQuarterRow {
     reportedEps: numOrNull(r.reported_eps),
     estimatedEps: numOrNull(r.estimated_eps),
     epsSurprisePercent: numOrNull(r.eps_surprise_percent),
-    reportedRevenue: numOrNull(r.reported_revenue),
-    estimatedRevenue: numOrNull(r.estimated_revenue),
-    revenueSurprisePercent: numOrNull(r.revenue_surprise_percent),
+    reportedRevenue: actual,
+    estimatedRevenue: estimate,
+    revenueSurprisePercent: revenueComparisonStatus(r.ticker, r.source, actual, estimate, surprise) === "available" ? surprise : null,
     source: r.source,
     raw: r.raw ?? null,
     pulledAt: r.pulled_at,
@@ -259,7 +263,8 @@ export async function getCachedQuarters(
   limit = 4,
 ): Promise<EarningsQuarterRow[]> {
   const res = await db.query(
-    `select ticker, fiscal_year, fiscal_quarter, fiscal_date_ending, report_date,
+    `select ticker, fiscal_year, fiscal_quarter,
+            fiscal_date_ending::text as fiscal_date_ending, report_date::text as report_date,
             report_hour, reported_eps, estimated_eps, eps_surprise_percent,
             reported_revenue, estimated_revenue, revenue_surprise_percent,
             source, raw, pulled_at, updated_at
@@ -301,7 +306,8 @@ export async function getRankingData(
   const perTicker = opts.perTicker ?? 4;
   const res = await db.query(
     `select w.id, w.ticker, w.company_name, w.is_active, w.added_at,
-            q.fiscal_year, q.fiscal_quarter, q.fiscal_date_ending, q.report_date,
+            q.fiscal_year, q.fiscal_quarter,
+            q.fiscal_date_ending::text as fiscal_date_ending, q.report_date::text as report_date,
             q.report_hour, q.reported_eps, q.estimated_eps, q.eps_surprise_percent,
             q.reported_revenue, q.estimated_revenue, q.revenue_surprise_percent,
             q.source, q.raw, q.pulled_at, q.updated_at
@@ -407,8 +413,15 @@ export async function getLastSuccessfulPipelineRun(
       limit 1`,
     [flow],
   );
-  const row = res.rows[0] as { window_to: string } | undefined;
-  return row ? { windowTo: row.window_to } : null;
+  const row = res.rows[0] as { window_to: string | Date } | undefined;
+  if (!row) return null;
+  // pg parses DATE as local midnight. Preserve its calendar components:
+  // toISOString() would shift the day backwards in timezones east of UTC.
+  const value = row.window_to;
+  const windowTo = value instanceof Date
+    ? `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`
+    : value;
+  return { windowTo };
 }
 
 /**

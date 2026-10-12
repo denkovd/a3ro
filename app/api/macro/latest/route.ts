@@ -27,7 +27,7 @@ export async function GET() {
       getLatestMacroSnapshot(db),
       getLatestPositioning(db),
     ]);
-    return Response.json({ macro, positioning });
+    return Response.json({ macro, positioning }, { headers: { "Cache-Control": "no-store" } });
   } catch (err) {
     return Response.json(
       { error: err instanceof Error ? err.message : String(err) },

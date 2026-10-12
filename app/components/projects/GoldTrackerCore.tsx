@@ -8,7 +8,6 @@
 ──────────────────────────────────────────────────────────────── */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { DUR, EASE_OUT } from "../motion";
 import {
   GLD,
   GLD_HI,
@@ -23,30 +22,20 @@ import {
   type GTView,
   type Rot,
 } from "./goldTrackerShared";
-import { FLOW_ROUTES, TERTIARY_PTS, type FlowTier } from "./gold/flowRoutes";
+import { FLOW_ROUTES, TERTIARY_PTS, type FlowTier, type FlowRoute } from "./gold/flowRoutes";
 import {
   HOLDERS,
   type Holder,
 } from "./gold/holders";
 import {
   MINE_REGIONS,
-  MINES_SOURCE,
   type MineLayerMode,
   type MineRegion,
 } from "./gold/mines";
-import {
-  useGoldSnapshot,
-  formatPrice,
-  formatPct,
-  formatAsOf,
-  GOLD_ACCENT,
-} from "./gold/goldData";
-import useGoldFlowData, {
-  findMetric,
-  formatTonnes,
-  formatToz,
-  formatFlowT,
-} from "./gold/useGoldFlowData";
+import { useGoldSnapshot } from "./gold/goldData";
+import useGoldFlowData from "./gold/useGoldFlowData";
+import GoldIntelPanel, { holderStatus } from "./gold/GoldIntelPanel";
+import { mineReading } from "./gold/dataQuality";
 
 type HitResult =
   | { type: "holder"; h: Holder }
@@ -126,7 +115,7 @@ const easeInOut = (t: number) =>
   t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 
-export default function BtcTrackerCore({
+export default function GoldTrackerCore({
   initialView,
   skipIntro = false,
   onExit,
@@ -145,55 +134,9 @@ export default function BtcTrackerCore({
   const reduced = useReducedMotion();
   const priceSnap = useGoldSnapshot();
   const flow = useGoldFlowData();
-
-  const holderLiveStatus = (h: Holder): { status: Holder["status"] | "live"; label: string } => {
-    if (h.id === "etf_us") {
-      const m = findMetric(flow.metrics, "etf_us", "etf_holdings_t");
-      if (m) return { status: "live", label: "live" };
-      return { status: "connecting", label: "connecting" };
-    }
-    if (h.id === "comex") {
-      const m = findMetric(flow.metrics, "comex", "comex_registered_toz");
-      if (m) return { status: "live", label: "live" };
-      return { status: "connecting", label: "connecting" };
-    }
-    return { status: h.status, label: h.status };
-  };
-
-  const holderMetricLines = (h: Holder): { headline: string; rows: { k: string; v: string }[]; asOf?: string } => {
-    if (h.id === "etf_us") {
-      const hold = findMetric(flow.metrics, "etf_us", "etf_holdings_t");
-      const fl = findMetric(flow.metrics, "etf_us", "etf_flow_t");
-      if (!hold) {
-        return {
-          headline: "—",
-          rows: [],
-        };
-      }
-      const rows: { k: string; v: string }[] = [
-        { k: "NA ETF holdings", v: formatTonnes(hold.value) },
-      ];
-      if (fl) rows.push({ k: "WoW flow (Δ holdings)", v: formatFlowT(fl.value) });
-      const glob = findMetric(flow.metrics, "etf_global", "etf_holdings_t");
-      if (glob) rows.push({ k: "Global ETF holdings", v: formatTonnes(glob.value) });
-      return { headline: formatTonnes(hold.value), rows, asOf: hold.periodDate };
-    }
-    if (h.id === "comex") {
-      const reg = findMetric(flow.metrics, "comex", "comex_registered_toz");
-      const elig = findMetric(flow.metrics, "comex", "comex_eligible_toz");
-      const comb = findMetric(flow.metrics, "comex", "comex_combined_toz");
-      const dlt = findMetric(flow.metrics, "comex", "comex_registered_delta_toz");
-      if (!reg) return { headline: "—", rows: [] };
-      const rows: { k: string; v: string }[] = [
-        { k: "Registered", v: formatToz(reg.value) },
-      ];
-      if (elig) rows.push({ k: "Eligible", v: formatToz(elig.value) });
-      if (comb) rows.push({ k: "Combined", v: formatToz(comb.value) });
-      if (dlt) rows.push({ k: "Registered Δ (vs prev)", v: formatToz(dlt.value) });
-      return { headline: formatToz(reg.value), rows, asOf: reg.periodDate };
-    }
-    return { headline: "—", rows: [] };
-  };
+  const flowRef = useRef(flow);
+  flowRef.current = flow;
+  const redrawRef = useRef<() => void>(() => {});
 
   const [selected, setSelected] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
@@ -204,8 +147,8 @@ export default function BtcTrackerCore({
     flows: boolean;
     holders: boolean;
     mines: MineLayerMode;
-  }>({ flows: true, holders: true, mines: "off" });
-  const lastMinesRef = useRef<Exclude<MineLayerMode, "off">>("share");
+  }>({ flows: true, holders: true, mines: "production" });
+  const lastMinesRef = useRef<Exclude<MineLayerMode, "off">>("production");
   const [layersExpanded, setLayersExpanded] = useState(false);
   const [hoverId, setHoverId] = useState<string | null>(null);
 
@@ -242,6 +185,8 @@ export default function BtcTrackerCore({
   selectedRef.current = selected;
   layersRef.current = layers;
 
+  useEffect(() => { redrawRef.current(); }, [layers, selected, narrow, hoverId, flow.metrics, flow.status, flow.error, reduced]);
+
   const tweenTo = useCallback((to: Partial<Tween["to"]>, dur = 1150) => {
     const s = sim.current;
     s.vlon = 0;
@@ -259,10 +204,9 @@ export default function BtcTrackerCore({
     };
   }, []);
 
-  const railCamOff = -0.18;
-
   const focusHolder = useCallback(
     (v: Holder) => {
+      setLayers((L) => ({ ...L, holders: true }));
       setSelected(v.id);
       setTouched(true);
       hasMoved.current = true;
@@ -272,7 +216,7 @@ export default function BtcTrackerCore({
           lon: v.lon,
           lat: clamp(v.lat, -48, 48),
           zoom: v.zoom,
-          off: narrowRef.current ? 0 : railCamOff,
+          off: 0,
         },
         1150,
       );
@@ -282,6 +226,7 @@ export default function BtcTrackerCore({
 
   const focusMine = useCallback(
     (m: MineRegion) => {
+      setLayers((L) => ({ ...L, mines: L.mines === "off" ? lastMinesRef.current : L.mines }));
       setSelected("mine:" + m.id);
       setTouched(true);
       hasMoved.current = true;
@@ -291,13 +236,23 @@ export default function BtcTrackerCore({
           lon: m.lon,
           lat: clamp(m.lat, -48, 48),
           zoom: Math.max(sim.current.zoom, 1.25),
-          off: narrowRef.current ? 0 : railCamOff,
+          off: 0,
         },
         1000,
       );
     },
     [tweenTo],
   );
+
+  const focusRoute = useCallback((route: FlowRoute) => {
+    setLayers((L) => ({ ...L, flows: true }));
+    setSelected("route:" + route.id);
+    setTouched(true);
+    hasMoved.current = true;
+    sim.current.lastInteract = performance.now();
+    const midpoint = route.pts[Math.floor(route.pts.length / 2)];
+    tweenTo({ lon: midpoint[0], lat: clamp(midpoint[1], -48, 48), zoom: 1.1, off: 0 }, 1000);
+  }, [tweenTo]);
 
   const closePanel = useCallback(() => {
     setSelected(null);
@@ -331,6 +286,7 @@ export default function BtcTrackerCore({
       canvas.style.width = `${r.width}px`;
       canvas.style.height = `${r.height}px`;
       setNarrow(wrapW < 768);
+      redrawRef.current();
     };
     resize();
     const ro = new ResizeObserver(resize);
@@ -340,9 +296,11 @@ export default function BtcTrackerCore({
     const frame = () => {
       const s = sim.current;
       const { w, h } = size.current;
-      const cx = w * (0.5 + s.off);
-      const cy = h * 0.53;
-      const R = Math.min(w * 0.42, h * 0.44) * s.zoom;
+      const availableW = narrowRef.current ? w : Math.max(240, w - 388);
+      const availableH = narrowRef.current ? h * 0.5 : h;
+      const cx = availableW * 0.5;
+      const cy = availableH * 0.53 + (narrowRef.current ? 26 : 0);
+      const R = Math.min(availableW * 0.42, availableH * 0.4) * s.zoom;
       return { s, w, h, cx, cy, R };
     };
 
@@ -538,7 +496,7 @@ export default function BtcTrackerCore({
       const flowsOn = layersRef.current.flows;
       const routeMidpoints: { c: Baked; sx: number; sy: number; z: number }[] = [];
       for (const c of corridors) {
-        if (c.rank !== "tertiary" && !flowsOn) continue;
+        if (!flowsOn) continue;
         const S = c.samples,
           N = c.n;
         const rev =
@@ -640,9 +598,7 @@ export default function BtcTrackerCore({
       const mMode = layersRef.current.mines;
       if (mMode !== "off") {
         const rScale = Math.min(1.25, Math.max(0.8, R / 260));
-        const sorted = [...MINE_REGIONS]
-          
-          .sort((a, b) => b.share - a.share);
+        const sorted = [...MINE_REGIONS].sort((a, b) => mMode === "production" ? b.productionT - a.productionT : b.share - a.share);
         ctx.font = '500 8px "JetBrains Mono", ui-monospace, monospace';
         for (const [rankIdx, m] of sorted.entries()) {
           rot(...vec(m.lon, m.lat), o);
@@ -652,8 +608,8 @@ export default function BtcTrackerCore({
           const fade = Math.min(1, (o[2] - 0.15) / 0.3);
           const alpha = 0.9 * fade;
           if (alpha <= 0.01) continue;
-          const pct = m.share * 100;
-          const r = (3 + Math.sqrt(pct) * 1.6) * rScale;
+          const amount = mMode === "production" ? m.productionT / 35 : m.share * 100;
+          const r = (3 + Math.sqrt(amount) * 1.6) * rScale;
           ctx.strokeStyle = GLD(0.5 * alpha);
           ctx.lineWidth = 1;
           ctx.beginPath();
@@ -684,7 +640,7 @@ export default function BtcTrackerCore({
           }
           if (sim.current.hovered === "mine:" + m.id) continue;
           if (rankIdx > 6 && s.zoom < 1.15) continue;
-          const label = `${m.name} · ${pct.toFixed(0)}%`;
+          const label = `${m.name} · ${mineReading(m, mMode)}`;
           ctx.fillStyle = INK(0.75 * fade);
           haloText(label, sx + r + 5, sy + 3);
         }
@@ -757,12 +713,7 @@ export default function BtcTrackerCore({
           ctx.textAlign = side < 0 ? "right" : "left";
           ctx.fillStyle = INK(0.85 * fade);
           haloText(v.label, lx, ly);
-          const sub =
-            v.status === "connecting"
-              ? "CONNECTING"
-              : v.status === "watchlist"
-                ? "WATCHLIST"
-                : "REFERENCE";
+          const sub = holderStatus(v, flowRef.current).toUpperCase();
           ctx.fillStyle = GLD(0.75 * fade);
           haloText(sub, lx, ly + 11);
           ctx.textAlign = "left";
@@ -780,34 +731,30 @@ export default function BtcTrackerCore({
     }
 
     const loop = (now: number) => {
-      raf = requestAnimationFrame(loop);
-      if (!visible) return;
-      draw(now);
+      raf = 0;
+      if (visible) draw(now);
+      if (!reducedRef.current) raf = requestAnimationFrame(loop);
     };
-    if (reducedRef.current) {
-      draw(performance.now());
-      if (!readyFired.current) {
-        readyFired.current = true;
-        onReady?.();
-      }
-    } else {
-      raf = requestAnimationFrame(loop);
-    }
+    redrawRef.current = () => { if (!raf) raf = requestAnimationFrame(loop); };
+    redrawRef.current();
 
     const io = new IntersectionObserver(
       ([e]) => {
         visible = e.isIntersecting;
+        redrawRef.current();
       },
       { threshold: 0.02 },
     );
     io.observe(wrap);
     const onVis = () => {
       visible = document.visibilityState === "visible";
+      redrawRef.current();
     };
     document.addEventListener("visibilitychange", onVis);
 
     return () => {
       cancelAnimationFrame(raf);
+      redrawRef.current = () => {};
       ro.disconnect();
       io.disconnect();
       document.removeEventListener("visibilitychange", onVis);
@@ -870,6 +817,7 @@ export default function BtcTrackerCore({
   };
 
   const onPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    redrawRef.current();
     const s = sim.current;
     const p = local(e);
     lastPointerRef.current = p;
@@ -907,7 +855,7 @@ export default function BtcTrackerCore({
         setHoverId(nextHovered);
       }
       if (nextHovered) positionHoverCard(p.x, p.y);
-      const opensPanel = hit != null && (hit.type === "holder" || hit.type === "mine");
+      const opensPanel = hit != null;
       e.currentTarget.style.cursor = opensPanel ? "pointer" : "grab";
     }
   };
@@ -930,6 +878,10 @@ export default function BtcTrackerCore({
       if (hit) {
         if (hit.type === "holder") focusHolder(hit.h);
         else if (hit.type === "mine") focusMine(hit.m);
+        else {
+          const route = FLOW_ROUTES.find((r) => r.id === hit.routeId);
+          if (route) focusRoute(route);
+        }
       }
     }
   };
@@ -951,13 +903,15 @@ export default function BtcTrackerCore({
     s.lastInteract = performance.now();
     hasMoved.current = true;
     setTouched(true);
+    redrawRef.current();
   };
 
   const selHolder = HOLDERS.find((v) => v.id === selected) ?? null;
   const selMine = selected?.startsWith("mine:")
     ? MINE_REGIONS.find((m) => m.id === selected.slice(5)) ?? null
     : null;
-  const hasFocus = selHolder !== null || selMine !== null;
+  const selRoute = selected?.startsWith("route:")
+    ? FLOW_ROUTES.find((r) => r.id === selected.slice(6)) ?? null : null;
 
   const hoverCard = (() => {
     if (!hoverId) return null;
@@ -967,7 +921,7 @@ export default function BtcTrackerCore({
       return {
         title: m.name,
         lines: [
-          `MINE SHARE ~${(m.share * 100).toFixed(0)}% · ${m.asOf}`,
+          `${mineReading(m, layers.mines)} · ${m.asOf}`,
           "STATIC REFERENCE · NOT LIVE",
         ],
         click: true,
@@ -978,8 +932,8 @@ export default function BtcTrackerCore({
       if (!route) return null;
       return {
         title: route.name,
-        lines: ["ILLUSTRATIVE LIQUIDITY PATH", "INTENSITY PENDING · FREE FEED"],
-        click: false,
+        lines: ["ILLUSTRATIVE MARKET CONNECTION", "CLICK TO EXPLORE RELATED LOCATIONS"],
+        click: true,
       };
     }
     const v = HOLDERS.find((x) => x.id === hoverId);
@@ -987,15 +941,12 @@ export default function BtcTrackerCore({
     return {
       title: v.title,
       lines: [
-        v.status === "connecting" ? "CONNECTING" : "WATCHLIST",
+        holderStatus(v, flow).toUpperCase(),
         v.kind.toUpperCase() + " LOCUS",
       ],
       click: true,
     };
   })();
-
-  const statusColor = (s: string) =>
-    s === "live" ? GOLD_CSS : s === "connecting" ? "var(--ink-2)" : "var(--ink-3)";
 
   return (
     <div ref={wrapRef} className={`relative h-full w-full ${className}`}>
@@ -1007,7 +958,12 @@ export default function BtcTrackerCore({
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
+          onPointerCancel={(e) => {
+            sim.current.pointers.delete(e.pointerId);
+            sim.current.dragging = false;
+            sim.current.pinchD = 0;
+            e.currentTarget.style.cursor = "grab";
+          }}
           onWheel={onWheel}
           aria-label="Gold mines, holders, and flow globe"
         />
@@ -1048,11 +1004,22 @@ export default function BtcTrackerCore({
         )}
       </AnimatePresence>
 
+      <div role="group" aria-label="Gold globe view" className="absolute left-3 top-4 z-20 flex flex-wrap gap-1 rounded-sm border border-[var(--line)] bg-[rgba(8,9,9,0.9)] p-1 md:left-6">
+        {([
+          { name: "Overview", flows: true, holders: true, mines: "production" },
+          { name: "Supply", flows: false, holders: false, mines: "production" },
+          { name: "Holdings", flows: false, holders: true, mines: "off" },
+          { name: "Flows", flows: true, holders: true, mines: "off" },
+        ] as const).map((preset) => <button key={preset.name} type="button" aria-pressed={layers.flows === preset.flows && layers.holders === preset.holders && layers.mines === preset.mines} onClick={() => { closePanel(); setLayers({ flows: preset.flows, holders: preset.holders, mines: preset.mines }); }} className="rounded-sm px-2 py-2 font-mono text-[9px] uppercase tracking-[0.1em] transition-colors hover:bg-[var(--depth-2)]" style={{ color: layers.flows === preset.flows && layers.holders === preset.holders && layers.mines === preset.mines ? GOLD_CSS : "var(--ink-3)" }}>{preset.name}</button>)}
+      </div>
+
       {/* left layers control */}
       <div className="absolute bottom-4 left-4 z-20 md:bottom-6 md:left-6">
         <button
           type="button"
           onClick={() => setLayersExpanded((v) => !v)}
+          aria-expanded={layersExpanded}
+          aria-controls="gold-layer-controls"
           className="rounded-sm border border-[var(--line)] bg-[rgba(8,9,9,0.85)] px-3 py-2 font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-2)] backdrop-blur-md transition-colors hover:text-[var(--ink)]"
         >
           Layers {layersExpanded ? "▾" : "▸"}
@@ -1060,6 +1027,7 @@ export default function BtcTrackerCore({
         <AnimatePresence>
           {layersExpanded && (
             <motion.div
+              id="gold-layer-controls"
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 6 }}
@@ -1074,6 +1042,7 @@ export default function BtcTrackerCore({
                 <button
                   key={key}
                   type="button"
+                  aria-pressed={on}
                   onClick={() =>
                     setLayers((L) => ({
                       ...L,
@@ -1090,6 +1059,7 @@ export default function BtcTrackerCore({
               ))}
               <button
                 type="button"
+                aria-pressed={layers.mines !== "off"}
                 onClick={() =>
                   setLayers((L) => {
                     if (L.mines !== "off") {
@@ -1116,6 +1086,7 @@ export default function BtcTrackerCore({
                     <button
                       key={mode}
                       type="button"
+                      aria-pressed={layers.mines === mode}
                       onClick={() => {
                         lastMinesRef.current = mode;
                         setLayers((L) => ({ ...L, mines: mode }));
@@ -1137,261 +1108,24 @@ export default function BtcTrackerCore({
 
       {/* intro hint */}
       {!touched && (
-        <p className="pointer-events-none absolute bottom-4 left-1/2 z-10 -translate-x-1/2 font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)] md:bottom-6">
-          Drag to rotate · scroll to zoom · click a holder
+        <p className="pointer-events-none absolute bottom-6 left-32 z-10 hidden font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--ink-3)] lg:block">
+          Drag · scroll to zoom · select a location or route
         </p>
       )}
 
-      {/* intel rail / focus panel */}
-      <aside
-        className={`absolute z-20 flex flex-col border border-[var(--line)] bg-[rgba(8,9,9,0.9)] backdrop-blur-md ${
-          narrow
-            ? "inset-x-3 bottom-14 max-h-[42vh] overflow-y-auto rounded-sm"
-            : "bottom-6 right-6 top-4 w-[340px] rounded-sm"
-        }`}
-      >
-        <div className="border-b border-[var(--line)] px-4 py-3">
-          <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
-            P·02 — Gold Tracker
-          </p>
-          <h3 className="mt-1 text-sm font-medium text-[var(--ink)]">
-            Mines · holders · flows
-          </h3>
-          <p className="mt-2 text-[11px] leading-relaxed text-[var(--ink-2)]">
-            Where gold is mined, who holds known stock (ETFs, COMEX, vaults, official
-            sector), and illustrative metal/paper paths. Holdings and warehouse
-            series connect when free feeds are verified — never invented.
-          </p>
-        </div>
-
-        <div className="border-b border-[var(--line)] px-4 py-3">
-          <p className="font-mono text-[8px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-            Spot · XAU
-          </p>
-          <p className="mt-1 font-mono text-2xl tabular-nums text-[var(--ink)]">
-            {formatPrice(priceSnap.price.value)}
-          </p>
-          <p className="mt-1 flex items-baseline justify-between gap-2">
-            <span
-              className="font-mono text-[10px] tabular-nums"
-              style={{
-                color:
-                  priceSnap.changes.d1 > 0
-                    ? GOLD_ACCENT
-                    : priceSnap.changes.d1 < 0
-                      ? "var(--ink-2)"
-                      : "var(--ink-3)",
-              }}
-            >
-              {formatPct(priceSnap.changes.d1)} · 1D
-            </span>
-            <span className="font-mono text-[8px] uppercase tracking-[0.16em] text-[var(--ink-3)]">
-              {priceSnap.source === "live" ? "live" : "baseline"} · {formatAsOf(priceSnap.asOf)}
-            </span>
-          </p>
-          <p className="mt-3 font-mono text-[8px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-            Stock / flow
-          </p>
-          {(() => {
-            const na = findMetric(flow.metrics, "etf_us", "etf_holdings_t");
-            const reg = findMetric(flow.metrics, "comex", "comex_registered_toz");
-            const fl = findMetric(flow.metrics, "etf_us", "etf_flow_t");
-            if (!na && !reg) {
-              return (
-                <>
-                  <p
-                    className="mt-1 font-mono text-[12px] uppercase tracking-[0.18em]"
-                    style={{ color: GOLD_CSS }}
-                  >
-                    {flow.status === "loading" ? "CONNECTING" : "PENDING · RUN FLOW CYCLE"}
-                  </p>
-                  <p className="mt-1 text-[10px] text-[var(--ink-3)]">
-                    Free COMEX warehouse + WGC ETF feeds land after migrate 018 + gold-flow cycle.
-                  </p>
-                </>
-              );
-            }
-            return (
-              <div className="mt-2 flex flex-col gap-1.5">
-                {na && (
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--ink-3)]">
-                      NA ETF
-                    </span>
-                    <span className="font-mono text-[11px] tabular-nums text-[var(--ink)]">
-                      {formatTonnes(na.value)}
-                      {fl ? (
-                        <span className="ml-2 text-[var(--ink-3)]">{formatFlowT(fl.value)}</span>
-                      ) : null}
-                    </span>
-                  </div>
-                )}
-                {reg && (
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--ink-3)]">
-                      COMEX reg
-                    </span>
-                    <span className="font-mono text-[11px] tabular-nums text-[var(--ink)]">
-                      {formatToz(reg.value)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-4 py-3">
-          <p className="font-mono text-[8px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-            Holder watchlist
-          </p>
-          <ul className="mt-2 flex flex-col gap-1.5">
-            {HOLDERS.map((v) => {
-              const live = holderLiveStatus(v);
-              return (
-              <li key={v.id}>
-                <button
-                  type="button"
-                  onClick={() =>
-                    selected === v.id ? closePanel() : focusHolder(v)
-                  }
-                  className="flex w-full items-baseline justify-between gap-2 rounded-sm px-1 py-1 text-left transition-colors hover:bg-[var(--depth-2)]"
-                  style={{
-                    outline:
-                      selected === v.id
-                        ? `1px solid ${GOLD_CSS}55`
-                        : undefined,
-                  }}
-                >
-                  <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--ink)]">
-                    {v.name}
-                  </span>
-                  <span
-                    className="shrink-0 font-mono text-[8px] uppercase tracking-[0.16em]"
-                    style={{ color: statusColor(live.label) }}
-                  >
-                    {live.label}
-                  </span>
-                </button>
-              </li>
-              );
-            })}
-          </ul>
-        </div>
-
-        {/* focus dock */}
-        <AnimatePresence mode="wait">
-          {hasFocus && (
-            <motion.div
-              key={selected ?? "focus"}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 8 }}
-              transition={{ duration: DUR.micro, ease: EASE_OUT as unknown as number[] }}
-              className="border-t border-[var(--line)] px-4 py-3"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  {selHolder && (() => {
-                    const live = holderLiveStatus(selHolder);
-                    const lines = holderMetricLines(selHolder);
-                    return (
-                    <>
-                      <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-                        {selHolder.kind} · {selHolder.label}
-                      </p>
-                      <h4 className="mt-1 text-base font-medium text-[var(--ink)]">
-                        {selHolder.title}
-                      </h4>
-                      <p
-                        className="mt-2 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.22em]"
-                        style={{ color: statusColor(live.label) }}
-                      >
-                        <span
-                          aria-hidden
-                          className="inline-block h-1 w-1 rounded-full"
-                          style={{ background: "currentColor" }}
-                        />
-                        {live.label}
-                        {lines.asOf ? ` · as of ${lines.asOf}` : ""}
-                      </p>
-                      <p
-                        className={`mt-3 font-mono ${
-                          lines.headline !== "—" ? "text-2xl text-[var(--ink)]" : "text-lg text-[var(--ink-3)]"
-                        }`}
-                      >
-                        {lines.headline}
-                      </p>
-                      <p className="mt-1 text-[11px] text-[var(--ink-3)]">
-                        {lines.rows.length
-                          ? selHolder.id === "etf_us"
-                            ? "WGC North America gold-ETF holdings"
-                            : selHolder.id === "comex"
-                              ? "COMEX registered warehouse stock"
-                              : "Live metric"
-                          : "No live holdings / warehouse figure on file yet"}
-                      </p>
-                      {lines.rows.length > 0 && (
-                        <div className="mt-3 flex flex-col gap-1.5">
-                          {lines.rows.map((r) => (
-                            <div key={r.k} className="flex items-baseline justify-between gap-2">
-                              <span className="text-[11px] text-[var(--ink-2)]">{r.k}</span>
-                              <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--ink)]">
-                                {r.v}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <p className="mt-3 text-[11px] leading-relaxed text-[var(--ink-2)]">
-                        {selHolder.note}
-                      </p>
-                    </>
-                    );
-                  })()}
-                  {selMine && (
-                    <>
-                      <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-                        Mine region
-                      </p>
-                      <h4 className="mt-1 text-base font-medium text-[var(--ink)]">
-                        {selMine.name}
-                      </h4>
-                      <p
-                        className="mt-2 font-mono text-[9px] uppercase tracking-[0.22em]"
-                        style={{ color: GOLD_CSS }}
-                      >
-                        Reference · {selMine.asOf}
-                      </p>
-                      <p className="mt-3 font-mono text-2xl text-[var(--ink)]">
-                        ~{(selMine.share * 100).toFixed(0)}%
-                      </p>
-                      <p className="mt-1 text-[11px] text-[var(--ink-3)]">
-                        Estimated mine production share
-                      </p>
-                      <p className="mt-3 text-[11px] leading-relaxed text-[var(--ink-2)]">
-                        Supply-side geography — where gold is mined, not where bars are vaulted.{" "}
-                        {MINES_SOURCE}.
-                      </p>
-                    </>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={closePanel}
-                  className="shrink-0 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)] hover:text-[var(--ink)]"
-                  aria-label="Close panel"
-                >
-                  Esc
-                </button>
-              </div>
-              <p className="mt-4 border-t border-[var(--line)] pt-3 font-mono text-[8px] uppercase tracking-[0.18em] text-[var(--ink-3)]">
-                Not investment advice · illustrative until live feeds connect
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </aside>
+      <GoldIntelPanel
+        narrow={narrow}
+        selectedHolder={selHolder}
+        selectedMine={selMine}
+        selectedRoute={selRoute}
+        price={priceSnap}
+        flow={flow}
+        mineMode={layers.mines}
+        focusHolder={focusHolder}
+        focusMine={focusMine}
+        focusRoute={focusRoute}
+        closePanel={closePanel}
+      />
     </div>
   );
 }

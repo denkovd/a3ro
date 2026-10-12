@@ -65,7 +65,9 @@ export function createHttpBtcProvider(
     async getSnapshot() {
       const res = await fetchMarketSnapshot(url);
       if (!res.ok) throw new Error(`btc api responded ${res.status}`);
-      return { ...map(await res.json()), source: "live" };
+      const snapshot = map(await res.json());
+      if (snapshot.price.value <= 0 || !Number.isFinite(Date.parse(snapshot.asOf))) throw new Error("Invalid BTC price observation");
+      return { ...snapshot, source: "live" };
     },
   };
 }
@@ -75,21 +77,27 @@ export function getBtcProvider(): BtcDataProvider {
   return createHttpBtcProvider(url);
 }
 
-/** Initial state is the static mock (SSR-safe, no hydration drift);
- *  the provider then fetches once and, on success, replaces it. */
+/** Refresh the stored price snapshot; preserve its original observation time. */
 export function useBtcSnapshot(): BtcSnapshot {
   const [snap, setSnap] = useState<BtcSnapshot>(MOCK_SNAPSHOT);
   useEffect(() => {
     const provider = getBtcProvider();
     let alive = true;
-    provider
-      .getSnapshot()
-      .then((s) => alive && setSnap(s))
-      .catch(() => {
-        /* API missing or empty — keep mock baseline */
-      });
+    let busy = false;
+    const load = async () => {
+      if (busy) return;
+      busy = true;
+      try {
+        const snapshot = await provider.getSnapshot();
+        if (alive) setSnap(snapshot);
+      } catch { /* UI distinguishes unavailable baseline from observed prices. */ }
+      finally { busy = false; }
+    };
+    void load();
+    const timer = setInterval(load, 60_000);
     return () => {
       alive = false;
+      clearInterval(timer);
     };
   }, []);
   return snap;
@@ -102,7 +110,7 @@ export const formatBtcPrice = (v: number) =>
 export const formatPct = (v: number) =>
   `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(Math.abs(v) < 10 ? 2 : 1)}%`;
 
-export const formatAsOf = (iso: string) => `${iso.slice(11, 16)} UTC`;
+export const formatAsOf = (iso: string) => `${iso.slice(0, 10)} · ${iso.slice(11, 16)} UTC`;
 
 export const CHANGE_ROWS: { key: ChangeKey; label: string }[] = [
   { key: "d1", label: "1 Day" },

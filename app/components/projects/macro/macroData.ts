@@ -158,6 +158,8 @@ export type MacroSnapshot = {
   allocationWeights: SleeveWeight[];
 
   errorMessage?: string;
+  /** A failed background refresh keeps the last reading visible. */
+  refreshError?: string;
 };
 
 const EMPTY: MacroSnapshot = {
@@ -422,23 +424,41 @@ export function useMacroSnapshot(): MacroSnapshot {
 
   useEffect(() => {
     let alive = true;
-    fetchMarketSnapshot("/api/macro/latest")
-      .then(async (res) => {
-        const body = await res.json().catch(() => ({}));
-        if (!alive) return;
+    let inFlight = false;
+    const refresh = async () => {
+      if (inFlight || document.visibilityState === "hidden") return;
+      inFlight = true;
+      try {
+        const res = await fetchMarketSnapshot("/api/macro/latest");
+        const body = await res.json();
         if (!res.ok) {
           const err = (body as Record<string, unknown>)?.error;
-          setSnap({ ...EMPTY, status: "error", errorMessage: typeof err === "string" ? err : `macro api ${res.status}` });
-          return;
+          throw new Error(typeof err === "string" ? err : `macro api ${res.status}`);
         }
-        setSnap(normalizeMacro(body));
-      })
-      .catch((err) => {
-        if (!alive) return;
-        setSnap({ ...EMPTY, status: "error", errorMessage: err instanceof Error ? err.message : "network error" });
-      });
+        const next = normalizeMacro(body);
+        if (next.status === "error") throw new Error(next.errorMessage);
+        if (alive) setSnap(next);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "network error";
+        if (alive) setSnap((previous) => previous.status === "live"
+          ? { ...previous, refreshError: message }
+          : { ...EMPTY, status: "error", errorMessage: message });
+      } finally {
+        inFlight = false;
+      }
+    };
+    void refresh();
+    const timer = window.setInterval(() => { void refresh(); }, 5 * 60 * 1000);
+    const onVisible = () => { void refresh(); };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    window.addEventListener("online", onVisible);
     return () => {
       alive = false;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+      window.removeEventListener("online", onVisible);
     };
   }, []);
 

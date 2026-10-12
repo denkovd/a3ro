@@ -12,6 +12,7 @@ backend/node_modules
 /.next/
 /.next-optimization/
 /.next-oil-review/
+/.next-btc-review/
 /supabase/.temp/
 /out/
 

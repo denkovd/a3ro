@@ -15,7 +15,7 @@ const MODULE_SEQUENCE: ModuleId[] = ["trend", "regime", "earnings", "australia"]
 
 const MODULE_META: Record<ModuleId, { label: string; route: string }> = {
   trend: { label: "Bull Market Finder", route: "/Projects/Bull-Market-Finder" },
-  regime: { label: "Regime Shift Finder", route: "/Projects/Regime-Shift" },
+  regime: { label: "US regime", route: "/Projects/Regime-Shift" },
   earnings: { label: "Earnings Beat Leaderboard", route: "/Projects/Earnings-Beat" },
   australia: { label: "Australia Watch", route: "/Projects/Australia-Watch" },
 };

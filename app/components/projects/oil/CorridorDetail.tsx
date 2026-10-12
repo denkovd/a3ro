@@ -6,12 +6,14 @@ import PhysicalOverview from "./PhysicalOverview";
 import { metricFreshness } from "./dataQuality";
 import { REFINERIES } from "./refineries";
 import type { FocusTarget } from "./types";
+import ChinaDetail from "./ChinaDetail";
 
 const NAMES: Record<string, string> = { tanker_transits_7d: "Tanker transits · 7-day average", tanker_volume_7d: "Tanker volume · 7-day average", bunker_sales: "Bunker sales · monthly", tanker_arrivals: "Tanker arrivals · monthly" };
 export default function CorridorDetail({ id, title, metrics, failed, onFocus }: {
   id: string; title: string; metrics: CorridorMetricLatest[] | null; failed: boolean; onFocus: (target: FocusTarget) => void;
 }) {
   const [expanded, setExpanded] = useState("tanker_transits_7d");
+  if (id === "china") return <ChinaDetail metrics={metrics} failed={failed} />;
   const corridor = id === "sg" ? "singapore" : id === "usgc" ? "usgulf" : id;
   const rows = (metrics ?? []).filter(m => m.corridor === corridor && NAMES[m.metric]);
   const facilities = REFINERIES.filter(r => r.corridorId === id);

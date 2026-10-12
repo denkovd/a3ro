@@ -3,9 +3,11 @@ import type { CorridorMetricLatest, LatestQuote } from "@a3ro/oil-backend";
 const DAY = 86_400_000;
 /** Observation age, not fetch age. Allow the source's normal publication lag. */
 export function metricFreshness(m: Pick<CorridorMetricLatest, "metric" | "periodDate">, now = Date.now()) {
+  const chinaMonthly = ["crude_imports", "crude_processing", "crude_production"].includes(m.metric);
   const monthly = m.metric === "bunker_sales" || m.metric === "tanker_arrivals";
   const daily = m.metric.endsWith("_spot");
-  const maxDays = monthly ? 75 : daily ? 7 : 14;
+  // China periods are stored at month start; allow the next release's publication lag and holidays.
+  const maxDays = chinaMonthly ? 90 : monthly ? 75 : daily ? 7 : 14;
   const date = Date.parse(`${m.periodDate.slice(0, 10)}T00:00:00Z`);
   return Number.isFinite(date) && now - date <= maxDays * DAY && date <= now + DAY ? "current" : "stale";
 }

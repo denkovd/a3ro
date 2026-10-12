@@ -144,7 +144,7 @@ export function bakeCorridor(pts: [number, number][]): { samples: Float32Array; 
 /* the two primary marks the teaser is allowed to show */
 export const PRIMARY_MARKS = [
   { label: "HORMUZ", sub: "EST. THROUGHPUT 80%", lon: 56.5, lat: 26.6, side: -1 as const, glyph: "ring" as const },
-  { label: "CHINA · DEMAND", sub: "WILDCARD", lon: 122.2, lat: 29.9, side: 1 as const, glyph: "diamond" as const },
+  { label: "CHINA · CRUDE", sub: "IMPORTS & REFINING", lon: 122.2, lat: 29.9, side: 1 as const, glyph: "diamond" as const },
 ];
 
 /* ── land dot builder (cached per density) ── */
