@@ -179,9 +179,10 @@ export default function AllocationPanel({ snap }: { snap: MacroSnapshot }) {
         than a default position.
       </p>
       <p className="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--ink-3)]">
-        This is the output of a mechanical rule, not a recommendation, and the rule has not yet been
-        validated against real price history — run <span className="font-mono">backtest:allocation</span>{" "}
-        to judge it. The regime scores behind it are reasoned rather than backtested.
+        This is the output of a mechanical rule, not a recommendation. The regime scores are
+        reasoned assumptions. <a href="#backtest-heading" className="underline underline-offset-4">Review
+        historical performance and test candidate rules below</a>; research results do not establish
+        how the rule would have performed with unrevised data available at the time.
       </p>
     </div>
   );

@@ -39,7 +39,7 @@ interface YahooChartResponse {
     result?: Array<{
       meta?: Record<string, unknown>;
       timestamp?: (number | null)[];
-      indicators?: { quote?: YahooQuote[] };
+      indicators?: { quote?: YahooQuote[]; adjclose?: { adjclose?: (number | null)[] }[] };
     }>;
     error?: { code: string; description: string } | null;
   };
@@ -108,9 +108,43 @@ export async function fetchDailyHistory(
   symbol: string,
   range: string = HISTORY_RANGE,
 ): Promise<RegimeBar[]> {
-  const url = `${BASE_URL}/${encodeURIComponent(symbol)}?interval=1d&range=${range}`;
+  // Yahoo silently coerces range=max to monthly bars. Explicit dates keep
+  // the full signal history daily. This starts far before any research window.
+  const query = range === "max"
+    ? `period1=631152000&period2=${Math.floor(Date.now() / 1000)}&interval=1d`
+    : `interval=1d&range=${range}`;
+  const url = `${BASE_URL}/${encodeURIComponent(symbol)}?${query}`;
   const body = await getJsonForSource<YahooChartResponse>(REGIME_SOURCE_ID, url, {
     classifyHttpError: classifyYahooError,
   });
+  if (body.chart?.result?.[0]?.meta?.dataGranularity && body.chart.result[0].meta.dataGranularity !== "1d")
+    throw new Error(`Yahoo returned non-daily bars for ${symbol}; refusing to score a daily signal.`);
   return parseYahooDaily(body, symbol);
+}
+
+/** Dividend/split-adjusted ETF prices for portfolio returns, not signals. */
+export async function fetchAdjustedHistory(symbol: string): Promise<RegimeBar[]> {
+  const body = await getJsonForSource<YahooChartResponse>(REGIME_SOURCE_ID,
+    `${BASE_URL}/${encodeURIComponent(symbol)}?interval=1d&period1=631152000&period2=${Math.floor(Date.now() / 1000)}`, { classifyHttpError: classifyYahooError });
+  return parseYahooAdjusted(body, symbol);
+}
+
+export function parseYahooAdjusted(body: YahooChartResponse, symbol: string): RegimeBar[] {
+  const result = body.chart?.result?.[0];
+  if (result?.meta?.dataGranularity && result.meta.dataGranularity !== "1d")
+    throw new Error(`Yahoo returned non-daily adjusted history for ${symbol}.`);
+  const adjusted = result?.indicators?.adjclose?.[0]?.adjclose;
+  if (!adjusted) throw new Error(`Adjusted closes missing for ${symbol}; refusing a price-return fallback.`);
+  const byDate = new Map<string, number>();
+  result?.timestamp?.forEach((t, i) => {
+    const close = adjusted[i];
+    if (typeof t === "number" && typeof close === "number" && Number.isFinite(close) && close > 0)
+      byDate.set(new Date(t * 1000).toISOString().slice(0, 10), close);
+  });
+  return parseYahooDaily(body, symbol).map(bar => {
+    const close = byDate.get(bar.date);
+    if (close === undefined) throw new Error(`Adjusted close missing for ${symbol} on ${bar.date}.`);
+    const scale = close / bar.close;
+    return { ...bar, open: bar.open * scale, high: bar.high * scale, low: bar.low * scale, close };
+  });
 }

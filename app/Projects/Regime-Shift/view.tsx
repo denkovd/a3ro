@@ -41,6 +41,7 @@ import MacroBriefOverlay, { HorizonRibbon } from "../../components/projects/macr
 import RiskMatrixPanel from "../../components/projects/macro/RiskMatrixPanel";
 import { LiquidityPanel, CostOfCapitalPanel } from "../../components/projects/macro/LiquidityPanel";
 import AllocationPanel from "../../components/projects/macro/AllocationPanel";
+import BacktestPanel from "../../components/projects/macro/BacktestPanel";
 import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
 import { macroFreshness, formatMacroUpdated, formatMacroPeriod } from "../../components/projects/macro/macroFreshness";
 
@@ -252,6 +253,7 @@ export default function RegimeShiftView() {
                Sits last among the substantive panels: it is the only
                block that depends on all three layers above it. */}
           {live && <AllocationPanel snap={snap} />}
+          <BacktestPanel />
 
           {/* ── oil overlay — demoted, collapsed, clearly labelled.
                This page used to LEAD with this block. It is one

@@ -95,6 +95,33 @@ export const RISK_SLEEVES: SleeveKey[] = ["stocks", "bitcoin"];
  *  sustainability read, not a stop-loss. */
 export const MAX_CYCLE_DRAG = 0.5;
 
+/** Versioned research settings. Passing these never changes the live defaults. */
+export interface AllocationSettings {
+  caps: Record<SleeveKey, number>;
+  regimeScores: Record<SleeveKey, Record<Quadrant, number>>;
+  vamsMultipliers: Record<VamsState, number>;
+  cycleDrag: number;
+}
+
+export const BASELINE_SETTINGS: AllocationSettings = {
+  caps: { stocks: 0.6, gold: 0.3, bitcoin: 0.1 },
+  regimeScores: structuredClone(SLEEVE_REGIME_SCORE),
+  vamsMultipliers: { ...VAMS_MULTIPLIER },
+  cycleDrag: MAX_CYCLE_DRAG,
+};
+
+export function validateAllocationSettings(settings: AllocationSettings): void {
+  const fraction = (n: number) => Number.isFinite(n) && n >= 0 && n <= 1;
+  if (!fraction(settings.cycleDrag) ||
+      SLEEVES.some(s => !fraction(settings.caps[s.key])) ||
+      Object.values(settings.caps).reduce((a, b) => a + b, 0) > 1 + 1e-9 ||
+      Object.values(settings.vamsMultipliers).some(n => !fraction(n)) ||
+      SLEEVES.some(s => Object.keys(SLEEVE_REGIME_SCORE[s.key]).some(q =>
+        !fraction(settings.regimeScores[s.key][q as Quadrant])))) {
+    throw new Error("Caps must total at most 100%; all allocation settings must be between 0 and 100%.");
+  }
+}
+
 export interface AllocationInput {
   date: string;
   /** Regime to allocate against. Prefer the MARKET's modal regime over
@@ -144,7 +171,8 @@ const round4 = (x: number) => Math.round(x * 10_000) / 10_000;
  * has no opinion, and expressing "no opinion" as a default 60/30/10
  * would silently turn a data outage into a full risk position.
  */
-export function computeAllocation(input: AllocationInput): Allocation {
+export function computeAllocation(input: AllocationInput, settings?: AllocationSettings): Allocation {
+  if (settings) validateAllocationSettings(settings);
   const regime = input.marketRegime ?? input.economicQuadrant;
   const regimeSource: Allocation["regimeSource"] = input.marketRegime
     ? "market"
@@ -158,19 +186,20 @@ export function computeAllocation(input: AllocationInput): Allocation {
   const weights: SleeveWeight[] = SLEEVES.map((s) => {
     const state = input.states[s.key] ?? "PENDING";
     const available = !unavailable.has(s.key);
-    const regimeScore = regime ? SLEEVE_REGIME_SCORE[s.key][regime] : 0;
-    const vamsMultiplier = VAMS_MULTIPLIER[state];
+    const cap = settings?.caps[s.key] ?? s.cap;
+    const regimeScore = regime ? (settings?.regimeScores ?? SLEEVE_REGIME_SCORE)[s.key][regime] : 0;
+    const vamsMultiplier = (settings?.vamsMultipliers ?? VAMS_MULTIPLIER)[state];
     const cycleDrag = RISK_SLEEVES.includes(s.key)
-      ? 1 - (headwinds / 6) * MAX_CYCLE_DRAG
+      ? 1 - (headwinds / 6) * (settings?.cycleDrag ?? MAX_CYCLE_DRAG)
       : 1;
 
     const weight =
-      !available || !regime ? 0 : round4(s.cap * regimeScore * vamsMultiplier * cycleDrag);
+      !available || !regime ? 0 : Math.min(cap, round4(cap * regimeScore * vamsMultiplier * cycleDrag));
 
     return {
       key: s.key,
       weight,
-      cap: s.cap,
+      cap,
       regimeScore: round4(regimeScore),
       vamsMultiplier,
       cycleDrag: round4(cycleDrag),

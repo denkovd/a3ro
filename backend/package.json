@@ -47,6 +47,9 @@
     "run:btc-flow": "tsx scripts/run-btc-flow.ts",
     "backtest:affinity": "tsx scripts/backtest-affinity.ts",
     "backtest:allocation": "tsx scripts/backtest-allocation.ts",
+    "backtest:history": "tsx scripts/build-backtest-history.ts",
+    "backtest:benchmarks": "tsx scripts/refresh-backtest-benchmarks.ts",
+    "backtest:vams21": "tsx scripts/refresh-backtest-vams21.ts",
     "run:earnings-weekly": "tsx scripts/run-earnings-weekly.ts",
     "backfill:earnings": "tsx scripts/run-earnings-backfill.ts",
     "test": "tsx --test tests/**/*.test.ts"

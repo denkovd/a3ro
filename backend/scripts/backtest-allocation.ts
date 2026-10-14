@@ -15,11 +15,11 @@
    silently changes its investable universe partway through is the kind
    of backtest that looks great and means nothing.
 
-   At each monthly step the script rebuilds, from data dated ≤ that
-   step: the GRID quadrant, the full 30-asset VAMS risk matrix, and the
-   six cycles. So the allocation sees exactly what the live page would
-   have seen — no look-ahead, and no shortcut of reusing today's regime
-   for history.
+   Legacy exploratory reconstruction. It uses current revised FRED
+   values by observation date, not verified release dates or vintages.
+   Results are NOT point-in-time investable performance. The dashboard
+   dataset (backtest:history) adds approximate release lags, next-session
+   execution and daily ETF total-return marks. Both remain research.
 ──────────────────────────────────────────────────────────────── */
 
 import { writeFileSync } from "node:fs";
