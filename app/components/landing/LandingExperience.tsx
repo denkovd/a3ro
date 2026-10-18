@@ -14,11 +14,13 @@ const BullFinder = dynamic(() => import("../projects/BullFinder"), { ssr: false,
 const Regime = dynamic(() => import("../projects/RegimeShiftFinder"), { ssr: false, loading: () => <ModulePlaceholder name="Regime" href="/Projects/Regime-Shift" /> });
 const Earnings = dynamic(() => import("../projects/EarningsBeat"), { ssr: false, loading: () => <ModulePlaceholder name="Earnings Beat" href="/Projects/Earnings-Beat" /> });
 const Australia = dynamic(() => import("../projects/AustraliaWatch"), { ssr: false, loading: () => <ModulePlaceholder name="Australia Watch" href="/Projects/Australia-Watch" /> });
+const Horizon = dynamic(() => import("../projects/MacroHorizon"), { ssr: false, loading: () => <ModulePlaceholder name="Macro Horizon" href="/Projects/Macro-Horizon" /> });
 const MODULES = [
   { name: "Trend Finder", href: "/Projects/Bull-Market-Finder", Component: BullFinder },
   { name: "Regime", href: "/Projects/Regime-Shift", Component: Regime },
   { name: "Earnings Beat", href: "/Projects/Earnings-Beat", Component: Earnings },
   { name: "Australia Watch", href: "/Projects/Australia-Watch", Component: Australia },
+  { name: "Macro Horizon", href: "/Projects/Macro-Horizon", Component: Horizon },
   { name: "Commodity Watch", href: "/Projects/Oil-Tracker", Component: CommodityWatch },
 ] as const;
 type Frame = ReturnType<typeof sequenceState>;
@@ -206,7 +208,7 @@ export default function LandingExperience() {
             {!animated && <><span id="modules" className="landing-static-anchor" /><span id="method" className="landing-static-anchor" /></>}
             <motion.div className="module-heading" style={{ opacity: animated ? modulesOpacity : 1 }}>
               <h2 className="landing-kicker">02 / Modules</h2>
-              <p className="landing-kicker" aria-hidden><motion.span>{animated ? activeText : "05"}</motion.span> / 05</p>
+              <p className="landing-kicker" aria-hidden><motion.span>{animated ? activeText : String(MODULES.length).padStart(2, "0")}</motion.span> / {String(MODULES.length).padStart(2, "0")}</p>
             </motion.div>
             <ol className="module-orbit" aria-label="Intelligence modules">
               {MODULES.map((module, index) => <OrbitCard key={module.href} index={index} frame={frame} animated={animated}

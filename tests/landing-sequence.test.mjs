@@ -70,3 +70,16 @@ test("the helix changes lateral position, height and depth, with a shallower pho
   assert.ok(phone.x < desktop.x && Math.abs(phone.z) < Math.abs(desktop.z));
   assert.ok(orbitPose(0, 0.5, 1200, 800, false).x < 0);
 });
+
+for (const mobile of [false, true]) {
+  test(`${mobile ? "phone" : "desktop"}: the six-module sequence reaches the final card before release`, () => {
+    const timing = sequenceTiming(mobile, 6);
+    for (let index = 0; index < 6; index++) {
+      const state = sequenceState(readingProgress(index, timing), timing);
+      assert.equal(state.active, index);
+      assert.equal(state.release, 0);
+    }
+    assert.equal(sequenceState(1, timing).active, 5);
+    assert.equal(sequenceState(1, timing).release, 1);
+  });
+}

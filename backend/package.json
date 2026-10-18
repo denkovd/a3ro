@@ -35,6 +35,8 @@
     "refresh:universe": "tsx scripts/refresh-universe.ts",
     "migrate:win": "tsx scripts/migrate.ts",
     "run:macro": "tsx scripts/run-macro.ts",
+    "run:horizon": "tsx scripts/run-horizon.ts",
+    "verify:horizon": "tsx scripts/verify-horizon.ts",
     "backfill:gold": "tsx scripts/backfill-gold.ts",
     "run:gold": "tsx scripts/run-gold.ts",
     "run:gold-flow": "tsx scripts/run-gold-flow.ts",

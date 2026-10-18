@@ -14,6 +14,7 @@ backend/.backtest-cache/
 /.next-optimization/
 /.next-oil-review/
 /.next-btc-review/
+/.next-horizon-review/
 /supabase/.temp/
 /out/
 

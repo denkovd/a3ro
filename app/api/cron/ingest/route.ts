@@ -36,6 +36,7 @@ import type {
   AustraliaWatchCycleReport,
 } from "@a3ro/oil-backend";
 import { requireCronAuth } from "../../_lib/cronAuth";
+import { runHorizonCycle, type HorizonCycleReport } from "../../../../backend/src/ingest/horizonCycle";
 
 export const runtime = "nodejs";
 // Never statically pre-render at build time — this route runs a full
@@ -161,6 +162,13 @@ export async function GET(request: Request) {
       australiaWatch = { error: e instanceof Error ? e.message : String(e) };
     }
 
+    let horizon: HorizonCycleReport | { error: string };
+    try {
+      horizon = await runHorizonCycle(db);
+    } catch {
+      horizon = { error: "Macro Horizon source cycle failed" };
+    }
+
     return Response.json({
       ...report,
       corridors,
@@ -174,6 +182,7 @@ export async function GET(request: Request) {
       btc,
       btcFlow,
       australiaWatch,
+      horizon,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
