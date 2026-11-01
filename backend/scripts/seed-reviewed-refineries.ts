@@ -1,12 +1,13 @@
 import { ensureDatabaseUrl } from "./loadEnv";
 import { Client } from "pg";
+import { pgConnectionConfig } from "../src/storage/pgConfig";
 import { REFINERIES } from "../../lib/oil/refineries";
 import { upsertRefineryEvents, type StoredRefineryEvent } from "../src/storage/refineryRepo";
 
 // One-time persistence of reviewed PDF history. Verification remains the review
 // date; neither publication dates nor a live successful source poll are invented.
 ensureDatabaseUrl();
-const client = new Client({ connectionString: process.env.DATABASE_URL });
+const client = new Client(pgConnectionConfig());
 try {
   await client.connect();
   const events: StoredRefineryEvent[] = REFINERIES.filter(r => r.id === "haifa-bazan").flatMap(r => r.events.map(e => ({

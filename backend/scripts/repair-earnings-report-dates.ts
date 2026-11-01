@@ -4,6 +4,7 @@
  * Finnhub's normalized period-end field. Dry-run by default; --apply fills
  * only NULL report_date values and preserves existing source payloads. */
 import { Pool } from "pg";
+import { pgConnectionConfig } from "../src/storage/pgConfig";
 
 const reports = [
   { ticker: "AAPL", year: 2026, quarter: 3, date: "2026-07-30", source: "https://www.apple.com/newsroom/2026/07/apple-reports-third-quarter-results/" },
@@ -17,7 +18,7 @@ const reports = [
 
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
 const apply = process.argv.includes("--apply");
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 1, connectionTimeoutMillis: 10000, query_timeout: 15000 });
+const pool = new Pool({ ...pgConnectionConfig(), max: 1, query_timeout: 15000 });
 let inTransaction = false;
 try {
   if (apply) {

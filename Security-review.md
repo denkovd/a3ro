@@ -1,3 +1,5 @@
+> Historical report: superseded by [the verified 29 October 2026 review](docs/security-review-2026-10-29.md). Findings and package versions below describe an older checkout.
+
 ---
 High
 

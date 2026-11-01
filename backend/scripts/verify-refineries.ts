@@ -1,7 +1,8 @@
 import { ensureDatabaseUrl } from "./loadEnv";
 import { Client } from "pg";
+import { pgConnectionConfig } from "../src/storage/pgConfig";
 ensureDatabaseUrl();
-const client = new Client({ connectionString: process.env.DATABASE_URL });
+const client = new Client(pgConnectionConfig());
 await client.connect();
 try {
   const rows = await client.query(`select c.relname,c.relrowsecurity,

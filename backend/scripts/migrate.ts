@@ -12,6 +12,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ensureDatabaseUrl } from "./loadEnv";
+import { pgConnectionConfig } from "../src/storage/pgConfig";
 
 async function main() {
   const arg = process.argv[2];
@@ -36,7 +37,7 @@ async function main() {
   // pre-existing, earnings-unrelated typecheck break fixed in passing
   // because it blocked `npm run typecheck` for the whole workspace.
   const { Client } = await import("pg");
-  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  const client = new Client(pgConnectionConfig());
   await client.connect();
   try {
     console.log(`Running ${arg} ...`);

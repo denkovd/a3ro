@@ -1,3 +1,5 @@
+import { pgConnectionConfig } from "./pgConfig";
+
 /* ────────────────────────────────────────────────────────────────
    DB access. Everything downstream depends on the minimal Queryable
    interface, not on `pg` — so the repo layer is testable with a stub
@@ -40,7 +42,7 @@ export async function createDb(connectionString = process.env.DATABASE_URL): Pro
   const { setDefaultResultOrder } = await import("node:dns");
   setDefaultResultOrder("ipv4first");
   const { Pool } = await import("pg");
-  const pool = new Pool({ connectionString, max: 5 });
+  const pool = new Pool({ ...pgConnectionConfig(connectionString), max: 5 });
   g.__a3roPgPools.set(connectionString, pool);
   return pool;
 }

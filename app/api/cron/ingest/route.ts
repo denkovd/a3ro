@@ -18,9 +18,8 @@
 
    Auth: verifies Authorization header against CRON_SECRET (Vercel's
    own cron feature sends this automatically when CRON_SECRET is
-   configured). Fails closed in production if CRON_SECRET is unset —
-   see app/api/_lib/cronAuth.ts. Local dev without CRON_SECRET is not
-   guarded (allows iterating locally).
+   configured). Fails closed in every environment if CRON_SECRET is
+   unset — see app/api/_lib/cronAuth.ts.
 ──────────────────────────────────────────────────────────────── */
 
 import {

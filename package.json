@@ -2,11 +2,15 @@
   "name": "a3ro",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test:security": "node --test tests/api-security.test.mjs && npm --prefix backend run test:security",
     "test:optimization": "node --test tests/optimization.test.mjs",
     "test:landing": "node --test tests/landing-sequence.test.mjs",
     "test:oil": "node --test tests/oil-intelligence.test.mjs",
@@ -14,20 +18,25 @@
   },
   "dependencies": {
     "framer-motion": "^11.3.0",
-    "next": "^14.2.35",
+    "next": "15.5.28",
     "pg": "^8.11.5",
-    "react": "^18",
-    "react-dom": "^18",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/pg": "^8.11.6",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "autoprefixer": "^10.0.1",
-    "postcss": "^8",
+    "postcss": "^8.5.32",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "$postcss"
+    }
   }
 }

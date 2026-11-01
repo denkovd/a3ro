@@ -11,6 +11,7 @@ backend/.backtest-cache/
 
 # next.js
 /.next/
+/.next-security-review/
 /.next-optimization/
 /.next-oil-review/
 /.next-btc-review/

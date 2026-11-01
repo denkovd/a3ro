@@ -12,6 +12,7 @@
 import { lookup } from "node:dns/promises";
 import { setDefaultResultOrder } from "node:dns";
 import pg from "pg";
+import { pgConnectionConfig } from "../src/storage/pgConfig";
 
 // GHA ubuntu-latest often has broken IPv6 routing. Prefer A records
 // so the pooler (dual-stack) connects over IPv4 instead of ENETUNREACH.
@@ -78,7 +79,7 @@ async function main(): Promise<void> {
   }
 
   const pool = new pg.Pool({
-    connectionString: raw,
+    ...pgConnectionConfig(raw),
     max: 1,
     connectionTimeoutMillis: 15_000,
   });

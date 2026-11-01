@@ -14,6 +14,7 @@
 ──────────────────────────────────────────────────────────────── */
 
 import type { Pool } from "pg";
+import { pgConnectionConfig } from "../../../../backend/src/storage/pgConfig";
 import { revenueComparisonStatus, type RevenueComparisonStatus } from "../../../../lib/earningsQuality";
 
 // NOTE ON `pg`'s TYPES: under this repo's tsconfig ("moduleResolution":
@@ -72,7 +73,7 @@ export async function createPool(connectionString = process.env.DATABASE_URL): P
   const existing = g.__a3roLeaderboardPgPool.get(connectionString);
   if (existing) return existing;
   const { Pool: PgPool } = await import("pg");
-  const pool = new PgPool({ connectionString, max: 5 });
+  const pool = new PgPool({ ...pgConnectionConfig(connectionString), max: 5 });
   g.__a3roLeaderboardPgPool.set(connectionString, pool);
   return pool;
 }

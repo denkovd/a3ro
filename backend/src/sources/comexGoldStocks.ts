@@ -11,6 +11,7 @@
 
 import * as XLSX from "xlsx";
 import { SourceError } from "../core/types";
+import { getResponseForSource } from "./http";
 import type { GoldFlowMetricInput } from "../storage/goldFlowRepo";
 
 const SOURCE_ID = "comex-stocks";
@@ -108,31 +109,14 @@ export function parseComexGoldStocksXls(buf: ArrayBuffer | Buffer | Uint8Array):
 }
 
 export async function fetchComexGoldStocks(): Promise<ComexGoldStocksReading> {
-  const timeoutMs = 20_000;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  let res: Response;
-  try {
-    res = await fetch(REPORT_URL, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; a3ro-gold-tracker/1.0)",
-        Accept: "application/vnd.ms-excel,*/*",
-        Referer: "https://www.cmegroup.com/solutions/clearing/operations-and-deliveries/nymex-delivery-notices.html",
-      },
-    });
-  } catch (cause) {
-    clearTimeout(timer);
-    const timedOut = cause instanceof Error && cause.name === "AbortError";
-    throw new SourceError(
-      SOURCE_ID,
-      "network",
-      timedOut ? `timeout after ${timeoutMs}ms` : String(cause),
-      { cause },
-    );
-  } finally {
-    clearTimeout(timer);
-  }
+  const { response: res, body } = await getResponseForSource(SOURCE_ID, REPORT_URL, {
+    timeoutMs: 20_000,
+    headers: {
+      "User-Agent": "Mozilla/5.0 (compatible; a3ro-gold-tracker/1.0)",
+      Accept: "application/vnd.ms-excel,*/*",
+      Referer: "https://www.cmegroup.com/solutions/clearing/operations-and-deliveries/nymex-delivery-notices.html",
+    },
+  });
 
   if (!res.ok) {
     const kind =
@@ -148,7 +132,7 @@ export async function fetchComexGoldStocks(): Promise<ComexGoldStocksReading> {
     });
   }
 
-  const buf = Buffer.from(await res.arrayBuffer());
+  const buf = Buffer.from(body);
   if (buf.length < 100) {
     throw new SourceError(SOURCE_ID, "bad_payload", `COMEX Gold Stocks body too small (${buf.length}b)`);
   }

@@ -39,7 +39,7 @@ export async function GET(req: Request) {
     const rows = await getRecentTransitions(db, days, strategy);
     return Response.json({ days, strategy, count: rows.length, rows });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+    const message = "Request could not be completed";
     return Response.json({ error: message }, { status: 500 });
   }
 }

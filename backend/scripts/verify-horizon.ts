@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Client } from "pg";
+import { pgConnectionConfig } from "../src/storage/pgConfig";
 import { archiveHorizonDataset, getStoredHorizon, recordHorizonFetch } from "../src/storage/horizonRepo";
 import type { HorizonDataset } from "../src/horizon/types";
 import type { Queryable } from "../src/storage/db";
@@ -9,7 +10,7 @@ import { ensureDatabaseUrl } from "./loadEnv";
 
 async function main() {
   ensureDatabaseUrl();
-  const client = new Client({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 5000, query_timeout: 5000 });
+  const client = new Client({ ...pgConnectionConfig(), connectionTimeoutMillis: 5000, query_timeout: 5000 });
   await client.connect();
   try {
     await client.query("create temporary table horizon_verification_session (id integer)");

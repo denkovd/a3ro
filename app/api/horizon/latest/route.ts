@@ -55,6 +55,9 @@ export async function GET() {
       console.error("Macro Horizon official source refresh failed");
     }
   }
-  const snapshot = buildHorizonSnapshot(stored.datasets, stored.states, now, archive);
+  const publicStates = stored.states.map(state => ({
+    ...state, error: state.error ? "Official source could not be verified on this attempt" : null,
+  }));
+  const snapshot = buildHorizonSnapshot(stored.datasets, publicStates, now, archive);
   return Response.json(snapshot, { headers: { "Cache-Control": "no-store" } });
 }

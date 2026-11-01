@@ -17,7 +17,7 @@ export async function GET() {
     return Response.json({ tape });
   } catch (err) {
     return Response.json(
-      { error: err instanceof Error ? err.message : String(err) },
+      { error: "Request could not be completed" },
       { status: 500 },
     );
   }

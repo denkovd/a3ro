@@ -262,11 +262,10 @@ export async function GET(request: Request) {
     // to the catch below and become 503, not a silently-null field.
     dataAsOf = await getDataAsOf(pool);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
     if (isDbUnavailable(err)) {
-      return errorResponse("DB_UNAVAILABLE", message, 503);
+      return errorResponse("DB_UNAVAILABLE", "Leaderboard is temporarily unavailable", 503);
     }
-    return errorResponse("INTERNAL", message, 500);
+    return errorResponse("INTERNAL", "Leaderboard could not be loaded", 500);
   }
 
   if (ticker !== null && dataRows.length === 0) {
@@ -307,7 +306,6 @@ export async function GET(request: Request) {
       headers: { "Cache-Control": RANKING_CONFIG.CACHE_CONTROL },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return errorResponse("INTERNAL", message, 500);
+    return errorResponse("INTERNAL", "Leaderboard could not be loaded", 500);
   }
 }

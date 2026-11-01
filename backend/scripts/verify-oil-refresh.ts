@@ -1,9 +1,10 @@
 import { ensureDatabaseUrl } from "./loadEnv";
 import { Client } from "pg";
+import { pgConnectionConfig } from "../src/storage/pgConfig";
 
 // Read-only: use existing local database credentials without retrieving secrets.
 ensureDatabaseUrl();
-const client = new Client({ connectionString: process.env.DATABASE_URL });
+const client = new Client(pgConnectionConfig());
 try {
   await client.connect();
   await client.query("begin read only");

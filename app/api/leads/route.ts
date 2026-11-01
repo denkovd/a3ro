@@ -1,6 +1,7 @@
 // Write-only endpoint: captures pro-tier access requests from the Oil
 // Tracker's contact panel. No read path — leads are consumed out-of-band.
 import { createDb, insertLead } from "@a3ro/oil-backend";
+import { createLeadBurstGuard, LeadRequestError, readLeadRequest } from "../_lib/leadRequest";
 
 // REQUIRED: `pg` speaks raw TCP, which Vercel's Edge runtime cannot do.
 // Every route/cron handler that touches storage/ must pin the Node runtime.
@@ -9,11 +10,14 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/;
+const guardBurst = createLeadBurstGuard();
 
 export async function POST(req: Request) {
+  const limited = guardBurst(req);
+  if (limited) return limited;
   try {
-    const body: unknown = await req.json();
-    if (typeof body !== "object" || body === null) {
+    const body = await readLeadRequest(req);
+    if (typeof body !== "object" || body === null || Array.isArray(body)) {
       return Response.json({ error: "Invalid request body" }, { status: 400 });
     }
     const { email, message, context, company } = body as Record<string, unknown>;
@@ -43,9 +47,11 @@ export async function POST(req: Request) {
 
     return Response.json({ ok: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+    if (error instanceof LeadRequestError) {
+      return Response.json({ error: error.message }, { status: error.status });
+    }
     return Response.json(
-      { error: message },
+      { error: "Request could not be completed" },
       { status: 500 }
     );
   }

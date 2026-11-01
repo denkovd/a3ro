@@ -12,7 +12,7 @@
 # on a schedule (e.g., every 15 minutes) rather than trying to implement a long-lived
 # polling process inside the container.
 
-FROM node:20-slim
+FROM node:24-slim
 
 # Set working directory
 WORKDIR /app
@@ -30,6 +30,8 @@ COPY src ./src
 COPY scripts ./scripts
 COPY migrations ./migrations
 COPY tsconfig.json .
+
+USER node
 
 # Default command: run the ingest cycle
 CMD ["npm", "run", "ingest"]

@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     return Response.json({ alerts });
   } catch (err) {
     return Response.json(
-      { error: err instanceof Error ? err.message : String(err) },
+      { error: "Request could not be completed" },
       { status: 500 },
     );
   }

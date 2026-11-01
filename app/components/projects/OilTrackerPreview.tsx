@@ -37,6 +37,7 @@ const GATES = [
 export default function OilTrackerPreview({
   className = "",
   labels = true,
+  cinematic = false,
   initialView,
   viewRef,
   rotation,
@@ -47,6 +48,7 @@ export default function OilTrackerPreview({
 }: {
   className?: string;
   labels?: boolean;
+  cinematic?: boolean;
   initialView?: OTView | null;
   viewRef?: MutableRefObject<OTView | null>;
   rotation?: MotionValue<number>;
@@ -101,8 +103,15 @@ export default function OilTrackerPreview({
       if (viewRef) viewRef.current = { lon, lat, zoom: 1 };
 
       const { w, h } = size;
-      const cx = w * 0.5, cy = h * 0.53;
-      const R = Math.min(w * 0.42, h * 0.44);
+      const detail = cinematic ? Math.min(1, scrollRotation / 100) : 1;
+      const framing = detail * detail * (3 - 2 * detail);
+      const routeEntrance = cinematic && !frozen && !reduced ? Math.max(0, Math.min(1, (el - 500) / 1100)) : 1;
+      const mobile = w < 768;
+      const cx = cinematic ? w * (mobile ? 0.53 : 0.77 - framing * 0.27) : w * 0.5;
+      const cy = cinematic ? h * (mobile ? 0.76 - framing * 0.23 : 0.53) : h * 0.53;
+      const R = cinematic
+        ? Math.min(w * (mobile ? 0.58 : 0.4), h * (mobile ? 0.34 + framing * 0.1 : 0.57 - framing * 0.13))
+        : Math.min(w * 0.42, h * 0.44);
       if (!w || !h) return;
       const rx = R * (1 - collapse) + 0.65 * collapse;
       const ry = R + (h * 0.55 - R) * collapse;
@@ -110,10 +119,18 @@ export default function OilTrackerPreview({
       ctx.clearRect(0, 0, w, h);
       ctx.globalAlpha = controlled ? 1 : Math.min(1, el / 650);
 
-      /* sheen */
+      /* A restrained halo and a directional sheen give the hero depth. */
+      if (cinematic && collapse < 0.8) {
+        const halo = ctx.createRadialGradient(cx, cy, R * 0.72, cx, cy, R * 1.25);
+        halo.addColorStop(0, "rgba(190,211,207,0)");
+        halo.addColorStop(0.65, `rgba(145,183,178,${0.065 * (1 - collapse)})`);
+        halo.addColorStop(1, "rgba(145,183,178,0)");
+        ctx.fillStyle = halo;
+        ctx.fillRect(cx - R * 1.25, cy - R * 1.25, R * 2.5, R * 2.5);
+      }
       const sph = ctx.createRadialGradient(cx - R * 0.35, cy - R * 0.4, R * 0.1, cx, cy, R * 1.02);
-      sph.addColorStop(0, "rgba(232,235,232,0.045)");
-      sph.addColorStop(0.6, "rgba(232,235,232,0.012)");
+      sph.addColorStop(0, cinematic ? "rgba(203,222,219,0.11)" : "rgba(232,235,232,0.045)");
+      sph.addColorStop(0.6, cinematic ? "rgba(203,222,219,0.025)" : "rgba(232,235,232,0.012)");
       sph.addColorStop(1, "rgba(232,235,232,0)");
       ctx.fillStyle = sph;
       ctx.beginPath();
@@ -146,7 +163,8 @@ export default function OilTrackerPreview({
         rot(dots[i], dots[i + 1], dots[i + 2], o);
         if (o[2] <= 0.02) continue;
         const sx = cx + o[0] * rx, sy = cy - o[1] * ry;
-        const a = (0.15 + 0.6 * Math.pow(o[2], 1.6)) * (1 - collapse * 0.96);
+        const light = cinematic ? 0.85 + 0.35 * Math.max(0, -o[0] * 0.6 + o[1] * 0.4) : 1;
+        const a = (0.15 + 0.6 * Math.pow(o[2], 1.6)) * light * (1 - collapse * 0.96);
         const ds = (1.1 + 1.2 * o[2]) * Math.min(1.25, Math.max(0.85, R / 260));
         ctx.fillStyle = DOT(a);
         ctx.fillRect(sx - ds / 2, sy - ds / 2, ds, ds);
@@ -160,6 +178,7 @@ export default function OilTrackerPreview({
 
       /* Shared route geometry keeps the preview aligned with the watch. */
       for (const route of ROUTES) {
+        if (cinematic && route.tier !== "major" && detail < 0.35) continue;
         const artery = route;
         const S = artery.samples, N = artery.n;
         ctx.beginPath();
@@ -170,7 +189,7 @@ export default function OilTrackerPreview({
           const sx = cx + o[0] * rx, sy = cy - o[1] * ry;
           if (!pen) { ctx.moveTo(sx, sy); pen = true; } else ctx.lineTo(sx, sy);
         }
-        ctx.strokeStyle = AMB((route.tier === "major" ? 0.48 : route.tier === "medium" ? 0.3 : 0.18) * (1 - collapse));
+        ctx.strokeStyle = AMB((route.tier === "major" ? (cinematic ? 0.55 : 0.48) : route.tier === "medium" ? 0.3 : 0.18) * (1 - collapse) * routeEntrance);
         ctx.lineWidth = route.tier === "major" ? 1.6 : route.tier === "medium" ? 1.1 : 0.7;
         ctx.stroke();
 
@@ -209,7 +228,7 @@ export default function OilTrackerPreview({
       }
 
       /* Gate crosshairs use the watch's neutral appearance. */
-      if (collapse < 0.6) {
+      if (collapse < 0.6 && (!cinematic || detail > 0.6)) {
         ctx.font = '500 8px "JetBrains Mono", ui-monospace, monospace';
         for (const gate of GATES) {
           rot(...vec(gate.lon, gate.lat), o);
@@ -232,7 +251,7 @@ export default function OilTrackerPreview({
       }
 
       /* Production is the watch's default producer layer. */
-      if (collapse < 0.6) {
+      if (collapse < 0.6 && (!cinematic || detail > 0.45)) {
         const labelRects: [number, number, number, number][] = [];
         const scale = Math.min(1.25, Math.max(0.8, R / 260));
         ctx.font = '500 8px "JetBrains Mono", ui-monospace, monospace';
@@ -270,7 +289,8 @@ export default function OilTrackerPreview({
       /* Current corridor and demand markers. */
       if (labels && collapse < 0.6) {
         ctx.font = '500 9px "JetBrains Mono", ui-monospace, monospace';
-        for (const m of MARKS) {
+        for (const [index, m] of MARKS.entries()) {
+          if (cinematic && detail < 0.35 && index > 1) continue;
           rot(...vec(m.lon, m.lat), o);
           if (o[2] < 0.12) continue;
           const sx = cx + o[0] * rx, sy = cy - o[1] * ry;
@@ -380,7 +400,7 @@ export default function OilTrackerPreview({
       window.removeEventListener("resize", onResize);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rotation, morph, autoRotate, frozen, reduced, initialView, labels, viewRef, onUnavailable]);
+  }, [rotation, morph, autoRotate, frozen, reduced, initialView, labels, cinematic, viewRef, onUnavailable]);
 
   return (
     <canvas

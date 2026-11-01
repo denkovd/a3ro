@@ -14,7 +14,7 @@ export async function GET() {
     const scores = await getLatestScoreSnapshots(db);
     return Response.json(scores);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+    const message = "Request could not be completed";
     return Response.json(
       { error: message },
       { status: 500 }

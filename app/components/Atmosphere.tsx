@@ -5,8 +5,8 @@
    2. Canvas dust field: two parallax planes of drifting particles
    3. Film grain (CSS, see globals.css)
 
-   Budget: one 2D canvas, DPR-capped at 1.5, ≤90 particles desktop /
-   ≤42 mobile, paused off-tab, disabled for reduced motion.
+   Budget: one 2D canvas, DPR-capped at 1.5, ≤28 particles desktop /
+   ≤12 mobile, paused off-tab, disabled for reduced motion.
 ──────────────────────────────────────────────────────────────── */
 import { useEffect, useRef } from "react";
 import { useMotionPreference } from "./motion";
@@ -34,7 +34,7 @@ export default function Atmosphere() {
     if (!ctx) return;
 
     const isMobile = window.matchMedia("(max-width: 768px)").matches;
-    const COUNT = isMobile ? 42 : 90;
+    const COUNT = isMobile ? 12 : 28;
     const DPR = Math.min(window.devicePixelRatio || 1, 1.5);
 
     let w = 0;
@@ -112,7 +112,7 @@ export default function Atmosphere() {
           4;
 
         const alpha =
-          (m.layer === 0 ? 0.16 : 0.3) *
+          (m.layer === 0 ? 0.06 : 0.12) *
           (0.7 + 0.3 * Math.sin(t * 0.7 + m.tw));
         ctx.beginPath();
         ctx.arc(x, y, m.r, 0, Math.PI * 2);

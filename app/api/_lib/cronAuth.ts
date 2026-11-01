@@ -4,12 +4,9 @@
    Verifies the `Authorization: Bearer <CRON_SECRET>` header Vercel's
    cron feature sends automatically when CRON_SECRET is configured.
 
-   Fails closed in production: a missing CRON_SECRET no longer means
-   "unguarded" — it means the route refuses to run. Unset in
-   non-production is still allowed through, so local dev doesn't
-   require configuring a secret. (Previously, an unset CRON_SECRET
-   skipped the check entirely in every environment, including prod —
-   see Security-review.md H2.)
+   Fails closed in every environment. Local development can use the
+   same database credentials as production, so it must also require
+   an explicit secret before any ingestion or other writes run.
 ──────────────────────────────────────────────────────────────── */
 
 import { timingSafeEqual } from "node:crypto";
@@ -25,11 +22,8 @@ function safeEqual(a: string, b: string): boolean {
  *  the request is authorized to proceed. */
 export function requireCronAuth(request: Request): Response | null {
   const secret = process.env.CRON_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV === "production") {
-      return Response.json({ error: "cron disabled — CRON_SECRET not configured" }, { status: 503 });
-    }
-    return null;
+  if (!secret?.trim()) {
+    return Response.json({ error: "cron disabled — CRON_SECRET not configured" }, { status: 503 });
   }
 
   const auth = request.headers.get("Authorization") ?? "";

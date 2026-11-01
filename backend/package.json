@@ -2,11 +2,15 @@
   "name": "@a3ro/oil-backend",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "description": "Oil price tracker backend: source adapters, ingestion, resolution, alert rules",
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "test:security": "tsx --test tests/dbSecurity.test.ts tests/httpSecurity.test.ts",
     "ingest": "tsx scripts/run-ingest.ts",
     "run:refineries": "tsx scripts/run-refineries.ts",
     "refresh:oil": "tsx scripts/refresh-oil.ts",

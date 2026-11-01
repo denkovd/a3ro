@@ -69,7 +69,7 @@ export async function GET(request: Request) {
     const series = await getDailySeries(db, benchmark, from, to);
     return Response.json(series);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+    const message = "Request could not be completed";
     return Response.json(
       { error: message },
       { status: 500 }
