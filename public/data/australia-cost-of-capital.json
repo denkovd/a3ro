@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "asOf": "2026-09-30",
+  "checkedAt": "2026-11-01T03:32:59.467Z",
+  "priceEarnings": 19.16,
+  "bondAsOf": "2026-09-30",
+  "bondYield": 5.283,
+  "sources": [
+    {
+      "label": "MSCI Australia Index — trailing P/E",
+      "url": "https://www.msci.com/indexes/index/903600/msci-australia-index"
+    },
+    {
+      "label": "RBA F2.1 — 10-year Australian government bond yield (monthly average)",
+      "url": "https://www.rba.gov.au/statistics/tables/csv/f2.1-data.csv"
+    }
+  ]
+}

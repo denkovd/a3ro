@@ -17,7 +17,7 @@ export function Nav() {
     <header
       className="fixed inset-x-0 top-0 z-50 bg-[rgba(6,7,7,0.9)] hairline-b"
     >
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5 md:px-10">
+      <div className="flex items-center justify-between px-6 py-5 md:px-[max(40px,5vw)]">
         <a
           href="#top"
           className="font-mono text-sm tracking-[0.25em] text-[var(--ink)]"

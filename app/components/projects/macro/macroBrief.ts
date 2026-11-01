@@ -26,6 +26,22 @@ import {
   type MacroQuadrant,
   type MacroSnapshot,
 } from "./macroData";
+import australiaSnapshot from "../../../../public/data/australia-cost-of-capital.json";
+import australiaBaseline from "../../../../lib/data/australia-capital-baseline.json";
+import { calculateAustraliaCapital } from "../../../../lib/australiaCapital";
+
+export const AUSTRALIA_CAPITAL = {
+  ...calculateAustraliaCapital(australiaSnapshot, australiaBaseline.observations),
+  asOf: australiaSnapshot.asOf,
+  checkedAt: australiaSnapshot.checkedAt,
+  priceEarnings: australiaSnapshot.priceEarnings,
+  bondYield: australiaSnapshot.bondYield,
+  baselineFrom: australiaBaseline.observations[0].asOf,
+  baselineTo: australiaBaseline.observations.at(-1)!.asOf,
+  baselineCount: australiaBaseline.observations.length,
+  sources: australiaSnapshot.sources,
+  baselineSources: australiaBaseline.sources,
+};
 
 /* regime mint — already in the site palette (see macroData palette note) */
 export const BRIEF_GREEN = "#5fc9a4";
@@ -55,6 +71,7 @@ export type AssetRead = {
  *  is Dale's published table, dated. */
 export type CostOfCapitalRead = {
   market: string;
+  asOf?: string;
   current: number;
   longRunMean: number;
   /** current − long-run mean, pp. Negative = capital too cheap. */
@@ -88,14 +105,15 @@ const COST_OF_CAPITAL_RAW: [string, number, number][] = [
   ["United Kingdom", 5.69, 5.03],
 ];
 
-export const COST_OF_CAPITAL: CostOfCapitalRead[] = COST_OF_CAPITAL_RAW.map(
+export const COST_OF_CAPITAL: CostOfCapitalRead[] = [...COST_OF_CAPITAL_RAW.map(
   ([market, current, longRunMean]) => ({
     market,
     current,
     longRunMean,
     gap: Math.round((current - longRunMean) * 100) / 100,
   }),
-);
+), { market: "Australia", asOf: AUSTRALIA_CAPITAL.asOf, current: AUSTRALIA_CAPITAL.current,
+  longRunMean: AUSTRALIA_CAPITAL.longRunMean, gap: AUSTRALIA_CAPITAL.gap }];
 
 const COST_OF_CAPITAL_NOTE =
   "Equity earnings yield + nominal 10y sovereign yield vs long-run mean. Below the mean = capital priced too cheaply for a world of above-trend nominal GDP and scarce savings.";

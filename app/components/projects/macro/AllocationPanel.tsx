@@ -51,7 +51,7 @@ const stateColor = (s: VamsState): string =>
 
 const pct1 = (v: number) => `${(v * 100).toFixed(1)}%`;
 
-export default function AllocationPanel({ snap }: { snap: MacroSnapshot }) {
+export default function AllocationPanel({ snap, onOpenResearch }: { snap: MacroSnapshot; onOpenResearch: () => void }) {
   const pending = snap.allocationInvested === null || snap.allocationWeights.length === 0;
   const invested = snap.allocationInvested ?? 0;
   const cash = snap.allocationCash ?? 1;
@@ -180,8 +180,8 @@ export default function AllocationPanel({ snap }: { snap: MacroSnapshot }) {
       </p>
       <p className="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--ink-3)]">
         This is the output of a mechanical rule, not a recommendation. The regime scores are
-        reasoned assumptions. <a href="#backtest-heading" className="underline underline-offset-4">Review
-        historical performance and test candidate rules below</a>; research results do not establish
+        reasoned assumptions. <button type="button" onClick={onOpenResearch} className="text-left underline underline-offset-4">Open the research laboratory to review
+        historical performance and test candidate rules</button>; research results do not establish
         how the rule would have performed with unrevised data available at the time.
       </p>
     </div>

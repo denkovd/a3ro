@@ -82,14 +82,16 @@ export default function OilTrackerPreview({
     const size = { w: 0, h: 0 };
 
     const resize = () => {
-      const r = wrap.getBoundingClientRect();
+      // Scroll and entrance transforms change the visual bounds, not the
+      // layout size. Measuring those bounds leaves the canvas shrunken when
+      // returning to the hero, and can apply the route expansion twice.
+      const width = wrap.clientWidth;
+      const height = wrap.clientHeight;
       dpr = Math.min(1.5, window.devicePixelRatio || 1);
-      size.w = r.width;
-      size.h = r.height;
-      canvas.width = Math.round(r.width * dpr);
-      canvas.height = Math.round(r.height * dpr);
-      canvas.style.width = `${r.width}px`;
-      canvas.style.height = `${r.height}px`;
+      size.w = width;
+      size.h = height;
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
     };
     resize();
     const draw = (now: number) => {

@@ -14,14 +14,15 @@
                                (growth, inflation, policy, corporate
                                profits, liquidity, positioning)
 
-   Plus the 24 Jul 2026 read — liquidity stress and cost of capital —
-   then the KISS allocation target the three layers imply, and at the
-   foot the oil overlay this page used to lead with.
+   The KISS allocation target follows the GRID, ahead of the supporting
+   market and cycle detail. The 24 Jul 2026 read — liquidity stress and
+   cost of capital — and the oil overlay follow at the foot.
 
    One data hook (/api/macro/latest). Esc or "Index" returns home.
    Distinct from P·04/P·05 (bottom-up price-trend screeners).
 ──────────────────────────────────────────────────────────────── */
 import { useCallback, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -41,12 +42,16 @@ import MacroBriefOverlay, { HorizonRibbon } from "../../components/projects/macr
 import RiskMatrixPanel from "../../components/projects/macro/RiskMatrixPanel";
 import { LiquidityPanel, CostOfCapitalPanel } from "../../components/projects/macro/LiquidityPanel";
 import AllocationPanel from "../../components/projects/macro/AllocationPanel";
-import BacktestPanel from "../../components/projects/macro/BacktestPanel";
 import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
 import { macroFreshness, formatMacroUpdated, formatMacroPeriod } from "../../components/projects/macro/macroFreshness";
 
+const BacktestPanel = dynamic(() => import("../../components/projects/macro/BacktestPanel"), {
+  loading: () => <p role="status" className="mt-6 text-sm text-[var(--ink-2)]">Opening research laboratory…</p>,
+});
+
 const ATMOSPHERE =
   "radial-gradient(90% 110% at 50% 65%, #0e1020 0%, var(--depth-1) 55%, #070808 100%)";
+const MARKET_GRID_RED = "#a43d49";
 
 const ORDER: Exclude<MacroQuadrant, "PENDING">[] = ["GOLDILOCKS", "REFLATION", "INFLATION", "DEFLATION"];
 
@@ -62,6 +67,25 @@ export default function RegimeShiftView() {
   const snap = useMacroSnapshot();
   const [leaving, setLeaving] = useState(false);
   const [oilOpen, setOilOpen] = useState(false);
+  const [researchOpen, setResearchOpen] = useState(false);
+  const [researchLoaded, setResearchLoaded] = useState(false);
+
+  const openResearch = useCallback(() => {
+    setResearchLoaded(true);
+    setResearchOpen(true);
+    requestAnimationFrame(() => {
+      document.getElementById("regime-tools-heading")?.scrollIntoView({ block: "start" });
+    });
+  }, []);
+
+  useEffect(() => {
+    const followResearchLink = () => {
+      if (location.hash === "#backtest-heading") openResearch();
+    };
+    followResearchLink();
+    window.addEventListener("hashchange", followResearchLink);
+    return () => window.removeEventListener("hashchange", followResearchLink);
+  }, [openResearch]);
 
   const leave = useCallback(() => {
     if (leaving) return;
@@ -176,21 +200,21 @@ export default function RegimeShiftView() {
                       return (
                         <div
                           key={q}
+                          role="group"
+                          aria-label={`${meta.label}${on ? " — economic regime" : ""}${marketOn ? " — market regime" : ""}`}
                           className="relative flex flex-col items-center justify-center rounded-[4px] p-3 text-center transition-colors"
                           style={{
-                            background: on ? meta.color : "var(--depth-2)",
-                            border: `1px solid ${on ? meta.color : marketOn ? meta.color : "var(--line)"}`,
-                            color: on ? "var(--depth-0)" : "var(--ink-2)",
+                            background: on ? meta.color : marketOn ? MARKET_GRID_RED : "var(--depth-2)",
+                            border: `1px solid ${marketOn ? MARKET_GRID_RED : on ? meta.color : "var(--line)"}`,
+                            boxShadow: on && marketOn ? `inset 0 0 0 2px ${MARKET_GRID_RED}` : undefined,
+                            color: on ? "var(--depth-0)" : marketOn ? "#fff1f2" : "var(--ink-2)",
                           }}
                         >
-                          {/* where the MARKET is, when it differs from the economy */}
-                          {marketOn && !on && (
-                            <span
-                              className="absolute right-1.5 top-1.5 rounded-[2px] px-1 py-px font-mono text-[7px] uppercase tracking-[0.15em]"
-                              style={{ border: `1px solid ${meta.color}`, color: meta.color }}
-                            >
-                              mkt
-                            </span>
+                          {(on || marketOn) && (
+                            <div className="absolute inset-x-2 top-2 flex flex-wrap justify-center gap-1 font-mono text-[8px] uppercase tracking-[0.1em]">
+                              {on && <span className="rounded-[2px] border border-current px-1.5 py-0.5">Economy</span>}
+                              {marketOn && <span className="rounded-[2px] px-1.5 py-0.5" style={{ background: MARKET_GRID_RED, color: "#fff1f2", border: "1px solid rgba(255,241,242,.5)" }}>Market</span>}
+                            </div>
                           )}
                           <span className="text-sm font-semibold">{meta.label}</span>
                           <span className="mt-1 font-mono text-[9px] uppercase tracking-[0.15em] opacity-80">
@@ -239,6 +263,9 @@ export default function RegimeShiftView() {
             </>
           )}
 
+          {/* ── allocation target: the rule's expression of all three layers ── */}
+          {live && <AllocationPanel snap={snap} onOpenResearch={openResearch} />}
+
           {/* ── layer 2: what the market is pricing ── */}
           {live && <RiskMatrixPanel snap={snap} />}
 
@@ -249,26 +276,33 @@ export default function RegimeShiftView() {
           {live && <LiquidityPanel snap={snap} />}
           {live && <CostOfCapitalPanel brief={brief} snap={snap} />}
 
-          {/* ── the conclusion: what the rule targets today ──
-               Sits last among the substantive panels: it is the only
-               block that depends on all three layers above it. */}
-          {live && <AllocationPanel snap={snap} />}
-          <BacktestPanel />
-
-          {/* ── oil overlay — demoted, collapsed, clearly labelled.
-               This page used to LEAD with this block. It is one
-               asset's view of the same macro panel and belongs at the
-               foot of a macro page, not the top. ── */}
-          {live && (
-            <div className="mt-12 border-t border-[var(--line)] pt-8">
-              <button
+          {/* ── optional tools, closed until the reader chooses to explore ── */}
+          <section className="mt-12 border-t border-[var(--line)] pt-8" aria-labelledby="regime-tools-heading">
+            <h2 id="regime-tools-heading" className="font-mono text-[11px] uppercase tracking-[0.25em] text-[var(--ink-2)]">Explore further</h2>
+            <p className="mt-2 text-xs text-[var(--ink-3)]">Optional tools to test ideas and explore the detail.</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <button type="button" aria-expanded={researchOpen} aria-controls="regime-research"
+                onClick={() => researchOpen ? setResearchOpen(false) : openResearch()}
+                className="flex min-h-20 items-start justify-between gap-4 rounded border border-[var(--line)] bg-[var(--depth-1)] p-4 text-left transition-colors hover:border-[var(--ink-3)]">
+                <span><span className="block text-sm text-[var(--ink)]">Research laboratory</span><span className="mt-1 block text-xs leading-relaxed text-[var(--ink-2)]">Test strategies and compare historical performance.</span></span>
+                <span aria-hidden className="text-lg text-[var(--ink-2)]">{researchOpen ? "−" : "+"}</span>
+              </button>
+              {live && <button type="button" aria-expanded={oilOpen} aria-controls="regime-oil-overlay"
                 onClick={() => setOilOpen((v) => !v)}
-                className="flex w-full flex-wrap items-baseline justify-between gap-2 text-left"
-                aria-expanded={oilOpen}
-              >
-                <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-                  {oilOpen ? "−" : "+"} Oil overlay — macro pressure on crude
-                </p>
+                className="flex min-h-20 items-start justify-between gap-4 rounded border border-[var(--line)] bg-[var(--depth-1)] p-4 text-left transition-colors hover:border-[var(--ink-3)]">
+                <span><span className="block text-sm text-[var(--ink)]">Oil overlay</span><span className="mt-1 block text-xs leading-relaxed text-[var(--ink-2)]">Explore macro pressure on crude.</span></span>
+                <span aria-hidden className="text-lg text-[var(--ink-2)]">{oilOpen ? "−" : "+"}</span>
+              </button>}
+            </div>
+            <div id="regime-research" hidden={!researchOpen}>
+              {researchLoaded && <BacktestPanel />}
+            </div>
+            {live && <div id="regime-oil-overlay" hidden={!oilOpen} className="mt-8 border-t border-[var(--line)] pt-6">
+              {oilOpen && <>
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--ink-2)]">
+                  Oil overlay — macro pressure on crude
+                </h3>
                 <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
                   {snap.pressureScore ?? "—"}/100 · {snap.pressureStatus}
                   {snap.diverging && (
@@ -280,10 +314,7 @@ export default function RegimeShiftView() {
                     </span>
                   )}
                 </span>
-              </button>
-
-              {oilOpen && (
-                <>
+              </div>
                   <p className="mt-3 text-[13px] leading-relaxed text-[var(--ink-2)]">{snap.pressureHeadline}</p>
                   <div className="mt-5 space-y-2">
                     {snap.components.map((c) => (
@@ -336,10 +367,9 @@ export default function RegimeShiftView() {
                     chip. The legs here are scaled as headwinds for oil specifically — the macro positioning cycle
                     above uses realized-volatility crowding, not WTI managed money.
                   </p>
-                </>
-              )}
-            </div>
-          )}
+              </>}
+            </div>}
+          </section>
         </div>
       </div>
 

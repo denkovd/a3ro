@@ -21,7 +21,8 @@ import {
   formatPct,
   type MacroSnapshot,
 } from "./macroData";
-import { BRIEF_GREEN, type MacroBrief } from "./macroBrief";
+import { AUSTRALIA_CAPITAL, BRIEF_GREEN, type MacroBrief } from "./macroBrief";
+import { formatMacroPeriod } from "./macroFreshness";
 
 const statusColor = (s: string): string =>
   s === "elevated" ? MACRO_PINK : s === "muted" ? BRIEF_GREEN : MACRO_AMBER;
@@ -122,7 +123,7 @@ export function CostOfCapitalPanel({
           Cost of capital vs long-run mean
         </p>
         <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-          brief {brief.asOf} — no free feed
+          International brief {brief.asOf} · Australia monthly
         </p>
       </div>
 
@@ -159,11 +160,13 @@ export function CostOfCapitalPanel({
             <div key={c.market} className="flex items-center gap-3">
               <span className="w-28 shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--ink-3)]">
                 {c.market}
+                {c.asOf && <span className="mt-1 block text-[8px] tracking-normal text-[var(--ink-2)]">Public proxy · {formatMacroPeriod(c.asOf)}</span>}
               </span>
               <div className="relative h-3 flex-1">
                 {/* long-run mean marker */}
                 <div
                   aria-hidden
+                  title={`Historical mean: ${c.longRunMean.toFixed(2)}%`}
                   className="absolute top-0 h-3 w-px"
                   style={{ left: `${(c.longRunMean / max) * 100}%`, background: "var(--ink-3)" }}
                 />
@@ -192,10 +195,26 @@ export function CostOfCapitalPanel({
       </div>
 
       <p className="mt-4 max-w-2xl text-xs leading-relaxed text-[var(--ink-3)]">
-        {brief.costOfCapitalNote} Bar = current, tick = long-run mean. This table has no free feed — the equity
-        earnings-yield half is not available keylessly — so it is a dated editorial read, unlike the nominal GDP
-        figure above it, which is live.
+        {brief.costOfCapitalNote} Bar = current, tick = long-run mean. The six international rows are the dated
+        editorial brief. Australia is a separately calculated public-source proxy, checked monthly; its
+        equity benchmark and historical reference period differ from the editorial rows.
       </p>
+      <details className="mt-4 text-xs leading-relaxed text-[var(--ink-3)]">
+        <summary className="cursor-pointer text-[var(--ink-2)]">Australia — sources and calculation</summary>
+        <div className="mt-3 space-y-2">
+          <p>As of {formatMacroPeriod(AUSTRALIA_CAPITAL.asOf)}: MSCI Australia trailing P/E {AUSTRALIA_CAPITAL.priceEarnings.toFixed(2)} gives an earnings yield of {(100 / AUSTRALIA_CAPITAL.priceEarnings).toFixed(2)}%,
+            plus the matching month&apos;s Australian 10-year government bond yield of {AUSTRALIA_CAPITAL.bondYield.toFixed(3)}% = {AUSTRALIA_CAPITAL.current.toFixed(2)}%.</p>
+          <p>Reference mean: {AUSTRALIA_CAPITAL.longRunMean.toFixed(2)}%, calculated across {AUSTRALIA_CAPITAL.baselineCount} quarterly observations,
+            {" "}{formatMacroPeriod(AUSTRALIA_CAPITAL.baselineFrom)}–{formatMacroPeriod(AUSTRALIA_CAPITAL.baselineTo)}.
+            This fixed reference uses the RBA research paper&apos;s modern ASX P/E series and matched quarter-end months&apos; bond yields.
+            The current MSCI benchmark differs, so this is an indicative comparison.</p>
+          <p>Last source check: {formatMacroPeriod(AUSTRALIA_CAPITAL.checkedAt)}. {Date.now() - Date.parse(AUSTRALIA_CAPITAL.asOf) > 75 * 86400000 ? "The observation is overdue for an update." : "Observations can lag the monthly check."}</p>
+          <ul className="list-disc space-y-1 pl-4">
+            {[...AUSTRALIA_CAPITAL.sources, ...AUSTRALIA_CAPITAL.baselineSources].filter((source, index, all) => all.findIndex((item) => item.url === source.url) === index).map((source) =>
+              <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer" className="underline underline-offset-4">{source.label}</a></li>)}
+          </ul>
+        </div>
+      </details>
     </div>
   );
 }

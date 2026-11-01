@@ -13,6 +13,7 @@
     "test:security": "node --test tests/api-security.test.mjs && npm --prefix backend run test:security",
     "test:optimization": "node --test tests/optimization.test.mjs",
     "test:landing": "node --test tests/landing-sequence.test.mjs",
+    "refresh:australia-capital": "node --use-system-ca scripts/refresh-australia-capital.mjs",
     "test:oil": "node --test tests/oil-intelligence.test.mjs",
     "test:gold": "node --test tests/gold-intelligence.test.mjs"
   },
