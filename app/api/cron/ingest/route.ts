@@ -26,13 +26,11 @@ import {
   createDb, runIngestionCycle, runCorridorCycle, runBaselineCycle,
   runSeasonalCycle, runMacroCycle, runPositioningCycle, runScoreCycle,
   runGoldCycle, runGoldFlowCycle, runBtcCycle, runBtcFlowCycle,
-  runAustraliaWatchCycle,
 } from "@a3ro/oil-backend";
 import type {
   CorridorCycleReport, BaselineCycleReport, SeasonalCycleReport,
   MacroCycleReport, PositioningCycleReport, ScoreCycleReport,
   GoldCycleReport, GoldFlowCycleReport, BtcCycleReport, BtcFlowCycleReport,
-  AustraliaWatchCycleReport,
 } from "@a3ro/oil-backend";
 import { requireCronAuth } from "../../_lib/cronAuth";
 import { runHorizonCycle, type HorizonCycleReport } from "../../../../backend/src/ingest/horizonCycle";
@@ -152,14 +150,7 @@ export async function GET(request: Request) {
       btcFlow = { error: e instanceof Error ? e.message : String(e) };
     }
 
-    // Australia Watch (official ABS) is its own data family. A failed
-    // fetch records degraded source health and can never affect global macro.
-    let australiaWatch: AustraliaWatchCycleReport | { error: string };
-    try {
-      australiaWatch = await runAustraliaWatchCycle(db);
-    } catch (e) {
-      australiaWatch = { error: e instanceof Error ? e.message : String(e) };
-    }
+    // Australia Watch has its own cron and execution budget at 02:15 UTC.
 
     let horizon: HorizonCycleReport | { error: string };
     try {
@@ -180,7 +171,6 @@ export async function GET(request: Request) {
       goldFlow,
       btc,
       btcFlow,
-      australiaWatch,
       horizon,
     });
   } catch (err) {

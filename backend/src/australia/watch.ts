@@ -47,9 +47,9 @@ function expectedPeriod(frequency: AustraliaFrequency, now: Date): string {
   return `${d.getUTCFullYear()}-Q${Math.floor(d.getUTCMonth() / 3) + 1}`;
 }
 
-export function estimateFreshness(frequency: AustraliaFrequency, referencePeriod: string | null, now = new Date()): ObservationFreshness {
+export function estimateFreshness(frequency: AustraliaFrequency, referencePeriod: string | null, now = new Date(), publishedPeriod?: string | null): ObservationFreshness {
   if (!referencePeriod) return "unavailable";
-  const expected = expectedPeriod(frequency, now);
+  const expected = publishedPeriod ?? expectedPeriod(frequency, now);
   if (referencePeriod >= expected) return "fresh";
   const gap = frequency === "monthly"
     ? (Number(expected.slice(0, 4)) - Number(referencePeriod.slice(0, 4))) * 12 + Number(expected.slice(5)) - Number(referencePeriod.slice(5))

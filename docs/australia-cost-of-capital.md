@@ -1,5 +1,7 @@
 # Australia cost of capital
 
+> Superseded for current monthly updates by [Monthly cost of capital](monthly-cost-of-capital.md). The seven-market process uses a common MSCI calculation and checks Australia one day after the RBA release. This document and its old JSON/script retain the separately labelled historical Australian comparison; do not keep running a duplicate Australia-only refresh.
+
 Australia is a public-source proxy alongside the six dated 42 Macro editorial rows. It is not a new observation from the July 2026 editorial table. All values are percentage points per annum.
 
 ## Current observation
@@ -18,7 +20,7 @@ The current MSCI and historical ASX benchmarks differ. This is an indicative Aus
 
 ## Monthly refresh
 
-A Codex chat automation checks on the 10th of each month at 09:00 Australia/Sydney, allowing time for monthly releases. Verify the MSCI profile's trailing P/E and its own observation date using the official webpage or factsheet. Its public webpage may require browser access, so the script intentionally does not scrape or bypass a browser challenge.
+The original Australia-only automation on the 10th has been replaced by the seven-market release-aware process in `docs/monthly-cost-of-capital.md`. The commands below document the legacy calculation, not the active update schedule. Verify the MSCI profile's trailing P/E and its own observation date using the official webpage or factsheet. Its public webpage may require browser access, so the script intentionally does not scrape or bypass a browser challenge.
 
 Run from the repository root, using the verified observation date and trailing P/E:
 

@@ -25,3 +25,18 @@ export interface AustraliaFetchState {
   retrievedAt: string | null;
   error: string | null;
 }
+
+export interface AustraliaRelease {
+  referencePeriod: string;
+  releaseAt: string;
+}
+
+export interface AustraliaReleaseSchedule {
+  sourceUrl: string;
+  verifiedAt: string | null;
+  latestReferencePeriod: string | null;
+  latest: AustraliaRelease | null;
+  next: AustraliaRelease | null;
+  nextPublication: AustraliaRelease | null;
+  health: "healthy" | "unavailable";
+}

@@ -14,6 +14,9 @@
     "test:optimization": "node --test tests/optimization.test.mjs",
     "test:landing": "node --test tests/landing-sequence.test.mjs",
     "refresh:australia-capital": "node --use-system-ca scripts/refresh-australia-capital.mjs",
+    "refresh:capital": "node --use-system-ca scripts/refresh-cost-of-capital.mjs",
+    "publish:capital": "node --use-system-ca --import ./backend/node_modules/tsx/dist/loader.mjs backend/scripts/publish-capital.ts",
+    "test:capital": "node --test tests/cost-of-capital.test.mjs tests/australia-capital.test.mjs",
     "test:oil": "node --test tests/oil-intelligence.test.mjs",
     "test:gold": "node --test tests/gold-intelligence.test.mjs"
   },

@@ -38,7 +38,8 @@ export function parseAbsCsv(indicator: AustraliaIndicator, text: string, sourceU
 export async function fetchAbsSeries(indicator: AustraliaIndicator, opts: { fetchImpl?: typeof fetch; now?: Date } = {}): Promise<AustraliaObservation[]> {
   const now = opts.now ?? new Date(); const cfg = AUSTRALIA_SERIES[indicator];
   const sourceUrl = `https://data.api.abs.gov.au/rest/data/${cfg.dataflow}/${cfg.key}?startPeriod=${startPeriodFor(indicator, now)}&format=csvfilewithlabels`;
-  const response = await (opts.fetchImpl ?? fetch)(sourceUrl, { headers: { Accept: "application/vnd.sdmx.data+csv;labels=both" } });
+  const requestOptions = { headers: { Accept: "application/vnd.sdmx.data+csv;labels=both" }, cache: "no-store" as const, signal: AbortSignal.timeout(30_000) };
+  const response = await (opts.fetchImpl ?? fetch)(sourceUrl, requestOptions);
   if (!response.ok) throw new Error(`ABS HTTP ${response.status}`);
   return parseAbsCsv(indicator, await response.text(), sourceUrl, now.toISOString());
 }

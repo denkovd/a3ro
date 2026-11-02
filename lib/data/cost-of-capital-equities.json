@@ -1,0 +1,51 @@
+[
+  {
+    "marketId": "US",
+    "asOf": "2026-09-30",
+    "priceEarnings": 25.37,
+    "checkedAt": "2026-11-02T04:02:26.463Z",
+    "sourceUrl": "https://www.msci.com/indexes/index/984000/msci-usa-index"
+  },
+  {
+    "marketId": "CN",
+    "asOf": "2026-09-30",
+    "priceEarnings": 13.03,
+    "checkedAt": "2026-11-02T04:02:26.464Z",
+    "sourceUrl": "https://www.msci.com/indexes/index/302400/msci-china-index"
+  },
+  {
+    "marketId": "EA",
+    "asOf": "2026-09-30",
+    "priceEarnings": 17.73,
+    "checkedAt": "2026-11-02T04:02:26.464Z",
+    "sourceUrl": "https://www.msci.com/indexes/index/106400/msci-emu-index"
+  },
+  {
+    "marketId": "CH",
+    "asOf": "2026-09-30",
+    "priceEarnings": 20.27,
+    "checkedAt": "2026-11-02T04:02:26.464Z",
+    "sourceUrl": "https://www.msci.com/indexes/index/975600/msci-switzerland-index"
+  },
+  {
+    "marketId": "JP",
+    "asOf": "2026-09-30",
+    "priceEarnings": 19.42,
+    "checkedAt": "2026-11-02T04:02:26.464Z",
+    "sourceUrl": "https://www.msci.com/indexes/index/939200/msci-japan-index"
+  },
+  {
+    "marketId": "GB",
+    "asOf": "2026-09-30",
+    "priceEarnings": 14.01,
+    "checkedAt": "2026-11-02T04:02:26.464Z",
+    "sourceUrl": "https://www.msci.com/indexes/index/982600/msci-united-kingdom-index"
+  },
+  {
+    "marketId": "AU",
+    "asOf": "2026-09-30",
+    "priceEarnings": 19.16,
+    "checkedAt": "2026-11-02T04:02:26.464Z",
+    "sourceUrl": "https://www.msci.com/indexes/index/903600/msci-australia-index"
+  }
+]

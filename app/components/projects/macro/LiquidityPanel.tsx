@@ -21,8 +21,7 @@ import {
   formatPct,
   type MacroSnapshot,
 } from "./macroData";
-import { AUSTRALIA_CAPITAL, BRIEF_GREEN, type MacroBrief } from "./macroBrief";
-import { formatMacroPeriod } from "./macroFreshness";
+import { BRIEF_GREEN } from "./macroBrief";
 
 const statusColor = (s: string): string =>
   s === "elevated" ? MACRO_PINK : s === "muted" ? BRIEF_GREEN : MACRO_AMBER;
@@ -107,114 +106,4 @@ export function LiquidityPanel({ snap }: { snap: MacroSnapshot }) {
   );
 }
 
-export function CostOfCapitalPanel({
-  brief,
-  snap,
-}: {
-  brief: MacroBrief;
-  snap: MacroSnapshot;
-}) {
-  const max = Math.max(...brief.costOfCapital.map((c) => Math.max(c.current, c.longRunMean)), 1);
-
-  return (
-    <div className="mt-12 border-t border-[var(--line)] pt-8">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-          Cost of capital vs long-run mean
-        </p>
-        <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-          International brief {brief.asOf} · Australia monthly
-        </p>
-      </div>
-
-      {/* live nominal-growth read — the reason the table matters */}
-      <div className="mt-4 flex flex-wrap items-baseline gap-x-6 gap-y-1">
-        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-          US nominal GDP
-          <span
-            aria-hidden
-            title="Derived from the live feed"
-            className="ml-1.5 inline-block h-[4px] w-[4px] rounded-full align-middle"
-            style={{ background: "var(--ink-3)" }}
-          />
-        </span>
-        <span className="text-lg font-semibold text-[var(--ink)]">{formatPct(snap.nominalGdpYoy)}</span>
-        <span className="font-mono text-[11px] text-[var(--ink-3)]">
-          2015–19 trend {formatPct(snap.nominalTrend1519)} · 2003–07 {formatPct(snap.nominalTrend0307)}
-        </span>
-        {snap.nominalGap !== null && (
-          <span
-            className="font-mono text-[11px]"
-            style={{ color: snap.nominalGap > 0 ? MACRO_AMBER : "var(--ink-3)" }}
-          >
-            {snap.nominalGap > 0 ? "+" : ""}
-            {snap.nominalGap.toFixed(1)}pp vs recent trend
-          </span>
-        )}
-      </div>
-
-      <div className="mt-5 space-y-2.5">
-        {brief.costOfCapital.map((c) => {
-          const below = c.gap < 0;
-          return (
-            <div key={c.market} className="flex items-center gap-3">
-              <span className="w-28 shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--ink-3)]">
-                {c.market}
-                {c.asOf && <span className="mt-1 block text-[8px] tracking-normal text-[var(--ink-2)]">Public proxy · {formatMacroPeriod(c.asOf)}</span>}
-              </span>
-              <div className="relative h-3 flex-1">
-                {/* long-run mean marker */}
-                <div
-                  aria-hidden
-                  title={`Historical mean: ${c.longRunMean.toFixed(2)}%`}
-                  className="absolute top-0 h-3 w-px"
-                  style={{ left: `${(c.longRunMean / max) * 100}%`, background: "var(--ink-3)" }}
-                />
-                {/* current bar */}
-                <div
-                  className="absolute top-[5px] h-1 rounded-full"
-                  style={{
-                    width: `${(c.current / max) * 100}%`,
-                    background: below ? MACRO_PINK : BRIEF_GREEN,
-                  }}
-                />
-              </div>
-              <span className="w-14 shrink-0 text-right font-mono text-[10px] tabular-nums text-[var(--ink-2)]">
-                {c.current.toFixed(2)}%
-              </span>
-              <span
-                className="w-16 shrink-0 text-right font-mono text-[10px] tabular-nums"
-                style={{ color: below ? MACRO_PINK : BRIEF_GREEN }}
-              >
-                {c.gap > 0 ? "+" : ""}
-                {c.gap.toFixed(2)}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      <p className="mt-4 max-w-2xl text-xs leading-relaxed text-[var(--ink-3)]">
-        {brief.costOfCapitalNote} Bar = current, tick = long-run mean. The six international rows are the dated
-        editorial brief. Australia is a separately calculated public-source proxy, checked monthly; its
-        equity benchmark and historical reference period differ from the editorial rows.
-      </p>
-      <details className="mt-4 text-xs leading-relaxed text-[var(--ink-3)]">
-        <summary className="cursor-pointer text-[var(--ink-2)]">Australia — sources and calculation</summary>
-        <div className="mt-3 space-y-2">
-          <p>As of {formatMacroPeriod(AUSTRALIA_CAPITAL.asOf)}: MSCI Australia trailing P/E {AUSTRALIA_CAPITAL.priceEarnings.toFixed(2)} gives an earnings yield of {(100 / AUSTRALIA_CAPITAL.priceEarnings).toFixed(2)}%,
-            plus the matching month&apos;s Australian 10-year government bond yield of {AUSTRALIA_CAPITAL.bondYield.toFixed(3)}% = {AUSTRALIA_CAPITAL.current.toFixed(2)}%.</p>
-          <p>Reference mean: {AUSTRALIA_CAPITAL.longRunMean.toFixed(2)}%, calculated across {AUSTRALIA_CAPITAL.baselineCount} quarterly observations,
-            {" "}{formatMacroPeriod(AUSTRALIA_CAPITAL.baselineFrom)}–{formatMacroPeriod(AUSTRALIA_CAPITAL.baselineTo)}.
-            This fixed reference uses the RBA research paper&apos;s modern ASX P/E series and matched quarter-end months&apos; bond yields.
-            The current MSCI benchmark differs, so this is an indicative comparison.</p>
-          <p>Last source check: {formatMacroPeriod(AUSTRALIA_CAPITAL.checkedAt)}. {Date.now() - Date.parse(AUSTRALIA_CAPITAL.asOf) > 75 * 86400000 ? "The observation is overdue for an update." : "Observations can lag the monthly check."}</p>
-          <ul className="list-disc space-y-1 pl-4">
-            {[...AUSTRALIA_CAPITAL.sources, ...AUSTRALIA_CAPITAL.baselineSources].filter((source, index, all) => all.findIndex((item) => item.url === source.url) === index).map((source) =>
-              <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer" className="underline underline-offset-4">{source.label}</a></li>)}
-          </ul>
-        </div>
-      </details>
-    </div>
-  );
-}
+export { CostOfCapitalPanel } from "./CostOfCapitalPanel";

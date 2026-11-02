@@ -57,7 +57,7 @@ const publicRoutes = [
 ];
 for (const [route, query = ""] of publicRoutes) {
   test(`${route} does not expose database exception details`, async () => {
-    const { GET } = loadModule(`app/api/${route}/route.ts`, { "@a3ro/oil-backend": failedDb });
+    const { GET } = loadModule(`app/api/${route}/route.ts`, { "@a3ro/oil-backend": failedDb, "next/cache": { unstable_cache: fn => fn } });
     const response = await GET(new Request(`https://a3ro.test/api/${route}?${query}`));
     assert.equal(response.status, 500);
     assert.deepEqual(await response.json(), { error: "Request could not be completed" });
@@ -83,12 +83,41 @@ test("Australia successful snapshots do not expose persisted errors", async () =
       createDb: async () => ({}), getAustraliaObservations: async () => [],
       getAustraliaFetchStates: async () => ({ unemployment_rate: { health: "degraded", retrievedAt: null, error: SECRET_ERROR } }),
     },
+    "../../../../backend/src/sources/absReleases": { fetchAustraliaReleaseSchedules: async () => ({}) },
+    "next/cache": { unstable_cache: fn => fn },
   });
   const response = await GET();
   assert.equal(response.status, 200);
   const body = await response.json();
   assert.equal(body.fetchStates.unemployment_rate.health, "degraded");
   assert.equal(body.fetchStates.unemployment_rate.error, "Official source could not be verified on this attempt");
+});
+
+test("Australia dedicated cron authenticates before opening the database", async (t) => {
+  setEnv(t, "CRON_SECRET", "regression-secret");
+  let calls = 0;
+  const { GET } = loadModule("app/api/cron/australia-watch/route.ts", {
+    "@a3ro/oil-backend": {
+      createDb: async () => { calls++; return {}; },
+      runAustraliaWatchCycle: async () => ({ startedAt: "2026-11-02T02:15:00Z", results: { unemployment_rate: { written: 132 } } }),
+    },
+  });
+  assert.equal((await GET(new Request("https://a3ro.test/api/cron/australia-watch"))).status, 401);
+  assert.equal(calls, 0);
+  assert.equal((await GET(new Request("https://a3ro.test/api/cron/australia-watch", { headers: { authorization: "Bearer regression-secret" } }))).status, 200);
+  assert.equal(calls, 1);
+});
+
+test("Australia dedicated cron surfaces partial source failure", async (t) => {
+  setEnv(t, "CRON_SECRET", "regression-secret");
+  const { GET } = loadModule("app/api/cron/australia-watch/route.ts", {
+    "@a3ro/oil-backend": {
+      createDb: async () => ({}),
+      runAustraliaWatchCycle: async () => ({ results: { hours_worked: { written: 0, error: "ABS HTTP 503" } } }),
+    },
+  });
+  const response = await GET(new Request("https://a3ro.test/api/cron/australia-watch", { headers: { authorization: "Bearer regression-secret" } }));
+  assert.equal(response.status, 502);
 });
 
 test("Horizon successful snapshots do not expose persisted errors", async (t) => {

@@ -10,7 +10,7 @@
 
    What remains here is only what has NO free feed and therefore has to
    be a dated, hand-maintained read:
-     · cost of capital per market vs its long-run mean
+     · historical cost of capital per market vs its long-run mean
      · horizon outlook tags
      · risk flags
      · per-asset directional bias
@@ -66,9 +66,8 @@ export type AssetRead = {
   tag: string;
 };
 
-/** Cost of capital = benchmark equity earnings yield + nominal 10y
- *  sovereign yield. No free feed for the earnings-yield half, so this
- *  is Dale's published table, dated. */
+/** Historical reference only. Current monthly estimates use lib/costOfCapital.ts
+ * and never inherit the editorial means or the older Australian ASX baseline. */
 export type CostOfCapitalRead = {
   market: string;
   asOf?: string;
