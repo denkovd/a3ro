@@ -1,6 +1,6 @@
 /* ────────────────────────────────────────────────────────────────
    FRED macro adapter — the shared macro-data layer that powers BOTH
-   P·06 (the Darius-Dale-style growth × inflation regime) and the
+   P·06 (the top-down growth × inflation regime) and the
    Macro Override score's "Macro pressure" half (docs/scores-plan.md
    #5). Built once, surfaced in both — see docs/roadmap.md.
 
@@ -31,7 +31,7 @@
    - T10YIE       — 10y breakeven inflation (forward inflation, daily, %)
 
    Added for the liquidity/cost-of-capital refresh (docs/regime-macro-
-   refresh.md) — the legs behind Dale's "is the global cost of capital
+   refresh.md) — the legs behind the editorial's "is the global cost of capital
    too low" read:
    - VIXCLS       — CBOE VIX (equity vol, daily, index)
    - WALCL        — Fed total assets (weekly, $mn)
@@ -39,7 +39,7 @@
    - RRPONTSYD    — Overnight reverse repo (daily, $bn)
    - GDP          — US nominal GDP, SAAR (quarterly, $bn)
 
-   Added to complete Dale's SIX cycles — the panel previously split
+   Added to complete the framework's SIX cycles — the panel previously split
    policy into monetary/fiscal and had no corporate profits cycle at
    all (docs/regime-macro-refresh.md §0):
    - DFF          — Fed funds effective (policy, daily, %)
@@ -113,7 +113,7 @@ export const MACRO_SERIES: FredSeriesConfig[] = [
   { seriesId: "GDP", key: "nominal_gdp", label: "Nominal GDP (SAAR)", axis: "nominal", frequency: "quarterly", units: "$bn", lookbackDays: 9200 },
 
   // ── the six cycles: policy + corporate profits ──
-  // Dale's six are growth, inflation, POLICY (monetary AND fiscal as
+  // The framework's six are growth, inflation, POLICY (monetary AND fiscal as
   // one cycle), CORPORATE PROFITS, liquidity, positioning. The page
   // previously split policy in two and omitted profits entirely.
   { seriesId: "DFF", key: "policy_rate", label: "Fed funds (effective)", axis: "policy", frequency: "daily", units: "%" },

@@ -5,7 +5,7 @@
      cd backend && npx tsx scripts/verify-regime.ts
 
    Checks the TypeScript engine against the calibration facts in the
-   Pine header of "BullMania Money Line [Recreation]" on BTC weekly:
+   Pine header of "Money Line" on BTC weekly:
      • a bearish weekly flip on the candle of the week of 2025-11-10
        (Pine stamps time_close → table read "2025-11-17"; we stamp
        the last trading day inside the week → 2025-11-16)

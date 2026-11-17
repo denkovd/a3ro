@@ -1,8 +1,8 @@
 # Regime Shift Finder (P·06) — macro refresh
 
 **Branch:** `agent/regime-macro-refresh`
-**Sources:** Darius Dale, *42 Macro* — Macro Minute, Fri 24 Jul 2026 (the current
-read) · *Darius Dale's Macro Regime Model and Six Key Cycles* (the framework)
+**Sources:** dated macro editorial, Fri 24 Jul 2026 (the current
+read) · a published macro regime model with six key cycles (the framework)
 
 The page was built as the top-down half of the **oil** tracker. Its quadrant is
 generic, but everything underneath it is oil-scaled: the pressure engine is
@@ -14,11 +14,11 @@ Reading the framework doc against the code also surfaced three **modelling
 errors** that matter more than the oil coupling:
 
 1. **The six cycles are wrong.** The page shows growth, inflation, *monetary*,
-   *fiscal*, liquidity, positioning. Dale's six are growth, inflation, **policy**
+   *fiscal*, liquidity, positioning. The framework's six are growth, inflation, **policy**
    (monetary and fiscal as one cycle), **corporate profits**, liquidity,
    positioning. Monetary and fiscal were split into two, and **corporate profits
    — an entire cycle — is missing**.
-2. **The whole top-down layer is absent.** Dale's model has two layers: a
+2. **The whole top-down layer is absent.** The framework has two layers: a
    bottom-up economic GRID *and* a top-down **Global Macro Risk Matrix** that
    scores ~42 liquid markets daily with a **volatility-adjusted momentum signal
    (VAMS)** and aggregates them into the regime the *market* is pricing. The page
@@ -26,7 +26,7 @@ errors** that matter more than the oil coupling:
    MOVE index recently broke out to bullish *from the perspective of our
    volatility-adjusted momentum signal*" — has nowhere to live on the page today.
 3. **Positioning is an oil read.** WTI managed-money COT is not a macro
-   positioning cycle. Dale builds positioning from sentiment and crowding —
+   positioning cycle. The framework builds positioning from sentiment and crowding —
    notably **260-day realized volatility at new cyclical lows**, which signals
    vol-targeting funds levering up.
 
@@ -37,7 +37,7 @@ oil to one clearly-labelled overlay.
 
 ## 0 · The model being implemented
 
-Three layers, in Dale's order:
+Three layers, in the framework's order:
 
 | Layer | What it answers | Status before / after |
 |---|---|---|
@@ -99,7 +99,7 @@ The argument, in order:
 6. **Capital competition between the AI capex bubble and structurally wide
    fiscal deficits** is now an acute risk.
 7. **The ICE BofA MOVE index hit a 2-month high and broke out to bullish** on
-   42 Macro's volatility-adjusted momentum signal. Rates, bond vol and currency
+   a volatility-adjusted momentum signal. Rates, bond vol and currency
    vol are all **countercyclical leading indicators of global liquidity** — a
    further breakout spells trouble for stocks and supports the 1998 thesis.
 
@@ -113,7 +113,7 @@ bond vol breaking out is the tell.*
 
 **Framework gaps** (from the six-cycles doc)
 
-| Dale's construct | On the page today |
+| Framework construct | On the page today |
 |---|---|
 | VAMS + Global Macro Risk Matrix | Absent — no top-down layer at all |
 | Modal *market* regime vs economic regime | Absent — one quadrant, presented as the whole answer |
@@ -123,7 +123,7 @@ bond vol breaking out is the tell.*
 
 **Current-read gaps** (from the 24 Jul Macro Minute)
 
-| Dale's leg | On the page today |
+| Framework leg | On the page today |
 |---|---|
 | Liquidity as the lead cycle | Editorial tile, hard-coded per quadrant — no feed |
 | Cost of capital vs long-run mean | Absent |
@@ -156,7 +156,7 @@ Probed 2026-07-25 before wiring, per the `fredMacro.ts` fail-loud convention.
 | **Policy — monetary** | FRED `DFF` (daily), real policy rate = `DFF` − CPI YoY | one half of the policy cycle |
 | **Policy — fiscal** | FRED `MTSDS133FMS` (monthly Treasury statement) — 12m rolling deficit vs prior 12m | Jun 2026 data, released 13 Jul; next 12 Aug |
 | **Corporate profits** | FRED `CP` (quarterly, back to 1947) | Q1 2026, released 28 May; the missing sixth cycle |
-| **Positioning** | 260-day realized vol on `^GSPC` and `HYG`, percentiled — new cyclical lows ⇒ vol-targeting leverage building | Dale's own construction; computed from bars already stored |
+| **Positioning** | 260-day realized vol on `^GSPC` and `HYG`, percentiled — new cyclical lows ⇒ vol-targeting leverage building | The framework's own construction; computed from bars already stored |
 | **VAMS** | vol-adjusted momentum per market, off `market_bars` | no new fetch — the daily bull scan already stores these bars |
 
 **Rejected**
@@ -172,7 +172,7 @@ Probed 2026-07-25 before wiring, per the `fredMacro.ts` fail-loud convention.
 **Editorial (dated, marked as such in the UI)**
 
 - Cost of capital per market — needs benchmark index earnings yield, which has no
-  free feed. Dale's table above is encoded as a dated brief in `macroBrief.ts`,
+  free feed. The editorial table above is encoded as a dated brief in `macroBrief.ts`,
   rendered next to the *live* sovereign-yield leg so the split is visible.
 - Global savings growth — no free series.
 - AI capex vs fiscal deficits — already an editorial flag.
@@ -182,7 +182,7 @@ Probed 2026-07-25 before wiring, per the `fredMacro.ts` fail-loud convention.
 
 ### 3.1 · VAMS specification
 
-Dale's VAMS uses price, volume and volatility. Volume is dropped — Yahoo volume
+The framework's VAMS uses price, volume and volatility. Volume is dropped — Yahoo volume
 is unreliable-to-absent for FX and continuous futures, and a leg that is missing
 for a third of the universe would bias the matrix toward the assets that happen
 to report it. Stated here rather than buried.
@@ -200,7 +200,7 @@ NEUTRAL  otherwise
 `z` is the drift expressed in units of its own noise — a t-statistic of the
 trend, which is what "volatility-adjusted momentum" means. The ±0.5 neutral band
 exists so a market drifting sideways contributes to nothing rather than
-flickering between confirmations. Horizon is 63 sessions because Dale's own
+flickering between confirmations. Horizon is 63 sessions because the framework's own
 regime horizon is 3–6 months and markets price a regime 1–3 months ahead.
 
 Each market's state maps to the regimes it confirms via a documented affinity
@@ -232,7 +232,7 @@ does not regress. The new work is additive and asset-neutral.
 
 6. `app/api/macro/latest/route.ts` *(new)* — asset-neutral read.
 7. `macro/macroData.ts` — extend the snapshot; read the new route.
-8. `macro/macroBrief.ts` — Dale's dated read: cost-of-capital table, liquidity now
+8. `macro/macroBrief.ts` — the dated editorial read: cost-of-capital table, liquidity now
    live, `1998-style risk` flag, horizon tags rewritten.
 9. `macro/LiquidityPanel.tsx`, `macro/CostOfCapitalPanel.tsx` *(new)*.
 10. `Projects/Regime-Shift/view.tsx` — GRID + liquidity stress lead; cost of
@@ -261,14 +261,14 @@ Things a reader of the page should not assume it does.
   run, the generated table is empty and everything falls through to the
   hand-written baseline. See §4.2.
 - **VAMS thresholds are chosen, not fitted.** 63 sessions and ±0.5σ are defensible
-  (his regime horizon is 3–6 months; markets price a regime 1–3 months ahead) but
+  (the framework's regime horizon is 3–6 months; markets price a regime 1–3 months ahead) but
   they are not optimised, deliberately — fitting them to recent data is how a
   signal stops generalising.
 - **VAMS reads one session behind.** The ingest cron runs 06:00 UTC; the bull scan
   that writes `market_bars` runs 06:20. Correct for a close-based signal, but the
   matrix is not intraday-fresh, and it reads PENDING on a new database until the
   first bull scan lands.
-- **No conditional regime probabilities.** Dale runs stochastic rolling 12-month
+- **No conditional regime probabilities.** The framework runs stochastic rolling 12-month
   forecasts for growth and inflation and reports probabilities over a 3–6 month
   horizon. This implements the *nowcast* half — where the economy is and what the
   market is pricing — not the forecast half. The horizon ribbon remains editorial.
@@ -311,13 +311,16 @@ like lift. It would matter if these were tradeable backtest returns; they are no
 `npm run backtest:allocation` (`--db` for stored bars, `--from 2014` for a single
 window, `--json out.json` to dump the curves).
 
-Dale's KISS portfolio is stocks + gold + Bitcoin, top-down exposure from the risk
+The framework's KISS portfolio is stocks + gold + Bitcoin, top-down exposure from the risk
 matrix, bottom-up from VAMS. Implemented with hard caps — **stocks 60%, gold 30%,
 Bitcoin 10%**, cash the remainder:
 
 ```
 weight = cap × regimeScore × vamsMultiplier × cycleDrag
 ```
+
+Gold is untimed (`vamsMultiplier` fixed at 1.0) and exempt from `cycleDrag`, so
+its weight is `cap × regimeScore`.
 
 **Why this matters more than it looks:** it gives the regime read a scoreboard.
 "Is Reflation the right label" is not falsifiable; "did this allocation beat
@@ -382,7 +385,7 @@ because it is the only one that depends on all three layers above it.
 
 ## 5 · Deliberate omissions
 
-- **No global aggregate is invented.** Dale quotes *global* nominal GDP and a
+- **No global aggregate is invented.** The editorial quotes *global* nominal GDP and a
   *global* IG yield; we have neither for free. The page computes US nominal GDP
   against its own trends and uses an international bond ETF for the global leg,
   and says so.

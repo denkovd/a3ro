@@ -56,7 +56,9 @@ function dataset(): ResearchDataset {
   }
   return { version: RESEARCH_VERSION, generatedAt: "2023-01-05T00:00:00Z", through: dates.at(-1)!, sources: [], warnings: [],
     signals: [{ ...input("2020-01-01"), signalDate: "2019-12-31" }],
-    prices: { stocks: dates.map((d, i) => bar(d, 100 + i)), gold: dates.map(d => bar(d, 100)), bitcoin: dates.map(d => bar(d, 100)) } };
+    prices: { stocks: dates.map((d, i) => bar(d, 100 + i)), gold: dates.map(d => bar(d, 100)), bitcoin: dates.map(d => bar(d, 100)) },
+    // The default config accrues cash at Treasury bills, so the fixture carries a bill series as the real dataset does.
+    benchmarkPrices: { bills: dates.map((d, i) => ({ date: d, close: 100 + i / 100 })) } };
 }
 test("research candidate cannot mutate baseline and validation uses disjoint periods", () => {
   const data = dataset(), config = { ...defaultResearchConfig(data.through), from: "2020-01-01", testFrom: "2021-01-01" };

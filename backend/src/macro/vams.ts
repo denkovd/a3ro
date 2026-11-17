@@ -1,5 +1,5 @@
 /* ────────────────────────────────────────────────────────────────
-   VAMS + Global Macro Risk Matrix — Dale's TOP-DOWN layer.
+   VAMS + Global Macro Risk Matrix — the TOP-DOWN layer.
 
    The GRID (macro/engine.ts) answers "what regime is the ECONOMY in"
    from IP and CPI rate-of-change. This module answers the other half:
@@ -21,7 +21,7 @@
    momentum already adjusted for volatility. Bullish above +0.5σ,
    bearish below −0.5σ, neutral in between.
 
-   Dale's VAMS also reads volume. Dropped here, deliberately: Yahoo
+   The framework's VAMS also reads volume. Dropped here, deliberately: Yahoo
    volume is unreliable-to-absent for FX pairs and continuous futures,
    so a volume leg would be present for equities/ETFs and missing for a
    third of the universe — biasing the matrix toward whichever assets

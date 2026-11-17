@@ -1,0 +1,8 @@
+geometry,transitions,transitions_per_year,avg_holding_sessions,pct_months_bullish,pct_months_neutral,pct_months_bearish,next_month_excess_pct_after_bullish,next_month_excess_pct_after_neutral,next_month_excess_pct_after_bearish,major_drawdowns,drawdown_avoided_pts_avg,hit_rate_pct,false_negative_rate_pct,derisk_spells,false_positive_rate_pct,whipsaw_cost_pts_per_year,strategy_max_drawdown_pct,buy_hold_max_drawdown_pct,rank_sum,rank
+Current 63-observation,297,26.6,9.4,48.5,24.6,26.9,9.32,1.94,5.37,4,19.6,0,100,76,62,20.33,-68.2,-83.0,13.0,6
+21 sessions,437,39.2,6.4,46.3,26.1,27.6,8.76,5.35,3.64,4,22.1,0,100,112,59,24.31,-62.3,-83.0,12.0,4
+63 sessions,207,18.6,13.5,47.8,28.4,23.9,11.35,-0.23,4.86,4,17.9,0,100,46,59,12.93,-70.8,-83.0,12.0,2
+126 sessions,120,10.8,23.2,55.2,24.6,20.1,7.83,9.24,-0.50,4,16.5,0,100,32,66,10.64,-67.4,-83.0,7.0,1
+252 sessions,94,8.4,29.5,60.4,19.4,20.1,9.07,-1.04,5.90,4,12.0,0,100,28,64,14.08,-83.3,-83.0,15.0,7
+Blend 21/63/126/252,216,19.4,12.9,51.5,33.6,14.9,9.53,5.08,-0.97,4,14.7,0,100,78,65,11.03,-71.9,-83.0,12.0,3
+Asymmetric 63 (2-session re-entry),155,13.9,18.0,46.3,26.9,26.9,11.23,0.95,3.96,4,19.5,0,100,34,68,16.79,-68.7,-83.0,13.0,5

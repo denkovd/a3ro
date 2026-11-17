@@ -2,7 +2,7 @@
 /* ────────────────────────────────────────────────────────────────
    /Projects/Regime-Shift — fullscreen experience shell (P·03)
 
-   Dale's macro regime model, in his own three layers
+   A top-down macro regime model, in its own three layers
    (docs/regime-macro-refresh.md):
 
      1 · bottom-up GRID      — what regime is the ECONOMY in
@@ -55,7 +55,7 @@ const MARKET_GRID_RED = "#a43d49";
 
 const ORDER: Exclude<MacroQuadrant, "PENDING">[] = ["GOLDILOCKS", "REFLATION", "INFLATION", "DEFLATION"];
 
-/** Risk-on regimes sit on the top row of the GRID. Dale's point: it is
+/** Risk-on regimes sit on the top row of the GRID. The point: it is
  *  the HORIZONTAL crossing (risk-on ↔ risk-off) that forces wholesale
  *  allocation pivots — vertical moves within a risk stance are
  *  incremental. The dial marks that boundary rather than rendering all

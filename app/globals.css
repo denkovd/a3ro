@@ -165,7 +165,8 @@ body {
 .module-chapter-description { margin-top: 28px; max-width: 420px; font-size: 16px; line-height: 1.7; color: var(--ink-2); }
 .module-chapter-line { display: block; width: 64px; height: 1px; margin-top: 40px; background: #d4b17c; }
 .module-showcases { list-style: none; margin: 0; padding: 0; }
-.module-showcase { display: grid; grid-template-columns: minmax(0, .7fr) minmax(0, 1.65fr); gap: 56px; align-items: center; padding: 80px 0; border-top: 1px solid var(--line-2); scroll-margin-top: 100px; }
+.module-showcase { display: grid; grid-template-columns: minmax(0, .7fr) minmax(0, 1.65fr); gap: 56px; align-items: center; padding: 80px 0; border-top: 1px solid var(--line-2); scroll-margin-top: 100px; opacity: 0; transform: translateY(24px); transition: opacity 700ms var(--ease-out), transform 700ms var(--ease-out); }
+.module-showcase.is-visible { opacity: 1; transform: none; }
 .module-story .landing-kicker { color: #9ca69f; line-height: 1.8; letter-spacing: .14em; }
 .module-story h3 { margin-top: 26px; font-size: clamp(30px, 3.1vw, 44px); line-height: 1.1; letter-spacing: -.045em; font-weight: 400; }
 .module-description { max-width: 310px; margin-top: 20px; font-size: 14px; line-height: 1.8; color: var(--ink-2); }
@@ -177,6 +178,52 @@ body {
 .landing-card:hover { border-color: var(--line-2); }
 .landing-card > .hairline-t { flex-wrap: wrap; }
 .commodity-card-line { display: block; width: 100%; height: 1px; background: linear-gradient(90deg, rgba(212,161,87,.65), var(--line), transparent); }
+
+/* ── Module spine ─────────────────────────────────────────────────
+   Applied only while .module-orbit is set (≥768px wide, tall enough,
+   motion allowed). The section becomes full-bleed around one vertical
+   axis; cards are placed on a ring by ModuleSpine.tsx. Geometry tokens
+   mirror the constants in that file. Amber carries the glow — acid
+   green stays reserved for focus and progress. */
+.module-orbit { max-width: none; padding: 80px 0 0; }
+.module-orbit .module-chapter { max-width: 1320px; margin: 0 auto; padding: 0 max(40px, 5vw); text-align: center; }
+.module-orbit .module-chapter-description { margin-inline: auto; }
+/* The chapter rule turns upright and becomes the head of the spine. */
+.module-orbit .module-chapter-line { width: 1px; height: 160px; margin: 44px 0 0 50%; background: linear-gradient(to bottom, #d4b17c, rgba(232, 235, 232, .16) 70%); }
+.module-orbit .spine-runway { position: relative; }
+.module-orbit .spine-line { position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: rgba(232, 235, 232, .16); -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 240px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 240px), transparent); pointer-events: none; }
+.module-orbit .spine-stage { position: sticky; top: 0; height: 100svh; overflow: clip; }
+.module-orbit .spine-rig {
+  --spine-card-h: 510px; --spine-caption-gap: 22px;
+  position: absolute; inset: 61px 0 0; transform: scale(var(--spine-fit, 1));
+}
+.module-orbit .module-showcases { position: absolute; inset: 0; z-index: 1; perspective: 1800px; }
+.module-orbit .module-showcase { position: absolute; display: block; top: var(--spine-junction); left: var(--spine-x); width: var(--spine-w); padding: 0; border: 0; opacity: 1; transition: none; pointer-events: none; will-change: transform; }
+
+/* Caption: name and purpose sit either side of the axis, above the card. */
+.module-orbit .module-story { position: absolute; left: 0; right: 0; bottom: calc(100% + var(--spine-caption-gap)); display: grid; grid-template-columns: minmax(0, 1fr) 96px minmax(0, 1fr); align-items: end; max-width: none; opacity: var(--focus, 0); transform: translateY(calc((1 - var(--focus, 0)) * 10px)); }
+.module-orbit .module-story .landing-kicker { grid-area: 1 / 1; text-align: right; }
+.module-orbit .module-story h3 { grid-area: 2 / 1; margin-top: 10px; text-align: right; font-size: clamp(28px, 2.6vw, 40px); }
+.module-orbit .module-description { grid-area: 1 / 3; max-width: 340px; margin: 0; font-size: 13.5px; line-height: 1.65; }
+.module-orbit .module-entry { grid-area: 2 / 3; justify-self: start; margin-top: 4px; }
+
+.module-orbit .module-preview { position: relative; opacity: var(--presence, 0); }
+.module-orbit .module-preview::after { content: ""; position: absolute; inset: 0; border-radius: 2px; background: var(--depth-0); opacity: var(--shade, 0); pointer-events: none; }
+.module-orbit .module-preview > a, .module-orbit .landing-card-slot { height: var(--spine-card-h); }
+.module-orbit .landing-card-slot { transition: box-shadow var(--dur-base) var(--ease-out); }
+.module-orbit .is-active .landing-card-slot { box-shadow: 0 0 0 1px rgba(212, 177, 124, .14), 0 44px 120px -56px rgba(212, 161, 87, .16); }
+
+/* The axis: a luminous beam through the junction, a soft glow where the
+   docked card connects, and one marker per module. */
+.spine-axis { position: absolute; inset: 0; pointer-events: none; }
+.spine-beam { position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; opacity: calc(.4 + .6 * var(--dock, 0)); background: linear-gradient(to bottom, transparent, rgba(240, 226, 200, .9) var(--spine-junction), rgba(240, 226, 200, .3) 78%, transparent); box-shadow: 0 0 14px rgba(212, 177, 124, .45); }
+.spine-halo { position: absolute; top: var(--spine-junction); left: 50%; width: 520px; height: 260px; margin: -130px 0 0 -260px; opacity: var(--dock, 0); background: radial-gradient(closest-side, rgba(212, 161, 87, .22), rgba(212, 161, 87, .07) 55%, transparent); }
+.spine-flare { position: absolute; z-index: 2; top: var(--spine-junction); left: calc(50% - var(--spine-w) * .32); width: calc(var(--spine-w) * .64); height: 1px; opacity: var(--dock, 0); background: linear-gradient(90deg, transparent, rgba(240, 226, 200, .8), transparent); }
+.spine-node { position: absolute; z-index: 2; top: var(--spine-junction); left: 50%; width: 7px; height: 7px; margin: -3px 0 0 -3px; border: 1px solid rgba(232, 235, 232, .34); border-radius: 50%; background: var(--depth-0); }
+.spine-node.is-passed { border-color: rgba(212, 177, 124, .6); }
+.spine-node::before { content: ""; position: absolute; inset: -1px; border-radius: 50%; background: #f0e2c8; opacity: var(--focus, 0); }
+.spine-node::after { content: ""; position: absolute; inset: -14px; border-radius: 50%; background: radial-gradient(closest-side, rgba(240, 226, 200, .55), rgba(212, 161, 87, .22) 45%, transparent); opacity: var(--focus, 0); }
+.spine-node i { position: absolute; top: 50%; left: 15px; transform: translateY(-50%); font: normal 9px/1 "JetBrains Mono", monospace; letter-spacing: .18em; color: var(--ink-3); opacity: calc(1 - var(--focus, 0)); }
 
 @media (min-width: 768px) and (max-width: 1023px) {
   .module-showcase { grid-template-columns: 1fr; gap: 32px; }
@@ -221,6 +268,28 @@ body {
   .landing-card > .hairline-t h3 { font-size: 12px; }
   .landing-card > .hairline-t p { font-size: 8px; }
 }
+
+/* ────────────────────────────────────────────────────────────────
+   Intelligence surfaces — per-asset tokens, scoped to each module so
+   the homepage keeps its own ink. Status colours are semantic and
+   shared; only the accent changes between oil, gold and bitcoin.
+   --ink-3 is lifted inside surfaces: #7d8781 is 5.3:1 on --depth-1
+   (WCAG AA) versus 3.2:1 for the editorial default.
+──────────────────────────────────────────────────────────────── */
+.intel-surface {
+  --ink-3: #7d8781;
+  --status-closed: #d4a157;
+  --status-alert: #e87869;
+  --status-restart: #5fc9a4;
+  --status-unknown: #9bada9;
+  --rel-own: #c9b48a;
+  --rel-operate: #e8ebe8;
+  --rel-proximity: #7d8781;
+  --panel: rgba(11, 13, 13, 0.92);
+}
+.oil-surface  { --asset-accent: #d4a157; --asset-accent-soft: rgba(212, 161, 87, 0.12); --asset-accent-line: rgba(212, 161, 87, 0.4); }
+.gold-surface { --asset-accent: #dcc689; --asset-accent-soft: rgba(220, 198, 137, 0.12); --asset-accent-line: rgba(220, 198, 137, 0.4); }
+.btc-surface  { --asset-accent: #e0873a; --asset-accent-soft: rgba(224, 135, 58, 0.12); --asset-accent-line: rgba(224, 135, 58, 0.4); }
 
 /* ── Reduced motion: everything settles instantly ── */
 @media (prefers-reduced-motion: reduce) {

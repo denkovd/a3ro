@@ -89,11 +89,11 @@ export type MacroBrief = {
 };
 
 /* ── the dated editorial read ──
-   Source: Darius Dale, 42 Macro — Macro Minute, 24 Jul 2026.
+   Source: dated macro editorial, 24 Jul 2026.
    Revisit when the commentary changes. */
 const BRIEF_AS_OF = "2026-07-24";
 
-/** Dale's cost-of-capital table, verbatim. Gap is computed, not
+/** The editorial cost-of-capital table, verbatim. Gap is computed, not
  *  transcribed, so the arithmetic can't drift from the inputs. */
 const COST_OF_CAPITAL_RAW: [string, number, number][] = [
   ["United States", 4.13, 4.46],

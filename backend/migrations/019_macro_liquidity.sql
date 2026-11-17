@@ -35,7 +35,7 @@ alter table macro_snapshots
   -- global bond stress leg, kept whole so the UI can name its source
   add column if not exists global_bonds         jsonb,                                 -- GlobalBondRead | null
 
-  -- ── Dale's TOP-DOWN layer: Global Macro Risk Matrix (VAMS) ──
+  -- ── the TOP-DOWN layer: Global Macro Risk Matrix (VAMS) ──
   -- The regime the MARKET is pricing, stored separately from the
   -- bottom-up economic quadrant above. They are allowed to disagree —
   -- the disagreement is the signal, so never reconcile them on write.

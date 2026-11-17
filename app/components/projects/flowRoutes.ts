@@ -58,7 +58,9 @@ export const FLOW_ROUTES: FlowRoute[] = [
     id: "gulf_europe_cape",
     name: "GULF → ATLANTIC · CAPE",
     tier: "medium",
-    gates: ["cape"],
+    // The path leaves the Gulf through Hormuz (its first waypoint), so that
+    // gate's traffic governs how the route is drawn, alongside the Cape.
+    gates: ["hormuz", "cape"],
     pts: [
       [56.5, 26.6], [58, 20], [52, 8], [45, -4], [40, -16], [35, -26], [26, -34],
       [19, -35], [8, -30], [-2, -18], [-8, -4], [-12, 12], [-13, 26], [-11, 38],

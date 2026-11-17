@@ -3,7 +3,7 @@
 
    Two readings off the same FRED panel (sources/fredMacro.ts):
 
-   1. computeMacroRegime — the Darius-Dale-style GRID (P·06). Two axes
+   1. computeMacroRegime — the top-down GRID (P·06). Two axes
       on a RATE-OF-CHANGE basis (is growth / inflation accelerating or
       decelerating — the 2nd derivative, not the level) → four
       quadrants: Goldilocks / Reflation / Inflation / Deflation.
@@ -178,7 +178,7 @@ export function realizedVol(
  * Vol legs are percentiled rather than put on a fixed scale (unlike the
  * level legs) because "high rate volatility" in bp means something
  * completely different at 1% yields than at 5%. The percentile is
- * regime-relative by construction, which is the property Dale's
+ * regime-relative by construction, which is the property the framework's
  * "broke out to bullish" claim actually needs.
  */
 export function percentileRank(values: number[], v: number): number | null {
@@ -253,10 +253,10 @@ export function netLiquiditySeries(panel: MacroSeries[]): MacroObservation[] {
 }
 
 /* ── Nominal growth vs its own trend ──────────────────────────────
-   Dale's point 2: nominal GDP is running above trend, which is what
+   Point 2: nominal GDP is running above trend, which is what
    is pulling bond yields up. He quotes GLOBAL nominal GDP; we only
    have US for free, so we compute the US series against the US's own
-   trend windows rather than borrowing his global trend numbers. The
+   trend windows rather than borrowing the editorial's global trend numbers. The
    comparison stays internally consistent; the UI says which it is. */
 
 /** Mean YoY over a calendar window, computed from the same series. */
@@ -325,7 +325,7 @@ export function computeNominalGrowth(
    are percentiled against their own trailing year.
 
    Higher score = tighter liquidity = higher required return = the
-   condition under which Dale's risk-premium correction happens. */
+   condition under which the framework's risk-premium correction happens. */
 
 const VOL_WINDOW = 20; // sessions in each realized-vol reading
 const VOL_HISTORY = 252; // trailing readings the percentile ranks against
@@ -355,7 +355,7 @@ export function computeLiquidityStress(
 
   // 2 · Bond volatility — the MOVE stand-in. Realized σ of daily 10y
   // yield CHANGES, percentiled against its own trailing year. This is
-  // the leg Dale calls the tell.
+  // the leg the framework calls the tell.
   const bondVol = realizedVol(dgs10, VOL_WINDOW, "diff");
   const bondVolHist = rollingVol(dgs10, VOL_WINDOW, "diff", VOL_HISTORY);
   const bondVolPct = bondVol === null ? null : percentileRank(bondVolHist, bondVol);

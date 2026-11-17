@@ -1,5 +1,6 @@
 "use client";
-/* Ranked corridor watchlist — persistent, stress-first. */
+/* Corridors that are not chokepoint gates (exports, national activity).
+   Gate traffic against its norm is reported once, in GateSignals. */
 import { flowHealth } from "../oilTrackerShared";
 import type { CorridorWatchRow } from "./types";
 
@@ -13,8 +14,8 @@ export default function CorridorWatchlist({
   onSelect: (id: string) => void;
 }) {
   return (
-    <section aria-label="Corridor watchlist">
-      <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">Corridors</p>
+    <section aria-label="Other corridors">
+      <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">Other corridors · reported</p>
       <ul className="mt-1.5 flex flex-col">
         {corridors.map((c) => {
           const isSel = selectedId === c.id;
@@ -29,13 +30,13 @@ export default function CorridorWatchlist({
                 aria-pressed={isSel}
                 className={`flex w-full items-center justify-between gap-2 border-l px-2.5 py-[7px] text-left transition-colors duration-[var(--dur-micro)] ${
                   isSel
-                    ? "border-[#d4a157] bg-[rgba(212,161,87,0.08)]"
+                    ? "border-[var(--asset-accent)] bg-[rgba(212,161,87,0.08)]"
                     : "border-[var(--line)] hover:border-[var(--line-2)] hover:bg-[rgba(232,235,232,0.03)]"
                 }`}
               >
                 <div className="min-w-0">
                   <p
-                    className={`truncate font-mono text-[10px] uppercase tracking-[0.15em] ${
+                    className={`truncate font-mono text-[11px] uppercase tracking-[0.15em] ${
                       isSel ? "text-[var(--ink)]" : mute ? "text-[var(--ink-3)]" : "text-[var(--ink-2)]"
                     }`}
                   >
@@ -43,7 +44,7 @@ export default function CorridorWatchlist({
                   </p>
                   {c.railMetric && (
                     <p
-                      className="mt-0.5 font-mono text-[9px] tracking-[0.1em]"
+                      className="mt-0.5 font-mono text-[10px] tracking-[0.1em]"
                       style={{ color: healthColor ?? "var(--ink-3)" }}
                     >
                       {c.railMetric}
@@ -59,11 +60,11 @@ export default function CorridorWatchlist({
                     />
                   )}
                   <span
-                    className="font-mono text-[8px] uppercase tracking-[0.16em]"
+                    className="font-mono text-[10px] uppercase tracking-[0.16em]"
                     style={{
                       color:
                         c.status === "live"
-                          ? "#d4a157"
+                          ? "var(--asset-accent)"
                           : c.status === "connecting"
                             ? "var(--ink-2)"
                             : "var(--ink-3)",
@@ -77,7 +78,7 @@ export default function CorridorWatchlist({
           );
         })}
       </ul>
-      <p className="mt-1 border-l border-[var(--line)] px-2.5 py-[6px] font-mono text-[8px] uppercase tracking-[0.16em] text-[var(--ink-3)]">
+      <p className="mt-1 border-l border-[var(--line)] px-2.5 py-[6px] font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--ink-3)]">
         Observations are dated by corridor · select for history
       </p>
     </section>

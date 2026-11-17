@@ -1,6 +1,6 @@
 /* ────────────────────────────────────────────────────────────────
    Money Line trend engine — faithful TypeScript port of the
-   "BullMania Money Line [Recreation]" Pine v6 Donchian close-flip.
+   "Money Line" Pine v6 Donchian close-flip.
 
    Pine semantics preserved exactly:
    - Channel = highest high / lowest low of the last N *closed* bars,

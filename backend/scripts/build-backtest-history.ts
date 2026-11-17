@@ -6,11 +6,8 @@ import { fileURLToPath } from "node:url";
 import { MACRO_SERIES, fetchFredSeries, parseFredCsv, type MacroSeries } from "../src/sources/fredMacro";
 import { fetchDailyHistory, fetchAdjustedHistory } from "../src/regime/yahooHistory";
 import { REGIME_UNIVERSE } from "../src/regime/universe";
-import { computeMacroRegime, netLiquiditySeries } from "../src/macro/engine";
-import { computeSixCycles } from "../src/macro/cycles";
-import { computeRiskMatrix, computeVams } from "../src/macro/vams";
-import { SLEEVES, type Quadrant, type SleeveKey } from "../src/macro/allocation";
-import { RESEARCH_VERSION, defaultResearchConfig, runResearch, type ResearchDataset } from "../src/macro/backtestResearch";
+import { RESEARCH_VERSION, TREND_HORIZONS, defaultResearchConfig, runResearch, type ResearchDataset } from "../src/macro/backtestResearch";
+import { buildResearchSignal, CORPORATE_PROFITS_Q4_LAG_DAYS, RELEASE_LAG_DAYS, SIGNAL_SCHEMA } from "../src/macro/backtestSignals";
 import type { RegimeBar } from "../src/regime/types";
 import { loadBenchmarkHistory } from "../src/macro/benchmarkHistory";
 import { buildDailyVams21 } from "../src/macro/vams21History";
@@ -18,10 +15,6 @@ import { BENCHMARK_HISTORY_SOURCE, BUY_HOLD_SELECTION_NOTE } from "../src/macro/
 
 const destination = resolve(dirname(fileURLToPath(import.meta.url)), "../../public/data/regime-backtest.json");
 const before = (date: string, days: number) => new Date(Date.parse(`${date}T00:00:00Z`) - days * 86400000).toISOString().slice(0, 10);
-const upTo = (bars: RegimeBar[], date: string) => bars.filter(b => b.date <= date);
-const lagged = (panel: MacroSeries[], date: string) => panel.map(s => ({ ...s,
-  observations: s.observations.filter(o => o.date <= before(date,
-    s.frequency === "quarterly" ? 120 : s.frequency === "monthly" ? 45 : s.frequency === "weekly" ? 8 : 2)) }));
 
 async function main() {
   const generatedAt = new Date().toISOString();
@@ -66,29 +59,12 @@ async function main() {
   for (let i = 1; i < calendar.length; i++) {
     const execution = calendar[i].date, signalDate = calendar[i - 1].date;
     if (execution < "2004-01-01" || execution > through || execution.slice(0, 7) === signalDate.slice(0, 7)) continue;
-    const asOfPanel = lagged(panel, signalDate);
-    const growth = asOfPanel.find(s => s.key === "growth_indpro")?.observations ?? [];
-    const inflation = asOfPanel.find(s => s.key === "inflation_cpi")?.observations ?? [];
-    const economic = computeMacroRegime(growth, inflation, signalDate);
-    const reads = REGIME_UNIVERSE.map(e => computeVams(upTo(bars.get(e.symbol) ?? [], signalDate), e.symbol, e.displayName));
-    const matrix = computeRiskMatrix(reads, signalDate);
-    const cycles = computeSixCycles(asOfPanel, netLiquiditySeries(asOfPanel),
-      upTo(calendar, signalDate), upTo(bars.get("HYG") ?? [], signalDate), signalDate);
-    const states: ResearchDataset["signals"][number]["states"] = {};
-    const unavailable: SleeveKey[] = [];
-    for (const sleeve of SLEEVES) {
-      const history = upTo(bars.get(sleeve.symbol) ?? [], signalDate);
-      const proxy = upTo(prices[sleeve.key], execution);
-      if (history.length < 64 || !proxy.length) unavailable.push(sleeve.key);
-      states[sleeve.key] = computeVams(history, sleeve.symbol, sleeve.label).state;
-    }
-    signals.push({ date: execution, signalDate,
-      marketRegime: matrix.modalRegime === "PENDING" ? null : matrix.modalRegime as Quadrant,
-      economicQuadrant: economic.quadrant === "PENDING" ? null : economic.quadrant as Quadrant,
-      states, headwinds: cycles.headwinds, unavailable });
+    signals.push(buildResearchSignal({ execution, signalDate, panel, bars, prices }));
   }
   const benchmarkPrices = await loadBenchmarkHistory(through);
   const dataset: ResearchDataset = { version: RESEARCH_VERSION, generatedAt, through, signals, prices,
+    signalSchema: SIGNAL_SCHEMA, trendHorizons: [...TREND_HORIZONS],
+    releaseLagDays: { ...RELEASE_LAG_DAYS, corporateProfitsQ4: CORPORATE_PROFITS_Q4_LAG_DAYS },
     vams21Signals: buildDailyVams21({ stocks: bars.get("^GSPC"), gold: bars.get("GC=F"), bitcoin: bars.get("BTC-USD") }, prices.stocks),
     vams21GeneratedAt: new Date().toISOString(),
     benchmarkPrices, benchmarkGeneratedAt: new Date().toISOString(),
@@ -98,7 +74,8 @@ async function main() {
     warnings: [
       BUY_HOLD_SELECTION_NOTE,
       "Research reconstruction using revised macro data, not a point-in-time or live performance record.",
-      "Approximate publication lags: daily 2 days, weekly 8 days, monthly 45 days, quarterly 120 days. These are not verified historical release dates.",
+      `Approximate publication lags from each observation's period start: daily ${RELEASE_LAG_DAYS.daily} days, weekly ${RELEASE_LAG_DAYS.weekly} days, monthly ${RELEASE_LAG_DAYS.monthly} days, quarterly ${RELEASE_LAG_DAYS.quarterly} days (fourth-quarter corporate profits ${CORPORATE_PROFITS_Q4_LAG_DAYS} days). These are not verified historical release dates.`,
+      "Each signal row also stores the regime vote shares, 21/63/126/252-observation trend z-scores, 21-session realised S&P 500 volatility with its 126-session median, and the share of the regime universe with a positive 63-observation trend score, for research. The allocation rule still uses only the winning regime and the 63-observation trend state.",
       "Macro regime signals are observed at month-end and executed at the next equity session close; intra-month macro changes are not reconstructed. The separate 21-day VAMS portfolio uses daily prior-date signals.",
       "Stocks and gold returns use SPY and GLD ETF proxies; their signals use the live S&P index and gold futures. Adjusted ETF returns include distributions and embedded fund fees, before taxes.",
       "The signal universe and regime affinities are the current model; historical constituent availability differs. No historical model vintages are available.",
@@ -110,6 +87,7 @@ async function main() {
   // Publish only a complete dataset after a strict portfolio validation.
   writeFileSync(`${destination}.tmp`, JSON.stringify(dataset));
   renameSync(`${destination}.tmp`, destination);
-  console.log(`Wrote ${signals.length} signals through ${through}. Baseline CAGR ${(check.baseline.metrics.cagr * 100).toFixed(2)}%.`);
+  const m = check.baseline.metrics;
+  console.log(`Wrote ${signals.length} signals through ${through}. Baseline, cash at Treasury bills: CAGR ${(m.cagr * 100).toFixed(2)}%, volatility ${(m.volatility * 100).toFixed(2)}%, Sharpe ${m.sharpe.toFixed(2)}, Sortino ${m.sortino.toFixed(2)}, max drawdown ${(m.maxDrawdown * 100).toFixed(2)}%.`);
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

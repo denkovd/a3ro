@@ -4,7 +4,7 @@
 -- One row per run_date holding BOTH readings off the same FRED panel
 -- (sources/fredMacro.ts), because they are computed together in one
 -- cycle from one fetch (macro/engine.ts):
---   • the Darius-Dale-style GRID regime (quadrant + growth/inflation
+--   • the top-down GRID regime (quadrant + growth/inflation
 --     axes) → powers P·06's Regime Shift Finder card;
 --   • the Macro Override "Macro pressure" half (0..100 score +
 --     divergence flag) → powers the Macro Override chip (#5).

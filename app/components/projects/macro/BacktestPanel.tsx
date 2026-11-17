@@ -10,6 +10,8 @@ import { SP_BENCHMARK, BUY_HOLD_SELECTION_NOTE } from "../../../../backend/src/m
 const STORAGE_KEY = "a3ro.regime-backtests.v1";
 const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
 const label = (q: string) => q.charAt(0) + q.slice(1).toLowerCase();
+// Runs saved before excess-return metrics existed have no Sharpe or Sortino to show.
+const ratio = (n: number | undefined) => typeof n === "number" && Number.isFinite(n) ? n.toFixed(2) : "—";
 const fieldClass = "mt-1 w-full rounded border border-[var(--line)] bg-[var(--depth-0)] px-3 py-2 text-sm text-[var(--ink)]";
 const buttonClass = "rounded border border-[var(--line)] px-3 py-2 text-xs text-[var(--ink-2)] hover:border-[var(--ink-3)] disabled:opacity-40";
 interface SavedRun {
@@ -58,6 +60,8 @@ export default function BacktestPanel() {
   const result = calculated.result;
   const comparison = result?.candidate.benchmarks[reference] ? reference : SP_BENCHMARK;
   const update = (patch: Partial<ResearchConfig>) => setConfig(previous => previous ? { ...previous, ...patch } : previous);
+  // First date the Treasury-bill series can pay cash from; the two-asset window otherwise starts in 2005.
+  const billsStart = dataset?.benchmarkPrices?.bills?.[0]?.date ?? "2005-01-01";
   const setting = (key: SleeveKey, value: number) => {
     if (config) update({ settings: { ...config.settings, caps: { ...config.settings.caps, [key]: value } } });
   };
@@ -102,7 +106,8 @@ export default function BacktestPanel() {
       <p className="mt-4 text-xs text-[var(--ink-3)]">History through {dataset.through} · Refreshed {dataset.generatedAt.slice(0, 10)} · {RESEARCH_VERSION}{Date.now() - Date.parse(dataset.generatedAt) > 35 * 86400000 ? " · History needs a refresh" : ""}</p>
       {dataset.benchmarkGeneratedAt ? <p className="mt-1 text-xs text-[var(--ink-3)]">Benchmark prices refreshed {dataset.benchmarkGeneratedAt.slice(0, 10)}</p> : null}
       <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <label className="text-xs text-[var(--ink-3)]">Asset universe<select className={fieldClass} value={config.universe} onChange={e => update({ universe: e.target.value as ResearchConfig["universe"], from: e.target.value === "all" ? "2015-01-01" : "2005-01-01" })}>
+        <label className="text-xs text-[var(--ink-3)]">Asset universe<select className={fieldClass} value={config.universe} onChange={e => update({ universe: e.target.value as ResearchConfig["universe"], from: e.target.value === "all" ? "2015-01-01"
+          : config.cashSource === "bills" && billsStart > "2005-01-01" ? billsStart : "2005-01-01" })}>
           <option value="all">Stocks, gold & Bitcoin (2015+)</option><option value="stocks-gold">Stocks & gold (2005+)</option></select></label>
         <label className="text-xs text-[var(--ink-3)]">Start date<input className={fieldClass} type="date" min={config.universe === "all" ? "2015-01-01" : "2005-01-01"} max={config.to} value={config.from} onChange={e => update({ from: e.target.value })} /></label>
         <label className="text-xs text-[var(--ink-3)]">End date<input className={fieldClass} type="date" min={config.from} max={dataset.through} value={config.to} onChange={e => update({ to: e.target.value })} /></label>
@@ -114,19 +119,23 @@ export default function BacktestPanel() {
           {SLEEVES.map(s => <PercentField key={s.key} label={`${s.label} cap`} value={config.settings.caps[s.key]} onChange={v => setting(s.key, v)} />)}
           <label className="text-xs text-[var(--ink-3)]">Rebalance<select className={fieldClass} value={config.rebalance} onChange={e => update({ rebalance: e.target.value as ResearchConfig["rebalance"] })}>
             <option value="monthly-regime">Monthly + observed regime changes</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="regime">Observed regime changes only</option></select></label>
+          <label className="text-xs text-[var(--ink-3)]">Rebalance tranches<select className={fieldClass} value={config.tranches ?? 1} onChange={e => update({ tranches: Number(e.target.value) })}>
+            <option value={1}>Single day (current rule)</option><option value={2}>2 tranches, two weeks apart</option><option value={4}>4 weekly tranches</option></select></label>
           <label className="text-xs text-[var(--ink-3)]">One-way cost (basis points)<input className={fieldClass} type="number" min="0" max="1000" value={config.costBps} onChange={e => update({ costBps: Number(e.target.value) })} /></label>
-          <PercentField label="Annual cash return assumption" value={config.cashRate} max={25} onChange={v => update({ cashRate: v })} />
+          <label className="text-xs text-[var(--ink-3)]">Idle cash earns<select className={fieldClass} value={config.cashSource ?? "constant"} onChange={e => update({ cashSource: e.target.value as NonNullable<ResearchConfig["cashSource"]> })}>
+            <option value="bills">Treasury bills (BIL actual return)</option><option value="constant">Fixed annual rate</option></select></label>
+          {(config.cashSource ?? "constant") === "constant" ? <PercentField label="Fixed annual cash rate" value={config.cashRate} max={25} onChange={v => update({ cashRate: v })} /> : null}
           <PercentField label="Maximum cycle reduction" value={config.settings.cycleDrag} onChange={v => update({ settings: { ...config.settings, cycleDrag: v } })} />
           {(["BULLISH", "NEUTRAL", "BEARISH"] as const).map(state => <PercentField key={state} label={`${label(state)} trend multiplier`} value={config.settings.vamsMultipliers[state]}
             onChange={v => update({ settings: { ...config.settings, vamsMultipliers: { ...config.settings.vamsMultipliers, [state]: v, ...(state === "NEUTRAL" ? { PENDING: v } : {}) } } })} />)}
         </div>
-        <p className="mt-3 text-xs text-[var(--ink-3)]">Caps total {pct(Object.values(config.settings.caps).reduce((a, b) => a + b, 0))}; unallocated exposure stays in cash. Trading costs apply to every portfolio. The cash assumption applies to unallocated cash; bond and Treasury bill ETFs use their actual adjusted returns.</p>
+        <p className="mt-3 text-xs text-[var(--ink-3)]">Caps total {pct(Object.values(config.settings.caps).reduce((a, b) => a + b, 0))}; unallocated exposure stays in cash. Trading costs apply to every portfolio. Unallocated cash earns the selected cash return in every portfolio; bond and Treasury bill ETFs use their actual adjusted returns. Tranches split the test strategy into equal parts that rebalance on staggered sessions (two tranches ten sessions apart, four tranches five apart), so a regime change reaches the book in steps; the current regime strategy and static benchmarks keep single-day rebalancing.</p>
         <details className="mt-4"><summary className="cursor-pointer text-xs text-[var(--ink-2)]">Exposure scores by regime</summary>
-          <div className="mt-3 overflow-x-auto"><table className="w-full text-left text-xs"><caption className="mb-3 text-left text-[var(--ink-3)]">Target = cap × regime score × trend multiplier × cycle adjustment. Gold is exempt from cycle reduction.</caption>
+          <div className="mt-3 overflow-x-auto"><table className="w-full text-left text-xs"><caption className="mb-3 text-left text-[var(--ink-3)]">Target = cap × regime score × trend multiplier × cycle adjustment. Gold is exempt from cycle reduction and from the trend multiplier.</caption>
             <thead><tr><th scope="col" className="p-2 text-[var(--ink-3)]">Asset</th>{REGIMES.map(q => <th key={q} scope="col" className="p-2 text-[var(--ink-3)]">{label(q)}</th>)}</tr></thead>
             <tbody>{SLEEVES.map(s => <tr key={s.key}><th scope="row" className="p-2 text-[var(--ink-2)]">{s.label}</th>{REGIMES.map(q => <td key={q} className="min-w-24 p-2"><input aria-label={`${s.label} ${label(q)} exposure score percent`} className={fieldClass} type="number" min="0" max="100" step="1" value={Math.round(config.settings.regimeScores[s.key][q] * 100)} onChange={e => score(s.key, q, Number(e.target.value) / 100)} /></td>)}</tr>)}</tbody>
           </table></div></details>
-        <button type="button" className={`${buttonClass} mt-4`} onClick={() => update({ settings: structuredClone(BASELINE_SETTINGS), rebalance: "monthly-regime" })}>Reset test strategy</button>
+        <button type="button" className={`${buttonClass} mt-4`} onClick={() => update({ settings: structuredClone(BASELINE_SETTINGS), rebalance: "monthly-regime", tranches: 1 })}>Reset test strategy</button>
       </details>
       {calculated.error && <p role="alert" className="mt-4 text-sm text-[#e0b969]">{calculated.error}</p>}
       {result && <>
@@ -182,11 +191,11 @@ function MetricsTable({ result }: { result: ResearchResult }) {
       metrics: result.candidate.benchmarks[benchmark.name], reason: benchmark.reason }))]
     .sort((a, b) => a.metrics && b.metrics ? b.metrics.totalReturn - a.metrics.totalReturn : a.metrics ? -1 : b.metrics ? 1 : 0);
   return <div className="mt-6 overflow-x-auto"><table className="w-full text-left text-xs text-[var(--ink-2)]"><caption className="mb-3 text-left text-sm text-[var(--ink)]">Same-window performance · {result.candidate.metrics.from} → {result.candidate.metrics.to}</caption>
-    <thead><tr className="border-b border-[var(--line)]">{["Portfolio", "Total return", "CAGR", "Max drawdown", "Volatility", "Return / vol"].map(h => <th scope="col" key={h} aria-sort={h === "Total return" ? "descending" : undefined} className="whitespace-nowrap p-2">{h}{h === "Total return" ? " ↓" : ""}</th>)}</tr></thead>
+    <thead><tr className="border-b border-[var(--line)]">{["Portfolio", "Total return", "CAGR", "Max drawdown", "Volatility", "Sharpe", "Sortino", "Return / vol"].map(h => <th scope="col" key={h} aria-sort={h === "Total return" ? "descending" : undefined} className="whitespace-nowrap p-2">{h}{h === "Total return" ? " ↓" : ""}</th>)}</tr></thead>
     <tbody>{rows.map(row => <tr key={row.name} className="border-b border-[var(--line)]" style={row.name === "Your test strategy" ? { color: "#e0b969" } : undefined}><th scope="row" className="whitespace-nowrap p-2 font-normal">{row.name}</th>
-      {row.metrics ? <><td className="p-2">{pct(row.metrics.totalReturn)}</td><td className="p-2">{pct(row.metrics.cagr)}</td><td className="p-2">{pct(row.metrics.maxDrawdown)}</td><td className="p-2">{pct(row.metrics.volatility)}</td><td className="p-2">{row.metrics.returnToVol.toFixed(2)}</td></>
-        : <td colSpan={5} className="p-2 text-[var(--ink-3)]">Unavailable for this window: {row.reason}</td>}</tr>)}</tbody>
-  </table><p className="mt-2 text-xs text-[var(--ink-3)]">Excess total return vs S&P: {((result.candidate.metrics.totalReturn - result.candidate.benchmarks[SP_BENCHMARK].totalReturn) * 100).toFixed(1)} percentage points · Average invested {pct(result.candidate.metrics.averageInvested)} · Turnover {result.candidate.metrics.totalTurnover.toFixed(1)}× (sum of traded weight per rebalance). Return / vol is CAGR divided by volatility, not Sharpe.</p>
+      {row.metrics ? <><td className="p-2">{pct(row.metrics.totalReturn)}</td><td className="p-2">{pct(row.metrics.cagr)}</td><td className="p-2">{pct(row.metrics.maxDrawdown)}</td><td className="p-2">{pct(row.metrics.volatility)}</td><td className="p-2">{ratio(row.metrics.sharpe)}</td><td className="p-2">{ratio(row.metrics.sortino)}</td><td className="p-2">{row.metrics.returnToVol.toFixed(2)}</td></>
+        : <td colSpan={7} className="p-2 text-[var(--ink-3)]">Unavailable for this window: {row.reason}</td>}</tr>)}</tbody>
+  </table><p className="mt-2 text-xs text-[var(--ink-3)]">Excess total return vs S&P: {((result.candidate.metrics.totalReturn - result.candidate.benchmarks[SP_BENCHMARK].totalReturn) * 100).toFixed(1)} percentage points · Average invested {pct(result.candidate.metrics.averageInvested)} · Turnover {result.candidate.metrics.totalTurnover.toFixed(1)}× (sum of traded weight per rebalance). {result.accounting.note} Return / vol is CAGR divided by volatility.</p>
     <details className="mt-4"><summary className="cursor-pointer text-sm text-[var(--ink)]">What each benchmark holds</summary><dl className="mt-3 space-y-4 text-xs leading-relaxed">
       {result.benchmarkAvailability.map(benchmark => <div key={benchmark.name}><dt className="font-medium text-[var(--ink-2)]">{benchmark.name}</dt><dd className="mt-1 text-[var(--ink-3)]">{benchmark.description}
         {benchmark.sourceUrl ? <> <a href={benchmark.sourceUrl} target="_blank" rel="noreferrer" className="underline underline-offset-4">Background</a></> : null}

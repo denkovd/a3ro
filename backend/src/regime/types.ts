@@ -1,7 +1,6 @@
 /* ────────────────────────────────────────────────────────────────
    Regime Shift Finder (Module 4) — domain types.
-   The trend engine is a TypeScript port of the "BullMania Money
-   Line [Recreation]" Pine v6 indicator: Donchian channel CLOSE-flip
+   The trend engine is a TypeScript port of the "Money Line" Pine v6 indicator: Donchian channel CLOSE-flip
    (length 20, ratcheted), evaluated on closed bars only, on two
    timeframes (daily + weekly resampled from daily).
 ──────────────────────────────────────────────────────────────── */

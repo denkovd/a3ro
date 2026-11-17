@@ -44,7 +44,7 @@ export type { RegimeLabel, RegimeStat, AffinityEvidence } from "./macro/affinity
 export { REGIME_AFFINITY_DERIVED, AFFINITY_GENERATED_AT } from "./macro/regimeAffinity.generated";
 export {
   computeAllocation, weightOf, SLEEVES, SLEEVE_REGIME_SCORE,
-  VAMS_MULTIPLIER, RISK_SLEEVES, MAX_CYCLE_DRAG,
+  VAMS_MULTIPLIER, RISK_SLEEVES, TREND_TIMED_SLEEVES, MAX_CYCLE_DRAG,
 } from "./macro/allocation";
 export type {
   Sleeve, SleeveKey, AllocationInput, SleeveWeight, Allocation,

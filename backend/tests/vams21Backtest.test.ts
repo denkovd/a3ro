@@ -63,7 +63,8 @@ test("21-day dynamic returns are included consistently in charts, regime and val
   const prices = dates.map((date, i) => bar(date, 100 + i / 10));
   const data: ResearchDataset = { version: RESEARCH_VERSION, generatedAt: "2023-01-05T00:00:00Z", through: dates.at(-1)!,
     signals: [{ ...input(dates[0]), signalDate: "2019-12-31" }], vams21Signals: signals(dates),
-    prices: { stocks: prices, gold: prices, bitcoin: prices }, sources: [], warnings: [] };
+    prices: { stocks: prices, gold: prices, bitcoin: prices }, sources: [], warnings: [],
+    benchmarkPrices: { bills: dates.map((date, i) => ({ date, close: 100 + i / 100 })) } };
   const result = runResearch(data, { ...defaultResearchConfig(data.through), from: dates[0], testFrom: "2021-01-01" });
   const metrics = result.candidate.benchmarks[VAMS_21_NAME];
   assert.ok(metrics);

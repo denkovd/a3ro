@@ -430,7 +430,7 @@ describe("six cycles", () => {
     assert.equal(c.source, "brief");
   });
 
-  test("computeSixCycles returns exactly Dale's six, in order", () => {
+  test("computeSixCycles returns exactly the framework's six, in order", () => {
     const snap = computeSixCycles([], [], [], [], "2026-07-25");
     assert.deepEqual(
       snap.cycles.map((c) => c.key),

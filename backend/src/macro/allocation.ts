@@ -1,7 +1,7 @@
 /* ────────────────────────────────────────────────────────────────
    Three-sleeve allocation — the KISS expression layer.
 
-   Dale's KISS portfolio is a simple systematic allocation across
+   The framework's KISS portfolio is a simple systematic allocation across
    stocks, gold and Bitcoin, with top-down exposure driven by the
    Global Macro Risk Matrix and bottom-up exposure adjusted by VAMS.
    This is that, with hard caps: stocks 60%, gold 30%, Bitcoin 10%,
@@ -21,6 +21,7 @@
 
    - regimeScore  how much the CURRENT regime favours this sleeve
    - vamsMultiplier   whether the sleeve is actually trending
+                      (stocks and Bitcoin only — gold is untimed, ×1)
    - cycleDrag    how many of the six cycles are fighting risk assets
 
    Caps sum to 1.0 and every multiplier is ≤ 1, so total exposure can
@@ -82,6 +83,19 @@ export const VAMS_MULTIPLIER: Record<VamsState, number> = {
 };
 
 /**
+ * Sleeves whose weight is scaled by their own trend state. Gold is
+ * not one of them: its trend multiplier is fixed at 1.0, so its weight
+ * is cap × regimeScore and nothing else. Gold's VAMS state is still
+ * computed and reported, it just no longer moves the weight.
+ *
+ * Approved 2026-11-14 after the pre-registered untimed-gold test
+ * (rebuilt Phase 1 dataset, BIL cash, 25 bps): timing gold on its
+ * 63-day trend de-risked it in 81 of 143 months and gold then rose in
+ * 46 of them.
+ */
+export const TREND_TIMED_SLEEVES: SleeveKey[] = ["stocks", "bitcoin"];
+
+/**
  * The six cycles are scored tailwind/headwind FOR RISK ASSETS (see
  * cycles.ts), so their drag applies to the risk sleeves only. Gold is
  * exempt — applying a risk-asset headwind to the hedge would cut the
@@ -101,6 +115,9 @@ export interface AllocationSettings {
   regimeScores: Record<SleeveKey, Record<Quadrant, number>>;
   vamsMultipliers: Record<VamsState, number>;
   cycleDrag: number;
+  /** Sleeves the trend multiplier applies to. Omitted = the live rule
+   *  (TREND_TIMED_SLEEVES); any sleeve not listed gets ×1. */
+  trendTimedSleeves?: SleeveKey[];
 }
 
 export const BASELINE_SETTINGS: AllocationSettings = {
@@ -108,6 +125,7 @@ export const BASELINE_SETTINGS: AllocationSettings = {
   regimeScores: structuredClone(SLEEVE_REGIME_SCORE),
   vamsMultipliers: { ...VAMS_MULTIPLIER },
   cycleDrag: MAX_CYCLE_DRAG,
+  trendTimedSleeves: [...TREND_TIMED_SLEEVES],
 };
 
 export function validateAllocationSettings(settings: AllocationSettings): void {
@@ -116,6 +134,7 @@ export function validateAllocationSettings(settings: AllocationSettings): void {
       SLEEVES.some(s => !fraction(settings.caps[s.key])) ||
       Object.values(settings.caps).reduce((a, b) => a + b, 0) > 1 + 1e-9 ||
       Object.values(settings.vamsMultipliers).some(n => !fraction(n)) ||
+      (settings.trendTimedSleeves ?? []).some(k => !SLEEVES.some(s => s.key === k)) ||
       SLEEVES.some(s => Object.keys(SLEEVE_REGIME_SCORE[s.key]).some(q =>
         !fraction(settings.regimeScores[s.key][q as Quadrant])))) {
     throw new Error("Caps must total at most 100%; all allocation settings must be between 0 and 100%.");
@@ -188,7 +207,9 @@ export function computeAllocation(input: AllocationInput, settings?: AllocationS
     const available = !unavailable.has(s.key);
     const cap = settings?.caps[s.key] ?? s.cap;
     const regimeScore = regime ? (settings?.regimeScores ?? SLEEVE_REGIME_SCORE)[s.key][regime] : 0;
-    const vamsMultiplier = (settings?.vamsMultipliers ?? VAMS_MULTIPLIER)[state];
+    const vamsMultiplier = (settings?.trendTimedSleeves ?? TREND_TIMED_SLEEVES).includes(s.key)
+      ? (settings?.vamsMultipliers ?? VAMS_MULTIPLIER)[state]
+      : 1;
     const cycleDrag = RISK_SLEEVES.includes(s.key)
       ? 1 - (headwinds / 6) * (settings?.cycleDrag ?? MAX_CYCLE_DRAG)
       : 1;

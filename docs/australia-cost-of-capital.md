@@ -2,7 +2,7 @@
 
 > Superseded for current monthly updates by [Monthly cost of capital](monthly-cost-of-capital.md). The seven-market process uses a common MSCI calculation and checks Australia one day after the RBA release. This document and its old JSON/script retain the separately labelled historical Australian comparison; do not keep running a duplicate Australia-only refresh.
 
-Australia is a public-source proxy alongside the six dated 42 Macro editorial rows. It is not a new observation from the July 2026 editorial table. All values are percentage points per annum.
+Australia is a public-source proxy alongside the six dated editorial rows. It is not a new observation from the July 2026 editorial table. All values are percentage points per annum.
 
 ## Current observation
 

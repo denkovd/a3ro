@@ -3,12 +3,15 @@
 The US regime page (`/Projects/Regime-Shift`) now includes a research panel
 below today's allocation. It renders independently of the live snapshot feed.
 The current 60/30/10 caps, regime scores, trend multipliers and cycle reduction
-form the fixed baseline. A candidate can adjust each of those rules, the
-rebalance cadence, date range, annual cash assumption and one-way trading cost.
+form the fixed baseline. Gold is untimed: its trend multiplier is fixed at 1.0
+(`TREND_TIMED_SLEEVES` in `backend/src/macro/allocation.ts`), so gold's weight is
+cap × regime score. A candidate can adjust each of those rules, the
+rebalance cadence and tranching, date range, cash return and one-way trading cost.
 Costs/cash assumptions and dates apply equally to both versions and benchmarks.
 
 The panel reports daily equity and drawdown curves, total return, calendar CAGR,
-annualised daily volatility, CAGR/volatility (not Sharpe), yearly returns,
+annualised daily volatility, Sharpe and Sortino against Treasury bills,
+CAGR/volatility, yearly returns,
 conditional regime returns, exposure and turnover. A chronological split shows
 earlier and later performance from the same continuous simulation, without
 resetting holdings or charging a second initial purchase. Windows on either
@@ -52,17 +55,22 @@ other than daily. The default five-year scanner requests are unchanged.
 
 - Rebuild monthly signals from the current cross-asset universe and live
   regime/cycle functions, using only price bars up to the previous month-end.
-- Delay macro observation eligibility by approximate lags: 2 days for daily,
-  8 for weekly, 45 for monthly and 120 for quarterly observations. These lags
-  do not repair revisions or substitute for verified historical release dates.
+- Delay macro observation eligibility by approximate lags, counted from each
+  observation's period-start date: 2 days for daily, 8 for weekly, 45 for
+  monthly and 150 for quarterly observations. Fourth-quarter corporate profits
+  wait 180 days, because BEA publishes them with the third GDP estimate in late
+  March rather than with the second. These lags do not repair revisions or
+  substitute for verified historical release dates
+  (`backend/src/macro/backtestSignals.ts`).
 - Execute at the next equity session close, and mark holdings on each SPY
   trading day. Each asset uses its own daily close on the execution date;
   cross-market closes are asynchronous. Intra-month signals and Bitcoin
   weekend troughs are not sampled.
 - Use S&P index and gold futures signals, but SPY/GLD adjusted ETF returns and
   BTC-USD portfolio returns. Adjusted prices incorporate distributions and
-  embedded ETF expenses; taxes are excluded. Cash uses the explicit constant
-  annual assumption, not a reconstructed Treasury bill yield.
+  embedded ETF expenses; taxes are excluded. Idle cash earns the adjusted BIL
+  (1–3 month Treasury bill ETF) return by default; a fixed annual rate remains
+  available and is required for windows that start before BIL's 2007 inception.
 - Holdings drift between rebalances. Costs apply before the period's return
   to the absolute change in asset weights. The benchmark has the same initial
   purchase cost; mixed static allocations rebalance monthly and pay costs.
@@ -240,3 +248,68 @@ signal vintage, validates all new asset histories on the default 2015+ window,
 and publishes atomically. The full history builder includes the same assets.
 Tests verify 100% single-stock holding, adjusted returns, initial cost, no monthly
 turnover, full-window IPO coverage, absence of Money Line and shared diagnostics.
+
+## Cash accrual, risk metrics, tranches and signal enrichment
+
+**Cash.** `ResearchConfig.cashSource` is `"bills"` (default) or `"constant"`.
+With bills, every portfolio's unallocated cash earns the daily return of the
+dataset's adjusted BIL series (`benchmarkPrices.bills`). A window that BIL does
+not cover is refused rather than spliced; choose a later start or a fixed rate.
+Configs saved before this option existed carry no `cashSource` and keep their
+fixed-rate meaning when restored. Setting a fixed rate of 0% with single-day
+rebalancing reproduces the earlier results exactly.
+
+**Sharpe and Sortino.** `summarizeBacktest()` returns both for the strategy,
+every benchmark and every slice (yearly, by regime, earlier/later). Each step
+records its risk-free return; excess return is the step return minus that.
+
+- Sharpe = mean excess ÷ sample standard deviation of excess × √(periods per year)
+- Sortino = mean excess ÷ downside deviation of excess (target zero) × √(periods per year)
+
+The risk-free leg is BIL whenever it covers the window, whatever the cash
+source. If it does not, the fixed cash rate is the risk-free leg and the panel
+says so. Return / vol (CAGR ÷ volatility) is still shown; it is not Sharpe.
+
+**Tranches.** `tranches` (1, 2 or 4 in the panel) splits the test strategy into
+equal sub-accounts. All buy the first target together. After that, tranche *k*
+rebalances only on session *k* × spacing of each month or quarter (spacing is
+20 ÷ tranches sessions: ten for two tranches, five for four), to the target in
+force that day. A regime change therefore reaches the book one tranche at a
+time. Tranching needs a calendar cadence; event-only cadences are refused. The
+current regime strategy and the static benchmarks keep single-day rebalancing.
+Signals are still built once a month, so tranches remove execution-day luck but
+not signal-day luck until the dataset carries intra-month signals.
+
+**Signal rows (schema 2).** Each row now also stores, for research only:
+
+- `regimeShares`: the risk matrix's normalised vote share per regime (null when
+  no market voted), with `marketsScored` and `marketsAttempted`;
+- `trendZ`: volatility-adjusted momentum z per sleeve at 21, 63, 126 and 252
+  observations of the signal instrument (null until warmed up). Bitcoin
+  observations include weekends.
+- `equityVol`: realised S&P 500 volatility at the signal date, as the annualised
+  standard deviation of the last 21 daily log returns (`realised21`), and the
+  median of that measure over the trailing 126 sessions (`median126`);
+- `universeBreadth63`: how many of the 30 regime-universe markets have a
+  63-observation trend score above zero (`positive`), how many have a score at
+  all that day (`measured`), and `share` = positive ÷ measured. Markets too
+  young to have a score are left out of the share rather than counted against it.
+
+The dataset records `signalSchema`, `trendHorizons` and the `releaseLagDays` it
+was built with. The allocation rule reads none of the new fields. A dataset
+built before this change loads and simulates as before; rebuild it with
+`npm run backtest:history` to add the fields and apply the longer lags.
+
+**FX bar dates.** Daily bars are dated in the exchange's own time zone
+(`meta.exchangeTimezoneName`), not in UTC. Yahoo's `=X` pairs follow a London
+calendar, so in British summer time their bars open at 23:00 UTC the evening
+before; dating them in UTC put each bar a day early, where a signal could read
+prices from the execution day. `npm run verify:fx-dates` prints how each pair
+is stamped and fails on duplicate, weekend or future-dated bars. Stored FX bars
+written under the old rule should be re-backfilled once.
+
+Additional tests:
+
+```powershell
+.\node_modules\.bin\tsx.cmd --test tests/backtestAccounting.test.ts tests/backtestTranches.test.ts tests/backtestSignals.test.ts tests/yahooTradingDate.test.ts
+```

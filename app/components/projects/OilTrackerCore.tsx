@@ -10,7 +10,7 @@
    Published references and dated observations are kept distinct;
    historical data never implies a current operating condition.
 ──────────────────────────────────────────────────────────────── */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { DUR, EASE_OUT } from "../motion";
 import {
@@ -31,10 +31,16 @@ import IntelRail from "./oil/IntelRail";
 import BenchmarkStrip from "./oil/BenchmarkStrip";
 import RefineryDetail from "./oil/RefineryDetail";
 import CorridorDetail from "./oil/CorridorDetail";
+import FlowHealthLegend from "./oil/FlowHealthLegend";
+import GateNormBlock from "./oil/GateNormBlock";
+import { gateArrow, hasComparison, isOutsideTypical, routeFlowState, routeWorstRatio, type GateSignal } from "./oil/gateSignal";
 import { refineryStatus, refineryCondition, capacityLabel, type Refinery } from "./oil/refineries";
 import { currentMetrics, quoteStatus, quoteBasis, comparablePriorClose } from "./oil/dataQuality";
 import type { FocusTarget } from "./oil/types";
 import { chinaLead, chinaMapText } from "./oil/china";
+import AssetSearch from "./oil/explorer/AssetSearch";
+import CompanyDetail from "./oil/explorer/CompanyDetail";
+import { useOilGraph, filterRefineries, filterIsActive, EMPTY_FILTER, searchCorpus, fitView, companyAssets, companyById, type RefineryFilter, type SearchHit } from "./oil/explorer/graph";
 import type { Benchmark, CorridorBaseline, CorridorId, CorridorMetricLatest, DailyPrice, LatestQuote } from "@a3ro/oil-backend";
 
 /* ══ route-only content: hotspot hierarchy + signal copy ══ */
@@ -189,6 +195,18 @@ function buildCorridorPanel(hotspotId: string, metrics: CorridorMetricLatest[]):
 }
 const WATCHLIST_IDS = new Set(["ara"]);
 
+/** Selection id used by `selected`, the back trail and the ?focus= URL parameter. */
+function focusKey(t: FocusTarget) {
+  switch (t.kind) {
+    case "refinery": return `ref:${t.id}`;
+    case "company": return `co:${t.id}`;
+    case "benchmark": return `bench:${t.id}`;
+    case "producer": return `prod:${t.id}`;
+    case "route": case "gate": return `${t.kind}:${t.id}`;
+    default: return t.id;
+  }
+}
+
 /* ══ component ══ */
 export default function OilTrackerCore({
   initialView,
@@ -217,7 +235,7 @@ export default function OilTrackerCore({
   const [layers, setLayers] = useState<{ flows: boolean; gates: boolean; refineries: boolean; producers: ProducerLayerMode }>({
     flows: true,
     gates: true,
-    producers: "production",
+    producers: "off", // static annual reference — off until asked for, so live readings lead
     refineries: true,
   });
   /* remembers the last non-"off" producer sub-mode so the LAYERS toggle
@@ -247,9 +265,12 @@ export default function OilTrackerCore({
   const layersRef = useRef<{ flows: boolean; gates: boolean; refineries: boolean; producers: ProducerLayerMode }>({
     flows: true,
     gates: true,
-    producers: "production",
+    producers: "off", // static annual reference — off until asked for, so live readings lead
     refineries: true,
   });
+  /* canvas emphasis — a selected company's sites, else the active filter
+     matches; null draws every refinery normally. Read by the draw loop. */
+  const emphasisRef = useRef<{ ids: Set<string>; mode: "company" | "filter" } | null>(null);
   /* hover-card screen position — set imperatively on every pointer move
      while something is hovered (Section §4b), so the card can track the
      cursor without a per-mousemove React re-render. */
@@ -288,6 +309,7 @@ export default function OilTrackerCore({
 
   const focusProducer = useCallback((p: Producer) => {
     setSelected("prod:" + p.id);
+    setLayers(prev => prev.producers === "off" ? { ...prev, producers: lastProducerModeRef.current } : prev);
     setProContact(null);
     setTouched(true);
     hasMoved.current = true;
@@ -299,9 +321,32 @@ export default function OilTrackerCore({
   }, [tweenTo]);
 
   const { feed, intel } = useOilIntelligence();
+  /* Gate traffic vs norm, keyed by corridor id. One source for the rail, the
+     detail panels and the draw loop (which reads the ref fresh each frame). */
+  const gateSignalsRef = useRef<Record<string, GateSignal>>({});
+  gateSignalsRef.current = Object.fromEntries(intel.gates.map(g => [g.id, g.signal]));
+  const gateSignalOf = (corridor: string): GateSignal | null => gateSignalsRef.current[corridor] ?? null;
+  /* until the first physical fetch settles, gate labels read LOADING — not "no reading" */
+  const gatesLoadingRef = useRef(true);
+  gatesLoadingRef.current = feed.corridors === null && !feed.physicalFailed;
+  /* narrow screens: the overview sheet can fold to its header so the globe keeps the screen */
+  const [overviewCollapsed, setOverviewCollapsed] = useState(false);
   const { refineries, feed: refineryFeed } = useRefineries();
   const refineriesRef = useRef(refineries);
   refineriesRef.current = refineries;
+  const graph = useOilGraph(refineries);
+  const [filter, setFilterState] = useState<RefineryFilter>(EMPTY_FILTER);
+  const [trail, setTrail] = useState<string[]>([]);
+  const filterIds = useMemo(() => filterRefineries(graph, filter, r => refineryCondition(r).status), [graph, filter]);
+  const corpus = useMemo(() => searchCorpus(graph, { corridors: HOTSPOTS.map(h => ({ id: h.id, title: h.title })), routes: FLOW_ROUTES }), [graph]);
+  const companySel = selected?.startsWith("co:") ? selected.slice(3) : null;
+  const companySiteIds = useMemo(() => companySel ? new Set(companyAssets(graph, companySel).filter(a => !a.former).map(a => a.refinery.id)) : null, [graph, companySel]);
+  /* an explicit filter outranks the selected company's highlight */
+  emphasisRef.current = filterIsActive(filter) ? { ids: filterIds, mode: "filter" } : companySiteIds?.size ? { ids: companySiteIds, mode: "company" } : null;
+  const setFilter = useCallback((next: RefineryFilter) => {
+    setFilterState(next);
+    if (filterIsActive(next)) setLayers(p => ({ ...p, refineries: true }));
+  }, []);
   const freshMetrics = currentMetrics(feed.corridors);
   const refinerySel = selected?.startsWith("ref:") ? refineries.find(r => r.id === selected.slice(4)) ?? null : null;
   const routeSel = selected?.startsWith("route:") ? FLOW_ROUTES.find(r => r.id === selected.slice(6)) ?? null : null;
@@ -318,6 +363,26 @@ export default function OilTrackerCore({
     sim.current.lastInteract = performance.now();
     tweenTo({ lon: r.lon, lat: clamp(r.lat, -48, 48), zoom: 1.45, off: 0 }, 1000);
   }, [tweenTo]);
+
+  const fitTo = useCallback((sites: { lon: number; lat: number }[]) => {
+    const v = fitView(sites);
+    if (!v) return;
+    setTouched(true);
+    hasMoved.current = true;
+    sim.current.lastInteract = performance.now();
+    tweenTo({ lon: v.lon, lat: clamp(v.lat, -48, 48), zoom: v.zoom, off: 0 }, 1000);
+  }, [tweenTo]);
+
+  const focusCompany = useCallback((id: string) => {
+    setHoverId(null);
+    sim.current.hovered = null;
+    setSelected(`co:${id}`);
+    setProContact(null);
+    setLayers(p => ({ ...p, refineries: true }));
+    setTouched(true);
+    const sites = companyAssets(graph, id).filter(a => !a.former).map(a => a.refinery);
+    if (sites.length) fitTo(sites);
+  }, [graph, fitTo]);
 
   /* benchmarks reuse the existing `selected` state via "bench:WTI" / "bench:BRENT" ids */
   const benchSel: Benchmark | null =
@@ -338,6 +403,7 @@ export default function OilTrackerCore({
 
   const closePanel = useCallback(() => {
     setSelected(null);
+    setTrail([]);
     setProContact(null);
     sim.current.lastInteract = performance.now();
     tweenTo({ zoom: 1, off: 0, lat: clamp(sim.current.lat, -34, 34) }, 900);
@@ -345,6 +411,13 @@ export default function OilTrackerCore({
 
   const onRailFocus = useCallback(
     (target: FocusTarget) => {
+      const key = focusKey(target);
+      const from = selectedRef.current;
+      if (from && from !== key && !from.startsWith("refgroup:")) setTrail(t => [...t.filter(x => x !== key), from].slice(-12));
+      if (target.kind === "company") {
+        focusCompany(target.id);
+        return;
+      }
       if (target.kind === "route" || target.kind === "gate") {
         setSelected(`${target.kind}:${target.id}`);
         setProContact(null);
@@ -369,7 +442,7 @@ export default function OilTrackerCore({
       const h = HOTSPOTS.find((x) => x.id === target.id);
       if (h) focusHotspot(h);
     },
-    [focusBenchmark, focusHotspot, focusProducer, focusRefinery, refineries],
+    [focusBenchmark, focusCompany, focusHotspot, focusProducer, focusRefinery, refineries],
   );
 
   const onRailSelectCorridor = useCallback(
@@ -392,6 +465,105 @@ export default function OilTrackerCore({
     [benchSel, closePanel, focusBenchmark],
   );
 
+  /* ── restore a selection from its id (back trail, ?focus= deep links, browser history) ── */
+  const focusById = useCallback((id: string): boolean => {
+    if (id.startsWith("ref:")) {
+      const r = refineriesRef.current.find(x => x.id === id.slice(4));
+      if (r) focusRefinery(r);
+      return !!r;
+    }
+    if (id.startsWith("co:")) {
+      if (!companyById(graph, id.slice(3))) return false;
+      focusCompany(id.slice(3));
+      return true;
+    }
+    if (id === "bench:WTI" || id === "bench:BRENT") {
+      focusBenchmark(id.slice(6) as Benchmark);
+      return true;
+    }
+    if (id.startsWith("prod:")) {
+      const p = PRODUCERS.find(x => x.id === id.slice(5));
+      if (p) focusProducer(p);
+      return !!p;
+    }
+    if ((id.startsWith("route:") && FLOW_ROUTES.some(r => r.id === id.slice(6))) || (id.startsWith("gate:") && GATE_LABEL[id.slice(5) as CorridorId])) {
+      setSelected(id);
+      setProContact(null);
+      setTouched(true);
+      return true;
+    }
+    const h = HOTSPOTS.find(x => x.id === id);
+    if (h) focusHotspot(h);
+    return !!h;
+  }, [graph, focusBenchmark, focusCompany, focusHotspot, focusProducer, focusRefinery]);
+  const focusByIdRef = useRef(focusById);
+  focusByIdRef.current = focusById;
+  const closePanelRef = useRef(closePanel);
+  closePanelRef.current = closePanel;
+
+  const labelFor = (id: string) => {
+    if (id.startsWith("ref:")) return refineries.find(r => r.id === id.slice(4))?.name ?? "refinery";
+    if (id.startsWith("co:")) return companyById(graph, id.slice(3))?.name ?? "company";
+    if (id.startsWith("bench:")) return BENCH_TITLE[id.slice(6) as Benchmark] ?? "benchmark";
+    if (id.startsWith("prod:")) return PRODUCERS.find(p => p.id === id.slice(5))?.name ?? "producer";
+    if (id.startsWith("route:")) return FLOW_ROUTES.find(r => r.id === id.slice(6))?.name ?? "route";
+    if (id.startsWith("gate:")) return GATE_LABEL[id.slice(5) as CorridorId] ?? "chokepoint";
+    return HOTSPOTS.find(h => h.id === id)?.title ?? "previous";
+  };
+
+  const goBack = useCallback(() => {
+    const prev = trail.at(-1);
+    if (!prev) return;
+    setTrail(trail.slice(0, -1));
+    focusById(prev);
+  }, [trail, focusById]);
+
+  /* Deep links: ?focus=<id> opens that selection and skips the intro sweep,
+     which would otherwise tween the camera away from it. */
+  const urlReady = useRef(false);
+  useEffect(() => {
+    const initial = new URLSearchParams(window.location.search).get("focus");
+    if (initial) {
+      skipIntroRef.current = true;
+      if (!focusByIdRef.current(initial)) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("focus");
+        window.history.replaceState(window.history.state, "", url);
+      }
+    }
+    urlReady.current = true;
+    const onPop = () => {
+      const next = new URLSearchParams(window.location.search).get("focus");
+      setTrail([]);
+      if (!next || !focusByIdRef.current(next)) closePanelRef.current();
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  /* Each selection becomes a browser-history entry, so Back returns to the previous asset. */
+  useEffect(() => {
+    if (!urlReady.current) return;
+    const url = new URL(window.location.href);
+    const next = selected && !selected.startsWith("refgroup:") ? selected : null;
+    if (url.searchParams.get("focus") === next) return;
+    if (next) url.searchParams.set("focus", next);
+    else url.searchParams.delete("focus");
+    window.history.pushState(window.history.state, "", url);
+  }, [selected]);
+
+  const onSearchSelect = useCallback((hit: SearchHit) => {
+    if (hit.kind === "country") {
+      setFilter({ ...filter, country: hit.id });
+      fitTo(refineriesRef.current.filter(r => r.country === hit.id));
+      return;
+    }
+    onRailFocus(hit.kind === "refinery" ? { kind: "refinery", id: hit.id }
+      : hit.kind === "company" ? { kind: "company", id: hit.id }
+      : hit.kind === "route" ? { kind: "route", id: hit.id }
+      : { kind: "corridor", id: hit.id });
+  }, [filter, fitTo, onRailFocus, setFilter]);
+
   /* ── data-driven globe sub-labels ──
      Stable-identity ref so the engine effect's [] deps stay valid;
      this effect just repopulates its contents whenever corridor data
@@ -400,21 +572,11 @@ export default function OilTrackerCore({
      real feed value backs the sub (amber in the canvas draw); false
      for the neutral CONNECTING/WATCHLIST placeholders. */
   const hotspotSubsRef = useRef<Record<string, { text: string; compactText?: string; live: boolean }>>({});
-  /* per-hotspot flow-health ratio (7d transits ÷ 1y norm), or null when no
-     baseline is on file. Drives the gate-dot colour in the draw loop — the
-     visual layer of Flow Stress. Only gate-capable hotspots get a value. */
-  const hotspotHealthRef = useRef<Record<string, number | null>>({});
-  /* per-gate flow-health ratio keyed by corridor id (all chokepoints) —
-     drives the tick-gate dot colour + salience on the globe. Same signal
-     as hotspotHealthRef, keyed by corridor instead of hotspot. */
-  const gateHealthRef = useRef<Record<string, number | null>>({});
   /* per-route pulse-speed multiplier (Section C3): live tanker_volume_7d
      at a route's gates vs. the EIA H1'25 estimate for that gate. Stable
      ref identity so the engine effect's [] deps stay valid — this effect
      just repopulates contents whenever corridor data changes. */
   const gateActivityRef = useRef<Record<string, number>>({});
-  /* per-gate tick-label live suffix, e.g. " · 12/D" (Section C5). */
-  const gateSubsRef = useRef<Record<string, string>>({});
   useEffect(() => {
     const metrics = currentMetrics(feed.corridors);
     const find = (corridor: string, metric: string) =>
@@ -438,35 +600,6 @@ export default function OilTrackerCore({
       china: { text: chinaMapText(feed.corridors), compactText: chinaMapText(feed.corridors, true), live: !!chinaLead(metrics.filter(m => m.corridor === "china")) },
       ara: { text: "WATCHLIST", live: false },
     };
-
-    // per-hotspot flow health: 7d transits ÷ 1-year norm (same ratio the
-    // hover card + panel show). Only gate hotspots (hormuz/sg) have a
-    // transits baseline; others stay null → default amber in the draw loop.
-    const healthOf = (corridor: CorridorId): number | null => {
-      const t = find(corridor, "tanker_transits_7d");
-      const b = baselineFor(feed.baselines ?? null, corridor, "tanker_transits", "1y");
-      if (!t || !b || b.meanValue <= 0) return null;
-      return t.value / b.meanValue;
-    };
-    hotspotHealthRef.current = {
-      hormuz: healthOf("hormuz"),
-      sg: healthOf("singapore"),
-    };
-
-    // gate tick suffixes: live tanker_transits_7d per gate, "/D" formatted.
-    const gateIds: CorridorId[] = ["hormuz", "singapore", "suez", "bab_el_mandeb", "cape", "panama"];
-    const nextGateSubs: Record<string, string> = {};
-    for (const gid of gateIds) {
-      const v = find(gid, "tanker_transits_7d");
-      nextGateSubs[gid] = v ? ` · ${v.value.toFixed(0)}/D` : "";
-    }
-    gateSubsRef.current = nextGateSubs;
-
-    // per-gate flow health (same 7d-transits ÷ 1y-norm ratio the hover card
-    // and panel show) for every chokepoint — colours the tick-gate dots.
-    gateHealthRef.current = Object.fromEntries(
-      gateIds.map((g) => [g, healthOf(g)] as [string, number | null]),
-    );
 
     // per-route activity factor: avg over the route's gates of
     // (live tanker_volume_7d Mt/d ÷ (EIA est. Mb/d × 0.136)) — 0.136 Mt/d
@@ -720,6 +853,80 @@ export default function OilTrackerCore({
          strokes + pulses (below) for major/secondary/thin, but tertiary
          is background texture, not data — it always draws (Section §2c). */
       const flowsOn = layersRef.current.flows;
+      const signals = gateSignalsRef.current;
+      /* Gate mark — the globe's primary encoding. Size and weight follow the
+         departure from the 1-year norm. A gate with no current comparison is
+         a hollow grey ring (dashed when the reading is stale) and is never
+         coloured. Returns the mark's radius so labels can sit clear of it. */
+      const drawGateMark = (sx: number, sy: number, sig: GateSignal | undefined, fade: number): number => {
+        if (!sig || !hasComparison(sig)) {
+          ctx.strokeStyle = INK(0.5 * fade);
+          ctx.lineWidth = 1.2;
+          ctx.setLineDash(sig?.state === "stale" ? [2.5, 2.5] : []);
+          ctx.beginPath();
+          ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          return 5;
+        }
+        const ratio = sig.ratio as number;
+        if (!isOutsideTypical(sig)) {
+          ctx.fillStyle = flowHealth(ratio, 0.85 * fade);
+          ctx.beginPath();
+          ctx.arc(sx, sy, 2.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = flowHealth(ratio, 0.4 * fade);
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(sx, sy, 5.5, 0, Math.PI * 2);
+          ctx.stroke();
+          return 5.5;
+        }
+        const r = 9 + 7 * Math.min(1, sig.severity / 0.6);
+        ctx.fillStyle = flowHealth(ratio, 0.2 * fade);
+        ctx.beginPath();
+        ctx.arc(sx, sy, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = flowHealth(ratio, 0.95 * fade);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(sx, sy, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = flowHealth(ratio, fade);
+        ctx.beginPath();
+        ctx.arc(sx, sy, 3.6, 0, Math.PI * 2);
+        ctx.fill();
+        return r;
+      };
+      /* Gate label: percent of norm with a direction arrow and the reading,
+         so the mark never depends on colour alone. */
+      const gateLabel = (sig: GateSignal | undefined): string => {
+        if (gatesLoadingRef.current) return "LOADING";
+        if (!sig || sig.state === "no-reading" || sig.value === null) return "NO READING";
+        if (sig.state === "stale") return `STALE · ${sig.periodDate}`;
+        if (sig.ratio === null) return `${sig.value.toFixed(1)}/D · NO NORM`;
+        const arrow = gateArrow(sig);
+        return `${Math.round(sig.ratio * 100)}% OF NORM${arrow ? ` ${arrow}` : ""} · ${sig.value.toFixed(1)}/D`;
+      };
+      /* Label boxes of gates outside their typical range. Ambient labels
+         (route names, zoom-revealed refinery names) give way inside them so
+         the reading that matters stays legible. [x0, y0, x1, y1] */
+      const gateGuards: [number, number, number, number][] = [];
+      const guardGate = (lon: number, lat: number, side: number, minZ: number) => {
+        rot(...vec(lon, lat), o);
+        if (o[2] < minZ) return;
+        const gx = cx + o[0] * R, gy = cy - o[1] * R;
+        gateGuards.push(side < 0 ? [gx - 230, gy - 28, gx + 24, gy + 18] : [gx - 24, gy - 28, gx + 230, gy + 18]);
+      };
+      for (const hs of HOTSPOTS) {
+        const gid = hs.id === "hormuz" ? "hormuz" : hs.id === "sg" ? "singapore" : null;
+        if (gid && signals[gid] && isOutsideTypical(signals[gid])) guardGate(hs.lon, hs.lat, hs.side ?? 1, 0.12);
+      }
+      if (layersRef.current.gates) {
+        for (const tk of TICKS) if (tk.gate && signals[tk.gate] && isOutsideTypical(signals[tk.gate])) guardGate(tk.lon, tk.lat, 1, 0.35);
+      }
+      const inGateGuard = (x: number, y: number, width: number) =>
+        gateGuards.some((g) => x < g[2] && x + width > g[0] && y - 10 < g[3] && y + 3 > g[1]);
       const routeMidpoints: { c: Baked; sx: number; sy: number; z: number }[] = [];
       for (const c of corridors) {
         if (c.rank !== "tertiary" && !flowsOn) continue;
@@ -746,9 +953,25 @@ export default function OilTrackerCore({
         }
         const major = c.rank === "major";
         const secondary = c.rank === "secondary";
-        ctx.strokeStyle = AMB(major ? 0.4 : secondary ? 0.3 : 0.2);
-        ctx.lineWidth = major ? 1.8 : secondary ? 1.2 : 0.8;
+        /* A route only reads as flowing when every gate on it has a current
+           reading at or above its norm. A gate below norm draws the route
+           dashed in that gate's colour; a route with no gate reading is a
+           static grey line. Neither pulses. */
+        const routeGates = (c.gates ?? []).map((g) => signals[g]);
+        const flow = routeFlowState(routeGates);
+        if (flow === "interrupted") {
+          ctx.setLineDash([5, 5]);
+          ctx.strokeStyle = flowHealth(routeWorstRatio(routeGates) ?? 0, major ? 0.75 : 0.55);
+          ctx.lineWidth = major ? 1.8 : secondary ? 1.3 : 1;
+        } else if (flow === "unobserved") {
+          ctx.strokeStyle = INK(major ? 0.26 : secondary ? 0.2 : 0.14);
+          ctx.lineWidth = major ? 1.6 : secondary ? 1.1 : 0.8;
+        } else {
+          ctx.strokeStyle = AMB(major ? 0.4 : secondary ? 0.3 : 0.2);
+          ctx.lineWidth = major ? 1.8 : secondary ? 1.2 : 0.8;
+        }
         ctx.stroke();
+        ctx.setLineDash([]);
 
         // route label anchor: middle sample point, captured regardless of
         // reveal progress so C4 can gate on its own label ramps.
@@ -760,7 +983,7 @@ export default function OilTrackerCore({
           }
         }
 
-        if (!reducedRef.current && rev >= 1) {
+        if (flow === "flowing" && !reducedRef.current && rev >= 1) {
           // per-route speed = base × activity factor (Section C3); the
           // ref is read fresh each frame, stable identity so the engine
           // effect's [] deps stay valid.
@@ -805,39 +1028,9 @@ export default function OilTrackerCore({
         const zFade = Math.min(1, (z - 0.4) / 0.3);
         const a = 0.5 * labSec * zFade;
         if (a <= 0.01) continue;
+        if (inGateGuard(sx, sy - 8, c.name.length * 5.4)) continue;
         ctx.fillStyle = INK(a);
         haloText(c.name, sx, sy - 8);
-      }
-
-      /* chokepoint ticks — skipped entirely when the gates layer is off
-         (Section §2c). */
-      ctx.font = '500 8px "JetBrains Mono", ui-monospace, monospace';
-      for (const tk of (layersRef.current.gates ? TICKS : [])) {
-        rot(...vec(tk.lon, tk.lat), o);
-        if (o[2] < 0.35) continue;
-        const sx = cx + o[0] * R, sy = cy - o[1] * R;
-        const a = 0.3 * o[2] * labSec;
-        // flow-health: a live 7d-transits ÷ 1y-norm ratio for this gate
-        // gets a filled colour dot (salience) + tints the crosshair; gates
-        // with no baseline yet stay the faint neutral cross.
-        const gh = tk.gate ? gateHealthRef.current[tk.gate] : null;
-        if (typeof gh === "number") {
-          ctx.fillStyle = flowHealth(gh, Math.min(1, o[2] * labSec * 0.85));
-          ctx.beginPath();
-          ctx.arc(sx, sy, 2.2, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.strokeStyle = typeof gh === "number" ? flowHealth(gh, Math.min(1, a * 1.8)) : INK(a);
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(sx - 3, sy);
-        ctx.lineTo(sx + 3, sy);
-        ctx.moveTo(sx, sy - 3);
-        ctx.lineTo(sx, sy + 3);
-        ctx.stroke();
-        ctx.fillStyle = INK(a * 0.8);
-        const liveSuffix = tk.gate ? gateSubsRef.current[tk.gate] ?? "" : "";
-        haloText(`${tk.label}${liveSuffix}`, sx + 6, sy + 2.5);
       }
 
       /* producers overlay (toggleable) — country markers sized by
@@ -929,23 +1122,67 @@ export default function OilTrackerCore({
           const closed = sites.every(r => ["closed", "idled"].includes(refineryCondition(r).status));
           const alert = sites.some(r => ["outage", "maintenance"].includes(refineryCondition(r).status));
           const radius = sites.length > 1 ? 10 : 4 + Math.sqrt((sites[0].capacityKbd ?? 0) / 100);
-          const alpha = Math.min(1, (z - 0.15) / 0.3);
-          ctx.strokeStyle = alert ? `rgba(232,120,105,${alpha})` : closed ? `rgba(212,161,87,${alpha})` : INK(0.75 * alpha);
-          ctx.fillStyle = closed ? AMB(0.16 * alpha) : INK(0.08 * alpha);
+          const em = emphasisRef.current;
+          const lit = !em || sites.some(r => em.ids.has(r.id));
+          const alpha = Math.min(1, (z - 0.15) / 0.3) * (lit ? 1 : 0.22);
+          /* A site with no current sourced event is a reference mark: dim and
+             hollow until it is selected, hovered or picked out by a filter. */
+          const bright = selected || s.hovered === `ref:${sites[0].id}` || (!!em && lit);
+          ctx.strokeStyle = alert ? `rgba(232,120,105,${alpha})` : closed ? `rgba(212,161,87,${alpha})` : INK((bright ? 0.75 : 0.3) * alpha);
+          ctx.fillStyle = closed ? AMB(0.16 * alpha) : INK((bright ? 0.08 : 0) * alpha);
           ctx.lineWidth = selected ? 2 : 1;
           ctx.beginPath();
           ctx.rect(x - radius, y - radius, radius * 2, radius * 2);
           ctx.fill(); ctx.stroke();
+          if (em && lit) {
+            /* emphasis ring: solid for a selected company's sites, dashed for filter matches */
+            ctx.strokeStyle = AMB(0.9 * alpha);
+            ctx.lineWidth = 1;
+            ctx.setLineDash(em.mode === "company" ? [] : [3, 3]);
+            ctx.strokeRect(x - radius - 4, y - radius - 4, (radius + 4) * 2, (radius + 4) * 2);
+            ctx.setLineDash([]);
+          }
           if (sites.length > 1) {
-            ctx.fillStyle = INK(alpha); ctx.textAlign = "center";
+            ctx.fillStyle = INK((bright || alert || closed ? 1 : 0.55) * alpha); ctx.textAlign = "center";
             haloText(String(sites.length), x, y + 3); ctx.textAlign = "left";
           } else if (closed) {
             ctx.beginPath(); ctx.moveTo(x - 3, y - 3); ctx.lineTo(x + 3, y + 3); ctx.moveTo(x + 3, y - 3); ctx.lineTo(x - 3, y + 3); ctx.stroke();
           }
-          if (selected || s.hovered === `ref:${sites[0].id}` || s.zoom >= 1.3) {
-            ctx.fillStyle = INK(alpha);
-            haloText(sites.length > 1 ? `${sites.length} REFINERIES` : sites[0].name.toUpperCase(), x + radius + 5, y - radius - 5);
+          const wanted = selected || s.hovered === `ref:${sites[0].id}` || (!!em && lit && em.ids.size <= 6);
+          const name = sites.length > 1 ? `${sites.length} REFINERIES` : sites[0].name.toUpperCase();
+          // zoom-revealed names are ambient: dimmer for unverified sites, and they yield to a gate reading
+          if (wanted || (s.zoom >= 1.3 && lit && !inGateGuard(x + radius + 5, y - radius - 5, name.length * 6))) {
+            ctx.fillStyle = INK((wanted || alert || closed ? 1 : 0.55) * alpha);
+            haloText(name, x + radius + 5, y - radius - 5);
           }
+        }
+      }
+
+      /* chokepoint gates — drawn after the reference layers so a departure
+         from the norm is never covered by them. Skipped entirely when the
+         gates layer is off (Section §2c). */
+      for (const tk of (layersRef.current.gates ? TICKS : [])) {
+        rot(...vec(tk.lon, tk.lat), o);
+        if (o[2] < 0.35) continue;
+        const sx = cx + o[0] * R, sy = cy - o[1] * R;
+        const fade = Math.min(1, o[2] * 1.2) * labSec;
+        if (fade <= 0.01) continue;
+        const sig = tk.gate ? signals[tk.gate] : undefined;
+        const out = !!sig && isOutsideTypical(sig);
+        const r = drawGateMark(sx, sy, sig, fade);
+        ctx.textAlign = "left";
+        if (out) {
+          ctx.font = '600 11px "JetBrains Mono", ui-monospace, monospace';
+          ctx.fillStyle = INK(0.95 * fade);
+          haloText(tk.label, sx + r + 6, sy - 2);
+          ctx.font = '500 10px "JetBrains Mono", ui-monospace, monospace';
+          ctx.fillStyle = INK(0.9 * fade);
+          haloText(gateLabel(sig), sx + r + 6, sy + 10);
+        } else {
+          ctx.font = '500 9px "JetBrains Mono", ui-monospace, monospace';
+          ctx.fillStyle = INK(0.6 * fade);
+          const short = sig && sig.ratio !== null ? `${Math.round(sig.ratio * 100)}%` : gateLabel(sig);
+          haloText(`${tk.label} · ${short}`, sx + r + 5, sy + 3);
         }
       }
 
@@ -962,11 +1199,15 @@ export default function OilTrackerCore({
         if (fade <= 0.01) continue;
         const isSel = selectedRef.current === hs.id;
         const isHover = s.hovered === hs.id;
-        // Flow-health colour: gate hotspots with a live "vs 1y norm" ratio
-        // tint red→amber→teal; everything else keeps the base amber/ink.
-        const health = hotspotHealthRef.current[hs.id];
-        const col = typeof health === "number" ? (a: number) => flowHealth(health, a) : primary ? AMB : INK;
+        // Gate hotspots (Hormuz, Singapore) carry the same traffic-vs-norm
+        // mark as every other chokepoint; other hotspots keep amber/ink.
+        const gateId = hs.id === "hormuz" ? "hormuz" : hs.id === "sg" ? "singapore" : null;
+        const sig = gateId ? signals[gateId] : undefined;
+        const out = !!sig && isOutsideTypical(sig);
+        const sigRatio = sig?.ratio ?? null;
+        const col = sigRatio !== null ? (a: number) => flowHealth(sigRatio, a) : gateId ? INK : primary ? AMB : INK;
         const coreA = primary ? 0.95 : hs.kind === "reserved" ? 0.35 : 0.6;
+        let markR = 6.5;
 
         if (hs.glyph === "diamond") {
           const r = 5.5;
@@ -983,16 +1224,9 @@ export default function OilTrackerCore({
           ctx.beginPath();
           ctx.arc(sx, sy, 1.8, 0, Math.PI * 2);
           ctx.fill();
+        } else if (gateId) {
+          markR = drawGateMark(sx, sy, sig, fade);
         } else {
-          // health salience: a faint filled disc in the gate's health colour
-          // behind the core dot, so a stressed (red) or strong (teal) gate
-          // reads at a glance instead of relying on the 2px core alone.
-          if (typeof health === "number") {
-            ctx.fillStyle = flowHealth(health, 0.16 * fade);
-            ctx.beginPath();
-            ctx.arc(sx, sy, primary ? 7.5 : 6, 0, Math.PI * 2);
-            ctx.fill();
-          }
           ctx.fillStyle = col(coreA * fade);
           ctx.beginPath();
           ctx.arc(sx, sy, primary ? 2.4 : 1.7, 0, Math.PI * 2);
@@ -1004,16 +1238,19 @@ export default function OilTrackerCore({
           ctx.stroke();
         }
 
-        if (!reducedRef.current && primary) {
+        // the expanding ring marks a departure from the norm (gates) or a
+        // primary non-gate hotspot; a gate inside its typical range stays still.
+        if (!reducedRef.current && (gateId ? out : primary)) {
           const pt = (t * 0.4 + (hs.lon + 180) / 360) % 1;
-          ctx.strokeStyle = col(0.3 * (1 - pt) * fade);
+          ctx.strokeStyle = col((gateId ? 0.45 : 0.3) * (1 - pt) * fade);
+          ctx.lineWidth = 1;
           ctx.beginPath();
-          ctx.arc(sx, sy, 7 + pt * 16, 0, Math.PI * 2);
+          ctx.arc(sx, sy, markR + 1 + pt * 16, 0, Math.PI * 2);
           ctx.stroke();
         }
 
         if (isSel) {
-          const b = 13;
+          const b = Math.max(13, markR + 5);
           ctx.strokeStyle = col(0.85 * fade);
           ctx.lineWidth = 1;
           for (const [dx, dy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) {
@@ -1025,18 +1262,34 @@ export default function OilTrackerCore({
           }
         }
 
-        const side = hs.side ?? 1;
-        const lx = sx + side * 14, ly = sy - 10;
+        let side: number = hs.side ?? 1;
+        const labelGap = Math.max(14, markR + 7);
+        // a gate reading must stay on screen: flip its label to the other side of the mark if it would be clipped
+        if (gateId) {
+          const labelW = Math.max(ctx.measureText(hs.label).width, ctx.measureText(gateLabel(sig)).width) + 6;
+          if (side < 0 && sx - labelGap - labelW < 4) side = 1;
+          else if (side > 0 && sx + labelGap + labelW > w - 4 && sx - labelGap - labelW >= 4) side = -1;
+        }
+        const lx = sx + side * labelGap, ly = sy - 10;
         ctx.textAlign = side < 0 ? "right" : "left";
-        ctx.strokeStyle = INK(0.22 * fade);
-        ctx.beginPath();
-        ctx.moveTo(sx + side * 4, sy - 4);
-        ctx.lineTo(lx - side * 3, ly + 3);
-        ctx.stroke();
-        ctx.fillStyle = INK((isSel || isHover ? 0.9 : primary ? 0.85 : 0.55) * fade);
+        if (!out) {
+          ctx.strokeStyle = INK(0.22 * fade);
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(sx + side * 4, sy - 4);
+          ctx.lineTo(lx - side * 3, ly + 3);
+          ctx.stroke();
+        }
+        if (out) ctx.font = `600 ${Math.max(11, Number(hotspotFontPx))}px "JetBrains Mono", ui-monospace, monospace`;
+        ctx.fillStyle = INK((out ? 1 : isSel || isHover ? 0.9 : primary ? 0.85 : 0.55) * fade);
         haloText(hs.label, lx, ly);
+        if (out) ctx.font = `500 ${hotspotFontPx}px "JetBrains Mono", ui-monospace, monospace`;
         const sub = hotspotSubsRef.current[hs.id];
-        if (primary && sub) {
+        if (gateId) {
+          // traffic vs norm, in ink with an arrow — colour stays on the mark
+          ctx.fillStyle = INK((out ? 0.95 : 0.6) * fade);
+          haloText(gateLabel(sig), lx, ly + 12);
+        } else if (primary && sub) {
           // amber only when a real feed value backs this sub (Section C7);
           // the neutral CONNECTING/WATCHLIST placeholders stay ink.
           ctx.fillStyle = sub.live ? AMB(0.8 * fade) : INK(0.55 * fade);
@@ -1483,6 +1736,8 @@ export default function OilTrackerCore({
         }
         lines.push({ text: parts.length > 0 ? parts.join(" · ") : "NO LIVE GATE ON ROUTE · WIDTH = EIA SCALE" });
       }
+      const flow = routeFlowState(route.gates.map(g => gateSignalOf(g) ?? undefined));
+      lines.push({ text: flow === "interrupted" ? "A GATE READS BELOW NORM · NO FLOW SHOWN" : flow === "unobserved" ? "NO GATE READING · ILLUSTRATIVE PATH" : "GATES AT OR ABOVE NORM" });
       return { title: route.name, lines, showClickFooter: true };
     }
 
@@ -1512,44 +1767,49 @@ export default function OilTrackerCore({
     }
     if (selected?.startsWith("refgroup:")) {
       const ids = selected.slice(9).split(",");
-      return <div><h3 className="text-lg text-[var(--ink)]">Refineries in this area</h3><p className="mt-2 text-xs text-[var(--ink-3)]">Select a facility to inspect its capacity and operating history.</p><ul className="mt-4 divide-y divide-[var(--line)]">{refineries.filter(r => ids.includes(r.id)).map(r => <li key={r.id}><button type="button" onClick={() => focusRefinery(r)} className="w-full py-4 text-left text-sm text-[var(--ink-2)] hover:bg-white/5">{r.name}<span className="mt-1 block font-mono text-[10px] text-[var(--ink-3)]">{capacityLabel(r)} · capacity reference</span></button></li>)}</ul></div>;
+      return <div><h3 className="text-lg text-[var(--ink)]">Refineries in this area</h3><p className="mt-2 text-xs text-[var(--ink-3)]">Select a facility to inspect its capacity and operating history.</p><ul className="mt-4 divide-y divide-[var(--line)]">{refineries.filter(r => ids.includes(r.id)).map(r => <li key={r.id}><button type="button" onClick={() => focusRefinery(r)} className="w-full py-4 text-left text-sm text-[var(--ink-2)] hover:bg-white/5">{r.name}<span className="mt-1 block font-mono text-[11px] text-[var(--ink-3)]">{capacityLabel(r)} · capacity reference</span></button></li>)}</ul></div>;
     }
-    if (refinerySel) return <RefineryDetail key={refinerySel.id} refinery={refinerySel} metrics={feed.corridors} onFocus={onRailFocus} />;
+    if (companySel) return <CompanyDetail key={companySel} graph={graph} companyId={companySel} onFocus={onRailFocus} onFit={() => fitTo(refineries.filter(r => companySiteIds?.has(r.id)))} />;
+    if (refinerySel) return <RefineryDetail key={refinerySel.id} refinery={refinerySel} metrics={feed.corridors} graph={graph} checks={refineryFeed.checks} onFocus={onRailFocus} />;
     if (routeSel || gateSel) {
       const gates = routeSel ? routeSel.gates : [gateSel!];
       return <div className="space-y-5">
-        <div><p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">{routeSel ? "Flow route" : "Chokepoint"}</p><h3 className="mt-2 text-lg text-[var(--ink)]">{routeSel?.name ?? GATE_LABEL[gateSel!] ?? gateSel}</h3></div>
+        <div><p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">{routeSel ? "Flow route" : "Chokepoint"}</p><h3 className="mt-2 text-lg text-[var(--ink)]">{routeSel?.name ?? GATE_LABEL[gateSel!] ?? gateSel}</h3></div>
         {routeSel && <p className="text-xs leading-relaxed text-[var(--ink-2)]">Illustrative seaborne crude route. Gate observations describe traffic at the chokepoint; they do not measure this route's cargo volume.</p>}
+        {routeSel && (() => {
+          const flow = routeFlowState(gates.map(g => gateSignalOf(g) ?? undefined));
+          return <p className="text-[11px] leading-relaxed text-[var(--ink-3)]">{flow === "interrupted" ? "Drawn dashed with no pulse: a gate on this path reads below its norm." : flow === "unobserved" ? "Drawn as a static grey line: no current gate reading covers this whole path." : "Drawn with a pulse: every gate on this path reads at or above its norm."}</p>;
+        })()}
         {gates.length === 0 && <p className="text-xs text-[var(--ink-3)]">No connected gate observations for this route.</p>}
         {gates.map(g => {
           const row = freshMetrics.find(m => m.corridor === g && m.metric === "tanker_transits_7d");
           const last = feed.corridors?.find(m => m.corridor === g && m.metric === "tanker_transits_7d");
-          return <section key={g} className="border-t border-[var(--line)] pt-4"><h4 className="text-sm text-[var(--ink)]">{GATE_LABEL[g] ?? g}</h4><p className="mt-2 font-mono text-lg text-[var(--ink-2)]">{row ? `${row.value.toFixed(1)} transits / day` : last ? "Stale observation" : "Observation unavailable"}</p><p className="mt-1 text-[10px] text-[var(--ink-3)]">{last ? `${last.source} · 7-day average · ${last.periodDate}` : "No reported traffic data"}</p><CorridorSpark key={g} corridor={g} metric="tanker_transits_7d" caption="Reported gate traffic · 7-day average" /></section>;
+          return <section key={g} className="border-t border-[var(--line)] pt-4"><h4 className="text-sm text-[var(--ink)]">{GATE_LABEL[g] ?? g}</h4>{gateSignalOf(g) && <GateNormBlock className="mt-3" signal={gateSignalOf(g)!} />}<p className="mt-2 font-mono text-lg text-[var(--ink-2)]">{row ? `${row.value.toFixed(1)} transits / day` : last ? "Stale observation" : "Observation unavailable"}</p><p className="mt-1 text-[11px] text-[var(--ink-3)]">{last ? `${last.source} · 7-day average · ${last.periodDate}` : "No reported traffic data"}</p><CorridorSpark key={g} corridor={g} metric="tanker_transits_7d" caption="Reported gate traffic · 7-day average" /></section>;
         })}
       </div>;
     }
 
-    if (sel) return <CorridorDetail key={sel.id} id={sel.id} title={sel.title} metrics={feed.corridors} failed={feed.physicalFailed} onFocus={onRailFocus} />;
+    if (sel) return <CorridorDetail key={sel.id} id={sel.id} title={sel.title} metrics={feed.corridors} failed={feed.physicalFailed} signal={sel.id === "hormuz" ? gateSignalOf("hormuz") : sel.id === "sg" ? gateSignalOf("singapore") : null} onFocus={onRailFocus} />;
 
     if (benchSel) {
       return (
         <div>
           <div>
-            <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
+            <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
               Benchmark · {benchSel}
             </p>
             <h4 className="mt-1 text-base font-medium text-[var(--ink)]">{BENCH_TITLE[benchSel]}</h4>
           </div>
           {benchStatusInfo ? (
             <p
-              className="mt-2 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em]"
+              className="mt-2 inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.25em]"
               style={{ color: benchStatusInfo.color }}
             >
               <span aria-hidden className="inline-block h-1 w-1 rounded-full" style={{ background: "currentColor" }} />
               {benchStatusInfo.text}
             </p>
           ) : (
-            <p className="mt-2 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
+            <p className="mt-2 inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
               awaiting feed
             </p>
           )}
@@ -1566,7 +1826,7 @@ export default function OilTrackerCore({
             </p>
           </div>
           {bq?.suspect && (
-            <p className="mt-2 font-mono text-[9px] uppercase tracking-[0.2em]" style={{ color: AMBER_CSS }}>
+            <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.2em]" style={{ color: AMBER_CSS }}>
               SUSPECT — DEVIATES FROM LAST SETTLEMENT
             </p>
           )}
@@ -1577,7 +1837,7 @@ export default function OilTrackerCore({
                   <div className="flex items-baseline justify-between gap-3">
                     <p className="min-w-0 text-[11px] text-[var(--ink-2)]">{r.k}</p>
                     <p
-                      className="whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.15em]"
+                      className="whitespace-nowrap font-mono text-[11px] uppercase tracking-[0.15em]"
                       style={{ color: r.warm ? AMBER_CSS : "var(--ink)" }}
                     >
                       {r.v}
@@ -1599,18 +1859,18 @@ export default function OilTrackerCore({
           {bs && bs.length >= 2 ? (
             <div className="mt-4">
               <Spark values={bs.map((p) => p.price)} id={`bench-${benchSel}`} />
-              <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
+              <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
                 Daily spot closes · {bs[0].periodDate} – {bs[bs.length - 1].periodDate}
               </p>
             </div>
           ) : (
-            <p className="mt-4 font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+            <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
               SERIES UNAVAILABLE
             </p>
           )}
           <p className="mt-4 text-[11px] leading-relaxed text-[var(--ink-2)]">{BENCH_NOTE[benchSel]}</p>
           <AlertsFeed benchmark={benchSel} className="mt-4 border-t border-[var(--line)] pt-3" />
-          <p className="mt-4 flex items-center justify-between border-t border-[var(--line)] pt-3 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+          <p className="mt-4 flex items-center justify-between border-t border-[var(--line)] pt-3 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
             <span>Benchmark feed</span>
             <span>{bq ? bq.staleness : "offline"}</span>
           </p>
@@ -1622,10 +1882,10 @@ export default function OilTrackerCore({
       return (
         <div>
           <div>
-            <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">Producer</p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">Producer</p>
             <h4 className="mt-1 text-base font-medium text-[var(--ink)]">{prodSel.name}</h4>
           </div>
-          <p className="mt-2 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-2)]">
+          <p className="mt-2 inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-2)]">
             <span aria-hidden className="inline-block h-1 w-1 rounded-full" style={{ background: "currentColor" }} />
             Annual reference
           </p>
@@ -1657,7 +1917,7 @@ export default function OilTrackerCore({
               <div key={r.k}>
                 <div className="flex items-baseline justify-between gap-3">
                   <p className="min-w-0 text-[11px] text-[var(--ink-2)]">{r.k}</p>
-                  <p className="whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.15em] text-[var(--ink)]">
+                  <p className="whitespace-nowrap font-mono text-[11px] uppercase tracking-[0.15em] text-[var(--ink)]">
                     {r.v}
                   </p>
                 </div>
@@ -1681,7 +1941,7 @@ export default function OilTrackerCore({
               <div className="flex items-baseline justify-between">
                 <p className="text-[11px] text-[var(--ink-2)]">Field-level output &amp; grades</p>
                 <p
-                  className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.15em]"
+                  className="flex items-center gap-1 font-mono text-[11px] uppercase tracking-[0.15em]"
                   style={{ color: AMBER_CSS, opacity: 0.85 }}
                 >
                   PRO
@@ -1694,7 +1954,7 @@ export default function OilTrackerCore({
             Static annual reference — reserves and output move yearly, not daily. Live field-level production,
             export grades, and loading programs are commercial data.
           </p>
-          <p className="mt-4 flex items-center justify-between border-t border-[var(--line)] pt-3 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+          <p className="mt-4 flex items-center justify-between border-t border-[var(--line)] pt-3 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
             <span>Reference data</span>
             <span>annual</span>
           </p>
@@ -1707,7 +1967,8 @@ export default function OilTrackerCore({
 
   const railProps = {
     intel,
-    refineries,
+    /* the overview list follows the map filter so both show the same sites */
+    refineries: filterIsActive(filter) ? refineries.filter(r => filterIds.has(r.id)) : refineries,
     refineryFeed,
     focusKey: proContact ?? selected ?? "overview",
     metrics: feed.corridors,
@@ -1717,6 +1978,8 @@ export default function OilTrackerCore({
     onFocus: onRailFocus,
     onSelectCorridor: onRailSelectCorridor,
     onCloseFocus: closePanel,
+    backLabel: hasFocus && trail.length ? labelFor(trail[trail.length - 1]) : null,
+    onBack: goBack,
   };
 
   const changeZoom = (factor: number) => {
@@ -1729,7 +1992,7 @@ export default function OilTrackerCore({
   };
 
   return (
-    <div ref={wrapRef} className={`relative overflow-hidden ${className}`} data-lenis-prevent="">
+    <div ref={wrapRef} className={`intel-surface oil-surface relative overflow-hidden ${className}`} data-lenis-prevent="">
       <div className="flex h-full w-full flex-col md:flex-row">
         {/* ── map stage (center of gravity) ── */}
         <div ref={stageRef} className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
@@ -1759,12 +2022,22 @@ export default function OilTrackerCore({
           role="img"
         />
 
-        {/* slim map title — shell header owns brand; avoid competing copy stack */}
-        <div className="pointer-events-none absolute left-5 top-4 md:left-6 md:top-5">
-          <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--ink-3)]">
-            Oil · refining & flows
-          </p>
+        {/* asset search + filters — top-left map chrome; shell header owns the brand */}
+        <div className={`absolute z-30 ${narrow ? "left-3 right-16 top-3" : "left-5 top-4"}`}>
+          <AssetSearch graph={graph} corpus={corpus} filter={filter} onFilter={setFilter} matchCount={filterIds.size}
+            onSelect={onSearchSelect} onFit={() => fitTo(refineries.filter(r => filterIds.has(r.id)))} compact={narrow} />
         </div>
+
+        {/* map key — what the gate marks, route styles and dim squares mean */}
+        {narrow ? (
+          <div className="pointer-events-none absolute left-3 right-16 top-[64px] z-10">
+            <FlowHealthLegend compact className="border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5 backdrop-blur-md" />
+          </div>
+        ) : (
+          <div className="pointer-events-none absolute right-5 top-4 z-10 w-[212px] border border-[var(--line)] bg-[var(--panel)] px-3 py-3 backdrop-blur-md">
+            <FlowHealthLegend />
+          </div>
+        )}
 
         {narrow && (
           <div role="group" aria-label="Globe zoom" className="absolute right-3 top-4 z-10 flex flex-col border border-[var(--line)] bg-[rgba(11,13,13,0.92)]">
@@ -1796,7 +2069,7 @@ export default function OilTrackerCore({
                 onClick={() => setLayersExpanded((v) => !v)}
                 aria-label="Toggle layers panel"
                 aria-expanded={layersExpanded}
-                className="pointer-events-auto border border-[var(--line)] px-3 py-[6px] font-mono text-[9px] uppercase tracking-[0.25em] transition-colors duration-[var(--dur-micro)] hover:border-[var(--line-2)]"
+                className="pointer-events-auto border border-[var(--line)] px-3 py-[6px] font-mono text-[10px] uppercase tracking-[0.25em] transition-colors duration-[var(--dur-micro)] hover:border-[var(--line-2)]"
                 style={{ color: layersExpanded ? AMBER_CSS : "var(--ink-3)" }}
               >
                 Layers
@@ -1820,7 +2093,7 @@ export default function OilTrackerCore({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: DUR.base, delay: 0.6 }}
-              className="pointer-events-none absolute bottom-[182px] left-5 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]"
+              className="pointer-events-none absolute bottom-[182px] left-5 font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]"
             >
               drag to rotate · scroll to zoom · select an asset
             </motion.p>
@@ -1851,12 +2124,12 @@ export default function OilTrackerCore({
                 className="absolute left-0 top-0 w-max max-w-[240px] border border-[var(--line)] px-3 py-2 backdrop-blur-md"
                 style={{ background: "rgba(11,13,13,0.92)" }}
               >
-                <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-[var(--ink)]">
+                <p className="font-mono text-[11px] uppercase tracking-[0.15em] text-[var(--ink)]">
                   {hoverCard.title}
                 </p>
                 {hoverCard.statusLine && (
                   <p
-                    className="mt-1 font-mono text-[8px] uppercase tracking-[0.2em]"
+                    className="mt-1 font-mono text-[10px] uppercase tracking-[0.2em]"
                     style={{ color: hoverCard.statusLine.color }}
                   >
                     {hoverCard.statusLine.text}
@@ -1865,14 +2138,14 @@ export default function OilTrackerCore({
                 {hoverCard.lines.map((l, i) => (
                   <p
                     key={i}
-                    className="mt-1 font-mono text-[9px] uppercase tracking-[0.15em]"
+                    className="mt-1 font-mono text-[10px] uppercase tracking-[0.15em]"
                     style={{ color: l.color ?? (l.warm ? AMBER_CSS : "var(--ink-2)") }}
                   >
                     {l.text}
                   </p>
                 ))}
                 {hoverCard.showClickFooter && (
-                  <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+                  <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
                     Click for detail
                   </p>
                 )}
@@ -1889,7 +2162,7 @@ export default function OilTrackerCore({
             <IntelRail {...railProps} variant="desktop" />
           </div>
         )}
-        {narrow && hasFocus && <div className="h-[42%] min-h-0 shrink-0 md:hidden"><IntelRail {...railProps} variant="mobile" /></div>}
+        {narrow && <div className={`min-h-0 shrink-0 md:hidden ${hasFocus ? "h-[42%]" : overviewCollapsed ? "" : "h-[44%]"}`}><IntelRail {...railProps} variant="mobile" collapsed={overviewCollapsed} onToggleCollapsed={() => setOverviewCollapsed(v => !v)} /></div>}
       </div>
     </div>
   );
@@ -1906,7 +2179,7 @@ function LayersPanelBody({
 }) {
   const glyphStyle = "inline-block w-3 shrink-0 text-center";
   const rowClass =
-    "flex w-full items-center gap-2 py-[5px] text-left font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-2)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]";
+    "flex w-full items-center gap-2 py-[5px] text-left font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-2)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]";
 
   const toggleProducers = () => {
     setLayers((prev) => {
@@ -1926,7 +2199,7 @@ function LayersPanelBody({
   return (
     <>
       <div className="px-3 py-[7px]">
-        <p className="font-mono text-[9px] tracking-[0.25em] text-[var(--ink-3)]">LAYERS</p>
+        <p className="font-mono text-[10px] tracking-[0.25em] text-[var(--ink-3)]">LAYERS</p>
       </div>
       <div className="flex flex-col px-3">
         <button type="button" onClick={() => setLayers((p) => ({ ...p, flows: !p.flows }))} className={rowClass}>
@@ -1979,7 +2252,7 @@ function LayersPanelBody({
         )}
       </div>
       {layers.producers !== "off" && (
-        <p className="border-t border-[var(--line)] px-3 py-[7px] font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+        <p className="border-t border-[var(--line)] px-3 py-[7px] font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
           {PRODUCERS_SOURCE}
         </p>
       )}
@@ -2026,7 +2299,7 @@ function ProContactPanel({
       <div className={narrow ? "" : "min-h-0 flex-1 overflow-y-auto overflow-x-hidden"}>
         <div className="flex items-start justify-between">
           <div>
-            <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
+            <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
               A3RO · Pro tier
             </p>
             <h4 className="mt-1 text-base font-medium text-[var(--ink)]">Commercial data, on request</h4>
@@ -2060,7 +2333,7 @@ function ProContactPanel({
         ) : (
           <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-4">
             <div>
-              <label htmlFor="pro-contact-email" className="font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+              <label htmlFor="pro-contact-email" className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
                 Email
               </label>
               <input
@@ -2075,7 +2348,7 @@ function ProContactPanel({
             </div>
 
             <div>
-              <label htmlFor="pro-contact-message" className="font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+              <label htmlFor="pro-contact-message" className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
                 Message · optional
               </label>
               <textarea
@@ -2102,7 +2375,7 @@ function ProContactPanel({
             />
 
             {state === "error" && (
-              <p className="font-mono text-[10px] text-[var(--ink-2)]">
+              <p className="font-mono text-[11px] text-[var(--ink-2)]">
                 Something went wrong — email us at{" "}
                 <a href="mailto:a3ro.helpdesk@gmail.com" style={{ color: AMBER_CSS }}>
                   a3ro.helpdesk@gmail.com
@@ -2113,7 +2386,7 @@ function ProContactPanel({
             <button
               type="submit"
               disabled={state === "sending"}
-              className="border border-[var(--line-2)] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink)] transition-colors duration-[var(--dur-micro)] hover:bg-[var(--ink)] hover:text-[var(--depth-1)] disabled:opacity-50"
+              className="border border-[var(--line-2)] px-4 py-2 font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--ink)] transition-colors duration-[var(--dur-micro)] hover:bg-[var(--ink)] hover:text-[var(--depth-1)] disabled:opacity-50"
             >
               {state === "sending" ? "Sending…" : "Request access"}
             </button>
@@ -2122,11 +2395,11 @@ function ProContactPanel({
       </div>
 
       <div className={narrow ? "mt-4" : "mt-4 shrink-0"}>
-        <p className="flex items-center justify-between border-t border-[var(--line)] pt-3 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+        <p className="flex items-center justify-between border-t border-[var(--line)] pt-3 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
           <span>Pro tier</span>
           <span>lead capture</span>
         </p>
-        <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.18em] text-[var(--ink-3)] opacity-70">
+        <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ink-3)] opacity-70">
           No fabricated data · commercial access on request
         </p>
       </div>

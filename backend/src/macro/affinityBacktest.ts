@@ -3,7 +3,7 @@
 
    vams.ts ships a hand-written affinity table — which GRID regimes a
    market's trend state confirms. It was reasoned from standard
-   cross-asset logic and documented per line, but Dale derives his
+   cross-asset logic and documented per line, but the framework derives its
    playbooks from ~25 years of per-asset regime statistics, and
    "reasoned" is a weaker claim than "measured". This module measures.
 
@@ -70,7 +70,7 @@ export const MIN_LIFT = 1.15;
  *  Roughly five years — below that an asset has not lived through
  *  enough distinct regimes for the conditional to mean anything. */
 export const MIN_SAMPLES = 60;
-/** Cap on regimes confirmed per state. Dale's own mappings are one or
+/** Cap on regimes confirmed per state. The framework's own mappings are one or
  *  two; allowing three or four would make a market's single point so
  *  finely split it stops discriminating. */
 export const MAX_CONFIRMS = 2;

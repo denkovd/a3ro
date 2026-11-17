@@ -2,7 +2,7 @@
    regime (P·06) and the Macro Override "Macro pressure" half (#5).
    Pure-engine domain: no IO here. */
 
-/** The four Darius-Dale-style GRID quadrants, by whether growth and
+/** The four top-down GRID quadrants, by whether growth and
  *  inflation are ACCELERATING (rate-of-change / 2nd derivative), not
  *  their level. */
 export type MacroQuadrant = "GOLDILOCKS" | "REFLATION" | "INFLATION" | "DEFLATION" | "PENDING";
@@ -72,7 +72,7 @@ export interface LiquidityStressSnapshot {
   /** 0..100, higher = tighter liquidity / faster repricing of capital. */
   score: number | null;
   status: "elevated" | "normal" | "muted" | "insufficient";
-  /** Dale's 1998-style setup: composite stress high AND bond vol
+  /** The 1998-style setup: composite stress high AND bond vol
    *  breaking out. Both must hold — a high composite on its own is a
    *  level read, the vol breakout is what makes it a repricing. */
   riskPremiumAlert: boolean;
@@ -100,7 +100,7 @@ export interface NominalGrowthSnapshot {
 }
 
 /* ── The six cycles ───────────────────────────────────────────────
-   Dale's six, exactly: growth, inflation, POLICY (monetary and fiscal
+   The framework's six, exactly: growth, inflation, POLICY (monetary and fiscal
    together — not two cycles), CORPORATE PROFITS, liquidity,
    positioning. The page previously showed monetary and fiscal as
    separate tiles and had no profits cycle at all.
@@ -138,7 +138,7 @@ export interface SixCyclesSnapshot {
   cycles: CycleRead[];
   tailwinds: number;
   headwinds: number;
-  /** Plain-English sustainability read, in Dale's own framing. */
+  /** Plain-English sustainability read, in the framework's own framing. */
   headline: string;
 }
 

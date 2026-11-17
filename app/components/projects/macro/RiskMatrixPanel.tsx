@@ -1,6 +1,6 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
-   P·06 — Global Macro Risk Matrix (Dale's top-down layer).
+   P·06 — Global Macro Risk Matrix (the top-down layer).
 
    What regime is the MARKET pricing, as against what regime the
    economy is in. Two elements:
@@ -10,7 +10,7 @@
    The economy/market split is rendered explicitly rather than
    reconciled. When the GRID says Reflation and the matrix says
    Deflation, the page should show a disagreement, because that is
-   what Dale's framework treats as the actionable signal.
+   what the framework treats as the actionable signal.
 ──────────────────────────────────────────────────────────────── */
 import { useState } from "react";
 import {

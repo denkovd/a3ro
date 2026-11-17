@@ -1,11 +1,13 @@
 /** Curated operator references. Coordinates represent sites/complexes, not unit footprints.
  * Capacity is a published reference, never a reading of current runs or available capacity.
  * Reviewed 2026-10-10. No operational status is inferred from an operator profile.
+ * "project" and "ownership" events (reviewed 2026-11-16) record dated developments;
+ * refineryCondition ignores them, so they never imply an operating status.
  */
 export type RefineryEvent = {
   id?: string; incidentId?: string;
   date: string; title: string; detail: string; sourceUrl: string;
-  kind: "closure" | "idled" | "outage" | "maintenance" | "restart" | "disruption" | "notice";
+  kind: "closure" | "idled" | "outage" | "maintenance" | "restart" | "disruption" | "notice" | "project" | "ownership";
   scope?: "facility" | "unit" | "group";
   verifiedAt?: string; publishedAt?: string | null; expiresAt?: string;
   confidence?: "operator" | "government" | "reported";
@@ -22,22 +24,29 @@ export type Refinery = {
 const reviewedAt = "2026-10-10";
 const bazanReport = "https://media.bazan.co.il/bazan/media/qlhn0z05/bazan-q4-2025.pdf";
 export const REFINERIES: Refinery[] = [
-  { id: "al-zour", name: "Al-Zour", operator: "KIPIC", country: "Kuwait", lon: 48.31, lat: 28.74,
+  { id: "al-zour", name: "Al-Zour", operator: "KNPC · formerly KIPIC", country: "Kuwait", lon: 48.31, lat: 28.74,
     capacityKbd: 615, capacityBasis: "Operator-published maximum refining capacity · February 2025 reference",
     sourceUrl: "https://kipic.com.kw/wp-content/uploads/2025/02/Kipic-2025-Feb-eng.pdf", reviewedAt: "2026-10-11", corridorId: "hormuz",
-    context: "Coastal fuel export refinery. The operator's 2025 capacity milestone does not establish present runs or export availability.", events: [] },
+    context: "Coastal fuel export refinery. The 2025 capacity milestone does not establish present runs or export availability.",
+    events: [{ id: "al-zour-knpc-merger-2026", verifiedAt: "2026-11-16", date: "2026-07-01", publishedAt: "2026-07-01", kind: "ownership", scope: "group", confidence: "reported", title: "KIPIC merger into KNPC completed", detail: "Kuwait's oil minister marked completion of the KIPIC–KNPC merger, which places Al-Zour within KNPC. Refinery runs were not described.", sourceUrl: "https://kuwaittimes.com/article/45801/business/kipic-knpc-merger-marks-strategic-milestone-for-kuwaits-oil-industry/" }] },
   { id: "yasref", name: "Yanbu · YASREF", operator: "YASREF · Aramco / Sinopec", country: "Saudi Arabia", lon: 38.26, lat: 23.96,
     capacityKbd: 400, capacityBasis: "Operator-published Arabian heavy crude processing design reference",
     sourceUrl: "https://www.yasref.com/about-us", reviewedAt: "2026-10-11",
-    context: "Red Sea refinery supplying domestic and international fuel markets. Its coastal location does not establish available bypass or export capacity.", events: [] },
+    context: "Red Sea refinery supplying domestic and international fuel markets. Its coastal location does not establish available bypass or export capacity.",
+    events: [{ id: "yasref-plus-vfa-2025", verifiedAt: "2026-11-16", date: "2025-04-08", publishedAt: "2025-04-09", kind: "project", scope: "group", confidence: "reported", title: "Yasref+ petrochemical expansion framework signed", detail: "Aramco, Sinopec and YASREF signed a venture framework agreement to advance engineering studies for a mixed-feed cracker and aromatics complex. No final investment decision or completion timeline was disclosed.", sourceUrl: "https://ogj.com/refining-processing/petrochemicals/article/55281305/sinopec-aramco-to-add-major-petrochemical-capacity-at-yanbu-complex" }] },
   { id: "dangote", name: "Dangote · Lekki", operator: "Dangote Petroleum Refinery", country: "Nigeria", lon: 3.86, lat: 6.43,
     capacityKbd: 650, capacityBasis: "Operator-published crude processing nameplate · single train",
     sourceUrl: "https://www.refinery-dangote.com/", reviewedAt: "2026-10-11",
-    context: "Atlantic coast refinery serving Nigerian and international product markets. Nameplate capacity and expansion plans do not establish current throughput.", events: [] },
+    context: "Atlantic coast refinery serving Nigerian and international product markets. Nameplate capacity and expansion plans do not establish current throughput.",
+    events: [
+      { id: "dangote-ipo-open-2026", verifiedAt: "2026-11-16", date: "2026-09-14", publishedAt: "2026-09-14", kind: "ownership", scope: "group", confidence: "reported", title: "Public share offering opened on NGX", detail: "The refinery company opened an offer of 4.1 billion new shares. Post-offer shareholding is not recorded in this coverage.", sourceUrl: "https://allafrica.com/stories/202609140375.html" },
+      { id: "dangote-expansion-prospectus-2026", verifiedAt: "2026-11-16", date: "2026-09-07", publishedAt: "2026-09-08", kind: "project", scope: "facility", confidence: "reported", title: "Expansion to 1.4 million b/d set out in IPO prospectus", detail: "The prospectus describes a programme to raise crude processing capacity to 1.4 million b/d by 2029. Construction progress is not reported here.", sourceUrl: "https://thecitizen.co.tz/tanzania/news/africa/nigeria-s-dangote-refinery-plans-14-billion-expansion-as-it-signs-ipo-documents-5587848" },
+    ] },
   { id: "sarroch", name: "Sarroch", operator: "Sarlux · Saras", country: "Italy", lon: 9.01, lat: 39.07,
     capacityKbd: 300, capacityBasis: "Operator-published processing capacity · 15 million tonnes per year; daily reference calculated on calendar days",
     sourceUrl: "https://www.saras.it/en/what-we-do/refining", reviewedAt: "2026-10-11",
-    context: "Sardinian refinery and storage complex in the Mediterranean fuel supply system. Storage capacity does not establish current stocks or available fuel exports.", events: [] },
+    context: "Sardinian refinery and storage complex in the Mediterranean fuel supply system. Storage capacity does not establish current stocks or available fuel exports.",
+    events: [{ id: "saras-delisting-2024", verifiedAt: "2026-11-16", date: "2024-09-11", publishedAt: "2024-09-03", kind: "ownership", scope: "group", confidence: "operator", title: "Saras delisted after Vitol vehicle's tender offer", detail: "Varas S.p.A. held 95.285% of Saras after the reopened offer and exercised its purchase right over the remaining shares; trading ended from 11 September 2024.", sourceUrl: "https://www.saras.it/sites/default/files/uploads/pressreleases/press-release-issued-by-saras-s.p.a.-on-behalf-of-varas-s.p.a.---press-release-final-results-of-the-reopening-of-the-terms.pdf" }] },
   { id: "haifa-bazan", name: "Haifa · Bazan", operator: "Bazan", country: "Israel", lon: 35.05, lat: 32.80,
     capacityKbd: 197, capacityBasis: "Operator 2025 annual report · crude distillation reference; PDF page 55",
     sourceUrl: bazanReport, reviewedAt: "2026-10-11",

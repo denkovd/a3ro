@@ -7,7 +7,7 @@
    · LiquidityPanel      — the 0..100 composite and its eight legs,
                            asset-neutral (this REPLACED "macro pressure
                            on oil" as the page's headline number)
-   · CostOfCapitalPanel  — Dale's per-market table, editorial and
+   · CostOfCapitalPanel  — the per-market table, editorial and
                            dated, shown against the live nominal-growth
                            read that motivates it
 

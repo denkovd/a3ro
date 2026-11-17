@@ -141,7 +141,14 @@ export default function AllocationPanel({ snap, onOpenResearch }: { snap: MacroS
                   {/* the four factors behind the weight */}
                   <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 pl-[15px] font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--ink-3)]">
                     <span>regime ×{w.regimeScore.toFixed(2)}</span>
-                    <span>trend ×{w.vamsMultiplier.toFixed(2)}</span>
+                    <span>
+                      trend ×{w.vamsMultiplier.toFixed(2)}
+                      {w.key === "gold" && (
+                        <span className="ml-1 normal-case tracking-normal text-[var(--ink-3)]">
+                          (untimed)
+                        </span>
+                      )}
+                    </span>
                     <span>
                       cycles ×{w.cycleDrag.toFixed(2)}
                       {w.cycleDrag === 1 && w.key === "gold" && (
@@ -175,8 +182,9 @@ export default function AllocationPanel({ snap, onOpenResearch }: { snap: MacroS
         leveraged. Each weight is its cap scaled by how much the current regime favours that sleeve,
         whether the sleeve is actually trending (VAMS), and how many of the six cycles are working
         against risk assets — gold is exempt from that last one, since cutting a hedge when the cycles
-        turn hostile defeats the point of holding it. No regime read at all means 100% cash rather
-        than a default position.
+        turn hostile defeats the point of holding it. Gold is also not trend-timed: its weight is its
+        cap scaled by the regime alone, and its trend state is shown for information. No regime read
+        at all means 100% cash rather than a default position.
       </p>
       <p className="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--ink-3)]">
         This is the output of a mechanical rule, not a recommendation. The regime scores are

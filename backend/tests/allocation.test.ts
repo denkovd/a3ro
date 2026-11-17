@@ -7,6 +7,8 @@ import {
   SLEEVE_REGIME_SCORE,
   VAMS_MULTIPLIER,
   RISK_SLEEVES,
+  TREND_TIMED_SLEEVES,
+  BASELINE_SETTINGS,
   MAX_CYCLE_DRAG,
   type AllocationInput,
 } from "../src/macro/allocation";
@@ -144,6 +146,59 @@ describe("allocation signal", () => {
     assert.equal(weightOf(a, "bitcoin"), 0);
     assert.equal(a.weights.find((w) => w.key === "bitcoin")?.available, false);
     assert.ok(weightOf(a, "stocks") > 0, "other sleeves unaffected");
+  });
+});
+
+/* ── untimed gold ─────────────────────────────────────────────── */
+
+describe("untimed gold", () => {
+  const quads = ["GOLDILOCKS", "REFLATION", "INFLATION", "DEFLATION"] as const;
+  const states = ["BULLISH", "NEUTRAL", "BEARISH", "PENDING"] as const;
+
+  test("gold's weight is cap × regime score whatever its trend state", () => {
+    assert.deepEqual(TREND_TIMED_SLEEVES, ["stocks", "bitcoin"]);
+    for (const q of quads) {
+      for (const st of states) {
+        for (const h of [0, 3, 6]) {
+          const a = computeAllocation(input({ marketRegime: q, headwinds: h,
+            states: { stocks: "BULLISH", gold: st, bitcoin: "BULLISH" } }));
+          const gold = a.weights.find((w) => w.key === "gold")!;
+          assert.equal(gold.weight, Math.round(0.3 * SLEEVE_REGIME_SCORE.gold[q] * 10_000) / 10_000, `${q}/${st}/h${h}`);
+          assert.equal(gold.vamsMultiplier, 1);
+          assert.equal(gold.state, st, "the state is still reported");
+        }
+      }
+    }
+  });
+
+  test("stocks and Bitcoin are still scaled by their own trend state", () => {
+    for (const st of states) {
+      const a = computeAllocation(input({ states: { stocks: st, gold: "BULLISH", bitcoin: st } }));
+      assert.equal(weightOf(a, "stocks"), Math.round(0.6 * VAMS_MULTIPLIER[st] * 10_000) / 10_000);
+      assert.equal(weightOf(a, "bitcoin"), Math.round(0.1 * VAMS_MULTIPLIER[st] * 10_000) / 10_000);
+    }
+  });
+
+  test("the live default and the research baseline settings give identical targets", () => {
+    for (const q of quads) {
+      for (const st of states) {
+        for (let h = 0; h <= 6; h++) {
+          const i = input({ marketRegime: q, headwinds: h, states: { stocks: st, gold: st, bitcoin: st } });
+          assert.deepEqual(computeAllocation(i, BASELINE_SETTINGS), computeAllocation(i));
+          // settings saved before this rule existed carry no list and follow the live rule
+          const { trendTimedSleeves: _omit, ...legacy } = BASELINE_SETTINGS;
+          assert.deepEqual(computeAllocation(i, legacy), computeAllocation(i));
+        }
+      }
+    }
+  });
+
+  test("research settings can still time gold explicitly, and reject unknown sleeves", () => {
+    const timed = { ...BASELINE_SETTINGS, trendTimedSleeves: ["stocks", "gold", "bitcoin"] as const };
+    const a = computeAllocation(input({ marketRegime: "INFLATION", states: { stocks: "BULLISH", gold: "BEARISH", bitcoin: "BULLISH" } }),
+      { ...timed, trendTimedSleeves: [...timed.trendTimedSleeves] });
+    assert.equal(weightOf(a, "gold"), 0.06);
+    assert.throws(() => computeAllocation(input(), { ...BASELINE_SETTINGS, trendTimedSleeves: ["silver" as never] }), /Caps/);
   });
 });
 

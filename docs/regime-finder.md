@@ -25,7 +25,7 @@ weekly closes. Free data only.
 
 ## Signal engine
 
-TypeScript port of the "BullMania Money Line [Recreation]" Pine v6 indicator
+TypeScript port of the "Money Line" Pine v6 indicator
 (`backend/src/regime/engine.ts`):
 
 - Donchian channel close-flip, length 20, **ratcheted** (the flip line only

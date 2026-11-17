@@ -38,7 +38,7 @@ import {
 
 const OUT_PATH = join(process.cwd(), "src", "macro", "regimeAffinity.generated.ts");
 const FETCH_DELAY_MS = 400;
-/** ~25 years, matching the horizon Dale backtests over. */
+/** ~25 years, matching the horizon the framework backtests over. */
 const FRED_LOOKBACK_DAYS = 9200;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

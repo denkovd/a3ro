@@ -1,5 +1,5 @@
 /* ────────────────────────────────────────────────────────────────
-   The six macro cycles — Dale's third layer.
+   The six macro cycles — the framework's third layer.
 
    Growth, inflation, POLICY, CORPORATE PROFITS, liquidity, positioning.
    Not the six the page previously showed: it split policy into separate
@@ -7,7 +7,7 @@
    which is a whole cycle missing from a six-cycle model.
 
    What the cycles are FOR: judging whether the current dominant regime
-   is sustainable. Dale's own example — early 2026, four of six cycles
+   is sustainable. The framework's own example — early 2026, four of six cycles
    (policy, liquidity, positioning) headwinds while growth and inflation
    stayed tailwinds ⇒ elevated near-term correction risk, constructive
    medium-term once positioning washed out. So each cycle is scored
@@ -251,18 +251,18 @@ export function liquidityCycle(netLiquidity: MacroObservation[]): CycleRead {
 }
 
 /* ── 6 · Positioning ──────────────────────────────────────────────
-   Dale's construction, not a WTI COT read. The specific mechanic he
+   The framework's construction, not a WTI COT read. The specific mechanic it
    describes: rolling 260-day realized volatility for equity and credit
    indices, where NEW CYCLICAL LOWS indicate vol-targeting funds are
    levering up — i.e. crowding, i.e. fragility. Low realized vol is a
    HEADWIND (contrarian), high realized vol means positioning has
    already washed out and is a TAILWIND.
 
-   AAII bulls–bears and the NAAIM survey are the other legs Dale names.
+   AAII bulls–bears and the NAAIM survey are the other legs the framework names.
    Neither has a free machine-readable feed, so they are absent and
    said to be absent rather than silently approximated. */
 
-const POSITIONING_WINDOW = 260; // Dale's own window
+const POSITIONING_WINDOW = 260; // the framework's own window
 const CROWDED_PCTILE = 0.2; // realized vol in the bottom fifth = crowded
 const WASHED_OUT_PCTILE = 0.8; // top fifth = positioning cleared
 
@@ -355,7 +355,7 @@ export function positioningCycle(
 
 /* ── assembly ─────────────────────────────────────────────────────
    The sustainability read: how many of the six are working against
-   risk assets. Dale's framing — growth and inflation can both be
+   risk assets. The framework's framing — growth and inflation can both be
    tailwinds while the other four are headwinds, which is exactly the
    "choppy near term, constructive medium term" setup. */
 

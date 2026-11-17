@@ -10,12 +10,19 @@ The landing page is one native-scroll descent: Commodity Watch globe → module 
 | --- | --- | --- |
 | Globe half-turn | 120svh | 80svh |
 | Globe to spine | 60svh | 40svh |
-| Each module | 110svh | 90svh |
-| Release | 40svh | 30svh |
+| Each module | 90svh | normal flow |
 
 The globe retains the Oil preview's land samples, graticule, artery and markers. Longitude advances from its existing opening view by exactly 180 degrees; latitude stays fixed. Horizontal projected coordinates contract while vertical coordinates extend, so the same canvas resolves into the card axis. Labels withdraw during compression. Scroll-controlled mode has no independent pendulum, tracing or pulse clock. Canvas drawing is coalesced into one animation frame when scroll, size or visibility changes.
 
-Cards follow successive quarter-turn positions on a helix: X and Z describe the orbit, Y advances along the spine. Faces are billboarded (orbital orientation and its counter-rotation cancel before CSS compositing), keeping text upright. The middle 65% of each interval holds the foreground card still, at full opacity and scale. The remainder exchanges cards with smoothstep easing. Only the foreground card accepts pointer events. All links retain semantic order; keyboard focus moves the document to that card's reading interval.
+## Module spine
+
+`ModuleSpine.tsx` renders the six platforms once and lays them out two ways. With motion allowed, a viewport at least 768px wide and room for the stage at 80% scale or better, the section gains `.module-orbit`: the chapter centres, its amber rule turns upright, and a 1px axis runs from it down the centre of the section to the last module. Otherwise the cards stay in the normal-flow list. Switching layouts never remounts a preview.
+
+The runway is one viewport for the pinned stage plus 0.9 viewport per module (`SPINE.slot`); the last module gives up part of its slot so the section releases while it is still docked. `spinePosition` maps runway progress to a fractional module index: the first card swings in while the stage rises, each card then rests for half its slot (`SPINE.hold`) and exchanges with the next through smoothstep. `orbitState` places a card on a ring whose axis is the spine: neighbours sit 60° apart, so six modules close the circle. X and Z come from the ring, cards face outward, neighbours wait in half-light (a scrim, not opacity) and are gone before they turn their backs. The docked card carries an identity transform at whole-pixel offsets, so its text stays crisp.
+
+The axis has three scroll-driven parts, all amber: a brighter beam through the junction, a soft halo and edge flare where the docked card meets the spine, and one numbered marker per module. Passed markers queue above the junction, upcoming ones below the card; a marker changing sides fades out at the card's foot and in at the junction (`nodeState`), never crossing the card's face. The caption sits either side of the axis and appears only as its card docks.
+
+One `useScroll` value drives one writer per frame, which sets transforms and custom properties directly; React renders only when the facing module changes. Previews load for the facing module and its neighbours once the runway is within 600px. Cards keep document order and stay in the accessibility tree. Focusing a waiting card's link, or clicking a card in the wings, scrolls the document to that module's resting stop (`spineStop`); only cards near the front accept pointer events. There is no scroll snapping or interception.
 
 The incoming Index overlaps the end of the runway by 60svh, allowing its heading to enter as the final card recedes. Its own timeline is independent and unchanged. Hash anchors use actual runway positions; `#modules` lands halfway through the first reading interval, while legacy `#platform` and `#method` remain usable.
 

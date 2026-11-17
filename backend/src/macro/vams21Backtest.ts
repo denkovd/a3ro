@@ -20,12 +20,14 @@ export const VAMS_21_SETTINGS: AllocationSettings = {
   },
   vamsMultipliers: { BULLISH: 1, NEUTRAL: 0.5, BEARISH: 0, PENDING: 0 },
   cycleDrag: 0,
+  // This comparison portfolio times all three sleeves, gold included.
+  trendTimedSleeves: ["stocks", "gold", "bitcoin"],
 };
 
 /** Match daily signals to exactly the same holding intervals as the main
  * strategy. No future signal, monthly fallback or missing-signal flat return. */
 export function runVams21Backtest(inputs: AllocationInput[], signals: DailyVamsSignal[], prices: PriceSeries,
-  universe: "all" | "stocks-gold", assumptions: Pick<BacktestOptions, "costBps" | "cashRate">) {
+  universe: "all" | "stocks-gold", assumptions: Pick<BacktestOptions, "costBps" | "cashRate" | "cashPrices" | "riskFreePrices">) {
   const byDate = new Map(signals.map(signal => [signal.date, signal]));
   const required: SleeveKey[] = universe === "all" ? ["stocks", "gold", "bitcoin"] : ["stocks", "gold"];
   const dailyInputs: AllocationInput[] = inputs.map(input => {

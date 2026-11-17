@@ -1,7 +1,7 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
    A3RO Intelligence — Regime · homepage module card (P·03)
-   The Darius-Dale-style GRID: growth × inflation on a rate-of-change
+   The top-down GRID: growth × inflation on a rate-of-change
    basis → one of four quadrants. Reads /api/oil/macro via
    useMacroSnapshot; honest states (cycle pending / feed unreachable)
    with no modeled numbers. Distinct from P·04/P·05 (Bull Market Finder
@@ -112,7 +112,7 @@ export default function RegimeShiftFinder({ className = "" }: { className?: stri
           A3RO Intelligence — US regime
         </h3>
         <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-          Darius-Dale GRID · macro
+          Growth × Inflation GRID · macro
         </p>
       </div>
     </a>

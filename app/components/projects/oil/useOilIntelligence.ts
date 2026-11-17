@@ -1,8 +1,9 @@
 "use client";
-import type { Benchmark, DailyPrice, LatestQuote } from "@a3ro/oil-backend";
+import type { Benchmark, CorridorBaseline, CorridorMetricLatest, DailyPrice, LatestQuote } from "@a3ro/oil-backend";
 import useOilData from "../useOilData";
 import { currentMetrics, metricFreshness, quoteStatus, quoteBasis, comparablePriorClose } from "./dataQuality";
-import { BENCH_TITLE, CORRIDOR_META, type OilIntelligence, type CorridorWatchRow } from "./types";
+import { BENCH_TITLE, CORRIDOR_META, GATE_HOTSPOT_IDS, GATE_META, type OilIntelligence, type CorridorWatchRow, type GateSignalRow } from "./types";
+import { gateSignal, rankGateSignals } from "./gateSignal";
 import { chinaLead, chinaMapText } from "./china";
 
 const TRACKED = ["WTI", "BRENT"] as const;
@@ -13,11 +14,22 @@ function changeVsPriorClose(q: LatestQuote | undefined, series: DailyPrice[] | u
   return prior && prior.price > 0 && comparablePriorClose(q, prior) ? { pct: (q.price - prior.price) / prior.price, date: prior.periodDate } : null;
 }
 
+/** Traffic vs norm for every chokepoint: 7-day tanker transits against the PortWatch 1-year mean.
+ *  Each gate yields exactly one row; ranking puts departures from the norm first. */
+export function gateSignalRows(metrics: CorridorMetricLatest[] | null, baselines: CorridorBaseline[] | null, now = Date.now()): GateSignalRow[] {
+  return rankGateSignals(GATE_META.map((meta): GateSignalRow => {
+    const reading = metrics?.find(m => m.corridor === meta.id && m.metric === "tanker_transits_7d") ?? null;
+    const norm = (win: "1y" | "5y") => baselines?.find(b => b.corridor === meta.id && b.metric === "tanker_transits" && b.win === win) ?? null;
+    return { ...meta, signal: gateSignal({ reading, fresh: !!reading && metricFreshness(reading, now) === "current", norm1y: norm("1y"), norm5y: norm("5y"), now }) };
+  }));
+}
+
 export default function useOilIntelligence() {
   const feed = useOilData();
   // Small derived lists intentionally recompute on each feed tick, including age checks.
   const current = currentMetrics(feed.corridors);
-  const corridors = CORRIDOR_META.map((meta): CorridorWatchRow => {
+  // Hormuz and Singapore are reported once, in the gate list below.
+  const corridors = CORRIDOR_META.filter(meta => !GATE_HOTSPOT_IDS.has(meta.id)).map((meta): CorridorWatchRow => {
     if (meta.id === "china") {
       const row = chinaLead(feed.corridors);
       const stale = row ? metricFreshness(row) === "stale" : false;
@@ -46,6 +58,7 @@ export default function useOilIntelligence() {
         statusColor: "var(--ink-2)", suspect: !!q?.suspect, observedAt: q?.observedAt ?? null, refreshFailed: feed.quoteFailed, basis: quoteBasis(q) };
     }),
     corridors,
+    gates: gateSignalRows(feed.corridors, feed.baselines),
     feedStatus: feed.status,
   };
   return { feed, intel };

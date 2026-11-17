@@ -1,5 +1,5 @@
 /* ────────────────────────────────────────────────────────────────
-   Global government bond stress — the live stand-in for Dale's
+   Global government bond stress — the live stand-in for the framework's
    "global IG government bond yield surged to 3.68%, steepest monthly
    loss since March" (docs/regime-macro-refresh.md §1.1).
 

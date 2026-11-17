@@ -4,6 +4,7 @@
 ──────────────────────────────────────────────────────────────── */
 
 import type { Benchmark, CorridorId } from "@a3ro/oil-backend";
+import type { GateSignal } from "./gateSignal";
 
 export type CorridorStatus = "live" | "connecting" | "watchlist" | "stale";
 
@@ -13,7 +14,8 @@ export type FocusTarget =
   | { kind: "refinery"; id: string }
   | { kind: "route"; id: string }
   | { kind: "gate"; id: CorridorId }
-  | { kind: "producer"; id: string };
+  | { kind: "producer"; id: string }
+  | { kind: "company"; id: string };
 
 export type BenchmarkRow = {
   id: Benchmark;
@@ -41,9 +43,21 @@ export type CorridorWatchRow = {
   rankScore: number;
 };
 
+/** One chokepoint in the "traffic vs norm" list — every gate appears exactly once. */
+export type GateSignalRow = {
+  id: CorridorId;
+  title: string;
+  /** Where selecting the row lands: a corridor hotspot panel, or the gate panel. */
+  focus: FocusTarget;
+  signal: GateSignal;
+};
+
 export type OilIntelligence = {
   benchmarks: BenchmarkRow[];
+  /** Corridors that are not chokepoint gates (exports, national activity, watchlist). */
   corridors: CorridorWatchRow[];
+  /** The six PortWatch chokepoints, ranked: outside typical range first. */
+  gates: GateSignalRow[];
   feedStatus: "loading" | "ready" | "error";
 };
 
@@ -67,6 +81,20 @@ export const CORRIDOR_META: CorridorMeta[] = [
   { id: "china", title: "China · Crude buying & refining", liveCapable: true, watchlist: false },
   { id: "ara", title: "ARA · Rotterdam", liveCapable: false, watchlist: true },
 ];
+
+/** The six PortWatch chokepoints. Hormuz and Singapore open their corridor
+    hotspot panel; the other four open the gate panel. */
+export const GATE_META: { id: CorridorId; title: string; focus: FocusTarget }[] = [
+  { id: "hormuz", title: "Strait of Hormuz", focus: { kind: "corridor", id: "hormuz" } },
+  { id: "singapore", title: "Singapore Strait", focus: { kind: "corridor", id: "sg" } },
+  { id: "suez", title: "Suez Canal", focus: { kind: "gate", id: "suez" } },
+  { id: "bab_el_mandeb", title: "Bab el-Mandeb", focus: { kind: "gate", id: "bab_el_mandeb" } },
+  { id: "cape", title: "Cape of Good Hope", focus: { kind: "gate", id: "cape" } },
+  { id: "panama", title: "Panama Canal", focus: { kind: "gate", id: "panama" } },
+];
+
+/** Corridor hotspot ids whose traffic is reported in the gate list instead of the corridor list. */
+export const GATE_HOTSPOT_IDS = new Set(["hormuz", "sg"]);
 
 export const BENCH_TITLE: Record<Benchmark, string> = {
   WTI: "WTI Crude",
