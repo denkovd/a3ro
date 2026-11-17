@@ -4,7 +4,9 @@
    Colours come from the scoped .intel-surface / .<asset>-surface tokens
    in globals.css, so one component reads correctly in every module.
 ──────────────────────────────────────────────────────────────── */
-import type { ReactNode } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 export function Kicker({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <p className={`font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)] ${className}`}>{children}</p>;
@@ -109,4 +111,96 @@ export function SourceFooter({ sources, reviewed, check, note }: { sources: Sour
     {unique.length > 0 && <ul className="mt-3 space-y-1">{unique.map(s => <li key={s.url}><a href={s.url} target="_blank" rel="noreferrer" className="text-[var(--asset-accent)] underline underline-offset-2">{s.label} ↗</a></li>)}</ul>}
     {note && <p className="mt-3">{note}</p>}
   </footer>;
+}
+
+/* ── InfoTip — hover / focus explanation, portal-rendered ─────────
+   Used for table headers whose meaning isn't obvious (first: the Bull
+   Market Finder columns). Shows after a short hover delay so sweeping
+   the pointer across a header row doesn't flicker; shows immediately
+   on keyboard focus (and on tap, since tapping focuses). Rendered into
+   document.body so `overflow-x-auto` table wrappers can't clip it.
+   Screen readers get the text through aria-describedby on a
+   visually-hidden span; the floating box itself is aria-hidden.
+   Esc closes it and calls preventDefault so page-level Esc handlers
+   (e.g. "leave module") can ignore that keypress. */
+
+const TIP_W = 288; // px — 18rem
+const TIP_GAP = 8;
+const TIP_EST_H = 170; // flip above the trigger when there's less room than this below
+
+type TipPos = { left: number; top?: number; bottom?: number };
+
+export function useInfoTip(text: string, align: "left" | "right" = "left") {
+  const id = useId();
+  const el = useRef<HTMLElement | null>(null);
+  const timer = useRef<number | null>(null);
+  const [pos, setPos] = useState<TipPos | null>(null);
+
+  const clear = () => {
+    if (timer.current !== null) window.clearTimeout(timer.current);
+    timer.current = null;
+  };
+  const hide = useCallback(() => { clear(); setPos(null); }, []);
+  const show = (delay: number) => {
+    clear();
+    timer.current = window.setTimeout(() => {
+      const r = el.current?.getBoundingClientRect();
+      if (!r) return;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const rawLeft = align === "right" ? r.right - TIP_W : r.left;
+      const left = Math.max(TIP_GAP, Math.min(rawLeft, vw - TIP_W - TIP_GAP));
+      setPos(
+        r.bottom + TIP_GAP + TIP_EST_H > vh
+          ? { left, bottom: vh - r.top + TIP_GAP }
+          : { left, top: r.bottom + TIP_GAP },
+      );
+    }, delay);
+  };
+
+  // A scroll or resize would leave the box floating in the wrong place.
+  useEffect(() => {
+    if (!pos) return;
+    window.addEventListener("scroll", hide, true);
+    window.addEventListener("resize", hide);
+    return () => {
+      window.removeEventListener("scroll", hide, true);
+      window.removeEventListener("resize", hide);
+    };
+  }, [pos, hide]);
+  useEffect(() => () => clear(), []);
+
+  const triggerProps = {
+    ref: (node: HTMLElement | null) => { el.current = node; },
+    "aria-describedby": id,
+    onMouseEnter: () => show(150),
+    onMouseLeave: hide,
+    onFocus: () => show(0),
+    onBlur: hide,
+    onKeyDown: (e: KeyboardEvent<HTMLElement>) => {
+      if (e.key === "Escape" && pos) {
+        e.preventDefault();
+        hide();
+      }
+    },
+  };
+
+  const tip = (
+    <>
+      <span id={id} className="sr-only">{text}</span>
+      {pos && typeof document !== "undefined" &&
+        createPortal(
+          <div
+            aria-hidden
+            className="pointer-events-none fixed z-[80] rounded-sm border border-[var(--line-2)] bg-[var(--depth-3)] px-3.5 py-3 text-left text-[12px] normal-case leading-relaxed tracking-normal text-[var(--ink-2)] shadow-[0_12px_32px_rgba(0,0,0,0.55)]"
+            style={{ width: TIP_W, left: pos.left, top: pos.top, bottom: pos.bottom }}
+          >
+            {text}
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+
+  return { triggerProps, tip };
 }

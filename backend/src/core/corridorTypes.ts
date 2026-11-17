@@ -67,4 +67,29 @@ export interface CorridorBaseline {
   sampleFrom: string;
   sampleTo: string;
   computedAt: string;
+  /** Spread of the gate's 7-DAY AVERAGES over this window. Absent until
+   *  migration 022 is applied and the gate-spread cycle has run. */
+  weekly?: WeeklySpread | null;
+}
+
+/** How a gate's 7-day average is distributed across one baseline
+ *  window — see core/weeklySpread.ts for the definitions. Units match
+ *  the row's metric (vessels/d or Mt/d). */
+export interface WeeklySpread {
+  /** Number of trailing 7-day windows sampled. */
+  n: number;
+  min: number;
+  p05: number;
+  p10: number;
+  p25: number;
+  p50: number;
+  p75: number;
+  p90: number;
+  p95: number;
+  max: number;
+  /** Median absolute deviation of the 7-day averages around p50 —
+   *  the outage-robust measure of normal week-to-week movement. */
+  mad: number;
+  sampleFrom: string;
+  sampleTo: string;
 }

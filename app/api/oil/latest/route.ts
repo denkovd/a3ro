@@ -1,6 +1,8 @@
 // Read-only endpoint: returns current price per benchmark.
 // Writes (ingestion) happen via the cron job in app/api/cron/ingest.
-import { createDb, getLatestQuotes, classifyStaleness, buildSources } from "@a3ro/oil-backend";
+import {
+  createDb, getLatestQuotes, classifyStaleness, buildSources, getDailySeries, computeQuoteChanges,
+} from "@a3ro/oil-backend";
 
 // REQUIRED: `pg` speaks raw TCP, which Vercel's Edge runtime cannot do.
 // Every route/cron handler that touches storage/ must pin the Node runtime.
@@ -26,8 +28,24 @@ export async function GET() {
     };
 
     const now = new Date();
+    // Reference closes for the 1D/1W change: the last ~3 weeks covers a
+    // 7-day lookback plus holidays and publication lag.
+    const from = new Date(now.getTime() - 21 * 86_400_000).toISOString().slice(0, 10);
+    const to = now.toISOString().slice(0, 10);
+    const closesByBenchmark = new Map<string, Awaited<ReturnType<typeof getDailySeries>>>(
+      await Promise.all(
+        quotes.map(async (q): Promise<[string, Awaited<ReturnType<typeof getDailySeries>>]> => {
+          try {
+            return [q.benchmark, await getDailySeries(db, q.benchmark, from, to)];
+          } catch {
+            return [q.benchmark, []]; // changes read null; price still served
+          }
+        }),
+      ),
+    );
     const fresh = quotes.map((q) => ({
       ...q,
+      ...computeQuoteChanges(q.price, q.observedAt, closesByBenchmark.get(q.benchmark) ?? []),
       // latest_quotes has no periodDate; classifyStaleness falls back to
       // observedAt for settlement kinds — fine, observedAt IS the
       // market-close instant.

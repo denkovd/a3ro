@@ -44,11 +44,16 @@ const failedDb = {
   createDb: async () => { throw new Error(SECRET_ERROR); },
   isBenchmark: (value) => value === "WTI",
   isCorridorId: (value) => value === "hormuz",
+  isBullSymbol: (value) => value === "NVDA",
+  isChartRange: (value) => ["3m", "6m", "1y", "2y", "5y", "max"].includes(value),
+  DEFAULT_CHART_RANGE: "1y",
+  isAustraliaIndicator: (value) => value === "unemployment_rate",
+  STRATEGIES: [],
 };
 const publicRoutes = [
   ["australia-watch/latest"], ["australia-watch/series", "indicator=unemployment_rate"],
   ["btc/history"], ["btc/latest"], ["btc/loci"], ["btc/loci/series", "locus=coinbase&metric=price"],
-  ["bull/latest"], ["bull/transitions"], ["gold/latest"], ["gold/loci"],
+  ["bull/latest"], ["bull/transitions"], ["bull/asset", "symbol=NVDA"], ["bull/chart", "symbol=NVDA&range=1y"], ["gold/latest"], ["gold/loci"],
   ["gold/loci/series", "locus=comex&metric=comex_registered_toz"], ["macro/latest"],
   ["oil/alerts"], ["oil/baselines"], ["oil/corridors"],
   ["oil/corridors/series", "corridor=hormuz&metric=tanker_transits_7d"],
@@ -64,6 +69,66 @@ for (const [route, query = ""] of publicRoutes) {
   });
 }
 
+test("bull asset + chart routes reject symbols outside the scan universe before opening the database", async () => {
+  let opened = false;
+  const stub = { ...failedDb, createDb: async () => { opened = true; throw new Error(SECRET_ERROR); } };
+  for (const route of ["bull/asset", "bull/chart"]) {
+    const { GET } = loadModule(`app/api/${route}/route.ts`, { "@a3ro/oil-backend": stub });
+    for (const query of ["", "symbol=", "symbol=DROP%20TABLE", "symbol=nvda", "symbol=NVDA&range=10y"]) {
+      if (route === "bull/asset" && query.includes("range")) continue;
+      const response = await GET(new Request(`https://a3ro.test/api/${route}?${query}`));
+      assert.ok(response.status === 400 || response.status === 404, `${route}?${query}`);
+      assert.doesNotMatch(JSON.stringify(await response.json()), /postgres|secret/i);
+    }
+  }
+  assert.equal(opened, false);
+});
+
+test("bull asset route still answers when the profiles table is missing, without leaking the error", async () => {
+  const row = { runDate: "2026-11-16", symbol: "NVDA", strategy: "ml-dw", lastClose: 100, lastCloseDate: "2026-11-14" };
+  const { GET } = loadModule("app/api/bull/asset/route.ts", {
+    "@a3ro/oil-backend": {
+      ...failedDb,
+      createDb: async () => ({}),
+      getLatestBullSnapshotsForSymbol: async () => [row],
+      getTransitionsForSymbol: async () => [],
+      getAssetProfile: async () => { throw new Error(`relation "asset_profiles" does not exist ${SECRET_ERROR}`); },
+      getCachedQuarters: async () => [],
+    },
+  });
+  const response = await GET(new Request("https://a3ro.test/api/bull/asset?symbol=NVDA"));
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.details, null);
+  assert.equal(body.earnings, null);
+  assert.equal(body.lenses.length, 1);
+  assert.doesNotMatch(JSON.stringify(body), /postgres|secret|asset_profiles/i);
+});
+
+test("bull asset route computes equity market cap from shares × last close", async () => {
+  const row = { runDate: "2026-11-16", symbol: "NVDA", strategy: "ml-dw", lastClose: 100, lastCloseDate: "2026-11-14" };
+  const { GET } = loadModule("app/api/bull/asset/route.ts", {
+    "@a3ro/oil-backend": {
+      ...failedDb,
+      createDb: async () => ({}),
+      getLatestBullSnapshotsForSymbol: async () => [row],
+      getTransitionsForSymbol: async () => [],
+      getAssetProfile: async () => ({
+        symbol: "NVDA", provider: "finnhub", providerId: "NVDA", sharesOutstanding: 2e9, marketCap: 1,
+        earnings: [{ period: "2025-10-26", year: 2025, quarter: 3, actual: 1.3, estimate: 1.2, surprisePct: 8.3 }],
+        nextEarningsDate: "2026-11-20", nextEarningsHour: "amc", fetchedAt: "2026-11-15T08:00:00Z", earningsFetchedAt: null,
+      }),
+      getCachedQuarters: async () => [],
+    },
+  });
+  const body = await (await GET(new Request("https://a3ro.test/api/bull/asset?symbol=NVDA"))).json();
+  assert.equal(body.details.marketCap, 2e11);
+  assert.equal(body.details.marketCapAsOf, "2026-11-14");
+  assert.equal(body.earnings.source, "finnhub");
+  assert.equal(body.earnings.quarters[0].epsSurprisePct, 8.3);
+  assert.equal(body.earnings.nextDate, "2026-11-20");
+});
+
 test("leaderboard retains error codes without exposing connection details", async () => {
   for (const error of [new Error(SECRET_ERROR), new Error(`ECONNREFUSED ${SECRET_ERROR}`)]) {
     const { GET } = loadModule("app/api/leaderboard/earnings-beats/route.ts", {
@@ -75,6 +140,14 @@ test("leaderboard retains error codes without exposing connection details", asyn
     assert.ok(["DB_UNAVAILABLE", "INTERNAL"].includes(body.error.code));
     assert.doesNotMatch(body.error.message, /private-|internal-db|secret-api-key/);
   }
+});
+
+test("Australia series rejects indicators outside the registry before opening the database", async () => {
+  let opened = false;
+  const { GET } = loadModule("app/api/australia-watch/series/route.ts", { "@a3ro/oil-backend": { ...failedDb, createDb: async () => { opened = true; return {}; } } });
+  const response = await GET(new Request("https://a3ro.test/api/australia-watch/series?indicator=toString"));
+  assert.equal(response.status, 400);
+  assert.equal(opened, false);
 });
 
 test("Australia successful snapshots do not expose persisted errors", async () => {

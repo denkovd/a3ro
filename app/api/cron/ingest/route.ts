@@ -23,12 +23,12 @@
 ──────────────────────────────────────────────────────────────── */
 
 import {
-  createDb, runIngestionCycle, runCorridorCycle, runBaselineCycle,
+  createDb, runIngestionCycle, runCorridorCycle, runBaselineCycle, runGateSpreadCycle,
   runSeasonalCycle, runMacroCycle, runPositioningCycle, runScoreCycle,
   runGoldCycle, runGoldFlowCycle, runBtcCycle, runBtcFlowCycle,
 } from "@a3ro/oil-backend";
 import type {
-  CorridorCycleReport, BaselineCycleReport, SeasonalCycleReport,
+  CorridorCycleReport, BaselineCycleReport, GateSpreadCycleReport, SeasonalCycleReport,
   MacroCycleReport, PositioningCycleReport, ScoreCycleReport,
   GoldCycleReport, GoldFlowCycleReport, BtcCycleReport, BtcFlowCycleReport,
 } from "@a3ro/oil-backend";
@@ -68,6 +68,17 @@ export async function GET(request: Request) {
       baselines = await runBaselineCycle(db);
     } catch (e) {
       baselines = { error: e instanceof Error ? e.message : String(e) };
+    }
+
+    // Gate weekly spreads — how much each gate's 7-day average normally
+    // moves. After the baseline refresh (it attaches to those rows), in
+    // its own try/catch: a five-year PortWatch row fetch, self-guarded
+    // to run ~monthly, that must never fail the baselines above.
+    let gateSpreads: GateSpreadCycleReport | { error: string };
+    try {
+      gateSpreads = await runGateSpreadCycle(db);
+    } catch (e) {
+      gateSpreads = { error: e instanceof Error ? e.message : String(e) };
     }
 
     // Week-of-year seasonal norms (WPSR stocks) — same isolation +
@@ -163,6 +174,7 @@ export async function GET(request: Request) {
       ...report,
       corridors,
       baselines,
+      gateSpreads,
       seasonal,
       macro: macroForResponse,
       positioning,

@@ -41,10 +41,26 @@ export const NEWLY_BULLISH_MAX_AGE = 10;
 
 /* ── core state machine ───────────────────────────────────────── */
 
+/** One evaluated bar of the Money Line, for charting: the level the
+ *  bar's close was tested against (after the ratchet; reset to the
+ *  opposite channel edge on the flip bar) and the trend after it. */
+export interface MoneyLineTracePoint {
+  date: string;
+  line: number | null;
+  trend: Trend;
+}
+
+/**
+ * Optional `trace` (chart use only): when an array is passed, one
+ * point per evaluated bar is appended to it. Purely observational —
+ * the state machine and the returned state are identical with or
+ * without it (tested: bull-chart.test).
+ */
 export function runMoneyLine(
   bars: RegimeBar[],
   donLen: number = DONCHIAN_LEN,
   ratchet: boolean = true,
+  trace?: MoneyLineTracePoint[],
 ): TimeframeState {
   let trend: Trend = 0;
   let line: number | null = null;
@@ -86,6 +102,7 @@ export function runMoneyLine(
         flips.push({ date: bars[i].date, direction: -1, price: close, barIndex: i });
       }
     }
+    trace?.push({ date: bars[i].date, line, trend });
   }
 
   const last = bars.length > 0 ? bars[bars.length - 1] : null;

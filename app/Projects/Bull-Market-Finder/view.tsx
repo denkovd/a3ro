@@ -6,8 +6,15 @@
    newly-bullish → double confirmed → conflicted → bearish. Tier
    tabs filter client-side; a transitions rail shows what changed
    verdict recently. Esc or "Index" returns to the homepage.
+   Column headers explain themselves on hover/focus and sort on
+   click (columns.ts); a non-default sort flattens the state groups
+   and is mirrored to ?sort=&dir= so the view is shareable.
+   Clicking a row (or a name in the transitions rail) opens the
+   asset drawer (?asset=SYMBOL, deep-linkable); ↑/↓ step through the
+   table in its current order, Esc closes the drawer before leaving.
 ──────────────────────────────────────────────────────────────── */
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import {
@@ -37,6 +44,19 @@ import {
   type BullVerdict,
   type StrategyTimeframe,
 } from "../../components/projects/bull/bullData";
+import {
+  BULL_COLUMNS,
+  isDefaultOrder,
+  nextSort,
+  parseSort,
+  sortLabel,
+  sortRows,
+  type BullColumn,
+  type SortKey,
+  type SortState,
+} from "../../components/projects/bull/columns";
+import { useInfoTip } from "../../components/projects/intel/primitives";
+import AssetDrawer from "../../components/projects/bull/AssetDrawer";
 import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
 
 const ATMOSPHERE =
@@ -82,6 +102,85 @@ function confirmedCell(r: BullRow): string {
   if (r.verdict === "CONFLICT_DAILY") return `${formatDate(r.dailyFlipDate)} · D`;
   if (r.verdict === "CONFLICT_WEEKLY") return `${formatDate(r.weeklyFlipDate)} · W`;
   return "—";
+}
+
+/* ── header cell: explanation on hover/focus, click to sort ── */
+function HeaderCell({
+  col, timeframe, sort, onSort,
+}: {
+  col: BullColumn;
+  timeframe: StrategyTimeframe;
+  sort: SortState;
+  onSort: (key: SortKey) => void;
+}) {
+  const { triggerProps, tip } = useInfoTip(col.tip(timeframe), col.align);
+  const active = col.sortKey !== null && sort?.key === col.sortKey;
+  const label =
+    "font-mono text-[9px] uppercase tracking-[0.2em] underline decoration-dotted decoration-[var(--line-2)] underline-offset-[5px] transition-colors duration-[var(--dur-micro)]";
+  return (
+    <div className={col.align === "right" ? "text-right" : ""}>
+      {col.sortKey !== null ? (
+        <button
+          type="button"
+          {...triggerProps}
+          onClick={() => onSort(col.sortKey as SortKey)}
+          aria-label={`${col.label}${
+            active ? `, sorted ${sort?.dir === "asc" ? "ascending" : "descending"}` : ""
+          }. Activate to sort.`}
+          className={`${label} inline-flex items-baseline gap-1 hover:text-[var(--ink)] ${
+            active ? "text-[var(--ink)]" : "text-[var(--ink-3)]"
+          }`}
+        >
+          {col.label}
+          <span aria-hidden className="no-underline" style={{ color: BULL_ACCENT, opacity: active ? 1 : 0 }}>
+            {active && sort?.dir === "asc" ? "↑" : "↓"}
+          </span>
+        </button>
+      ) : (
+        <span tabIndex={0} {...triggerProps} className={`${label} cursor-help text-[var(--ink-3)]`}>
+          {col.label}
+        </span>
+      )}
+      {tip}
+    </div>
+  );
+}
+
+/* button with an InfoTip — strategy lenses + Disagreement toggle */
+function TipButton({
+  tip, children, ...rest
+}: { tip: string; children: ReactNode } & ButtonHTMLAttributes<HTMLButtonElement>) {
+  const { triggerProps, tip: tipNode } = useInfoTip(tip);
+  return (
+    <>
+      <button type="button" {...rest} {...triggerProps}>
+        {children}
+      </button>
+      {tipNode}
+    </>
+  );
+}
+
+const STRATEGY_TIP: Record<StrategyTimeframe, string> = {
+  multi:
+    "Money Line on daily × weekly — bullish only when both timeframes agree; conflicts are shown, never guessed. The default, balanced lens.",
+  weekly:
+    "Money Line on weekly closes only — the slow, position lens. A state changes only when a weekly candle closes.",
+  daily:
+    "Money Line on daily closes only — the fast lens. Catches turns first but is noisier, with more turnover.",
+};
+
+const DISAGREEMENT_TIP =
+  "Show only assets where at least one lens reads bullish and another bearish — where the timeframes are actively fighting.";
+
+/** Patch the page's query string without a navigation. */
+function setQuery(patch: Record<string, string | null>) {
+  const url = new URL(window.location.href);
+  for (const [k, v] of Object.entries(patch)) {
+    if (v === null) url.searchParams.delete(k);
+    else url.searchParams.set(k, v);
+  }
+  window.history.replaceState(window.history.state, "", url);
 }
 
 type TabKey = "all" | BullTier;
@@ -135,6 +234,35 @@ export default function BullMarketFinderView() {
   const [leaving, setLeaving] = useState(false);
   const [tab, setTab] = useState<TabKey>("all");
   const [disagreementOnly, setDisagreementOnly] = useState(false);
+  const [sort, setSort] = useState<SortState>(null);
+
+  const [selected, setSelected] = useState<string | null>(null);
+
+  // Sort and the open asset live in the URL (?sort=rs63&dir=desc,
+  // ?asset=NVDA) so a view is shareable and survives reloads. Read
+  // once on mount via window.location (useSearchParams would force a
+  // Suspense boundary on this statically rendered page); write back
+  // with replaceState.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    setSort(parseSort(q.get("sort"), q.get("dir")));
+    setSelected(q.get("asset"));
+  }, []);
+  const applySort = useCallback((key: SortKey) => {
+    setSort((prev) => {
+      const next = nextSort(prev, key);
+      setQuery({ sort: next?.key ?? null, dir: next?.dir ?? null });
+      return next;
+    });
+  }, []);
+  const resetSort = useCallback(() => {
+    setSort(null);
+    setQuery({ sort: null, dir: null });
+  }, []);
+  const openAsset = useCallback((symbol: string | null) => {
+    setSelected(symbol);
+    setQuery({ asset: symbol });
+  }, []);
 
   const strategies = snap.strategies;
   const activeStrategyMeta =
@@ -152,7 +280,9 @@ export default function BullMarketFinderView() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") leave();
+      // A tooltip (or, later, the asset drawer) that consumed this Esc
+      // marks it defaultPrevented — only a "free" Esc leaves the module.
+      if (e.key === "Escape" && !e.defaultPrevented) leave();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -172,7 +302,37 @@ export default function BullMarketFinderView() {
   );
   const dist = bullDistribution(visibleRows);
   const newlyCount = visibleRows.filter((r) => r.newlyBullish).length;
-  const grouped = withBullGroupBoundaries(visibleRows);
+  const defaultOrder = isDefaultOrder(sort);
+  const sortedRows = useMemo(() => sortRows(visibleRows, sort), [visibleRows, sort]);
+  // Group headers only make sense in ranking order; any other sort
+  // shows one flat list.
+  const grouped = withBullGroupBoundaries(sortedRows).map((g) =>
+    defaultOrder ? g : { ...g, startsGroup: false },
+  );
+
+  // Drawer: the active lens's row (if loaded) + position in the
+  // table's current order for ↑/↓ stepping.
+  const selectedRow = selected ? snap.rows.find((r) => r.symbol === selected) ?? null : null;
+  const selectedIndex = selected ? sortedRows.findIndex((r) => r.symbol === selected) : -1;
+  const stepAsset = useCallback(
+    (delta: 1 | -1) => {
+      if (sortedRows.length === 0) return;
+      const i = selectedIndex === -1
+        ? 0
+        : Math.min(Math.max(selectedIndex + delta, 0), sortedRows.length - 1);
+      openAsset(sortedRows[i].symbol);
+    },
+    [sortedRows, selectedIndex, openAsset],
+  );
+  const closeAsset = useCallback(() => openAsset(null), [openAsset]);
+
+  // Keep the selected row in view while stepping.
+  useEffect(() => {
+    if (!selected) return;
+    document
+      .querySelector<HTMLElement>(`[data-symbol="${CSS.escape(selected)}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [selected]);
   const newlyBullishTransitions = transitions.rows.filter((t) => t.toVerdict === "BULLISH");
 
   return (
@@ -265,7 +425,12 @@ export default function BullMarketFinderView() {
               </p>
               <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
                 {newlyBullishTransitions.slice(0, 12).map((t) => (
-                  <p key={`${t.runDate}-${t.symbol}`} className="flex items-baseline gap-2.5">
+                  <button
+                    type="button"
+                    key={`${t.runDate}-${t.symbol}`}
+                    onClick={() => openAsset(t.symbol)}
+                    className="flex items-baseline gap-2.5 text-left transition-opacity duration-[var(--dur-micro)] hover:opacity-80"
+                  >
                     <span
                       aria-hidden
                       className="h-[5px] w-[5px] self-center rounded-full"
@@ -277,7 +442,7 @@ export default function BullMarketFinderView() {
                     <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-[var(--ink-3)]">
                       {formatDate(t.runDate)}
                     </span>
-                  </p>
+                  </button>
                 ))}
               </div>
             </div>
@@ -318,8 +483,9 @@ export default function BullMarketFinderView() {
             {strategies.map((s) => {
               const active = strategy === s.id;
               return (
-                <button
+                <TipButton
                   key={s.id}
+                  tip={STRATEGY_TIP[s.timeframe]}
                   onClick={() => setStrategy(s.id)}
                   aria-pressed={active}
                   className="rounded-[2px] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] transition-colors duration-[var(--dur-micro)]"
@@ -330,7 +496,7 @@ export default function BullMarketFinderView() {
                   }}
                 >
                   {s.label}
-                </button>
+                </TipButton>
               );
             })}
           </div>
@@ -360,7 +526,8 @@ export default function BullMarketFinderView() {
                 </button>
               );
             })}
-            <button
+            <TipButton
+              tip={DISAGREEMENT_TIP}
               onClick={() => setDisagreementOnly((v) => !v)}
               aria-pressed={disagreementOnly}
               className="rounded-[2px] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] transition-colors duration-[var(--dur-micro)]"
@@ -371,26 +538,42 @@ export default function BullMarketFinderView() {
               }}
             >
               Disagreement
-            </button>
+            </TipButton>
           </div>
+
+          {/* active sort — the table is no longer grouped by state */}
+          {!defaultOrder && sort && (
+            <p className="mt-4 flex items-baseline gap-3 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
+              <span>
+                Sorted by{" "}
+                <span style={{ color: BULL_ACCENT }}>
+                  {sortLabel(sort.key)} {sort.dir === "asc" ? "↑" : "↓"}
+                </span>
+                {" "}· state groups hidden · missing values last
+              </span>
+              <button
+                type="button"
+                onClick={resetSort}
+                className="sweep text-[var(--ink-2)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]"
+              >
+                Reset to ranking
+              </button>
+            </p>
+          )}
 
           {/* ── the ranked table ── */}
           <div className="mt-6 overflow-x-auto">
             <div className="min-w-[56rem]">
               {/* header */}
               <div className={`${GRID} border-b border-[var(--line)] pb-3`}>
-                {[
-                  "Rank", "Asset", "State", "D", "W",
-                  "Confirmed / Flip", "Str ×vol", "RS 63d", "Lens", "Last close",
-                ].map((h, i) => (
-                  <p
-                    key={h}
-                    className={`font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)] ${
-                      i >= 6 ? "text-right" : ""
-                    }`}
-                  >
-                    {h}
-                  </p>
+                {BULL_COLUMNS.map((col) => (
+                  <HeaderCell
+                    key={col.id}
+                    col={col}
+                    timeframe={timeframe}
+                    sort={sort}
+                    onSort={applySort}
+                  />
                 ))}
               </div>
 
@@ -399,7 +582,7 @@ export default function BullMarketFinderView() {
                 <div aria-hidden className="animate-pulse">
                   {Array.from({ length: 10 }, (_, i) => (
                     <div key={i} className={`${GRID} border-b border-[var(--line)] py-3.5`}>
-                      {Array.from({ length: 10 }, (_, j) => (
+                      {BULL_COLUMNS.map((_, j) => (
                         <span key={j} className="h-[9px] rounded-full bg-[var(--depth-3)]" />
                       ))}
                     </div>
@@ -452,11 +635,25 @@ export default function BullMarketFinderView() {
                       )}
 
                       <div
-                        className={`${GRID} border-b border-[var(--line)] py-3 transition-colors duration-[var(--dur-micro)] hover:bg-[rgba(232,235,232,0.02)]`}
+                        role="button"
+                        tabIndex={0}
+                        data-symbol={r.symbol}
+                        aria-label={`${r.displayName} — open details`}
+                        aria-current={selected === r.symbol ? "true" : undefined}
+                        onClick={() => openAsset(r.symbol)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            openAsset(r.symbol);
+                          }
+                        }}
+                        className={`${GRID} cursor-pointer border-b border-[var(--line)] py-3 outline-none transition-colors duration-[var(--dur-micro)] hover:bg-[rgba(232,235,232,0.035)] focus-visible:bg-[rgba(127,158,232,0.08)]`}
                         style={
-                          r.newlyBullish
-                            ? { background: "rgba(127, 158, 232, 0.05)" }
-                            : undefined
+                          selected === r.symbol
+                            ? { background: "rgba(127, 158, 232, 0.12)", boxShadow: `inset 2px 0 0 ${BULL_ACCENT}` }
+                            : r.newlyBullish
+                              ? { background: "rgba(127, 158, 232, 0.05)" }
+                              : undefined
                         }
                       >
                         <p className="font-mono text-[10px] tabular-nums text-[var(--ink-3)]">
@@ -538,6 +735,19 @@ export default function BullMarketFinderView() {
           </p>
         </div>
       </div>
+
+      {/* ── asset drawer ── */}
+      {selected && (
+        <AssetDrawer
+          key="asset-drawer"
+          symbol={selected}
+          row={selectedRow}
+          strategy={strategy}
+          onClose={closeAsset}
+          onStep={stepAsset}
+          position={selectedIndex === -1 ? null : { index: selectedIndex, total: sortedRows.length }}
+        />
+      )}
 
       {/* ── bottom chrome ── */}
       <footer className="absolute inset-x-0 bottom-0 z-30 flex h-12 items-center justify-between border-t border-[var(--line)] bg-[rgba(6,7,7,0.55)] px-6 backdrop-blur-md md:px-10">

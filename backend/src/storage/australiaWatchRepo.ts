@@ -1,9 +1,9 @@
 import type { AustraliaFetchState, AustraliaIndicator, AustraliaObservation, FetchHealth } from "../australia/types";
-import { AUSTRALIA_SERIES } from "../australia/watch";
+import { AUSTRALIA_REGISTRY, isAustraliaIndicator } from "../australia/registry";
 import type { Queryable } from "./db";
 
 const mapObservation = (r: Record<string, unknown>): AustraliaObservation => ({
-  indicator: String(r.indicator) as AustraliaIndicator, title: AUSTRALIA_SERIES[r.indicator as AustraliaIndicator].title, value: Number(r.value), unit: String(r.unit),
+  indicator: String(r.indicator) as AustraliaIndicator, title: AUSTRALIA_REGISTRY[r.indicator as AustraliaIndicator].title, value: Number(r.value), unit: String(r.unit),
   unitMultiplier: r.unit_multiplier == null ? null : Number(r.unit_multiplier), frequency: String(r.frequency) as AustraliaObservation["frequency"],
   adjustment: String(r.adjustment), referencePeriod: String(r.reference_period), sourceUrl: String(r.source_url),
   publicationDate: r.publication_date == null ? null : String(r.publication_date).slice(0, 10), sourceStatus: r.source_status == null ? null : String(r.source_status),
@@ -37,7 +37,8 @@ export async function recordAustraliaFetchRun(db: Queryable, indicator: Australi
 
 export async function getAustraliaObservations(db: Queryable, indicator?: AustraliaIndicator): Promise<AustraliaObservation[]> {
   const res = await db.query(`select * from australia_watch_observations${indicator ? " where indicator = $1" : ""} order by indicator, reference_period asc`, indicator ? [indicator] : []);
-  return res.rows.map(mapObservation);
+  // Rows for an indicator no longer in the registry are kept in storage but not served.
+  return res.rows.filter((r) => isAustraliaIndicator(String(r.indicator))).map(mapObservation);
 }
 
 export async function getAustraliaFetchStates(db: Queryable): Promise<Record<string, AustraliaFetchState>> {

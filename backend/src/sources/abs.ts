@@ -1,4 +1,5 @@
-import { AUSTRALIA_SERIES, startPeriodFor } from "../australia/watch";
+import { startPeriodFor } from "../australia/watch";
+import { AUSTRALIA_REGISTRY } from "../australia/registry";
 import type { AustraliaIndicator, AustraliaObservation } from "../australia/types";
 
 function csvRow(line: string): string[] {
@@ -18,7 +19,7 @@ export function parseAbsCsv(indicator: AustraliaIndicator, text: string, sourceU
   const header = csvRow(lines[0]); const col = (name: string) => header.indexOf(name);
   const required = ["TIME_PERIOD", "OBS_VALUE", "UNIT_MEASURE", "TSEST"];
   if (required.some((name) => col(name) < 0)) throw new Error("ABS CSV missing required columns");
-  const config = AUSTRALIA_SERIES[indicator];
+  const config = AUSTRALIA_REGISTRY[indicator];
   return lines.slice(1).map(csvRow).flatMap((r) => {
     const raw = r[col("OBS_VALUE")]?.trim();
     if (!raw || raw === ".") return [];
@@ -36,7 +37,7 @@ export function parseAbsCsv(indicator: AustraliaIndicator, text: string, sourceU
 }
 
 export async function fetchAbsSeries(indicator: AustraliaIndicator, opts: { fetchImpl?: typeof fetch; now?: Date } = {}): Promise<AustraliaObservation[]> {
-  const now = opts.now ?? new Date(); const cfg = AUSTRALIA_SERIES[indicator];
+  const now = opts.now ?? new Date(); const cfg = AUSTRALIA_REGISTRY[indicator];
   const sourceUrl = `https://data.api.abs.gov.au/rest/data/${cfg.dataflow}/${cfg.key}?startPeriod=${startPeriodFor(indicator, now)}&format=csvfilewithlabels`;
   const requestOptions = { headers: { Accept: "application/vnd.sdmx.data+csv;labels=both" }, cache: "no-store" as const, signal: AbortSignal.timeout(30_000) };
   const response = await (opts.fetchImpl ?? fetch)(sourceUrl, requestOptions);

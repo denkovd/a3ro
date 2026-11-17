@@ -39,3 +39,22 @@ remains the last available reading until a successful scheduled refresh.
 Validation: `node --test tests/us-regime.test.mjs` and `npx tsc --noEmit`.
 Inspect the stored reading with `npx tsx scripts/inspect-us-regime.ts` from
 `backend`; manually refresh with the existing `npm run run:macro` command.
+
+## Newsletter fixes (17 November 2026)
+
+- **Macro weather.** `/api/macro/latest` now returns `weather`, a fixed
+  rule over the snapshot (`backend/src/macro/weather.ts`): Sunny when
+  economy and market agree and risk-on ≥ 60%; Partly cloudy when they
+  agree otherwise; Rain when they disagree; Storm when they disagree
+  and liquidity stress ≥ 60. `stormWatch` flags any liquidity leg at or
+  above its 95th percentile. Computed on read, never stored.
+- **VIX.** The equity-vol leg overlays Yahoo `^VIX` daily closes on FRED
+  `VIXCLS`, which lags one to two sessions. A Yahoo failure is logged in
+  `seriesErrors` and the FRED series stands alone.
+- **VAMS on futures.** Percent returns on back-adjusted series are now
+  measured against the raw traded level, and each read carries
+  `spotReturn63` (the as-traded change). Brent (`BZ=F`) is roll-adjusted
+  like WTI from now on, prospectively.
+- **Timing.** The bull scan runs at 21:15 UTC Mon–Fri, after the US close,
+  so a run scores that day's bars. BTC has its own cron
+  (`/api/cron/btc`, 21:45 UTC) instead of running at the tail of ingest.

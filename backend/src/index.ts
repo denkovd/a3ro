@@ -26,6 +26,8 @@ export { MpaSingaporeSource, thousandTonnesToMt, MPA_DATASETS } from "./sources/
 export { PortWatchSource, tonsToMegatons } from "./sources/portwatch";
 export { buildCorridorSources, getCorridorSource } from "./sources/corridorRegistry";
 export { fetchGateBaselines } from "./sources/portwatchBaselines";
+export { fetchGateWeeklySpreads } from "./sources/portwatchWeekly";
+export type { GateWeeklySpreadRow } from "./sources/portwatchWeekly";
 export { fetchSeasonalBaselines, groupByIsoWeek, SEASONAL_METRICS } from "./sources/eiaSeasonal";
 export { fetchFredSeries, fetchMacroPanel, parseFredCsv, MACRO_SERIES } from "./sources/fredMacro";
 export type { MacroSeries, MacroObservation, FredSeriesConfig } from "./sources/fredMacro";
@@ -79,6 +81,8 @@ export { createDb } from "./storage/db";
 export type { Queryable } from "./storage/db";
 export { fetchAbsSeries, parseAbsCsv } from "./sources/abs";
 export { AUSTRALIA_SERIES, estimateFreshness, comparableChange, isRevision } from "./australia/watch";
+export { AUSTRALIA_REGISTRY, AUSTRALIA_INDICATORS, isAustraliaIndicator, indicatorsInSection } from "./australia/registry";
+export type { AustraliaIndicatorDef, AustraliaSection, AustraliaPillar, AustraliaRole } from "./australia/registry";
 export type { AustraliaIndicator, AustraliaObservation, AustraliaFetchState, AustraliaFrequency, ObservationFreshness, FetchHealth } from "./australia/types";
 export { upsertAustraliaObservations, recordAustraliaFetchRun, getAustraliaObservations, getAustraliaFetchStates } from "./storage/australiaWatchRepo";
 export { runAustraliaWatchCycle } from "./ingest/australiaWatchCycle";
@@ -92,6 +96,7 @@ export {
 } from "./storage/corridorRepo";
 export {
   upsertBaselines, getBaselines, getBaselineAgeDays,
+  updateWeeklySpreads, getWeeklySpreadAgeDays,
 } from "./storage/baselineRepo";
 export {
   upsertSeasonalBaselines, getSeasonalBaselines, getSeasonalAgeDays,
@@ -113,6 +118,7 @@ export {
   closedDailyBars, weekStartOf, verdictOf,
   DONCHIAN_LEN, NEWLY_BULLISH_MAX_AGE,
 } from "./regime/engine";
+export type { MoneyLineTracePoint } from "./regime/engine";
 export type {
   RegimeBar, RegimeSnapshot, RegimeVerdict, TimeframeState,
   Trend, UniverseEntry, AssetClass, Flip,
@@ -132,6 +138,8 @@ export { runCorridorCycle } from "./ingest/corridorPipeline";
 export type { CorridorCycleReport } from "./ingest/corridorPipeline";
 export { runBaselineCycle } from "./ingest/baselineCycle";
 export type { BaselineCycleReport } from "./ingest/baselineCycle";
+export { runGateSpreadCycle } from "./ingest/gateSpreadCycle";
+export type { GateSpreadCycleReport } from "./ingest/gateSpreadCycle";
 export { runSeasonalCycle } from "./ingest/seasonalCycle";
 export type { SeasonalCycleReport } from "./ingest/seasonalCycle";
 export { runMacroCycle } from "./ingest/macroCycle";
@@ -174,7 +182,27 @@ export type {
   BarSourceAdapter, BarRange, AdapterId, AdapterHealthEntry,
   RollEvent, RollProbeResult,
 } from "./bull/types";
-export { BULL_UNIVERSE, buildBullUniverse, benchmarkFor, toYahooSymbol } from "./bull/universe";
+export { BULL_UNIVERSE, buildBullUniverse, benchmarkFor, toYahooSymbol, isBullSymbol } from "./bull/universe";
+export {
+  buildBullChart, moneyLineSignals, rangeStart, isChartRange,
+  CHART_RANGES, DEFAULT_CHART_RANGE,
+} from "./bull/chartSignals";
+export type {
+  ChartSignal, ChartBar, SignalPoint, SignalTone, ChartRange, BullChartPayload,
+} from "./bull/chartSignals";
+// Asset profiles — drawer details (Finnhub equities/ETFs, CoinGecko crypto)
+export {
+  parseFinnhubProfile, parseFinnhubMetrics, parseCoinGeckoMarkets,
+  toEarningsQuarters, nextEarningsBySymbol, toFinnhubSymbol,
+} from "./profiles/sources";
+export type { CompanyProfile, CompanyMetrics, CoinMarket, EarningsQuarter } from "./profiles/sources";
+export { COINGECKO_IDS } from "./profiles/coingeckoIds";
+export { runWeeklyProfiles, runDailyProfiles, profileTargets } from "./profiles/pipeline";
+export type { ProfileRefreshReport } from "./profiles/pipeline";
+export {
+  upsertEquityProfile, upsertCryptoProfile, setNextEarnings, getAssetProfile,
+} from "./storage/profileRepo";
+export type { AssetProfileRow } from "./storage/profileRepo";
 export {
   fetchBarsWithFallback, defaultRegistry, isStale,
   yahooAdapter, makeStooqAdapter, makeBinanceAdapter, makeAlphaVantageAdapter,
@@ -189,6 +217,7 @@ export {
   insertRoll, getRolls, upsertBullSnapshots, getPreviousVerdicts,
   insertTransitions, insertHealthEntries,
   getLatestBullSnapshots, getRecentTransitions, getLatestVerdictsBySymbol,
+  getLatestBullSnapshotsForSymbol, getTransitionsForSymbol,
 } from "./storage/bullRepo";
 export type { BullSnapshotRow, BullTransitionRow, BarSeries } from "./storage/bullRepo";
 export {

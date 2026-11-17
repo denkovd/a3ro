@@ -121,3 +121,11 @@ export function benchmarkFor(e: BullUniverseEntry): string | null {
 }
 
 export const BULL_UNIVERSE = buildBullUniverse();
+
+const BULL_SYMBOLS = new Set(BULL_UNIVERSE.map((e) => e.symbol));
+
+/** Allow-list check for user-supplied symbols (asset drawer route):
+ *  nothing outside the scan universe reaches SQL. */
+export function isBullSymbol(v: unknown): v is string {
+  return typeof v === "string" && BULL_SYMBOLS.has(v);
+}

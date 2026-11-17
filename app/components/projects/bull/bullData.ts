@@ -95,6 +95,16 @@ export type BullRow = {
   lastClose: number | null;
   lastCloseDate: string | null;
   consensus: BullConsensus;
+  /* Flip-level detail, both legs — null on older payloads. */
+  strategy: string;
+  dailyLine: number | null;
+  weeklyLine: number | null;
+  dailyFlipPrice: number | null;
+  weeklyFlipPrice: number | null;
+  weeklySinceFlipPct: number | null;
+  weeklyCushionPct: number | null;
+  dailyBarsSinceFlip: number | null;
+  weeklyBarsSinceFlip: number | null;
 };
 
 export type BullStatus = "loading" | "live" | "pending" | "error";
@@ -194,6 +204,15 @@ function normalizeRow(raw: unknown, i: number): BullRow | null {
     lastClose: num(o.lastClose),
     lastCloseDate: str(o.lastCloseDate),
     consensus: normalizeConsensus(o.consensus),
+    strategy: str(o.strategy) ?? DEFAULT_STRATEGY_ID,
+    dailyLine: num(o.dailyLine),
+    weeklyLine: num(o.weeklyLine),
+    dailyFlipPrice: num(o.dailyFlipPrice),
+    weeklyFlipPrice: num(o.weeklyFlipPrice),
+    weeklySinceFlipPct: num(o.weeklySinceFlipPct),
+    weeklyCushionPct: num(o.weeklyCushionPct),
+    dailyBarsSinceFlip: num(o.dailyBarsSinceFlip),
+    weeklyBarsSinceFlip: num(o.weeklyBarsSinceFlip),
   };
 }
 
@@ -322,6 +341,223 @@ export function useBullTransitions(
     return () => { alive = false; };
   }, [days, strategy]);
   return state;
+}
+
+/* ── single asset, every lens (asset drawer) ──────────────────── */
+
+export type BullAssetTransition = BullTransitionRow & { strategy: string };
+
+/** Company (Finnhub) or coin (CoinGecko) fundamentals — null fields
+ *  mean "not reported", never zero. */
+export type BullAssetDetails = {
+  provider: "finnhub" | "coingecko";
+  name: string | null;
+  exchange: string | null;
+  country: string | null;
+  currency: string | null;
+  industry: string | null;
+  ipoDate: string | null;
+  website: string | null;
+  logoUrl: string | null;
+  marketCap: number | null;
+  marketCapAsOf: string | null;
+  marketCapMethod: string | null;
+  sharesOutstanding: number | null;
+  week52High: number | null;
+  week52Low: number | null;
+  peTtm: number | null;
+  beta: number | null;
+  dividendYieldPct: number | null;
+  circulatingSupply: number | null;
+  totalSupply: number | null;
+  maxSupply: number | null;
+  volume24h: number | null;
+  ath: number | null;
+  athDate: string | null;
+  athChangePct: number | null;
+  marketCapRank: number | null;
+  fetchedAt: string | null;
+};
+
+export type BullEarningsQuarter = {
+  year: number;
+  quarter: number;
+  periodEnd: string | null;
+  reportDate: string | null;
+  epsActual: number | null;
+  epsEstimate: number | null;
+  epsSurprisePct: number | null;
+  revenueActual: number | null;
+  revenueEstimate: number | null;
+  revenueSurprisePct: number | null;
+};
+
+export type BullEarnings = {
+  source: "earnings-beat" | "finnhub";
+  fetchedAt: string | null;
+  nextDate: string | null;
+  nextHour: string | null;
+  quarters: BullEarningsQuarter[];
+};
+
+const SAFE_URL = /^https?:\/\//i;
+const url = (v: unknown): string | null => {
+  const s = str(v);
+  return s && SAFE_URL.test(s) ? s : null;
+};
+
+function normalizeDetails(raw: unknown): BullAssetDetails | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const provider = o.provider === "coingecko" ? "coingecko" : o.provider === "finnhub" ? "finnhub" : null;
+  if (!provider) return null;
+  return {
+    provider,
+    name: str(o.name), exchange: str(o.exchange), country: str(o.country), currency: str(o.currency),
+    industry: str(o.industry), ipoDate: str(o.ipoDate), website: url(o.website), logoUrl: url(o.logoUrl),
+    marketCap: num(o.marketCap), marketCapAsOf: str(o.marketCapAsOf), marketCapMethod: str(o.marketCapMethod),
+    sharesOutstanding: num(o.sharesOutstanding), week52High: num(o.week52High), week52Low: num(o.week52Low),
+    peTtm: num(o.peTtm), beta: num(o.beta), dividendYieldPct: num(o.dividendYieldPct),
+    circulatingSupply: num(o.circulatingSupply), totalSupply: num(o.totalSupply), maxSupply: num(o.maxSupply),
+    volume24h: num(o.volume24h), ath: num(o.ath), athDate: str(o.athDate), athChangePct: num(o.athChangePct),
+    marketCapRank: num(o.marketCapRank), fetchedAt: str(o.fetchedAt),
+  };
+}
+
+function normalizeEarnings(raw: unknown): BullEarnings | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const quarters = (Array.isArray(o.quarters) ? o.quarters : [])
+    .map((r): BullEarningsQuarter | null => {
+      const q = (r ?? {}) as Record<string, unknown>;
+      const year = num(q.year);
+      const quarter = num(q.quarter);
+      if (year === null || quarter === null) return null;
+      return {
+        year, quarter, periodEnd: str(q.periodEnd), reportDate: str(q.reportDate),
+        epsActual: num(q.epsActual), epsEstimate: num(q.epsEstimate), epsSurprisePct: num(q.epsSurprisePct),
+        revenueActual: num(q.revenueActual), revenueEstimate: num(q.revenueEstimate),
+        revenueSurprisePct: num(q.revenueSurprisePct),
+      };
+    })
+    .filter((q): q is BullEarningsQuarter => q !== null);
+  return {
+    source: o.source === "earnings-beat" ? "earnings-beat" : "finnhub",
+    fetchedAt: str(o.fetchedAt),
+    nextDate: str(o.nextDate),
+    nextHour: str(o.nextHour),
+    quarters,
+  };
+}
+
+export type BullAssetState = {
+  status: BullStatus;
+  symbol: string | null;
+  runDate: string | null;
+  /** One row per strategy lens on the newest run. */
+  lenses: BullRow[];
+  strategies: StrategyMeta[];
+  transitions: BullAssetTransition[];
+  details: BullAssetDetails | null;
+  earnings: BullEarnings | null;
+  errorMessage?: string;
+};
+
+const EMPTY_ASSET: BullAssetState = {
+  status: "loading", symbol: null, runDate: null, lenses: [],
+  strategies: DEFAULT_STRATEGIES, transitions: [], details: null, earnings: null,
+};
+
+export function normalizeBullAsset(raw: unknown, symbol: string): BullAssetState {
+  const o = (raw ?? {}) as Record<string, unknown>;
+  const strategies = normalizeStrategies(o.strategies);
+  if (typeof o.error === "string") {
+    return { ...EMPTY_ASSET, status: "error", symbol, strategies, errorMessage: o.error };
+  }
+  const lenses = (Array.isArray(o.lenses) ? o.lenses : [])
+    .map((r, i) => normalizeRow(r, i))
+    .filter((r): r is BullRow => r !== null);
+  const transitions = (Array.isArray(o.transitions) ? o.transitions : [])
+    .map((r): BullAssetTransition | null => {
+      const t = (r ?? {}) as Record<string, unknown>;
+      const toV = str(t.toVerdict);
+      const sym = str(t.symbol);
+      if (!toV || !sym) return null;
+      return {
+        runDate: str(t.runDate) ?? "",
+        symbol: sym,
+        displayName: str(t.displayName) ?? sym,
+        tier: toTier(t.tier),
+        fromVerdict: t.fromVerdict == null ? null : toVerdict(t.fromVerdict),
+        toVerdict: toVerdict(toV),
+        strategy: str(t.strategy) ?? DEFAULT_STRATEGY_ID,
+      };
+    })
+    .filter((t): t is BullAssetTransition => t !== null);
+  return {
+    status: lenses.length > 0 ? "live" : "pending",
+    symbol,
+    runDate: str(o.runDate),
+    lenses,
+    strategies,
+    transitions,
+    details: normalizeDetails(o.details),
+    earnings: normalizeEarnings(o.earnings),
+  };
+}
+
+/** Compact money: 3.52T / 812.4B / 41.2M / 950K. */
+export const formatCompact = (v: number | null, prefix = "$"): string => {
+  if (v === null) return "—";
+  const a = Math.abs(v);
+  const sign = v < 0 ? "−" : "";
+  const [div, unit] = a >= 1e12 ? [1e12, "T"] : a >= 1e9 ? [1e9, "B"] : a >= 1e6 ? [1e6, "M"] : a >= 1e3 ? [1e3, "K"] : [1, ""];
+  const n = a / div;
+  return `${sign}${prefix}${n.toFixed(n >= 100 ? 0 : n >= 10 ? 1 : 2)}${unit}`;
+};
+
+/** Every lens's read of one symbol + its recent transitions. Lens-
+ *  independent (one fetch per symbol), so switching strategy while
+ *  the drawer is open costs nothing. `null` symbol = drawer closed. */
+export function useBullAsset(symbol: string | null): BullAssetState {
+  const [state, setState] = useState<BullAssetState>(EMPTY_ASSET);
+  useEffect(() => {
+    if (!symbol) { setState(EMPTY_ASSET); return; }
+    let alive = true;
+    setState({ ...EMPTY_ASSET, symbol });
+    fetchMarketSnapshot(`/api/bull/asset?symbol=${encodeURIComponent(symbol)}&days=90`)
+      .then(async (res) => {
+        const body = await res.json().catch(() => ({}));
+        if (!alive) return;
+        if (!res.ok) {
+          const msg = (body as Record<string, unknown>)?.error;
+          setState({
+            ...EMPTY_ASSET, status: "error", symbol,
+            errorMessage: typeof msg === "string" ? msg : `bull api responded ${res.status}`,
+          });
+          return;
+        }
+        setState(normalizeBullAsset(body, symbol));
+      })
+      .catch((err) => {
+        if (!alive) return;
+        setState({
+          ...EMPTY_ASSET, status: "error", symbol,
+          errorMessage: err instanceof Error ? err.message : "network error",
+        });
+      });
+    return () => { alive = false; };
+  }, [symbol]);
+  return state;
+}
+
+/** RS 63d benchmark label — mirrors backend bull/universe.ts benchmarkFor. */
+export function rsBenchmarkLabel(row: Pick<BullRow, "symbol" | "assetClass">): string | null {
+  if (row.assetClass === "crypto") return row.symbol === "BTC-USD" ? null : "BTC";
+  if (row.assetClass === "equity" || row.assetClass === "etf" || row.assetClass === "index") {
+    return row.symbol === "^GSPC" ? null : "S&P 500";
+  }
+  return null;
 }
 
 /* ── verdict display metadata — the module-spec names ─────────── */

@@ -1,6 +1,7 @@
 import type { AustraliaFrequency, AustraliaIndicator, AustraliaRelease, AustraliaReleaseSchedule } from "../australia/types";
+import { AUSTRALIA_INDICATORS, AUSTRALIA_REGISTRY, type AustraliaReleaseFamily } from "../australia/registry";
 
-export const ABS_RELEASE_PAGES = {
+export const ABS_RELEASE_PAGES: Record<AustraliaReleaseFamily, string> = {
   cpi: "https://www.abs.gov.au/statistics/economy/price-indexes-and-inflation/consumer-price-index-australia/latest-release",
   labour: "https://www.abs.gov.au/statistics/labour/employment-and-unemployment/labour-force-australia/latest-release",
 };
@@ -48,21 +49,39 @@ export function parseAbsReleasePage(html: string, frequency: AustraliaFrequency,
   };
 }
 
+const unavailable = (sourceUrl: string): AustraliaReleaseSchedule => ({ sourceUrl, verifiedAt: null, latestReferencePeriod: null, latest: null, next: null, nextPublication: null, health: "unavailable" });
+
+/**
+ * One request per ABS release page (family), parsed once per frequency used by that family's
+ * indicators. Series in the same family and frequency share one schedule object.
+ */
 export async function fetchAustraliaReleaseSchedules(opts: { fetchImpl?: typeof fetch; now?: Date } = {}): Promise<Record<AustraliaIndicator, AustraliaReleaseSchedule>> {
   const now = opts.now ?? new Date();
-  const load = async (sourceUrl: string, frequency: AustraliaFrequency): Promise<AustraliaReleaseSchedule> => {
+  const families = [...new Set(AUSTRALIA_INDICATORS.map((i) => AUSTRALIA_REGISTRY[i].releaseFamily))];
+  const pages = new Map<AustraliaReleaseFamily, string | null>(await Promise.all(families.map(async (family): Promise<[AustraliaReleaseFamily, string | null]> => {
     try {
       const requestOptions = {
         signal: AbortSignal.timeout(10_000),
         cache: "no-store" as const,
       };
-      const response = await (opts.fetchImpl ?? fetch)(sourceUrl, requestOptions);
+      const response = await (opts.fetchImpl ?? fetch)(ABS_RELEASE_PAGES[family], requestOptions);
       if (!response.ok) throw new Error(`ABS HTTP ${response.status}`);
-      return parseAbsReleasePage(await response.text(), frequency, sourceUrl, now);
+      return [family, await response.text()];
     } catch {
-      return { sourceUrl, verifiedAt: null, latestReferencePeriod: null, latest: null, next: null, nextPublication: null, health: "unavailable" };
+      return [family, null];
     }
+  })));
+  const parsed = new Map<string, AustraliaReleaseSchedule>();
+  const scheduleFor = (family: AustraliaReleaseFamily, frequency: AustraliaFrequency): AustraliaReleaseSchedule => {
+    const cacheKey = `${family}:${frequency}`;
+    const cached = parsed.get(cacheKey);
+    if (cached) return cached;
+    const html = pages.get(family);
+    let schedule: AustraliaReleaseSchedule;
+    try { schedule = html == null ? unavailable(ABS_RELEASE_PAGES[family]) : parseAbsReleasePage(html, frequency, ABS_RELEASE_PAGES[family], now); }
+    catch { schedule = unavailable(ABS_RELEASE_PAGES[family]); }
+    parsed.set(cacheKey, schedule);
+    return schedule;
   };
-  const [cpi, labour] = await Promise.all([load(ABS_RELEASE_PAGES.cpi, "quarterly"), load(ABS_RELEASE_PAGES.labour, "monthly")]);
-  return { trimmed_mean_cpi_yoy: cpi, headline_cpi_yoy: cpi, unemployment_rate: labour, hours_worked: labour };
+  return Object.fromEntries(AUSTRALIA_INDICATORS.map((i) => [i, scheduleFor(AUSTRALIA_REGISTRY[i].releaseFamily, AUSTRALIA_REGISTRY[i].frequency)])) as Record<AustraliaIndicator, AustraliaReleaseSchedule>;
 }

@@ -19,8 +19,16 @@ export async function GET() {
       return Response.json({ error: "no btc snapshot available" }, { status: 404 });
     }
 
+    // Flag when the snapshot has stopped advancing, rather than serving an
+    // old price as "live" (it sat at 26 Oct for three weeks unnoticed).
+    const asOfMs = snapshot.priceAsOf ? Date.parse(snapshot.priceAsOf) : NaN;
+    const ageHours = Number.isFinite(asOfMs) ? (Date.now() - asOfMs) / 3_600_000 : null;
+    const stale = ageHours === null || ageHours > 36;
+
     return Response.json({
       source: "live",
+      stale,
+      ageHours: ageHours === null ? null : Math.round(ageHours * 10) / 10,
       asOf: snapshot.priceAsOf,
       price: {
         value: snapshot.price,

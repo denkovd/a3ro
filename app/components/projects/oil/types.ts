@@ -4,7 +4,8 @@
 ──────────────────────────────────────────────────────────────── */
 
 import type { Benchmark, CorridorId } from "@a3ro/oil-backend";
-import type { GateSignal } from "./gateSignal";
+import type { GateSignal, TierMove } from "./gateSignal";
+import type { DailyPoint, WeeklyChange } from "./gateHistory";
 
 export type CorridorStatus = "live" | "connecting" | "watchlist" | "stale";
 
@@ -50,6 +51,12 @@ export type GateSignalRow = {
   /** Where selecting the row lands: a corridor hotspot panel, or the gate panel. */
   focus: FocusTarget;
   signal: GateSignal;
+  /** This week against the week before, from the daily series. null until that history has loaded. */
+  change: WeeklyChange | null;
+  /** How the gate's tier moved against the week before; null when unchanged or unknown. */
+  move: TierMove;
+  /** Daily tanker transits for the detail chart. */
+  history: { status: "loading" | "live" | "error"; points: DailyPoint[] };
 };
 
 export type OilIntelligence = {

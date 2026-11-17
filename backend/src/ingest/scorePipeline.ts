@@ -27,6 +27,7 @@ import {
   computeSpreadSignal,
   computeStockDrawLeg,
   computeThroughputDeviationLeg,
+  referenceNorm,
   computeTapeStance,
   computeTightness,
   computeUtilizationLeg,
@@ -138,16 +139,26 @@ export async function runScoreCycle(
     const toPts = (rows: { periodDate: string; value: number }[]): PricePoint[] =>
       rows.map((r) => ({ date: r.periodDate, value: r.value }));
 
+    // Each gate is read against its reference norm (1y, or 5y once the
+    // 1y mean has drifted — scores/engine.ts referenceNorm), and carries
+    // its reading's age so a stale gate is skipped rather than scored.
+    const runDayMs = Date.parse(`${runDate}T00:00:00.000Z`);
     const gates: GateThroughput[] = [];
     for (const corridor of GATE_CORRIDORS) {
       const vol = latestMetrics.find(
         (m) => m.corridor === corridor && m.metric === "tanker_volume_7d",
       );
-      const band = baselines.find(
-        (b) => b.corridor === corridor && b.metric === "tanker_volume" && b.win === "1y",
-      );
-      if (!vol || !band) continue;
-      gates.push({ corridor, current: vol.value, mean: band.meanValue, p10: band.p10 });
+      if (!vol) continue;
+      const meanOf = (win: "1y" | "5y") =>
+        baselines.find((b) => b.corridor === corridor && b.metric === "tanker_volume" && b.win === win)
+          ?.meanValue ?? null;
+      const ref = referenceNorm(meanOf("1y"), meanOf("5y"));
+      if (!ref) continue;
+      const periodMs = Date.parse(`${vol.periodDate.slice(0, 10)}T00:00:00.000Z`);
+      const ageDays = Number.isFinite(periodMs) && Number.isFinite(runDayMs)
+        ? Math.round((runDayMs - periodMs) / 86_400_000)
+        : null;
+      gates.push({ corridor, current: vol.value, norm: ref.mean, normWin: ref.win, ageDays });
     }
 
     const legs: ScoreComponent[] = [

@@ -32,6 +32,10 @@ function hookHarness() {
       return Response.json({ observations: [{ indicator: "unemployment_rate", value: calls }], fetchStates: {}, releaseSchedules: {} });
     } },
     "../../../../backend/src/australia/watch": { estimateFreshness: () => "fresh" },
+    "../../../../backend/src/australia/registry": {
+      AUSTRALIA_REGISTRY: { unemployment_rate: { section: "primary", order: 30, shortLabel: "Unemployment", releaseLagDays: 21 }, trimmed_mean_cpi_yoy: { section: "comparison", order: 110, shortLabel: "Trimmed mean CPI (Q)", releaseLagDays: 45 } },
+      isAustraliaIndicator: id => id === "unemployment_rate" || id === "trimmed_mean_cpi_yoy",
+    },
   };
   new Function("require", "module", "exports", "document", "window", "setInterval", "clearInterval", outputText)(
     id => { if (!stubs[id]) throw new Error(`Unexpected import ${id}`); return stubs[id]; }, module, module.exports, document, window,
@@ -101,4 +105,17 @@ test("initial failure recovers and source checks expire independently of observa
   assert.equal(h.helpers.fetchOverdue("2026-11-01T00:00:00Z", now), false);
   assert.equal(h.helpers.fetchOverdue(null, now), true);
   h.stop();
+});
+
+test("summary tiles show primary series only, in registry order", () => {
+  const h = hookHarness();
+  const rows = [
+    { indicator: "trimmed_mean_cpi_yoy", referencePeriod: "2026-Q3" },
+    { indicator: "unemployment_rate", referencePeriod: "2026-09" },
+    { indicator: "unemployment_rate", referencePeriod: "2026-10" },
+    { indicator: "retired_series", referencePeriod: "2026-10" },
+  ];
+  assert.deepEqual(h.helpers.primaryLatest(rows), [{ indicator: "unemployment_rate", referencePeriod: "2026-10" }]);
+  assert.equal(h.helpers.shortLabel("unemployment_rate"), "Unemployment");
+  assert.equal(h.helpers.shortLabel("retired_series"), "retired_series");
 });

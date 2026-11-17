@@ -33,15 +33,16 @@ import RefineryDetail from "./oil/RefineryDetail";
 import CorridorDetail from "./oil/CorridorDetail";
 import FlowHealthLegend from "./oil/FlowHealthLegend";
 import GateNormBlock from "./oil/GateNormBlock";
-import { gateArrow, hasComparison, isOutsideTypical, routeFlowState, routeWorstRatio, type GateSignal } from "./oil/gateSignal";
+import { gateArrow, gateColourRatio, gateMarkRadius, gateShortfallShort, gateTier, gateTierText, hasComparison, isOutsideTypical, routeFlowState, routeWorstRatio, tierMoveText, type GateSignal } from "./oil/gateSignal";
+import { weeklyChangeShort } from "./oil/gateHistory";
 import { refineryStatus, refineryCondition, capacityLabel, type Refinery } from "./oil/refineries";
 import { currentMetrics, quoteStatus, quoteBasis, comparablePriorClose } from "./oil/dataQuality";
-import type { FocusTarget } from "./oil/types";
+import type { FocusTarget, GateSignalRow } from "./oil/types";
 import { chinaLead, chinaMapText } from "./oil/china";
 import AssetSearch from "./oil/explorer/AssetSearch";
 import CompanyDetail from "./oil/explorer/CompanyDetail";
 import { useOilGraph, filterRefineries, filterIsActive, EMPTY_FILTER, searchCorpus, fitView, companyAssets, companyById, type RefineryFilter, type SearchHit } from "./oil/explorer/graph";
-import type { Benchmark, CorridorBaseline, CorridorId, CorridorMetricLatest, DailyPrice, LatestQuote } from "@a3ro/oil-backend";
+import type { Benchmark, CorridorId, CorridorMetricLatest, DailyPrice, LatestQuote } from "@a3ro/oil-backend";
 
 /* ══ route-only content: hotspot hierarchy + signal copy ══ */
 type HotspotKind = "live" | "demand" | "watch" | "reserved";
@@ -180,11 +181,6 @@ type Sim = {
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const shortest = (from: number, to: number) => ((to - from + 540) % 360) - 180;
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
-
-/** Baselines describe a historical window; expired windows do not colour current traffic. */
-function baselineFor(baselines: CorridorBaseline[] | null, corridor: string, metric: string, win: "1y" | "5y") {
-  return baselines?.find(b => b.corridor === corridor && b.metric === metric && b.win === win && Date.now() - Date.parse(b.sampleTo) <= 45 * 86_400_000) ?? null;
-}
 
 type CorridorPanelContent = { metric: string; statusText: string };
 function buildCorridorPanel(hotspotId: string, metrics: CorridorMetricLatest[]): CorridorPanelContent | null {
@@ -326,6 +322,14 @@ export default function OilTrackerCore({
   const gateSignalsRef = useRef<Record<string, GateSignal>>({});
   gateSignalsRef.current = Object.fromEntries(intel.gates.map(g => [g.id, g.signal]));
   const gateSignalOf = (corridor: string): GateSignal | null => gateSignalsRef.current[corridor] ?? null;
+  /* which yardstick the compared gates are using, so the map key can say so */
+  const comparedGates = intel.gates.filter(g => hasComparison(g.signal));
+  const legendBasis = comparedGates.length > 0 && comparedGates.every(g => g.signal.bandBasis === "own") ? "own" as const
+    : comparedGates.some(g => g.signal.bandBasis === "own") ? "mixed" as const : "fixed" as const;
+  /* the full gate rows (signal + week-on-week change + daily history), same keying */
+  const gateRowsRef = useRef<Record<string, GateSignalRow>>({});
+  gateRowsRef.current = Object.fromEntries(intel.gates.map(g => [g.id, g]));
+  const gateRowOf = (corridor: string): GateSignalRow | null => gateRowsRef.current[corridor] ?? null;
   /* until the first physical fetch settles, gate labels read LOADING — not "no reading" */
   const gatesLoadingRef = useRef(true);
   gatesLoadingRef.current = feed.corridors === null && !feed.physicalFailed;
@@ -692,10 +696,13 @@ export default function OilTrackerCore({
       const L = layersRef.current;
       let best: HitResult | null = null;
       let bestD = 18;
+      /* a gate mark grows with its departure from the norm, so distance is
+         measured from the mark's edge once it is larger than the default reach */
+      const reach = (corridor: string | null | undefined) => Math.max(0, gateMarkRadius(corridor ? gateSignalsRef.current[corridor] : null) - 8);
       for (const hs of HOTSPOTS) {
         const p = project(rot, vec(hs.lon, hs.lat), cx, cy, R);
         if (p.z < 0.12) continue;
-        const d = Math.hypot(p.x - mx, p.y - my);
+        const d = Math.max(0, Math.hypot(p.x - mx, p.y - my) - reach(hs.id === "hormuz" ? "hormuz" : hs.id === "sg" ? "singapore" : null));
         if (d < bestD) { bestD = d; best = { type: "hotspot", h: hs }; }
       }
       if (L.producers !== "off") {
@@ -722,7 +729,7 @@ export default function OilTrackerCore({
           if (!tk.gate) continue;
           const p = project(rot, vec(tk.lon, tk.lat), cx, cy, R);
           if (p.z <= 0.35) continue;
-          const d = Math.hypot(p.x - mx, p.y - my);
+          const d = Math.max(0, Math.hypot(p.x - mx, p.y - my) - reach(tk.gate));
           if (d < bestGateD && d < bestD) {
             bestGateD = d; bestD = d;
             best = { type: "gate", corridorId: tk.gate, label: tk.label };
@@ -869,7 +876,8 @@ export default function OilTrackerCore({
           ctx.setLineDash([]);
           return 5;
         }
-        const ratio = sig.ratio as number;
+        // colour follows the state: the gate's ratio mapped through its own typical range
+        const ratio = gateColourRatio(sig) as number;
         if (!isOutsideTypical(sig)) {
           ctx.fillStyle = flowHealth(ratio, 0.85 * fade);
           ctx.beginPath();
@@ -882,13 +890,14 @@ export default function OilTrackerCore({
           ctx.stroke();
           return 5.5;
         }
-        const r = 9 + 7 * Math.min(1, sig.severity / 0.6);
+        // size is the percent departure from the norm; the ring thickens a step per tier
+        const r = gateMarkRadius(sig);
         ctx.fillStyle = flowHealth(ratio, 0.2 * fade);
         ctx.beginPath();
         ctx.arc(sx, sy, r, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = flowHealth(ratio, 0.95 * fade);
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1 + 0.5 * gateTier(sig);
         ctx.beginPath();
         ctx.arc(sx, sy, r, 0, Math.PI * 2);
         ctx.stroke();
@@ -898,15 +907,23 @@ export default function OilTrackerCore({
         ctx.fill();
         return r;
       };
-      /* Gate label: percent of norm with a direction arrow and the reading,
-         so the mark never depends on colour alone. */
-      const gateLabel = (sig: GateSignal | undefined): string => {
-        if (gatesLoadingRef.current) return "LOADING";
-        if (!sig || sig.state === "no-reading" || sig.value === null) return "NO READING";
-        if (sig.state === "stale") return `STALE · ${sig.periodDate}`;
-        if (sig.ratio === null) return `${sig.value.toFixed(1)}/D · NO NORM`;
-        const arrow = gateArrow(sig);
-        return `${Math.round(sig.ratio * 100)}% OF NORM${arrow ? ` ${arrow}` : ""} · ${sig.value.toFixed(1)}/D`;
+      /* Gate label lines. Outside the typical range: percent of norm with a
+         direction arrow and the absolute gap, then the reading and the
+         week-on-week change. Otherwise one line. The mark never depends on
+         colour alone. */
+      const gateRows = gateRowsRef.current;
+      const gateLines = (id: string | null | undefined): string[] => {
+        const row = id ? gateRows[id] : undefined;
+        const sig = row?.signal;
+        if (gatesLoadingRef.current) return ["LOADING"];
+        if (!row || !sig || sig.state === "no-reading" || sig.value === null) return ["NO READING"];
+        if (sig.state === "stale") return [`STALE · ${sig.periodDate}`];
+        if (sig.ratio === null) return [`${sig.value.toFixed(1)}/D · NO NORM`];
+        const pct = `${Math.round(sig.ratio * 100)}% OF NORM`;
+        const wk = weeklyChangeShort(row.change);
+        const reading = `${sig.value.toFixed(1)}/D`;
+        if (!isOutsideTypical(sig)) return [[pct, reading, wk].filter(Boolean).join(" · ")];
+        return [`${pct} ${gateArrow(sig)} · ${gateShortfallShort(sig)}`, [reading, wk, tierMoveText(row.move).toUpperCase()].filter(Boolean).join(" · ")];
       };
       /* Label boxes of gates outside their typical range. Ambient labels
          (route names, zoom-revealed refinery names) give way inside them so
@@ -916,7 +933,7 @@ export default function OilTrackerCore({
         rot(...vec(lon, lat), o);
         if (o[2] < minZ) return;
         const gx = cx + o[0] * R, gy = cy - o[1] * R;
-        gateGuards.push(side < 0 ? [gx - 230, gy - 28, gx + 24, gy + 18] : [gx - 24, gy - 28, gx + 230, gy + 18]);
+        gateGuards.push(side < 0 ? [gx - 270, gy - 30, gx + 30, gy + 30] : [gx - 30, gy - 30, gx + 270, gy + 30]);
       };
       for (const hs of HOTSPOTS) {
         const gid = hs.id === "hormuz" ? "hormuz" : hs.id === "sg" ? "singapore" : null;
@@ -1171,17 +1188,24 @@ export default function OilTrackerCore({
         const out = !!sig && isOutsideTypical(sig);
         const r = drawGateMark(sx, sy, sig, fade);
         ctx.textAlign = "left";
+        const lines = gateLines(tk.gate);
         if (out) {
           ctx.font = '600 11px "JetBrains Mono", ui-monospace, monospace';
           ctx.fillStyle = INK(0.95 * fade);
-          haloText(tk.label, sx + r + 6, sy - 2);
+          haloText(tk.label, sx + r + 6, sy - 8);
           ctx.font = '500 10px "JetBrains Mono", ui-monospace, monospace';
           ctx.fillStyle = INK(0.9 * fade);
-          haloText(gateLabel(sig), sx + r + 6, sy + 10);
+          haloText(lines[0], sx + r + 6, sy + 4);
+          // narrow screens: the reading and weekly change stay in the sheet below, so labels do not collide
+          if (lines[1] && !narrowRef.current) {
+            ctx.fillStyle = INK(0.62 * fade);
+            haloText(lines[1], sx + r + 6, sy + 16);
+          }
         } else {
           ctx.font = '500 9px "JetBrains Mono", ui-monospace, monospace';
           ctx.fillStyle = INK(0.6 * fade);
-          const short = sig && sig.ratio !== null ? `${Math.round(sig.ratio * 100)}%` : gateLabel(sig);
+          // within range: percent of norm and the week-on-week change, without repeating "OF NORM"
+          const short = sig && sig.ratio !== null ? lines[0].replace(" OF NORM", "").replace(/ · [\d.]+\/D/, "") : lines[0];
           haloText(`${tk.label} · ${short}`, sx + r + 5, sy + 3);
         }
       }
@@ -1204,7 +1228,7 @@ export default function OilTrackerCore({
         const gateId = hs.id === "hormuz" ? "hormuz" : hs.id === "sg" ? "singapore" : null;
         const sig = gateId ? signals[gateId] : undefined;
         const out = !!sig && isOutsideTypical(sig);
-        const sigRatio = sig?.ratio ?? null;
+        const sigRatio = sig ? gateColourRatio(sig) : null;
         const col = sigRatio !== null ? (a: number) => flowHealth(sigRatio, a) : gateId ? INK : primary ? AMB : INK;
         const coreA = primary ? 0.95 : hs.kind === "reserved" ? 0.35 : 0.6;
         let markR = 6.5;
@@ -1266,7 +1290,7 @@ export default function OilTrackerCore({
         const labelGap = Math.max(14, markR + 7);
         // a gate reading must stay on screen: flip its label to the other side of the mark if it would be clipped
         if (gateId) {
-          const labelW = Math.max(ctx.measureText(hs.label).width, ctx.measureText(gateLabel(sig)).width) + 6;
+          const labelW = Math.max(ctx.measureText(hs.label).width, ...gateLines(gateId).map((line) => ctx.measureText(line).width)) + 6;
           if (side < 0 && sx - labelGap - labelW < 4) side = 1;
           else if (side > 0 && sx + labelGap + labelW > w - 4 && sx - labelGap - labelW >= 4) side = -1;
         }
@@ -1287,8 +1311,13 @@ export default function OilTrackerCore({
         const sub = hotspotSubsRef.current[hs.id];
         if (gateId) {
           // traffic vs norm, in ink with an arrow — colour stays on the mark
+          const lines = gateLines(gateId);
           ctx.fillStyle = INK((out ? 0.95 : 0.6) * fade);
-          haloText(gateLabel(sig), lx, ly + 12);
+          haloText(lines[0], lx, ly + 12);
+          if (lines[1] && !narrowRef.current) {
+            ctx.fillStyle = INK(0.62 * fade);
+            haloText(lines[1], lx, ly + 24);
+          }
         } else if (primary && sub) {
           // amber only when a real feed value backs this sub (Section C7);
           // the neutral CONNECTING/WATCHLIST placeholders stay ink.
@@ -1647,26 +1676,19 @@ export default function OilTrackerCore({
      buildCorridorPanel's coverage). Used by the hover card's baseline line. */
   const HOTSPOT_GATE_CORRIDOR: Partial<Record<string, CorridorId>> = { hormuz: "hormuz", sg: "singapore" };
 
-  /* Shared "vs 1-year norm / YoY" one-liner (Section §4a/§4c) — reads the
-     exact same feed.corridors + feed.baselines that back the panel's own
-     baseline rows (Section §3b), so the hover card never shows a number
-     the panel wouldn't also show. Returns null when no baseline is on file. */
+  /* Shared "vs norm" one-liner for hover cards — read from the same gate
+     signal as the globe mark, the rail and the detail panel, so a hover
+     card never shows a different percent or norm than they do. `ratio` is
+     the colour ratio (the reading mapped through the gate's own typical
+     range). Returns null when the gate has no current comparison. */
   const baselineLineFor = (corridorId: CorridorId): { text: string; warm: boolean; ratio: number } | null => {
-    const transits7d = freshMetrics.find(
-      (m) => m.corridor === corridorId && m.metric === "tanker_transits_7d",
-    );
-    if (!transits7d) return null;
-    const baseline1y = baselineFor(feed.baselines ?? null, corridorId, "tanker_transits", "1y");
-    if (!baseline1y || baseline1y.meanValue <= 0) return null;
-    const ratio = transits7d.value / baseline1y.meanValue;
-    const pct = Math.round(ratio * 100);
-    const warm = ratio < 0.7 || ratio > 1.3;
-    if (baseline1y.yoyPct == null) return { text: `${pct}% OF 1Y NORM`, warm, ratio };
-    const yoyPct = baseline1y.yoyPct;
-    const yoyWarm = Math.abs(yoyPct) >= 15;
+    const sig = gateSignalOf(corridorId);
+    const ratio = sig ? gateColourRatio(sig) : null;
+    if (!sig || sig.ratio === null || ratio === null) return null;
+    const outside = isOutsideTypical(sig);
     return {
-      text: `${pct}% OF 1Y NORM · ${yoyPct >= 0 ? "▲" : "▼"}${Math.abs(yoyPct).toFixed(0)}% YOY`,
-      warm: warm || yoyWarm,
+      text: `${Math.round(sig.ratio * 100)}% OF ${sig.ref === "5y" ? "5Y" : "1Y"} NORM · ${outside ? `${gateTierText(sig).toUpperCase()} ${gateArrow(sig)}` : "TYPICAL RANGE"}`,
+      warm: outside,
       ratio,
     };
   };
@@ -1784,12 +1806,12 @@ export default function OilTrackerCore({
         {gates.map(g => {
           const row = freshMetrics.find(m => m.corridor === g && m.metric === "tanker_transits_7d");
           const last = feed.corridors?.find(m => m.corridor === g && m.metric === "tanker_transits_7d");
-          return <section key={g} className="border-t border-[var(--line)] pt-4"><h4 className="text-sm text-[var(--ink)]">{GATE_LABEL[g] ?? g}</h4>{gateSignalOf(g) && <GateNormBlock className="mt-3" signal={gateSignalOf(g)!} />}<p className="mt-2 font-mono text-lg text-[var(--ink-2)]">{row ? `${row.value.toFixed(1)} transits / day` : last ? "Stale observation" : "Observation unavailable"}</p><p className="mt-1 text-[11px] text-[var(--ink-3)]">{last ? `${last.source} · 7-day average · ${last.periodDate}` : "No reported traffic data"}</p><CorridorSpark key={g} corridor={g} metric="tanker_transits_7d" caption="Reported gate traffic · 7-day average" /></section>;
+          return <section key={g} className="border-t border-[var(--line)] pt-4"><h4 className="text-sm text-[var(--ink)]">{GATE_LABEL[g] ?? g}</h4>{gateRowOf(g) && <GateNormBlock className="mt-3" gate={gateRowOf(g)!} />}<p className="mt-2 font-mono text-lg text-[var(--ink-2)]">{row ? `${row.value.toFixed(1)} transits / day` : last ? "Stale observation" : "Observation unavailable"}</p><p className="mt-1 text-[11px] text-[var(--ink-3)]">{last ? `${last.source} · 7-day average · ${last.periodDate}` : "No reported traffic data"}</p>{/* the dated daily chart above replaces the 7-day sparkline for gates that have one */}{!gateRowOf(g) && <CorridorSpark key={g} corridor={g} metric="tanker_transits_7d" caption="Reported gate traffic · 7-day average" />}</section>;
         })}
       </div>;
     }
 
-    if (sel) return <CorridorDetail key={sel.id} id={sel.id} title={sel.title} metrics={feed.corridors} failed={feed.physicalFailed} signal={sel.id === "hormuz" ? gateSignalOf("hormuz") : sel.id === "sg" ? gateSignalOf("singapore") : null} onFocus={onRailFocus} />;
+    if (sel) return <CorridorDetail key={sel.id} id={sel.id} title={sel.title} metrics={feed.corridors} failed={feed.physicalFailed} gate={sel.id === "hormuz" ? gateRowOf("hormuz") : sel.id === "sg" ? gateRowOf("singapore") : null} onFocus={onRailFocus} />;
 
     if (benchSel) {
       return (
@@ -2031,11 +2053,11 @@ export default function OilTrackerCore({
         {/* map key — what the gate marks, route styles and dim squares mean */}
         {narrow ? (
           <div className="pointer-events-none absolute left-3 right-16 top-[64px] z-10">
-            <FlowHealthLegend compact className="border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5 backdrop-blur-md" />
+            <FlowHealthLegend compact basis={legendBasis} className="border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5 backdrop-blur-md" />
           </div>
         ) : (
           <div className="pointer-events-none absolute right-5 top-4 z-10 w-[212px] border border-[var(--line)] bg-[var(--panel)] px-3 py-3 backdrop-blur-md">
-            <FlowHealthLegend />
+            <FlowHealthLegend basis={legendBasis} />
           </div>
         )}
 

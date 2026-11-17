@@ -234,8 +234,9 @@ export function combineComposite(
  * Flow Stress — corridor supply-side strain. Legs (per the plan):
  * widening Brent–WTI spread, export strength, regional stock draw,
  * throughput deviation. Callers pass whichever legs are live; the
- * combiner handles the rest. Not yet wired into the cycle — awaits
- * the stock-draw and throughput legs.
+ * combiner handles the rest. Leg weights are FLOW_STRESS_WEIGHTS
+ * (throughput 3, the three US-pull legs 1 each) — see the note above
+ * the leg builders.
  */
 export function computeFlowStress(runDate: string, legs: ScoreComponent[]): ScoreSnapshot {
   return combineComposite("flow_stress", runDate, legs, {
@@ -249,11 +250,41 @@ export function computeFlowStress(runDate: string, legs: ScoreComponent[]): Scor
 /* ── Flow Stress leg builders ─────────────────────────────────────
    Each returns a ScoreComponent — normalized ∈ [0,1] when live, or
    value=null/normalized=null when its inputs are missing, so the
-   combiner's coverage accounting stays honest. All legs carry equal
-   weight 1 (a deliberate, documented default: with no evidence for
-   any other weighting, equal weight is the least-overfit choice; the
-   combiner reweights over whichever legs are live). Pure functions —
-   the pipeline does all IO. */
+   combiner's coverage accounting stays honest. Pure functions — the
+   pipeline does all IO.
+
+   WEIGHTS (changed 2026-11-17; previously every leg weighed 1).
+   The four legs measure two different things:
+     • chokepoint disruption — throughput deviation (1 leg);
+     • US export pull — export strength, regional stock draw and the
+       Brent–WTI spread (3 legs, all reading the same US Gulf story).
+   With equal leg weights the composite was three-quarters US pull, so
+   a fully shut chokepoint could add at most 25 points and, with the
+   US legs at mid-range, topped out at 62.5 — below the 66 STRESSED
+   line. The weights below give each CONCEPT half the composite:
+   throughput 3, the three US legs 1 each. It is a structural choice
+   (two concepts, equal say), not a fitted one — there is no outcome
+   history here to fit against. The combiner still reweights over
+   whichever legs are live.
+
+   Consequences worth knowing:
+     • a shut gate alone contributes 50; STRESSED (≥66) then needs the
+       US legs to average ≥0.32, so it is not automatic;
+     • with every gate at or above its norm the composite cannot
+       exceed 50, so US pull alone never reads STRESSED — the
+       Tightness score is the place that reads US tightness;
+     • quiet-market readings sit lower than under equal weights, since
+       the throughput leg is near 0 when gates run at their norms.
+   The tape stance (computeTapeStance) is unchanged: it still takes
+   max(flow stress, tightness) against its own 60 / 40 lines. */
+
+/** Flow Stress leg weights — see the note above before changing. */
+export const FLOW_STRESS_WEIGHTS = {
+  throughput: 3,
+  exportStrength: 1,
+  stockDraw: 1,
+  spread: 1,
+} as const;
 
 const EXPORT_MIN_POINTS = 4; // below this, percentile-vs-history is noise
 const STOCK_DRAW_LOOKBACK_DAYS = 28; // "4-week draw" window
@@ -275,7 +306,7 @@ export function computeExportStrengthLeg(history: PricePoint[]): ScoreComponent 
       value: latest ? round(latest.value, 2) : null,
       unit: "Mb/d",
       normalized: null,
-      weight: 1,
+      weight: FLOW_STRESS_WEIGHTS.exportStrength,
       asOf: latest ? latest.date : null,
       note: `needs ≥${EXPORT_MIN_POINTS} weekly points (${pts.length} on file)`,
     };
@@ -290,7 +321,7 @@ export function computeExportStrengthLeg(history: PricePoint[]): ScoreComponent 
     value: round(latest.value, 2),
     unit: "Mb/d",
     normalized: round(pct, 4),
-    weight: 1,
+    weight: FLOW_STRESS_WEIGHTS.exportStrength,
     asOf: latest.date,
     note: `${Math.round(pct * 100)}th pct of ${values.length}w · range ${min.toFixed(2)}–${max.toFixed(2)} Mb/d`,
   };
@@ -344,7 +375,7 @@ export function computeStockDrawLeg(
       value: null,
       unit: "Mbbl",
       normalized: null,
-      weight: 1,
+      weight: FLOW_STRESS_WEIGHTS.stockDraw,
       asOf: null,
       note: "needs ≥4 weeks of US or Cushing stocks history",
     };
@@ -374,38 +405,92 @@ export function computeStockDrawLeg(
     value: round(deltaMbbl, 1),
     unit: "Mbbl",
     normalized: round(clamp01(normalized), 4),
-    weight: 1,
+    weight: FLOW_STRESS_WEIGHTS.stockDraw,
     asOf: primary!.asOf,
     note: `4w: ${noteParts.join(" · ")}`,
   };
 }
 
-/** One chokepoint's current 7d tanker volume + its 1y norm band. */
+/** A gate's 1-year norm stops being the reference once it has drifted
+ *  this far (as a fraction) from the 5-year norm. Keep equal to
+ *  GATE_NORM_SWITCH_DRIFT in app/components/projects/oil/gateSignal.ts
+ *  so the score and the globe read each gate against the same norm. */
+export const NORM_SWITCH_DRIFT = 0.25;
+
+/** A gate reading older than this (days before the run date) is not
+ *  scored. Matches the frontend's 14-day rule for weekly PortWatch
+ *  metrics (oil/dataQuality.ts metricFreshness). */
+export const GATE_READING_MAX_AGE_DAYS = 14;
+
+/**
+ * Which window's mean a gate is read against. The 1-year mean is the
+ * default — it tracks slow structural change. But a disruption that
+ * lasts months drags the 1-year mean down with it, until a shut gate
+ * looks "normal" against its own outage. So when the 1-year mean has
+ * drifted ≥ NORM_SWITCH_DRIFT from the 5-year mean, the 5-year mean is
+ * the reference instead. Falls back to whichever window exists.
+ */
+export function referenceNorm(
+  mean1y: number | null | undefined,
+  mean5y: number | null | undefined,
+): { mean: number; win: "1y" | "5y" } | null {
+  const ok = (m: number | null | undefined): m is number => typeof m === "number" && Number.isFinite(m) && m > 0;
+  if (ok(mean1y) && ok(mean5y)) {
+    return Math.abs(mean1y / mean5y - 1) >= NORM_SWITCH_DRIFT ? { mean: mean5y, win: "5y" } : { mean: mean1y, win: "1y" };
+  }
+  if (ok(mean1y)) return { mean: mean1y, win: "1y" };
+  if (ok(mean5y)) return { mean: mean5y, win: "5y" };
+  return null;
+}
+
+/** One chokepoint's current 7d tanker volume + the norm it is read against. */
 export interface GateThroughput {
   corridor: string;
   /** Latest tanker_volume_7d, Mt/d. */
   current: number;
-  /** corridor_baselines (metric tanker_volume, win 1y). */
-  mean: number;
-  p10: number | null;
+  /** Reference mean from referenceNorm() (corridor_baselines, metric tanker_volume). */
+  norm: number;
+  /** Which window `norm` came from. */
+  normWin: "1y" | "5y";
+  /** Days between the reading's period and the run date; null = unknown (treated as current). */
+  ageDays?: number | null;
 }
 
 /**
- * Throughput deviation — worst-gate shortfall below the 1y norm:
- * clamp01((mean − current) / (mean − p10)) per gate, leg = the worst
- * gate. 0 = at/above norm, 1 = at/below the p10 floor. Surges above
- * norm deliberately do NOT count as stress — this leg reads supply
- * disruption, not flow direction. Gates without a valid band
- * (p10 ≥ mean, or missing) are skipped and reported in the note.
+ * Throughput deviation — worst-gate shortfall below its reference
+ * norm, as a share of that norm: clamp01(1 − current / norm) per gate,
+ * leg = the worst gate. 0 = at/above norm, 0.5 = half the normal
+ * volume, 1 = nothing moving. Surges above norm deliberately do NOT
+ * count as stress — this leg reads supply disruption, not flow
+ * direction.
+ *
+ * (Until 2026-11-17 the shortfall was scaled by the gap between the
+ * 1-year mean and the DAILY p10. That saturated on ordinary weeks — a
+ * 7-day average only 14% under norm could score 0.8+ — and it stopped
+ * working in a long outage, when the 1-year p10 reaches zero and the
+ * 1-year mean follows it down.)
+ *
+ * Known limits, stated rather than papered over:
+ *   • every gate counts the same. PortWatch reports tanker capacity,
+ *     not crude, so a size weighting from this data would rank Malacca
+ *     above Hormuz; no crude-share figures are stored to do better.
+ *   • a stale reading (older than GATE_READING_MAX_AGE_DAYS) is
+ *     skipped, never scored — if every gate is stale the leg goes dark
+ *     and the composite reweights over the legs that are live.
  */
 export function computeThroughputDeviationLeg(gates: GateThroughput[]): ScoreComponent {
-  const scored: { corridor: string; current: number; shortfall: number; ofNorm: number }[] = [];
+  const scored: { corridor: string; current: number; shortfall: number; ofNorm: number; win: string }[] = [];
+  let stale = 0;
   for (const g of gates) {
-    if (!Number.isFinite(g.current) || !Number.isFinite(g.mean) || g.mean <= 0) continue;
-    if (g.p10 === null || !Number.isFinite(g.p10) || g.p10 >= g.mean) continue;
-    const shortfall = clamp01((g.mean - g.current) / (g.mean - g.p10));
-    scored.push({ corridor: g.corridor, current: g.current, shortfall, ofNorm: g.current / g.mean });
+    if (!Number.isFinite(g.current) || !Number.isFinite(g.norm) || g.norm <= 0) continue;
+    if (typeof g.ageDays === "number" && g.ageDays > GATE_READING_MAX_AGE_DAYS) {
+      stale++;
+      continue;
+    }
+    const ofNorm = g.current / g.norm;
+    scored.push({ corridor: g.corridor, current: g.current, shortfall: clamp01(1 - ofNorm), ofNorm, win: g.normWin });
   }
+  const staleNote = stale > 0 ? ` · ${stale} stale, not scored` : "";
 
   if (scored.length === 0) {
     return {
@@ -414,9 +499,9 @@ export function computeThroughputDeviationLeg(gates: GateThroughput[]): ScoreCom
       value: null,
       unit: "Mt/d",
       normalized: null,
-      weight: 1,
+      weight: FLOW_STRESS_WEIGHTS.throughput,
       asOf: null,
-      note: "no gate has both a live 7d volume and a valid 1y band",
+      note: `no gate has both a current 7d volume and a norm${staleNote}`,
     };
   }
 
@@ -428,9 +513,9 @@ export function computeThroughputDeviationLeg(gates: GateThroughput[]): ScoreCom
     value: round(worst.current, 2),
     unit: "Mt/d",
     normalized: round(worst.shortfall, 4),
-    weight: 1,
+    weight: FLOW_STRESS_WEIGHTS.throughput,
     asOf: null, // gate metrics carry their own period dates; the pipeline stamps run day
-    note: `worst: ${worst.corridor} at ${Math.round(worst.ofNorm * 100)}% of 1y norm · ${scored.length} gates read`,
+    note: `worst: ${worst.corridor} at ${Math.round(worst.ofNorm * 100)}% of ${worst.win} norm · ${scored.length} gates read${staleNote}`,
   };
 }
 
@@ -654,7 +739,7 @@ export function spreadLegFrom(spread: ScoreSnapshot | null): ScoreComponent {
     value: live ? src.value : null,
     unit: "$/bbl",
     normalized: live ? src.normalized : null,
-    weight: 1,
+    weight: FLOW_STRESS_WEIGHTS.spread,
     asOf: live ? src.asOf : null,
     note: live ? src.note : "spread signal not live this run",
   };

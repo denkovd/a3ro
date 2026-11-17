@@ -1,5 +1,5 @@
-export type AustraliaIndicator = "trimmed_mean_cpi_yoy" | "headline_cpi_yoy" | "unemployment_rate" | "hours_worked";
-export type AustraliaFrequency = "monthly" | "quarterly";
+import type { AustraliaFrequency, AustraliaIndicator } from "./registry";
+export type { AustraliaFrequency, AustraliaIndicator } from "./registry";
 export type ObservationFreshness = "fresh" | "aging" | "stale" | "unavailable";
 export type FetchHealth = "healthy" | "degraded" | "unavailable" | "never_attempted";
 

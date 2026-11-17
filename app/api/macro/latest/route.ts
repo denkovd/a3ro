@@ -15,7 +15,7 @@
    Same posture as its sibling: node runtime, force-dynamic, no cache.
 ──────────────────────────────────────────────────────────────── */
 
-import { createDb, getLatestMacroSnapshot, getLatestPositioning } from "@a3ro/oil-backend";
+import { computeMacroWeather, createDb, getLatestMacroSnapshot, getLatestPositioning } from "@a3ro/oil-backend";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,7 +27,19 @@ export async function GET() {
       getLatestMacroSnapshot(db),
       getLatestPositioning(db),
     ]);
-    return Response.json({ macro, positioning }, { headers: { "Cache-Control": "no-store" } });
+    // Newsletter "macro weather" — a fixed rule over fields already on
+    // the snapshot (backend/src/macro/weather.ts), never stored, so a
+    // rule change applies to the latest reading immediately.
+    const weather = macro
+      ? computeMacroWeather({
+          economicRegime: macro.quadrant,
+          marketRegime: macro.marketRegime,
+          riskOnShare: macro.marketRiskOn,
+          liquidityScore: macro.liquidityScore,
+          liquidityLegs: macro.liquidityLegs,
+        })
+      : null;
+    return Response.json({ macro, positioning, weather }, { headers: { "Cache-Control": "no-store" } });
   } catch (err) {
     return Response.json(
       { error: "Request could not be completed" },

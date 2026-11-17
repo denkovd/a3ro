@@ -5,25 +5,25 @@ import CorridorSpark from "../CorridorSpark";
 import PhysicalOverview from "./PhysicalOverview";
 import { metricFreshness } from "./dataQuality";
 import { REFINERIES } from "./refineries";
-import type { FocusTarget } from "./types";
+import type { FocusTarget, GateSignalRow } from "./types";
 import ChinaDetail from "./ChinaDetail";
 import GateNormBlock from "./GateNormBlock";
-import type { GateSignal } from "./gateSignal";
 
 const NAMES: Record<string, string> = { tanker_transits_7d: "Tanker transits · 7-day average", tanker_volume_7d: "Tanker volume · 7-day average", bunker_sales: "Bunker sales · monthly", tanker_arrivals: "Tanker arrivals · monthly" };
-export default function CorridorDetail({ id, title, metrics, failed, signal, onFocus }: {
+export default function CorridorDetail({ id, title, metrics, failed, gate, onFocus }: {
   id: string; title: string; metrics: CorridorMetricLatest[] | null; failed: boolean; onFocus: (target: FocusTarget) => void;
   /** Traffic vs norm for gate corridors (Hormuz, Singapore); absent for corridors with no gate. */
-  signal?: GateSignal | null;
+  gate?: GateSignalRow | null;
 }) {
-  const [expanded, setExpanded] = useState("tanker_transits_7d");
+  // A gate corridor already shows its dated daily chart above, so its metric rows start folded.
+  const [expanded, setExpanded] = useState(gate ? "" : "tanker_transits_7d");
   if (id === "china") return <ChinaDetail metrics={metrics} failed={failed} />;
   const corridor = id === "sg" ? "singapore" : id === "usgc" ? "usgulf" : id;
   const rows = (metrics ?? []).filter(m => m.corridor === corridor && NAMES[m.metric]);
   const facilities = REFINERIES.filter(r => r.corridorId === id);
   return <div className="space-y-5">
     <div><p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">Corridor intelligence</p><h3 className="mt-2 text-xl text-[var(--ink)]">{title}</h3></div>
-    {signal && <GateNormBlock signal={signal} />}
+    {gate && <GateNormBlock gate={gate} />}
     {id === "usgc" ? <PhysicalOverview metrics={metrics} failed={failed} /> : <>
       <p className="text-xs leading-relaxed text-[var(--ink-2)]">{id === "sg" ? "Malacca Strait tanker traffic provides gate context for Singapore. MPA port statistics describe monthly Singapore activity." : id === "hormuz" ? "Reported tanker traffic through the Gulf export gate. AIS disruption and spoofing can affect counts; vessel counts do not establish oil cargo volume." : "Regional coverage is a watchlist. No current physical observations are connected."}</p>
       {failed && <p className="text-[11px] text-[var(--asset-accent)]">Physical feed refresh failed · retained observations below.</p>}

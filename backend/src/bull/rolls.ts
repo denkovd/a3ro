@@ -1,5 +1,5 @@
 /* ────────────────────────────────────────────────────────────────
-   Continuous-futures back-adjustment — CL=F, GC=F.
+   Continuous-futures back-adjustment — CL=F, BZ=F, GC=F.
 
    Yahoo's continuous futures are SPLICED, not back-adjusted: every
    contract roll leaves an artificial gap that can nudge Donchian

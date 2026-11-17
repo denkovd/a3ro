@@ -3,7 +3,9 @@ import type { Benchmark, CorridorBaseline, CorridorMetricLatest, DailyPrice, Lat
 import useOilData from "../useOilData";
 import { currentMetrics, metricFreshness, quoteStatus, quoteBasis, comparablePriorClose } from "./dataQuality";
 import { BENCH_TITLE, CORRIDOR_META, GATE_HOTSPOT_IDS, GATE_META, type OilIntelligence, type CorridorWatchRow, type GateSignalRow } from "./types";
-import { gateSignal, rankGateSignals } from "./gateSignal";
+import { gateSignal, rankGateSignals, tierMove } from "./gateSignal";
+import { weeklyChange } from "./gateHistory";
+import useGateHistory, { gateHistoryOf, type GateHistory } from "./useGateHistory";
 import { chinaLead, chinaMapText } from "./china";
 
 const TRACKED = ["WTI", "BRENT"] as const;
@@ -16,16 +18,24 @@ function changeVsPriorClose(q: LatestQuote | undefined, series: DailyPrice[] | u
 
 /** Traffic vs norm for every chokepoint: 7-day tanker transits against the PortWatch 1-year mean.
  *  Each gate yields exactly one row; ranking puts departures from the norm first. */
-export function gateSignalRows(metrics: CorridorMetricLatest[] | null, baselines: CorridorBaseline[] | null, now = Date.now()): GateSignalRow[] {
+export function gateSignalRows(metrics: CorridorMetricLatest[] | null, baselines: CorridorBaseline[] | null, histories: Record<string, GateHistory> = {}, now = Date.now()): GateSignalRow[] {
   return rankGateSignals(GATE_META.map((meta): GateSignalRow => {
     const reading = metrics?.find(m => m.corridor === meta.id && m.metric === "tanker_transits_7d") ?? null;
     const norm = (win: "1y" | "5y") => baselines?.find(b => b.corridor === meta.id && b.metric === "tanker_transits" && b.win === win) ?? null;
-    return { ...meta, signal: gateSignal({ reading, fresh: !!reading && metricFreshness(reading, now) === "current", norm1y: norm("1y"), norm5y: norm("5y"), now }) };
+    const norms = { norm1y: norm("1y"), norm5y: norm("5y"), now };
+    const signal = gateSignal({ reading, fresh: !!reading && metricFreshness(reading, now) === "current", ...norms });
+    const history = gateHistoryOf(histories, meta.id);
+    // The change covers the same week as the reading, and only a current, compared reading has one.
+    const change = signal.ratio !== null && signal.periodDate && history.status === "live" ? weeklyChange(history.points, signal.periodDate) : null;
+    // Last week's tier, read against the same norm as this week's.
+    const prior = change && change.prior.mean !== null ? gateSignal({ reading: { value: change.prior.mean, periodDate: change.prior.to }, fresh: true, ...norms }) : null;
+    return { ...meta, signal, change, move: tierMove(signal, prior), history };
   }));
 }
 
 export default function useOilIntelligence() {
   const feed = useOilData();
+  const gateHistory = useGateHistory();
   // Small derived lists intentionally recompute on each feed tick, including age checks.
   const current = currentMetrics(feed.corridors);
   // Hormuz and Singapore are reported once, in the gate list below.
@@ -58,7 +68,7 @@ export default function useOilIntelligence() {
         statusColor: "var(--ink-2)", suspect: !!q?.suspect, observedAt: q?.observedAt ?? null, refreshFailed: feed.quoteFailed, basis: quoteBasis(q) };
     }),
     corridors,
-    gates: gateSignalRows(feed.corridors, feed.baselines),
+    gates: gateSignalRows(feed.corridors, feed.baselines, gateHistory),
     feedStatus: feed.status,
   };
   return { feed, intel };

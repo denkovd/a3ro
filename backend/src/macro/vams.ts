@@ -153,8 +153,15 @@ export interface VamsRead {
   state: VamsState;
   /** The vol-adjusted momentum t-stat itself. */
   z: number | null;
-  /** Raw n-session return, %, for display alongside the score. */
+  /** Raw n-session return, %, for display alongside the score. For
+   *  back-adjusted futures this is the rolled-position return (price
+   *  changes over the real traded level), which includes roll yield. */
   return63: number | null;
+  /** Spot n-session change of the continuous contract as traded, %.
+   *  Only set when raw levels were supplied. This is the number to quote
+   *  to readers ("WTI is up X% in three months"). It differs from
+   *  return63 for futures by the roll gaps the window spans. */
+  spotReturn63?: number | null;
   asOf: string | null;
   /** Regimes this read confirms, given its state. */
   confirms: Exclude<MacroQuadrant, "PENDING">[];
@@ -198,11 +205,44 @@ export function dailyLogVol(bars: RegimeBar[], window: number): number | null {
  * different answers and must not collapse into one another, or a
  * thinly-listed market silently votes for nothing while looking scored.
  */
+/**
+ * Daily simple returns of an adjusted series measured against the REAL
+ * traded level. Additive back-adjustment (bull/rolls.ts) preserves
+ * price DIFFERENCES but shifts old LEVELS, so dividing by an adjusted
+ * level inflates percentages after a run of negative roll gaps (steep
+ * backwardation pushes old adjusted prices far below where the market
+ * traded). Using adj differences over raw levels is the standard fix.
+ * Without `levels` (or for a date raw lacks) the level is the bar's own
+ * close, which reduces exactly to close/prev − 1.
+ */
+function levelOf(bars: RegimeBar[], levels: Map<string, number> | null): (i: number) => number {
+  return (i: number) => {
+    const raw = levels?.get(bars[i].date);
+    return raw !== undefined && raw > 0 ? raw : bars[i].close;
+  };
+}
+
+function leveledLogVol(bars: RegimeBar[], window: number, level: (i: number) => number): number | null {
+  if (bars.length < window + 1) return null;
+  const start = bars.length - (window + 1);
+  const rets: number[] = [];
+  for (let i = start + 1; i < bars.length; i++) {
+    const base = level(i - 1);
+    if (base <= 0) return null;
+    const r = (bars[i].close - bars[i - 1].close) / base;
+    if (r <= -1) return null; // log-return undefined
+    rets.push(Math.log(1 + r));
+  }
+  const mean = rets.reduce((a, r) => a + r, 0) / rets.length;
+  const varr = rets.reduce((a, r) => a + (r - mean) ** 2, 0) / rets.length;
+  return Math.sqrt(varr);
+}
+
 export function computeVams(
   bars: RegimeBar[],
   symbol: string,
   displayName: string,
-  opts: { window?: number; threshold?: number } = {},
+  opts: { window?: number; threshold?: number; levels?: RegimeBar[] } = {},
 ): VamsRead {
   const window = opts.window ?? VAMS_WINDOW;
   const threshold = opts.threshold ?? VAMS_THRESHOLD;
@@ -212,22 +252,42 @@ export function computeVams(
     asOf: bars.length ? bars[bars.length - 1].date : null, confirms: [],
   };
 
-  const sigma = dailyLogVol(bars, window);
+  const levelMap = opts.levels && opts.levels.length > 0
+    ? new Map(opts.levels.map((b) => [b.date, b.close] as const))
+    : null;
+  const level = levelOf(bars, levelMap);
+
+  const sigma = leveledLogVol(bars, window, level);
   if (sigma === null || sigma === 0) return base;
 
-  const last = bars[bars.length - 1];
-  const then = bars[bars.length - 1 - window];
+  const lastIdx = bars.length - 1;
+  const thenIdx = lastIdx - window;
+  const last = bars[lastIdx];
+  const then = bars[thenIdx];
   if (!then || then.close <= 0 || last.close <= 0) return base;
 
-  const r = Math.log(last.close / then.close);
+  const thenLevel = level(thenIdx);
+  const simple = (last.close - then.close) / thenLevel;
+  if (simple <= -1) return base;
+  const r = Math.log(1 + simple);
   const z = r / (sigma * Math.sqrt(window));
   const state: VamsState = z >= threshold ? "BULLISH" : z <= -threshold ? "BEARISH" : "NEUTRAL";
+
+  let spotReturn63: number | null | undefined;
+  if (levelMap) {
+    const rawLast = levelMap.get(last.date);
+    const rawThen = levelMap.get(then.date);
+    spotReturn63 = rawLast !== undefined && rawThen !== undefined && rawThen > 0
+      ? Math.round(((rawLast - rawThen) / rawThen) * 10_000) / 100
+      : null;
+  }
 
   return {
     ...base,
     state,
     z: Math.round(z * 1000) / 1000,
-    return63: Math.round(((last.close - then.close) / Math.abs(then.close)) * 10_000) / 100,
+    return63: Math.round(simple * 10_000) / 100,
+    ...(spotReturn63 !== undefined ? { spotReturn63 } : {}),
     confirms: state === "BULLISH" ? affinity.bullish : state === "BEARISH" ? affinity.bearish : [],
   };
 }

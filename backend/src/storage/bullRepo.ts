@@ -274,6 +274,17 @@ export interface BullSnapshotRow {
   adjusted: boolean;
   lastClose: number | null;
   lastCloseDate: string | null;
+  /* Flip-level detail for both legs (asset drawer). Always stored by
+   * the scan; exposed so the UI can show "next flip" levels. */
+  strategy: string;
+  dailyLine: number | null;
+  weeklyLine: number | null;
+  dailyFlipPrice: number | null;
+  weeklyFlipPrice: number | null;
+  weeklySinceFlipPct: number | null;
+  weeklyCushionPct: number | null;
+  dailyBarsSinceFlip: number | null;
+  weeklyBarsSinceFlip: number | null;
 }
 
 const toDateStr = (v: unknown): string | null =>
@@ -284,27 +295,8 @@ const toNum = (v: unknown): number | null => {
   return Number.isFinite(n) ? n : null;
 };
 
-export async function getLatestBullSnapshots(
-  db: Queryable,
-  tier?: string,
-  strategy = "ml-dw",
-): Promise<BullSnapshotRow[]> {
-  const res = tier
-    ? await db.query(
-        `select * from bull_snapshots
-          where run_date = (select max(run_date) from bull_snapshots)
-            and strategy = $2 and tier = $1
-          order by rank asc`,
-        [tier, strategy],
-      )
-    : await db.query(
-        `select * from bull_snapshots
-          where run_date = (select max(run_date) from bull_snapshots)
-            and strategy = $1
-          order by rank asc`,
-        [strategy],
-      );
-  return res.rows.map((r) => ({
+function mapSnapshotRow(r: Record<string, unknown>): BullSnapshotRow {
+  return {
     runDate: toDateStr(r.run_date)!,
     symbol: String(r.symbol),
     displayName: String(r.display_name),
@@ -328,7 +320,55 @@ export async function getLatestBullSnapshots(
     adjusted: Boolean(r.adjusted),
     lastClose: toNum(r.last_close),
     lastCloseDate: toDateStr(r.last_close_date),
-  }));
+    strategy: r.strategy == null ? "ml-dw" : String(r.strategy),
+    dailyLine: toNum(r.daily_line),
+    weeklyLine: toNum(r.weekly_line),
+    dailyFlipPrice: toNum(r.daily_flip_price),
+    weeklyFlipPrice: toNum(r.weekly_flip_price),
+    weeklySinceFlipPct: toNum(r.weekly_since_flip_pct),
+    weeklyCushionPct: toNum(r.weekly_cushion_pct),
+    dailyBarsSinceFlip: toNum(r.daily_bars_since_flip),
+    weeklyBarsSinceFlip: toNum(r.weekly_bars_since_flip),
+  };
+}
+
+/** Every strategy lens's row for ONE symbol on the newest run (asset
+ *  drawer). Empty when the symbol wasn't scored on that run. */
+export async function getLatestBullSnapshotsForSymbol(
+  db: Queryable,
+  symbol: string,
+): Promise<BullSnapshotRow[]> {
+  const res = await db.query(
+    `select * from bull_snapshots
+      where run_date = (select max(run_date) from bull_snapshots)
+        and symbol = $1
+      order by strategy asc`,
+    [symbol],
+  );
+  return res.rows.map(mapSnapshotRow);
+}
+
+export async function getLatestBullSnapshots(
+  db: Queryable,
+  tier?: string,
+  strategy = "ml-dw",
+): Promise<BullSnapshotRow[]> {
+  const res = tier
+    ? await db.query(
+        `select * from bull_snapshots
+          where run_date = (select max(run_date) from bull_snapshots)
+            and strategy = $2 and tier = $1
+          order by rank asc`,
+        [tier, strategy],
+      )
+    : await db.query(
+        `select * from bull_snapshots
+          where run_date = (select max(run_date) from bull_snapshots)
+            and strategy = $1
+          order by rank asc`,
+        [strategy],
+      );
+  return res.rows.map(mapSnapshotRow);
 }
 
 export interface BullTransitionRow {
@@ -338,6 +378,7 @@ export interface BullTransitionRow {
   tier: string;
   fromVerdict: string | null;
   toVerdict: string;
+  strategy?: string;
 }
 
 /** Latest run's verdict per (symbol → strategy verdicts) — feeds the
@@ -379,5 +420,30 @@ export async function getRecentTransitions(
     tier: String(r.tier),
     fromVerdict: r.from_verdict == null ? null : String(r.from_verdict),
     toVerdict: String(r.to_verdict),
+  }));
+}
+
+/** One symbol's verdict changes across ALL lenses in the last `days`
+ *  (asset drawer), newest first. */
+export async function getTransitionsForSymbol(
+  db: Queryable,
+  symbol: string,
+  days: number,
+): Promise<BullTransitionRow[]> {
+  const res = await db.query(
+    `select * from bull_transitions
+      where symbol = $1
+        and run_date >= (current_date - ($2 || ' days')::interval)::date
+      order by run_date desc, strategy asc`,
+    [symbol, String(days)],
+  );
+  return res.rows.map((r) => ({
+    runDate: toDateStr(r.run_date)!,
+    symbol: String(r.symbol),
+    displayName: String(r.display_name),
+    tier: String(r.tier),
+    fromVerdict: r.from_verdict == null ? null : String(r.from_verdict),
+    toVerdict: String(r.to_verdict),
+    strategy: r.strategy == null ? "ml-dw" : String(r.strategy),
   }));
 }

@@ -2,6 +2,7 @@
 import { fetchMarketSnapshot } from "../marketFetch";
 import { useEffect, useState } from "react";
 import { estimateFreshness } from "../../../../backend/src/australia/watch";
+import { AUSTRALIA_REGISTRY, isAustraliaIndicator } from "../../../../backend/src/australia/registry";
 import type { AustraliaReleaseSchedule } from "../../../../backend/src/australia/types";
 export type { AustraliaReleaseSchedule } from "../../../../backend/src/australia/types";
 
@@ -9,6 +10,19 @@ export type AustraliaObservation = { indicator: string; title: string; value: nu
 export type FetchState = { health: "healthy" | "degraded" | "unavailable" | "never_attempted"; retrievedAt: string | null; error: string | null; };
 export const AU_ROUTE = "/Projects/Australia-Watch";
 export const AU_ACCENT = "#d4a157";
+
+/** Short tile label from the registry; unknown ids fall back to the raw id. */
+export function shortLabel(indicator: string): string {
+  return isAustraliaIndicator(indicator) ? AUSTRALIA_REGISTRY[indicator].shortLabel : indicator;
+}
+
+/** Primary-section indicators only, in registry order (quarterly CPI comparison series excluded). */
+export function primaryLatest<T extends { indicator: string; referencePeriod: string }>(observations: T[]): T[] {
+  const latest = observations.reduce<Record<string, T>>((a, o) => (!a[o.indicator] || a[o.indicator].referencePeriod < o.referencePeriod ? { ...a, [o.indicator]: o } : a), {});
+  return Object.values(latest)
+    .filter((o) => isAustraliaIndicator(o.indicator) && AUSTRALIA_REGISTRY[o.indicator].section === "primary")
+    .sort((a, b) => AUSTRALIA_REGISTRY[a.indicator as keyof typeof AUSTRALIA_REGISTRY].order - AUSTRALIA_REGISTRY[b.indicator as keyof typeof AUSTRALIA_REGISTRY].order);
+}
 
 export function useAustraliaWatch() {
   const [state, setState] = useState<{ observations: AustraliaObservation[]; fetchStates: Record<string, FetchState>; releaseSchedules: Record<string, AustraliaReleaseSchedule>; status: "loading" | "ready" | "error"; refreshError: boolean; testMode?: boolean }>({ observations: [], fetchStates: {}, releaseSchedules: {}, status: "loading", refreshError: false });
@@ -39,7 +53,7 @@ export function useAustraliaWatch() {
 
 export function displayValue(o: AustraliaObservation): string {
   if (o.indicator === "hours_worked") return `${(o.value / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })}m hours`;
-  return `${o.value.toFixed(o.indicator === "unemployment_rate" ? 1 : 1)}%`;
+  return `${o.value.toFixed(1)}%`;
 }
 export function delta(o: AustraliaObservation, all: AustraliaObservation[]): string {
   const earlier = all.filter((x) => x.indicator === o.indicator && x.referencePeriod < o.referencePeriod).sort((a, b) => b.referencePeriod.localeCompare(a.referencePeriod))[0];
@@ -48,7 +62,8 @@ export function delta(o: AustraliaObservation, all: AustraliaObservation[]): str
   const d = o.value - earlier.value; return `${d >= 0 ? "+" : ""}${d.toFixed(1)} pp vs prior ${o.frequency === "monthly" ? "month" : "quarter"}`;
 }
 export function estimatedFreshness(o: AustraliaObservation, now = new Date(), schedule?: AustraliaReleaseSchedule): "fresh" | "aging" | "stale" {
-  return estimateFreshness(o.frequency, o.referencePeriod, now, schedule?.latestReferencePeriod) as "fresh" | "aging" | "stale";
+  const lagDays = isAustraliaIndicator(o.indicator) ? AUSTRALIA_REGISTRY[o.indicator].releaseLagDays : undefined;
+  return estimateFreshness(o.frequency, o.referencePeriod, now, schedule?.latestReferencePeriod, lagDays) as "fresh" | "aging" | "stale";
 }
 
 export function fetchOverdue(verifiedAt: string | null | undefined, now = new Date()): boolean {

@@ -1,14 +1,11 @@
 "use client";
 
-import { displayValue, estimatedFreshness, fetchOverdue, useAustraliaWatch } from "../australia/australiaWatchData";
+import { displayValue, estimatedFreshness, fetchOverdue, primaryLatest, useAustraliaWatch } from "../australia/australiaWatchData";
 import ReleaseSchedule from "../australia/ReleaseSchedule";
 
 export default function AustraliaBaseline() {
   const { observations, fetchStates, releaseSchedules, status, refreshError } = useAustraliaWatch();
-  const latest = Object.values(observations.reduce<Record<string, typeof observations[number]>>((result, point) => {
-    if (!result[point.indicator] || point.referencePeriod > result[point.indicator].referencePeriod) result[point.indicator] = point;
-    return result;
-  }, {}));
+  const latest = primaryLatest(observations);
   return <section aria-label="Australian baseline" className="space-y-6">
     <div className="max-w-3xl"><h2 className="text-2xl text-[var(--ink)]">The Australian lens</h2><p className="mt-3 text-sm leading-7 text-[var(--ink-2)]">Official inflation and labour observations from Australia Watch. These retain their ABS definitions and reporting periods.</p></div>
     {refreshError && status === "ready" && <p role="status" className="text-xs text-amber-300">Refresh failed — showing last loaded observations. Retrying automatically.</p>}

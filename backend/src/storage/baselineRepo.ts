@@ -5,9 +5,17 @@
    calls upsertBaselines; REST handlers read via getBaselines.
    getBaselineAgeDays backs the cycle's freshness guard (skip refetch
    when the table was computed recently).
+
+   The weekly-spread columns (migration 022) live on the same rows but
+   are written by their own statements (updateWeeklySpreads) and read
+   by their own guard (getWeeklySpreadAgeDays). upsertBaselines never
+   names them, so the baseline refresh keeps working on a database
+   where 022 has not been applied, and a baseline refresh never wipes
+   a stored spread.
 ──────────────────────────────────────────────────────────────── */
 
-import { CorridorBaseline, CorridorId } from "../core/corridorTypes";
+import { BaselineWindow, CorridorBaseline, CorridorId, WeeklySpread } from "../core/corridorTypes";
+import { parseWeeklySpread } from "../core/weeklySpread";
 import { Queryable } from "./db";
 
 /**
@@ -59,10 +67,51 @@ export async function getBaselineAgeDays(db: Queryable): Promise<number | null> 
   return Math.floor(ageMs / 86_400_000);
 }
 
+/**
+ * Attach weekly spreads to existing (corridor, metric, win) baseline
+ * rows. An UPDATE, not an upsert: a spread only means something next
+ * to the mean it describes, so a key with no baseline row is skipped
+ * (and not counted). Returns rows written. Requires migration 022.
+ */
+export async function updateWeeklySpreads(
+  db: Queryable,
+  rows: { corridor: CorridorId; metric: string; win: BaselineWindow; weekly: WeeklySpread }[],
+): Promise<number> {
+  let written = 0;
+  for (const r of rows) {
+    const res = await db.query(
+      `update corridor_baselines
+          set weekly = $4::jsonb,
+              weekly_computed_at = now()
+        where corridor = $1 and metric = $2 and win = $3`,
+      [r.corridor, r.metric, r.win, JSON.stringify(r.weekly)],
+    );
+    written += res.rowCount ?? 0;
+  }
+  return written;
+}
+
+/**
+ * Whole days since the newest weekly spread was computed, or null when
+ * none is stored. Throws when migration 022 has not been applied (the
+ * column does not exist) — runGateSpreadCycle reports that, never hides it.
+ */
+export async function getWeeklySpreadAgeDays(db: Queryable): Promise<number | null> {
+  const res = await db.query(`select max(weekly_computed_at) as newest from corridor_baselines`);
+  const newest = res.rows[0]?.newest;
+  if (newest == null) return null;
+  const newestMs = newest instanceof Date ? newest.getTime() : new Date(String(newest)).getTime();
+  return Math.floor((Date.now() - newestMs) / 86_400_000);
+}
+
 /* ── row mapping helpers ──────────────────────────────────────── */
 
 function rowToBaseline(r: Record<string, unknown>): CorridorBaseline {
+  // `weekly` is only set when the column exists AND holds a valid
+  // spread, so rows read from a pre-022 database keep their old shape.
+  const weekly = parseWeeklySpread(r.weekly);
   return {
+    ...(weekly ? { weekly } : {}),
     corridor: r.corridor as CorridorId,
     metric: String(r.metric),
     win: r.win as "1y" | "5y",

@@ -18,10 +18,12 @@
     "publish:capital": "node --use-system-ca --import ./backend/node_modules/tsx/dist/loader.mjs backend/scripts/publish-capital.ts",
     "test:capital": "node --test tests/cost-of-capital.test.mjs tests/australia-capital.test.mjs",
     "test:oil": "node --test tests/oil-intelligence.test.mjs",
-    "test:gold": "node --test tests/gold-intelligence.test.mjs"
+    "test:gold": "node --test tests/gold-intelligence.test.mjs",
+    "test:bull": "node --test tests/bull-columns.test.mjs tests/bull-chart.test.mjs"
   },
   "dependencies": {
     "framer-motion": "^11.3.0",
+    "lightweight-charts": "^5.3.0",
     "next": "15.5.28",
     "pg": "^8.11.5",
     "react": "19.3.1",
@@ -35,7 +37,7 @@
     "@types/react-dom": "^19.3.0",
     "autoprefixer": "^10.0.1",
     "postcss": "^8.5.32",
-    "tailwindcss": "^3.4.1",
+    "tailwindcss": "^4.3.5",
     "typescript": "^5"
   },
   "overrides": {

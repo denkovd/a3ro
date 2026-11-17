@@ -1,0 +1,74 @@
+# ──────────────────────────────────────────────────────────────
+# Asset profiles for the Bull Market Finder asset drawer (Phase 4).
+#  - daily  07:10 UTC (after bull-scan 06:20): next earnings dates
+#           (1 Finnhub call) + crypto market data (1 CoinGecko call)
+#  - weekly Sunday 08:40 UTC: equity/ETF profiles, metrics and
+#           earnings history (~600 symbols, ~30 min at 60 req/min)
+# Manual: Actions → profiles-refresh → Run workflow (pick a mode).
+#
+# Required repo secrets: DATABASE_URL, FINNHUB_API_KEY.
+# Optional: COINGECKO_API_KEY (free CoinGecko Demo key).
+# Apply backend/migrations/023_asset_profiles.sql before the first run.
+# ──────────────────────────────────────────────────────────────
+name: profiles-refresh
+
+on:
+  schedule:
+    - cron: "10 7 * * *"   # daily
+    - cron: "40 8 * * 0"   # weekly (Sunday)
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "daily or weekly"
+        required: true
+        default: daily
+        type: choice
+        options: [daily, weekly]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: profiles-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # GHA runners often pick the unreachable Supabase AAAA first.
+      NODE_OPTIONS: --dns-result-order=ipv4first
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Preflight — verify DATABASE_URL secret
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/preflight-db.ts
+      - name: Pick mode
+        id: mode
+        env:
+          INPUT_MODE: ${{ inputs.mode }}
+          SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          if [ -n "$INPUT_MODE" ]; then echo "mode=$INPUT_MODE" >> "$GITHUB_OUTPUT";
+          elif [ "$SCHEDULE" = "40 8 * * 0" ]; then echo "mode=weekly" >> "$GITHUB_OUTPUT";
+          else echo "mode=daily" >> "$GITHUB_OUTPUT"; fi
+      - name: Refresh profiles
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          COINGECKO_API_KEY: ${{ secrets.COINGECKO_API_KEY }}
+          MODE: ${{ steps.mode.outputs.mode }}
+        run: npx tsx scripts/run-profiles.ts "--$MODE"

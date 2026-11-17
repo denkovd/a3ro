@@ -74,11 +74,12 @@ export default function CorridorSpark({
     }).filter(p => Number.isFinite(p.value)) : s.points;
     const firstChart = chartPoints[0], lastChart = chartPoints[chartPoints.length - 1];
     const chartChange = monthly ? (firstChart?.value ? (lastChart.value / firstChart.value - 1) * 100 : null) : change;
+    const holes = sparkRuns(chartPoints.map(p => p.date)).length - 1;
     return (
       <div className="mt-6">
-        {chartPoints.length >= 2 && <MiniSpark values={chartPoints.map((p) => p.value)} dates={monthly ? chartPoints.map(p => p.date) : undefined} id={`${corridor}-${metric}`} />}
+        {chartPoints.length >= 2 && <MiniSpark values={chartPoints.map((p) => p.value)} dates={chartPoints.map(p => p.date)} id={`${corridor}-${metric}`} />}
         <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-          {caption ?? "Reported observation history"} · {s.points.length} pts{monthly ? " · daily average, kt/day" : ""}
+          {caption ?? "Reported observation history"} · {s.points.length} pts{monthly ? " · daily average, kt/day" : ""}{holes > 0 ? ` · ${holes} gap${holes === 1 ? "" : "s"} in the record` : ""}
         </p>
         <div className="mt-2 flex justify-between gap-2 font-mono text-[8px] text-[var(--ink-3)]"><span>{first.date.slice(0, 10)}</span><span>{last.date.slice(0, 10)}</span></div>
         <p className="mt-2 text-[10px] text-[var(--ink-2)]">{chartChange === null ? "Change unavailable from zero baseline" : `${chartChange >= 0 ? "+" : ""}${chartChange.toFixed(1)}% across displayed observations${monthly ? " · daily average" : ""}`}</p>
@@ -98,20 +99,37 @@ export default function CorridorSpark({
   );
 }
 
+/* Index ranges of consecutive observations. A step more than 2.5× the
+   series' usual spacing is a hole in the record: the line stops there
+   rather than implying a reading for the missing period. */
+function sparkRuns(dates: string[]): [number, number][] {
+  const t = dates.map(d => Date.parse(d));
+  const steps = t.slice(1).map((v, i) => v - t[i]).filter(v => v > 0).sort((a, b) => a - b);
+  const usual = steps.length ? steps[Math.floor(steps.length / 2)] : 0;
+  const runs: [number, number][] = [];
+  let start = 0;
+  for (let i = 1; i < t.length; i++) {
+    if (usual > 0 && t[i] - t[i - 1] > usual * 2.5) { runs.push([start, i - 1]); start = i; }
+  }
+  runs.push([start, t.length - 1]);
+  return runs;
+}
+
 /* tiny sparkline — mirrors OilTrackerCore's benchmark Spark, kept local
-   so this component is fully self-contained. */
-function MiniSpark({ values, dates, id }: { values: number[]; dates?: string[]; id: string }) {
+   so this component is fully self-contained. Plotted against real dates. */
+function MiniSpark({ values, dates, id }: { values: number[]; dates: string[]; id: string }) {
   const w = 240,
     h = 36,
     pad = 2;
   const min = Math.min(...values),
     max = Math.max(...values);
-  const pts = values.map((v, i) => {
-    const fraction = dates ? (Date.parse(dates[i]) - Date.parse(dates[0])) / (Date.parse(dates[dates.length - 1]) - Date.parse(dates[0]) || 1) : i / (values.length - 1);
-    const x = pad + fraction * (w - pad * 2);
+  const t0 = Date.parse(dates[0]), span = Date.parse(dates[dates.length - 1]) - t0 || 1;
+  const xy = values.map((v, i) => {
+    const x = pad + ((Date.parse(dates[i]) - t0) / span) * (w - pad * 2);
     const y = h - pad - ((v - min) / (max - min || 1)) * (h - pad * 2);
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
+    return [x, y] as const;
   });
+  const fmt = ([x, y]: readonly [number, number]) => `${x.toFixed(1)},${y.toFixed(1)}`;
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="h-9 w-full" preserveAspectRatio="none" aria-hidden>
       <defs>
@@ -120,8 +138,14 @@ function MiniSpark({ values, dates, id }: { values: number[]; dates?: string[]; 
           <stop offset="100%" stopColor={AMBER} stopOpacity="0" />
         </linearGradient>
       </defs>
-      <polygon points={`${pad},${h - pad} ${pts.join(" ")} ${w - pad},${h - pad}`} fill={`url(#corridor-spark-${id})`} />
-      <polyline points={pts.join(" ")} fill="none" stroke={AMBER} strokeWidth="1" strokeOpacity="0.85" />
+      {sparkRuns(dates).map(([a, b]) => {
+        const run = xy.slice(a, b + 1);
+        if (run.length === 1) return <circle key={a} cx={run[0][0]} cy={run[0][1]} r="1.4" fill={AMBER} fillOpacity="0.85" />;
+        return <g key={a}>
+          <polygon points={`${run[0][0].toFixed(1)},${h - pad} ${run.map(fmt).join(" ")} ${run[run.length - 1][0].toFixed(1)},${h - pad}`} fill={`url(#corridor-spark-${id})`} />
+          <polyline points={run.map(fmt).join(" ")} fill="none" stroke={AMBER} strokeWidth="1" strokeOpacity="0.85" />
+        </g>;
+      })}
     </svg>
   );
 }

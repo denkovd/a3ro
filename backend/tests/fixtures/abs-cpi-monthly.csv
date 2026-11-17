@@ -1,0 +1,4 @@
+STRUCTURE,STRUCTURE_ID,STRUCTURE_NAME,ACTION,MEASURE,Measure,INDEX,Index,TSEST,Adjustment Type,REGION,Region,FREQ,Frequency,TIME_PERIOD,Time Period,OBS_VALUE,Observation Value,UNIT_MEASURE,Unit of Measure,OBS_STATUS,Observation Status,DECIMALS,Decimals,OBS_COMMENT,Observation Comment
+DATAFLOW,ABS:CPI(2.0.0),Consumer Price Index (CPI),I,3,Percentage change from previous year,10001,All groups CPI,10,Original,50,Australia,M,Monthly,2026-07,,3.5,,PCT,Percent,,,,,,
+DATAFLOW,ABS:CPI(2.0.0),Consumer Price Index (CPI),I,3,Percentage change from previous year,10001,All groups CPI,10,Original,50,Australia,M,Monthly,2026-08,,4,,PCT,Percent,,,,,,
+DATAFLOW,ABS:CPI(2.0.0),Consumer Price Index (CPI),I,3,Percentage change from previous year,10001,All groups CPI,10,Original,50,Australia,M,Monthly,2026-09,,4.3,,PCT,Percent,,,,,,

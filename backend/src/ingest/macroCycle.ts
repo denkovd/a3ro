@@ -30,6 +30,8 @@ import {
 } from "../macro/allocation";
 import { MacroQuadrant } from "../macro/types";
 import { fetchGlobalBondStress } from "../macro/globalBonds";
+import { overlayObservations } from "../macro/panelOverlay";
+import { fetchDailyHistory } from "../regime/yahooHistory";
 import { REGIME_UNIVERSE } from "../regime/universe";
 import { RegimeBar } from "../regime/types";
 import { fetchMacroPanel, MacroSeries } from "../sources/fredMacro";
@@ -113,12 +115,17 @@ async function loadVamsReads(db: Queryable): Promise<VamsRead[]> {
   const reads: VamsRead[] = [];
   for (const entry of REGIME_UNIVERSE) {
     let bars: RegimeBar[] = [];
+    let levels: RegimeBar[] = [];
     try {
       bars = await loadBars(db, entry.symbol, "adj");
+      // Raw levels: percentage returns on back-adjusted futures are
+      // measured against the real traded price (see vams.ts levelOf),
+      // and spotReturn63 is the change readers actually saw.
+      levels = await loadBars(db, entry.symbol, "raw");
     } catch {
       // one unreadable symbol must not take the matrix down
     }
-    reads.push(computeVams(bars, entry.symbol, entry.displayName));
+    reads.push(computeVams(bars, entry.symbol, entry.displayName, { levels }));
   }
   return reads;
 }
@@ -177,7 +184,7 @@ function buildAllocationInput(
 
 export async function runMacroCycle(
   db: Queryable,
-  opts: { now?: () => Date } = {},
+  opts: { now?: () => Date; fetchVix?: () => Promise<RegimeBar[]> } = {},
 ): Promise<MacroCycleReport> {
   const now = opts.now ?? (() => new Date());
   const started = now();
@@ -190,10 +197,24 @@ export async function runMacroCycle(
     // a series that quietly stops updating must be visible in the run
     // log, not just as a tile that says "pending" forever.
     const seriesErrors: string[] = [];
-    const panel = await fetchMacroPanel({
+    const fredPanel = await fetchMacroPanel({
       now: started,
       onSeriesError: (f) => seriesErrors.push(`${f.seriesId}: ${f.error}`),
     });
+    // VIXCLS lags on FRED; overlay Yahoo's same-day ^VIX closes. The
+    // Yahoo leg is isolated: on failure the FRED series stands alone.
+    const fetchVix = opts.fetchVix ?? ((): Promise<RegimeBar[]> => fetchDailyHistory("^VIX", "1mo"));
+    let panel = fredPanel;
+    try {
+      const vixBars = await fetchVix();
+      panel = overlayObservations(
+        fredPanel,
+        "vol_equity",
+        vixBars.map((b) => ({ date: b.date, value: b.close })),
+      );
+    } catch (e) {
+      seriesErrors.push(`^VIX (yahoo overlay): ${e instanceof Error ? e.message : String(e)}`);
+    }
     const growth = panel.find((s) => s.key === "growth_indpro")?.observations ?? [];
     const inflation = panel.find((s) => s.key === "inflation_cpi")?.observations ?? [];
 

@@ -1,6 +1,8 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { upsertBaselines, getBaselines, getBaselineAgeDays } from "../src/storage/baselineRepo";
+import {
+  upsertBaselines, getBaselines, getBaselineAgeDays, updateWeeklySpreads, getWeeklySpreadAgeDays,
+} from "../src/storage/baselineRepo";
 import { CorridorBaseline } from "../src/core/corridorTypes";
 import { QueryResultLike, Queryable } from "../src/storage/db";
 
@@ -234,5 +236,68 @@ describe("baselineRepo", () => {
     await getBaselineAgeDays(db);
     assert.equal(db.calls.length, 1);
     assert.match(db.calls[0].text.toLowerCase(), /max\(computed_at\)/);
+  });
+});
+
+describe("baselineRepo — weekly spread columns (migration 022)", () => {
+  const spread = {
+    n: 365, min: 60.1, p05: 66, p10: 68.4, p25: 72, p50: 76.3, p75: 80.9, p90: 85, p95: 87.2, max: 93.4, mad: 4.4,
+    sampleFrom: "2025-07-07", sampleTo: "2026-07-07",
+  };
+
+  test("upsertBaselines never names the weekly columns (works before 022, never wipes a spread)", async () => {
+    const db = new StubDb();
+    db.responses = [{ rows: [], rowCount: 1 }];
+    await upsertBaselines(db, [makeBaseline({ weekly: spread })]);
+    assert.equal(/weekly/i.test(db.calls[0].text), false);
+    assert.equal(db.calls[0].params.length, 9);
+  });
+
+  test("updateWeeklySpreads updates by key, sends the spread as JSON, and counts rows actually matched", async () => {
+    const db = new StubDb();
+    db.responses = [{ rows: [], rowCount: 1 }, { rows: [], rowCount: 0 }];
+    const written = await updateWeeklySpreads(db, [
+      { corridor: "singapore", metric: "tanker_transits", win: "1y", weekly: spread },
+      { corridor: "panama", metric: "tanker_volume", win: "5y", weekly: spread }, // no baseline row → 0
+    ]);
+    assert.equal(written, 1);
+    assert.equal(db.calls.length, 2);
+    assert.match(db.calls[0].text, /update corridor_baselines/);
+    assert.match(db.calls[0].text, /weekly = \$4::jsonb/);
+    assert.match(db.calls[0].text, /where corridor = \$1 and metric = \$2 and win = \$3/);
+    assert.deepEqual(db.calls[0].params.slice(0, 3), ["singapore", "tanker_transits", "1y"]);
+    assert.deepEqual(JSON.parse(String(db.calls[0].params[3])), spread);
+  });
+
+  test("getBaselines attaches a valid spread and leaves pre-022 / malformed rows in their old shape", async () => {
+    const db = new StubDb();
+    const base = {
+      corridor: "singapore", metric: "tanker_transits", win: "1y", mean_value: 76.5, p10: 64, p90: 91, yoy_pct: -6.5,
+      sample_from: "2025-07-07", sample_to: "2026-07-07", computed_at: "2026-07-07T00:00:00.000Z",
+    };
+    db.responses = [{
+      rows: [
+        { ...base, weekly: spread, weekly_computed_at: "2026-07-07T00:00:00.000Z" }, // jsonb arrives parsed
+        { ...base, win: "5y", weekly: null, weekly_computed_at: null }, // 022 applied, cycle not run yet
+        { ...base, corridor: "suez" }, // pre-022: no such column
+        { ...base, corridor: "cape", weekly: { n: 10, p50: "x" } }, // malformed
+      ],
+      rowCount: 4,
+    }];
+    const rows = await getBaselines(db);
+    assert.deepEqual(rows[0].weekly, spread);
+    assert.equal(rows[0].meanValue, 76.5);
+    for (const r of rows.slice(1)) assert.equal("weekly" in r, false);
+  });
+
+  test("getWeeklySpreadAgeDays: null when nothing is stored, whole days otherwise", async () => {
+    const empty = new StubDb();
+    empty.responses = [{ rows: [{ newest: null }], rowCount: 1 }];
+    assert.equal(await getWeeklySpreadAgeDays(empty), null);
+
+    const db = new StubDb();
+    db.responses = [{ rows: [{ newest: new Date(Date.now() - 9.5 * 86_400_000) }], rowCount: 1 }];
+    assert.equal(await getWeeklySpreadAgeDays(db), 9);
+    assert.match(db.calls[0].text, /max\(weekly_computed_at\)/);
   });
 });
