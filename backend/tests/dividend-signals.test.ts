@@ -26,6 +26,13 @@ describe("Epoch Capabilities Index", () => {
     assert.deepEqual(models.map(item => item.date), [...models.map(item => item.date)].sort());
   });
 
+  test("parses the eci_scores.csv layout Epoch switched to on 18 Nov 2026", () => {
+    const { models } = parseEci(fixture("eci-scores-20261118.csv").toString("utf8"));
+    assert.ok(models.length >= 20);
+    assert.ok(models.every(item => Number.isFinite(item.score) && /^\d{4}-\d{2}-\d{2}$/.test(item.date)));
+    assert.ok(models.some(item => item.open) && models.some(item => !item.open));
+  });
+
   test("rejects a changed header instead of guessing", () => {
     assert.throws(() => parseEci(eciCsv.replace("ECI Score", "Score")), /header/);
   });
@@ -57,6 +64,11 @@ describe("Census BTOS business AI use", () => {
     assert.match(result.useQuestion, /last two weeks.*Artificial Intelligence/);
     assert.deepEqual(result.points.at(-1), { period: "2025-11-30", sampleCode: "202525", use: 17.2, expected: 20.9 });
     assert.ok(result.points.every(point => point.use === null || (point.use > 0 && point.use < 100)));
+  });
+
+  test("Nov 2026 workbook: 'Super Intelligence (formerly AI)' wording and the extra employee-use question", () => {
+    const { points } = parseBtos(fixture("btos-national-20261118.xlsx"));
+    assert.ok(points.length > 0);
   });
 
   test("fails loudly if the AI question disappears", () => {

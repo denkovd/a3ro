@@ -16,30 +16,35 @@ const isoDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.i
 // ── Epoch AI: Capabilities Index ─────────────────────────────────
 
 const ECI_FILE = "epoch_capabilities_index.csv";
+/** Since 18 Nov 2026 the archive ships epoch_capabilities_index/eci_scores.csv instead. */
+const ECI_FILES = [ECI_FILE, "eci_scores.csv"];
 
-/** Pull epoch_capabilities_index.csv out of Epoch's benchmark_data.zip. */
+/** Pull the ECI scores CSV out of Epoch's benchmark_data.zip (old or new layout). */
 export function readEpochArchive(bytes: ArrayBuffer | Uint8Array): string {
   const reader = XL.CFB;
   if (!reader) throw new Error("ZIP reader is unavailable");
   const archive = reader.read(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes), { type: "array" }) as { FullPaths: string[]; FileIndex: { content?: Uint8Array; size: number }[] };
-  const entries = archive.FullPaths.map((name, index) => ({ name, entry: archive.FileIndex[index] })).filter(item => item.name.split("/").at(-1) === ECI_FILE);
+  const entries = archive.FullPaths.map((name, index) => ({ name, entry: archive.FileIndex[index] })).filter(item => ECI_FILES.includes(item.name.split("/").at(-1) ?? ""));
   if (entries.length !== 1 || !entries[0].entry.content || entries[0].entry.size > 10_000_000) throw new Error(`Epoch archive does not contain one bounded ${ECI_FILE}`);
   return Buffer.from(entries[0].entry.content).toString("utf8");
 }
 
 export function parseEci(csv: string): EpochPayload {
   const rows = parseDividendCsv(csv);
-  const required = ["Model version", "ECI Score", "Release date", "Organization", "Model accessibility"];
-  if (!rows[0] || required.some(key => !Object.hasOwn(rows[0], key))) throw new Error("Epoch ECI CSV header changed");
+  // Two layouts: the original epoch_capabilities_index.csv, and eci_scores.csv (from 18 Nov 2026).
+  const legacy = { model: "Model version", score: "ECI Score", date: "Release date" };
+  const current = { model: "Model", score: "eci", date: "date" };
+  const cols = [legacy, current].find(c => rows[0] && [c.model, c.score, c.date, "Organization", "Model accessibility"].every(key => Object.hasOwn(rows[0], key)));
+  if (!cols) throw new Error("Epoch ECI CSV header changed");
   const models: EciModel[] = [];
   for (const row of rows) {
-    const score = Number(row["ECI Score"]);
-    const date = row["Release date"];
-    if (!row["ECI Score"] || !Number.isFinite(score) || !isoDate(date)) continue;
-    const access = row["Model accessibility"] ?? "";
+    const score = Number(row[cols.score]);
+    const date = row[cols.date];
+    if (!row[cols.score] || !Number.isFinite(score) || !isoDate(date)) continue;
+    const access = row["Accessibility group"] || row["Model accessibility"] || "";
     models.push({
-      model: row["Model version"],
-      name: row["Display name"] || row["Model name"] || row["Model version"],
+      model: row[cols.model],
+      name: row["Display name"] || row["Model name"] || row[cols.model],
       organization: row.Organization ?? "",
       date,
       score: Math.round(score * 10) / 10,
@@ -64,8 +69,9 @@ function usDate(value: unknown): string | null {
     const parsed = XL.SSF?.parse_date_code?.(value);
     return parsed ? `${parsed.y}-${String(parsed.m).padStart(2, "0")}-${String(parsed.d).padStart(2, "0")}` : null;
   }
-  const match = String(value ?? "").trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  return match ? `${match[3]}-${match[1].padStart(2, "0")}-${match[2].padStart(2, "0")}` : null;
+  // Census switched from M/D/YYYY to M/D/YY in Nov 2026; BTOS starts in 2022, so YY is always 20YY.
+  const match = String(value ?? "").trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+  return match ? `${match[3].length === 2 ? `20${match[3]}` : match[3]}-${match[1].padStart(2, "0")}-${match[2].padStart(2, "0")}` : null;
 }
 
 /**
@@ -102,8 +108,8 @@ export function parseBtos(bytes: ArrayBuffer | Uint8Array): BtosPayload {
     if (matches.length > 1) throw new Error("BTOS has more than one matching AI question");
     return matches[0] ?? null;
   };
-  const useRow = findRow(/last two weeks.*artificial intelligence/i);
-  const expectedRow = findRow(/next six months.*artificial intelligence/i);
+  const useRow = findRow(/last two weeks, did this business use .*artificial intelligence/i);
+  const expectedRow = findRow(/next six months, do you think this business will be using .*artificial intelligence/i);
   if (!useRow) throw new Error("BTOS no longer contains the AI-use question");
   const points: BtosPoint[] = [];
   header.forEach((code, column) => {
