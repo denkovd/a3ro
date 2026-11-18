@@ -1,30 +1,30 @@
 import { unstable_cache } from "next/cache";
-import { buildHorizonSnapshot, horizonDatasetComplete } from "../../../../backend/src/horizon/engine";
-import { HORIZON_SOURCES } from "../../../../backend/src/horizon/indicators";
-import { fetchHorizonDataset } from "../../../../backend/src/horizon/sources";
-import type { HorizonDataset, HorizonSourceState } from "../../../../backend/src/horizon/types";
+import { buildDividendSnapshot, dividendDatasetComplete } from "../../../../backend/src/dividend/engine";
+import { DIVIDEND_SOURCES } from "../../../../backend/src/dividend/indicators";
+import { fetchDividendDataset } from "../../../../backend/src/dividend/sources";
+import type { DividendDataset, DividendSourceState } from "../../../../backend/src/dividend/types";
 import { createDb } from "../../../../backend/src/storage/db";
-import { getStoredHorizon } from "../../../../backend/src/storage/horizonRepo";
+import { getStoredDividend } from "../../../../backend/src/storage/dividendRepo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const sourceReaders = HORIZON_SOURCES.map(source => ({ source, read: unstable_cache(() => fetchHorizonDataset(source), ["horizon-baseline-v1", source], { revalidate: 21_600 }) }));
+const sourceReaders = DIVIDEND_SOURCES.map(source => ({ source, read: unstable_cache(() => fetchDividendDataset(source), ["dividend-baseline-v1", source], { revalidate: 21_600 }) }));
 
 export async function GET() {
   const now = new Date();
-  let stored: { datasets: HorizonDataset[]; states: HorizonSourceState[] } = { datasets: [], states: [] };
+  let stored: { datasets: DividendDataset[]; states: DividendSourceState[] } = { datasets: [], states: [] };
   let archive: "available" | "unavailable" = "unavailable";
   if (process.env.DATABASE_URL) {
     try {
-      stored = await getStoredHorizon(await createDb());
+      stored = await getStoredDividend(await createDb());
       archive = "available";
     } catch {
-      console.warn("Macro Horizon revision archive could not be read; checking official sources");
+      console.warn("AI Dividend revision archive could not be read; checking official sources");
     }
   }
-  const recent = HORIZON_SOURCES.every(source => {
+  const recent = DIVIDEND_SOURCES.every(source => {
     const state = stored.states.find(item => item.source === source);
     return stored.datasets.some(item => item.source === source) && state?.health === "healthy" && state.checkedAt && now.getTime() - Date.parse(state.checkedAt) < 26 * 3_600_000;
   });
@@ -33,13 +33,13 @@ export async function GET() {
       const results = await Promise.allSettled(sourceReaders.map(reader => reader.read()));
       const current = {
         datasets: results.flatMap(result => result.status === "fulfilled" ? [result.value] : []),
-        states: results.map((result, index): HorizonSourceState => {
-          const complete = result.status === "fulfilled" && horizonDatasetComplete(result.value);
-          if (result.status === "rejected") console.warn("Macro Horizon official source unavailable", sourceReaders[index].source);
+        states: results.map((result, index): DividendSourceState => {
+          const complete = result.status === "fulfilled" && dividendDatasetComplete(result.value);
+          if (result.status === "rejected") console.warn("AI Dividend official source unavailable", sourceReaders[index].source);
           return { source: sourceReaders[index].source, health: result.status === "fulfilled" ? complete ? "healthy" : "degraded" : "unavailable", checkedAt: result.status === "fulfilled" ? result.value.retrievedAt : now.toISOString(), error: result.status === "rejected" ? "Official source could not be verified on this attempt" : complete ? null : "Some official series are missing" };
         }),
       };
-      for (const source of HORIZON_SOURCES) {
+      for (const source of DIVIDEND_SOURCES) {
         const incoming = current.datasets.find(dataset => dataset.source === source);
         const existing = stored.datasets.find(dataset => dataset.source === source);
         const state = current.states.find(item => item.source === source)!;
@@ -52,12 +52,12 @@ export async function GET() {
         }
       }
     } catch {
-      console.error("Macro Horizon official source refresh failed");
+      console.error("AI Dividend official source refresh failed");
     }
   }
   const publicStates = stored.states.map(state => ({
     ...state, error: state.error ? "Official source could not be verified on this attempt" : null,
   }));
-  const snapshot = buildHorizonSnapshot(stored.datasets, publicStates, now, archive);
+  const snapshot = buildDividendSnapshot(stored.datasets, publicStates, now, archive);
   return Response.json(snapshot, { headers: { "Cache-Control": "no-store" } });
 }

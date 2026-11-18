@@ -9,16 +9,16 @@
 ──────────────────────────────────────────────────────────────── */
 import { useRouter } from "next/navigation";
 
-export type ModuleId = "trend" | "regime" | "earnings" | "australia" | "horizon";
+export type ModuleId = "trend" | "regime" | "earnings" | "australia" | "dividend";
 
-const MODULE_SEQUENCE: ModuleId[] = ["trend", "regime", "earnings", "australia", "horizon"];
+const MODULE_SEQUENCE: ModuleId[] = ["trend", "regime", "earnings", "australia", "dividend"];
 
 const MODULE_META: Record<ModuleId, { label: string; route: string }> = {
   trend: { label: "Bull Market Finder", route: "/Projects/Bull-Market-Finder" },
   regime: { label: "US regime", route: "/Projects/Regime-Shift" },
   earnings: { label: "Earnings Beat Leaderboard", route: "/Projects/Earnings-Beat" },
   australia: { label: "Australia Watch", route: "/Projects/Australia-Watch" },
-  horizon: { label: "Macro Horizon", route: "/Projects/Macro-Horizon" },
+  dividend: { label: "AI Dividend", route: "/Projects/AI-Dividend" },
 };
 
 const switchButtonClass =

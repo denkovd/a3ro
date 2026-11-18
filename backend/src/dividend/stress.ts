@@ -1,9 +1,9 @@
-import { horizonFreshness, horizonPeriodEnd } from "./engine";
-import { HORIZON_INDICATORS } from "./indicators";
-import type { HorizonFrequency, HorizonPoint, HorizonSnapshot } from "./types";
-import type { HorizonScenarioRun } from "./scenarios";
+import { dividendFreshness, dividendPeriodEnd } from "./engine";
+import { DIVIDEND_INDICATORS } from "./indicators";
+import type { DividendFrequency, DividendPoint, DividendSnapshot } from "./types";
+import type { DividendScenarioRun } from "./scenarios";
 
-export const HORIZON_STRESS_VERSION = "horizon-stress-1.0.0";
+export const DIVIDEND_STRESS_VERSION = "horizon-stress-1.0.0";
 export const STRESS_SETTING_RULES = {
   compensationFloor: { label: "Real compensation annual-change floor", min: -1, max: 1, step: 0.1, unit: "%" },
   unemploymentRise: { label: "Unemployment annual rise", min: 0.1, max: 1, step: 0.1, unit: "pp" },
@@ -29,7 +29,7 @@ export interface StressSample {
 export interface StressEvidence {
   key: string;
   title: string;
-  frequency: HorizonFrequency;
+  frequency: DividendFrequency;
   unit: "%" | "pp";
   sourceUrl: string;
   sourceSeries: string;
@@ -57,7 +57,7 @@ export interface StressWatch {
 }
 
 export interface StressAssessment {
-  ruleVersion: typeof HORIZON_STRESS_VERSION;
+  ruleVersion: typeof DIVIDEND_STRESS_VERSION;
   evaluatedAt: string;
   snapshotGeneratedAt: string;
   settings: StressSettings;
@@ -78,8 +78,8 @@ export function validateStressSettings(input: unknown): StressSettings {
   return result;
 }
 
-export function shiftHorizonPeriod(period: string, frequency: "quarterly" | "monthly", offset: number): string {
-  if (!Number.isInteger(offset) || !horizonPeriodEnd(period, frequency)) throw new Error("Invalid period shift.");
+export function shiftDividendPeriod(period: string, frequency: "quarterly" | "monthly", offset: number): string {
+  if (!Number.isInteger(offset) || !dividendPeriodEnd(period, frequency)) throw new Error("Invalid period shift.");
   const count = frequency === "quarterly" ? 4 : 12;
   const index = Number(period.slice(0, 4)) * count + Number(period.slice(frequency === "quarterly" ? -1 : -2)) - 1 + offset;
   const year = Math.floor(index / count);
@@ -87,19 +87,19 @@ export function shiftHorizonPeriod(period: string, frequency: "quarterly" | "mon
   return frequency === "quarterly" ? `${year}-Q${position}` : `${year}-${String(position).padStart(2, "0")}`;
 }
 
-export function stressSeries(snapshot: HorizonSnapshot, key: string, evaluatedAt: string): HorizonPoint[] {
-  const definition = HORIZON_INDICATORS.find(item => item.key === key);
+export function stressSeries(snapshot: DividendSnapshot, key: string, evaluatedAt: string): DividendPoint[] {
+  const definition = DIVIDEND_INDICATORS.find(item => item.key === key);
   const reading = snapshot.indicators.find(item => item.key === key);
   if (!definition || !reading || reading.frequency !== definition.frequency || reading.unit !== definition.unit) return [];
-  const points = new Map<string, HorizonPoint>();
+  const points = new Map<string, DividendPoint>();
   for (const point of reading.points) {
-    const end = horizonPeriodEnd(point.period, definition.frequency);
+    const end = dividendPeriodEnd(point.period, definition.frequency);
     if (end && end.getTime() <= Date.parse(evaluatedAt) && Number.isFinite(point.value) && (definition.unit === "percent" ? point.value >= 0 && point.value <= 100 : point.value > 0)) points.set(point.period, point);
   }
   return [...points.values()].sort((first, second) => first.period.localeCompare(second.period));
 }
 
-export function stressEvidenceIssues(snapshot: HorizonSnapshot, key: string, evaluatedAt: string): string[] {
+export function stressEvidenceIssues(snapshot: DividendSnapshot, key: string, evaluatedAt: string): string[] {
   const reading = snapshot.indicators.find(item => item.key === key);
   const latest = stressSeries(snapshot, key, evaluatedAt).at(-1);
   const issues: string[] = [];
@@ -107,22 +107,22 @@ export function stressEvidenceIssues(snapshot: HorizonSnapshot, key: string, eva
   if (!Number.isFinite(Date.parse(snapshot.generatedAt)) || Date.parse(snapshot.generatedAt) > now) issues.push("Snapshot date is invalid or later than the assessment.");
   if (!reading || !latest) return [...issues, "No valid observations."];
   if (reading.sourceHealth !== "healthy" || snapshot.sources.find(source => source.source === reading.source)?.health !== "healthy") issues.push("The source is not verified healthy.");
-  if (horizonFreshness(latest.period, reading.frequency, new Date(evaluatedAt)) !== "current") issues.push("The latest observation is outside the current freshness window.");
+  if (dividendFreshness(latest.period, reading.frequency, new Date(evaluatedAt)) !== "current") issues.push("The latest observation is outside the current freshness window.");
   const verified = Date.parse(reading.verifiedAt ?? "");
   if (!Number.isFinite(verified) || verified > now || now - verified > 7 * 86_400_000) issues.push("Successful source verification is missing, future-dated or over seven days old.");
   return issues;
 }
 
-function evidence(snapshot: HorizonSnapshot, key: string, count: number, evaluatedAt: string, test: (change: number) => boolean): StressEvidence {
-  const definition = HORIZON_INDICATORS.find(item => item.key === key)!;
+function evidence(snapshot: DividendSnapshot, key: string, count: number, evaluatedAt: string, test: (change: number) => boolean): StressEvidence {
+  const definition = DIVIDEND_INDICATORS.find(item => item.key === key)!;
   const reading = snapshot.indicators.find(item => item.key === key);
   const points = stressSeries(snapshot, key, evaluatedAt);
   const latest = points.at(-1);
   const byPeriod = new Map(points.map(point => [point.period, point]));
   const frequency = definition.frequency as "quarterly" | "monthly";
   const samples: StressSample[] = latest ? Array.from({ length: count }, (_, index) => {
-    const period = shiftHorizonPeriod(latest.period, frequency, index - count + 1);
-    const comparisonPeriod = shiftHorizonPeriod(period, frequency, frequency === "quarterly" ? -4 : -12);
+    const period = shiftDividendPeriod(latest.period, frequency, index - count + 1);
+    const comparisonPeriod = shiftDividendPeriod(period, frequency, frequency === "quarterly" ? -4 : -12);
     const point = byPeriod.get(period);
     const prior = byPeriod.get(comparisonPeriod);
     const change = point && prior ? definition.change === "percentage_points" ? point.value - prior.value : (point.value / prior.value - 1) * 100 : null;
@@ -147,7 +147,7 @@ const GAPS: Omit<StressWatch, "status" | "rawStatus" | "evidence">[] = [
   { id: "policy_delivery", title: "Institutional delivery", scope: "Named policies and beneficiaries · register needed", constraint: "No funded enactment, delivery deadline and beneficiary-uptake register is connected.", trigger: "Requires an enacted, financed commitment and an observable missed delivery milestone.", transmission: "Delayed support, retraining or infrastructure can prolong household or productive-capacity pressure.", confirmation: "The stated delivery window is missed and the targeted pressure persists in compatible outcome data.", relief: "Actual funded delivery and measured beneficiary uptake/outcome improvement.", limitation: "Announcements and modelled transfers do not establish a delivered policy response." },
 ];
 
-export function evaluateHorizonStress(snapshot: HorizonSnapshot, input: unknown, evaluatedAt: string): StressAssessment {
+export function evaluateDividendStress(snapshot: DividendSnapshot, input: unknown, evaluatedAt: string): StressAssessment {
   if (!Number.isFinite(Date.parse(evaluatedAt))) throw new Error("A valid assessment date is required.");
   const settings = validateStressSettings(input);
   const wealthTop = evidence(snapshot, "wealth_top1", 2, evaluatedAt, value => value >= settings.wealthRise - 1e-9);
@@ -164,22 +164,22 @@ export function evaluateHorizonStress(snapshot: HorizonSnapshot, input: unknown,
     setWatchState({ id: "ownership_proxy", title: "Wealth concentration drift", scope: "US households ranked by net worth · top 1% and bottom 50%", constraint: "Top wealth share rising while the bottom wealth share does not improve.", trigger: `Top 1% annual wealth-share rise ≥ ${settings.wealthRise} pp AND bottom 50% annual change ≤ 0 pp, in each of two consecutive quarters.`, transmission: "Different ownership exposures can amplify divergence in asset-linked income and financial buffers.", confirmation: "Both distribution conditions persist. A claim about lower/middle living standards still needs separate compatible income/budget outcomes.", relief: "Either distribution condition ceases on fresh, healthy, complete data; this does not establish that every household improves.", limitation: "Net worth is not cash income. Wealth ranks change membership and differ from income ranks; a share shift does not identify AI causation.", evidence: [wealthTop, wealthBottom] }),
     ...GAPS.map(gap => ({ ...gap, evidence: [], status: "needs_data" as const, rawStatus: "needs_data" as const })),
   ];
-  return { ruleVersion: HORIZON_STRESS_VERSION, evaluatedAt, snapshotGeneratedAt: snapshot.generatedAt, settings, watches };
+  return { ruleVersion: DIVIDEND_STRESS_VERSION, evaluatedAt, snapshotGeneratedAt: snapshot.generatedAt, settings, watches };
 }
 
-export function retrospectiveStressDiagnostics(snapshot: HorizonSnapshot, settings: StressSettings, evaluatedAt: string) {
+export function retrospectiveStressDiagnostics(snapshot: DividendSnapshot, settings: StressSettings, evaluatedAt: string) {
   return stressSeries(snapshot, "real_compensation", evaluatedAt).slice(-8).map(point => {
-    const cutoff = horizonPeriodEnd(point.period, "quarterly")!.toISOString();
-    const assessment = evaluateHorizonStress(snapshot, settings, cutoff);
+    const cutoff = dividendPeriodEnd(point.period, "quarterly")!.toISOString();
+    const assessment = evaluateDividendStress(snapshot, settings, cutoff);
     return { period: point.period, states: assessment.watches.filter(watch => watch.evidence.length > 0).map(watch => ({ id: watch.id, status: watch.rawStatus })) };
   });
 }
 
-export function scenarioStressWindows(run: HorizonScenarioRun) {
+export function scenarioStressWindows(run: DividendScenarioRun) {
   const rules = [
-    { id: "high_budget", label: "High-burden budget gap", predicate: (point: HorizonScenarioRun["points"][number]) => point.households[0].roomReal < 0 },
-    { id: "lower_budget", label: "Lower-burden budget gap", predicate: (point: HorizonScenarioRun["points"][number]) => point.households[1].roomReal < 0 },
-    { id: "energy_screen", label: "Desired energy / delivery > 1.1", predicate: (point: HorizonScenarioRun["points"][number]) => point.demandSupplyRatio > 1.1 + 1e-9 },
+    { id: "high_budget", label: "High-burden budget gap", predicate: (point: DividendScenarioRun["points"][number]) => point.households[0].roomReal < 0 },
+    { id: "lower_budget", label: "Lower-burden budget gap", predicate: (point: DividendScenarioRun["points"][number]) => point.households[1].roomReal < 0 },
+    { id: "energy_screen", label: "Desired energy / delivery > 1.1", predicate: (point: DividendScenarioRun["points"][number]) => point.demandSupplyRatio > 1.1 + 1e-9 },
   ];
   return rules.map(rule => {
     const firstIndex = run.points.findIndex(rule.predicate);

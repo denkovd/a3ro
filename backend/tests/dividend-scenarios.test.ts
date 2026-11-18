@@ -1,22 +1,22 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { ASSUMPTION_RULES, HORIZON_MODEL_VERSION, HORIZON_SCENARIOS, ILLUSTRATIVE_HOUSEHOLDS, horizonSensitivity, runHorizonScenario, scenarioAnchor, validateHorizonAssumptions, type AssumptionKey, type ScenarioAnchor } from "../src/horizon/scenarios";
-import { buildHorizonSnapshot } from "../src/horizon/engine";
-import type { HorizonDataset, HorizonSnapshot } from "../src/horizon/types";
+import { ASSUMPTION_RULES, DIVIDEND_MODEL_VERSION, DIVIDEND_SCENARIOS, ILLUSTRATIVE_HOUSEHOLDS, dividendSensitivity, runDividendScenario, scenarioAnchor, validateDividendAssumptions, type AssumptionKey, type ScenarioAnchor } from "../src/dividend/scenarios";
+import { buildDividendSnapshot } from "../src/dividend/engine";
+import type { DividendDataset, DividendSnapshot } from "../src/dividend/types";
 
 const anchor: ScenarioAnchor = { period: "2026-Q2", year: 2026, productivity: 120, realCompensation: 109, snapshotGeneratedAt: "2026-10-18T00:00:00Z", evidence: [] };
-const preset = () => ({ ...HORIZON_SCENARIOS[1].assumptions });
+const preset = () => ({ ...DIVIDEND_SCENARIOS[1].assumptions });
 const near = (actual: number, expected: number) => assert.ok(Math.abs(actual - expected) < 1e-8, `${actual} differs from ${expected}`);
-const run = (changes = {}) => runHorizonScenario(anchor, { ...preset(), ...changes });
-const snapshot = (): HorizonSnapshot => {
-  const dataset: HorizonDataset = { source: "bls", retrievedAt: anchor.snapshotGeneratedAt, publicationDate: null, dataUrl: "https://api.bls.gov/", series: [
+const run = (changes = {}) => runDividendScenario(anchor, { ...preset(), ...changes });
+const snapshot = (): DividendSnapshot => {
+  const dataset: DividendDataset = { source: "bls", retrievedAt: anchor.snapshotGeneratedAt, publicationDate: null, dataUrl: "https://api.bls.gov/", series: [
     { key: "productivity", points: [{ period: "2025-Q4", value: 118, status: null }, { period: "2026-Q2", value: 120, status: null }, { period: "2026-Q3", value: 121, status: null }] },
     { key: "real_compensation", points: [{ period: "2025-Q4", value: 108, status: null }, { period: "2026-Q2", value: 109, status: null }] },
   ] };
-  return buildHorizonSnapshot([dataset], [{ source: "bls", health: "healthy", checkedAt: anchor.snapshotGeneratedAt, error: null }], new Date(anchor.snapshotGeneratedAt), "unavailable");
+  return buildDividendSnapshot([dataset], [{ source: "bls", health: "healthy", checkedAt: anchor.snapshotGeneratedAt, error: null }], new Date(anchor.snapshotGeneratedAt), "unavailable");
 };
 
-describe("Horizon scenario evidence and inputs", () => {
+describe("Dividend scenario evidence and inputs", () => {
   test("selects the latest shared actual quarter, not the latest unmatched reading", () => {
     const result = scenarioAnchor(snapshot())!;
     assert.equal(result.period, "2026-Q2");
@@ -46,28 +46,28 @@ describe("Horizon scenario evidence and inputs", () => {
     assert.equal(scenarioAnchor(source)!.evidence[0].freshness, "stale");
   });
   test("validates every preset and bounds all inputs without numeric coercion", () => {
-    for (const scenario of HORIZON_SCENARIOS) assert.deepEqual(validateHorizonAssumptions(scenario.assumptions), scenario.assumptions);
+    for (const scenario of DIVIDEND_SCENARIOS) assert.deepEqual(validateDividendAssumptions(scenario.assumptions), scenario.assumptions);
     for (const key of Object.keys(ASSUMPTION_RULES) as AssumptionKey[]) {
       for (const invalid of [NaN, Infinity, -Infinity, "1", null, undefined, ASSUMPTION_RULES[key].min - 0.01, ASSUMPTION_RULES[key].max + 0.01]) assert.throws(() => run({ [key]: invalid }), new RegExp(key));
     }
-    for (const invalid of [null, [], 1, "assumptions"]) assert.throws(() => validateHorizonAssumptions(invalid));
+    for (const invalid of [null, [], 1, "assumptions"]) assert.throws(() => validateDividendAssumptions(invalid));
     assert.throws(() => run({ constructor: 1 }), /Unknown/);
     assert.throws(() => run({ madeUpParameter: 2 }), /Unknown/);
     const missing = preset() as Partial<ReturnType<typeof preset>>;
     delete missing.inflation;
-    assert.throws(() => validateHorizonAssumptions(missing), /inflation/);
-    assert.throws(() => validateHorizonAssumptions(Object.create(preset())), /baselineGrowth/);
+    assert.throws(() => validateDividendAssumptions(missing), /inflation/);
+    assert.throws(() => validateDividendAssumptions(Object.create(preset())), /baselineGrowth/);
   });
   test("requires integer delays and a valid quarterly anchor", () => {
     for (const key of ["diffusionYears", "adoptionLag", "powerDelay", "policyDelay"]) assert.throws(() => run({ [key]: 1.5 }), /whole years/);
-    for (const invalid of [{ period: "2026" }, { year: 2025 }, { period: "2046-Q1", year: 2046 }, { period: "2027-Q1", year: 2027 }, { snapshotGeneratedAt: "invalid" }, { productivity: NaN }, { realCompensation: -1 }]) assert.throws(() => runHorizonScenario({ ...anchor, ...invalid }, preset()), /baseline/);
+    for (const invalid of [{ period: "2026" }, { year: 2025 }, { period: "2046-Q1", year: 2046 }, { period: "2027-Q1", year: 2027 }, { snapshotGeneratedAt: "invalid" }, { productivity: NaN }, { realCompensation: -1 }]) assert.throws(() => runDividendScenario({ ...anchor, ...invalid }, preset()), /baseline/);
   });
 });
 
-describe("Horizon scenario cash-flow and energy accounting", () => {
+describe("Dividend scenario cash-flow and energy accounting", () => {
   test("starts at the observed quarter and includes annual checkpoints through 2046", () => {
     const result = run();
-    assert.equal(result.modelVersion, HORIZON_MODEL_VERSION);
+    assert.equal(result.modelVersion, DIVIDEND_MODEL_VERSION);
     assert.equal(result.points.length, 21);
     assert.equal(result.points[0].period, "2026-Q2");
     assert.equal(result.points.at(-1)!.period, "2046-Q2");
@@ -166,8 +166,8 @@ describe("Horizon scenario cash-flow and energy accounting", () => {
     for (const boundary of ["min", "max"] as const) {
       const assumptions = Object.fromEntries((Object.keys(ASSUMPTION_RULES) as AssumptionKey[]).map(key => [key, ASSUMPTION_RULES[key][boundary]]));
       const before = JSON.stringify({ anchor, assumptions });
-      const result = runHorizonScenario(anchor, assumptions);
-      assert.deepEqual(result, runHorizonScenario(anchor, assumptions));
+      const result = runDividendScenario(anchor, assumptions);
+      assert.deepEqual(result, runDividendScenario(anchor, assumptions));
       assert.equal(JSON.stringify({ anchor, assumptions }), before);
       for (const point of result.points) for (const value of [...Object.values(point), ...point.households.flatMap(household => Object.values(household))]) if (typeof value === "number") assert.ok(Number.isFinite(value));
     }
@@ -175,15 +175,15 @@ describe("Horizon scenario cash-flow and energy accounting", () => {
   test("serialised inputs reproduce the exact run and returned data cannot mutate its inputs", () => {
     const result = run();
     const restored = JSON.parse(JSON.stringify(result));
-    assert.deepEqual(runHorizonScenario(restored.anchor, restored.assumptions), result);
+    assert.deepEqual(runDividendScenario(restored.anchor, restored.assumptions), result);
     result.anchor.productivity = 999;
     result.assumptions.inflation = 6;
     assert.equal(anchor.productivity, 120);
     assert.equal(preset().inflation, 2);
   });
   test("sensitivity tests use bounded whole-year inputs and rank actual endpoint differences", () => {
-    for (const scenario of HORIZON_SCENARIOS) {
-      const result = horizonSensitivity(anchor, scenario.assumptions);
+    for (const scenario of DIVIDEND_SCENARIOS) {
+      const result = dividendSensitivity(anchor, scenario.assumptions);
       assert.equal(result.length, 6);
       for (const [index, item] of result.entries()) {
         const rule = ASSUMPTION_RULES[item.key];

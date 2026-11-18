@@ -1,17 +1,17 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { buildHorizonSnapshot } from "../src/horizon/engine";
-import { HORIZON_INDICATORS, HORIZON_SOURCES } from "../src/horizon/indicators";
-import { DEFAULT_STRESS_SETTINGS, STRESS_SETTING_RULES, evaluateHorizonStress, retrospectiveStressDiagnostics, scenarioStressWindows, shiftHorizonPeriod, stressSeries, validateStressSettings, type StressSettingKey } from "../src/horizon/stress";
-import { HORIZON_LEDGER_MAX_BYTES, emptyHorizonLedger, horizonPredictionMetrics, parseHorizonLedger, recordHorizonPrediction, recordStressCheckpoint, reviewHorizonPredictions, stressCheckpointChanges, type PredictionDirection } from "../src/horizon/ledger";
-import { HORIZON_SCENARIOS, runHorizonScenario } from "../src/horizon/scenarios";
-import type { HorizonDataset, HorizonPoint, HorizonSnapshot } from "../src/horizon/types";
+import { buildDividendSnapshot } from "../src/dividend/engine";
+import { DIVIDEND_INDICATORS, DIVIDEND_SOURCES } from "../src/dividend/indicators";
+import { DEFAULT_STRESS_SETTINGS, STRESS_SETTING_RULES, evaluateDividendStress, retrospectiveStressDiagnostics, scenarioStressWindows, shiftDividendPeriod, stressSeries, validateStressSettings, type StressSettingKey } from "../src/dividend/stress";
+import { DIVIDEND_LEDGER_MAX_BYTES, emptyDividendLedger, dividendPredictionMetrics, parseDividendLedger, recordDividendPrediction, recordStressCheckpoint, reviewDividendPredictions, stressCheckpointChanges, type PredictionDirection } from "../src/dividend/ledger";
+import { DIVIDEND_SCENARIOS, runDividendScenario } from "../src/dividend/scenarios";
+import type { DividendDataset, DividendPoint, DividendSnapshot } from "../src/dividend/types";
 
 const checkedAt = "2026-10-18T12:00:00.000Z";
 const decisionAt = "2026-10-18T12:00:01.000Z";
 const reviewedAt = "2027-10-18T12:00:01.000Z";
-const point = (period: string, value: number, status: string | null = null): HorizonPoint => ({ period, value, status });
-const baseSeries: Record<string, HorizonPoint[]> = {
+const point = (period: string, value: number, status: string | null = null): DividendPoint => ({ period, value, status });
+const baseSeries: Record<string, DividendPoint[]> = {
   productivity: [point("2025-Q1", 100), point("2025-Q2", 100), point("2026-Q1", 102), point("2026-Q2", 103)],
   real_compensation: [point("2025-Q1", 100), point("2025-Q2", 100), point("2026-Q1", 99), point("2026-Q2", 98)],
   unemployment: [point("2025-07", 4), point("2025-08", 4), point("2025-09", 4), point("2026-07", 4.3), point("2026-08", 4.3), point("2026-09", 4.3)],
@@ -20,18 +20,18 @@ const baseSeries: Record<string, HorizonPoint[]> = {
   wealth_bottom50: [point("2025-Q1", 3), point("2025-Q2", 3), point("2026-Q1", 2.8), point("2026-Q2", 2.7)],
 };
 
-function snapshot(at = checkedAt, overrides: Record<string, HorizonPoint[]> = {}): HorizonSnapshot {
+function snapshot(at = checkedAt, overrides: Record<string, DividendPoint[]> = {}): DividendSnapshot {
   const series = { ...baseSeries, ...overrides };
-  const datasets: HorizonDataset[] = HORIZON_SOURCES.map(source => ({ source, retrievedAt: at, publicationDate: null, dataUrl: "https://example.test/official-fixture", series: HORIZON_INDICATORS.filter(indicator => indicator.source === source).map(indicator => ({ key: indicator.key, points: series[indicator.key] ?? [] })) }));
-  return buildHorizonSnapshot(datasets, HORIZON_SOURCES.map(source => ({ source, health: "healthy", checkedAt: at, error: null })), new Date(at));
+  const datasets: DividendDataset[] = DIVIDEND_SOURCES.map(source => ({ source, retrievedAt: at, publicationDate: null, dataUrl: "https://example.test/official-fixture", series: DIVIDEND_INDICATORS.filter(indicator => indicator.source === source).map(indicator => ({ key: indicator.key, points: series[indicator.key] ?? [] })) }));
+  return buildDividendSnapshot(datasets, DIVIDEND_SOURCES.map(source => ({ source, health: "healthy", checkedAt: at, error: null })), new Date(at));
 }
 
-const assess = (source = snapshot(), settings = DEFAULT_STRESS_SETTINGS, at = decisionAt) => evaluateHorizonStress(source, settings, at);
+const assess = (source = snapshot(), settings = DEFAULT_STRESS_SETTINGS, at = decisionAt) => evaluateDividendStress(source, settings, at);
 const watch = (id: string, source = snapshot()) => assess(source).watches.find(item => item.id === id)!;
-const makeCall = (prediction: PredictionDirection = "decline") => recordHorizonPrediction(emptyHorizonLedger(), snapshot(), DEFAULT_STRESS_SETTINGS, prediction, decisionAt, "call-1");
+const makeCall = (prediction: PredictionDirection = "decline") => recordDividendPrediction(emptyDividendLedger(), snapshot(), DEFAULT_STRESS_SETTINGS, prediction, decisionAt, "call-1");
 const outcomeSnapshot = (factor = 0.99, targetStatus: string | null = null, previousValue = 98) => snapshot("2027-10-18T12:00:00.000Z", { real_compensation: [...baseSeries.real_compensation.filter(item => item.period !== "2026-Q2"), point("2026-Q2", previousValue), point("2027-Q2", previousValue * factor, targetStatus)] });
 
-describe("Horizon dated stress rules", () => {
+describe("Dividend dated stress rules", () => {
   test("three complete persistent proxy rules can flag while five real-evidence gaps stay uncomputed", () => {
     const result = assess();
     assert.equal(result.watches.length, 8);
@@ -48,11 +48,11 @@ describe("Horizon dated stress rules", () => {
     assert.throws(() => assess(snapshot(), DEFAULT_STRESS_SETTINGS, "invalid"), /date/);
   });
   test("period arithmetic respects quarter/month and year boundaries", () => {
-    assert.equal(shiftHorizonPeriod("2026-Q1", "quarterly", -1), "2025-Q4");
-    assert.equal(shiftHorizonPeriod("2026-Q2", "quarterly", 4), "2027-Q2");
-    assert.equal(shiftHorizonPeriod("2026-01", "monthly", -1), "2025-12");
-    assert.throws(() => shiftHorizonPeriod("2026-Q5", "quarterly", 1));
-    assert.throws(() => shiftHorizonPeriod("2026-01", "monthly", 0.5));
+    assert.equal(shiftDividendPeriod("2026-Q1", "quarterly", -1), "2025-Q4");
+    assert.equal(shiftDividendPeriod("2026-Q2", "quarterly", 4), "2027-Q2");
+    assert.equal(shiftDividendPeriod("2026-01", "monthly", -1), "2025-12");
+    assert.throws(() => shiftDividendPeriod("2026-Q5", "quarterly", 1));
+    assert.throws(() => shiftDividendPeriod("2026-01", "monthly", 0.5));
   });
   test("one current observation cannot satisfy persistence or borrow an annual income observation", () => {
     const partial = snapshot(checkedAt, { real_compensation: [point("2025-Q2", 100), point("2026-Q2", 98)], real_median_dpi: [point("2025", 90000)] });
@@ -113,7 +113,7 @@ describe("Horizon dated stress rules", () => {
   test("retrospective diagnostics restrict reference periods but do not claim original publication availability", () => {
     const history = retrospectiveStressDiagnostics(snapshot(), DEFAULT_STRESS_SETTINGS, decisionAt);
     assert.equal(history.at(-1)!.period, "2026-Q2");
-    const quarterEnd = evaluateHorizonStress(snapshot(), DEFAULT_STRESS_SETTINGS, "2026-06-30T00:00:00Z");
+    const quarterEnd = evaluateDividendStress(snapshot(), DEFAULT_STRESS_SETTINGS, "2026-06-30T00:00:00Z");
     assert.equal(quarterEnd.watches[0].evidence[1].samples.at(-1)!.period, "2025-09");
     assert.equal(quarterEnd.watches[0].status, "unverified");
     assert.equal(quarterEnd.watches[1].rawStatus, "unverified");
@@ -121,20 +121,20 @@ describe("Horizon dated stress rules", () => {
   });
 });
 
-describe("Horizon prospective ledger and revisions", () => {
+describe("Dividend prospective ledger and revisions", () => {
   test("a checkpoint freezes evidence, round-trips, deduplicates unchanged inputs and never mutates inputs", () => {
     const source = snapshot();
     const original = JSON.stringify(source);
-    const first = recordStressCheckpoint(emptyHorizonLedger(), source, DEFAULT_STRESS_SETTINGS, decisionAt, "checkpoint-1");
-    assert.deepEqual(parseHorizonLedger(JSON.stringify(first)), first);
+    const first = recordStressCheckpoint(emptyDividendLedger(), source, DEFAULT_STRESS_SETTINGS, decisionAt, "checkpoint-1");
+    assert.deepEqual(parseDividendLedger(JSON.stringify(first)), first);
     assert.equal(recordStressCheckpoint(first, source, DEFAULT_STRESS_SETTINGS, "2026-10-18T12:01:00Z", "checkpoint-2"), first);
     source.indicators[0].points[0].value = 999;
     assert.notEqual(first.checkpoints[0].snapshot.indicators[0].points[0].value, 999);
     assert.notEqual(JSON.stringify(source), original);
-    assert.equal(emptyHorizonLedger().checkpoints.length, 0);
+    assert.equal(emptyDividendLedger().checkpoints.length, 0);
   });
   test("rule retractions require fresh comparable evidence and survive an unverified intervening checkpoint", () => {
-    let ledger = recordStressCheckpoint(emptyHorizonLedger(), snapshot(), DEFAULT_STRESS_SETTINGS, decisionAt, "checkpoint-1");
+    let ledger = recordStressCheckpoint(emptyDividendLedger(), snapshot(), DEFAULT_STRESS_SETTINGS, decisionAt, "checkpoint-1");
     const blocked = snapshot();
     blocked.indicators.find(item => item.key === "real_compensation")!.sourceHealth = "degraded";
     assert.equal(stressCheckpointChanges(ledger.checkpoints, assess(blocked))[0].kind, "unverified");
@@ -153,25 +153,25 @@ describe("Horizon prospective ledger and revisions", () => {
     assert.equal(entry.createdAt, decisionAt);
     assert.equal(entry.reviews.length, 0);
     assert.equal(ledger.checkpoints.length, 1);
-    assert.deepEqual(parseHorizonLedger(JSON.stringify(ledger)), ledger);
-    assert.throws(() => recordHorizonPrediction(ledger, snapshot(), DEFAULT_STRESS_SETTINGS, "not_decline", decisionAt, "call-2"), /already registered/);
+    assert.deepEqual(parseDividendLedger(JSON.stringify(ledger)), ledger);
+    assert.throws(() => recordDividendPrediction(ledger, snapshot(), DEFAULT_STRESS_SETTINGS, "not_decline", decisionAt, "call-2"), /already registered/);
   });
   test("missing/stale/degraded/old verification cannot register a prediction", () => {
     const bad = snapshot();
     bad.indicators.find(item => item.key === "real_compensation")!.sourceHealth = "degraded";
-    assert.throws(() => recordHorizonPrediction(emptyHorizonLedger(), bad, DEFAULT_STRESS_SETTINGS, "decline", decisionAt, "bad"), /fresh/);
-    assert.throws(() => recordHorizonPrediction(emptyHorizonLedger(), snapshot(), DEFAULT_STRESS_SETTINGS, "decline", reviewedAt, "bad"), /fresh/);
+    assert.throws(() => recordDividendPrediction(emptyDividendLedger(), bad, DEFAULT_STRESS_SETTINGS, "decline", decisionAt, "bad"), /fresh/);
+    assert.throws(() => recordDividendPrediction(emptyDividendLedger(), snapshot(), DEFAULT_STRESS_SETTINGS, "decline", reviewedAt, "bad"), /fresh/);
     const missing = snapshot(checkedAt, { real_compensation: [point("2026-Q2", 98)] });
-    assert.throws(() => recordHorizonPrediction(emptyHorizonLedger(), missing, DEFAULT_STRESS_SETTINGS, "decline", decisionAt, "bad"), /prior-year/);
+    assert.throws(() => recordDividendPrediction(emptyDividendLedger(), missing, DEFAULT_STRESS_SETTINGS, "decline", decisionAt, "bad"), /prior-year/);
   });
   test("pending targets and missing exact outcomes stay pending, not failed forecasts or fabricated outcomes", () => {
     const ledger = makeCall();
-    const pending = reviewHorizonPredictions(ledger, snapshot(), decisionAt);
+    const pending = reviewDividendPredictions(ledger, snapshot(), decisionAt);
     assert.equal(pending.pending, 1);
     assert.equal(pending.ledger.predictions[0].reviews.length, 0);
     const missing = snapshot("2027-10-18T12:00:00.000Z", { real_compensation: [...baseSeries.real_compensation, point("2027-Q3", 99)] });
-    assert.equal(reviewHorizonPredictions(ledger, missing, reviewedAt).pending, 1);
-    const metrics = horizonPredictionMetrics(pending.ledger);
+    assert.equal(reviewDividendPredictions(ledger, missing, reviewedAt).pending, 1);
+    const metrics = dividendPredictionMetrics(pending.ledger);
     assert.equal(metrics.accuracy, null);
     assert.equal(metrics.persistenceAccuracy, null);
     assert.equal(metrics.meanCalendarLeadDays, null);
@@ -179,30 +179,30 @@ describe("Horizon prospective ledger and revisions", () => {
   test("a verified target is scored once and unchanged refreshes do not duplicate reviews", () => {
     const ledger = makeCall();
     const outcome = outcomeSnapshot();
-    const first = reviewHorizonPredictions(ledger, outcome, reviewedAt);
+    const first = reviewDividendPredictions(ledger, outcome, reviewedAt);
     assert.equal(first.added, 1);
     assert.equal(first.revised, 0);
     assert.equal(first.ledger.predictions[0].reviews[0].result, "hit");
-    const repeated = reviewHorizonPredictions(first.ledger, outcome, "2027-10-18T12:02:00Z");
+    const repeated = reviewDividendPredictions(first.ledger, outcome, "2027-10-18T12:02:00Z");
     assert.equal(repeated.added, 0);
     assert.equal(repeated.revised, 0);
     assert.equal(repeated.ledger.predictions[0].reviews.length, 1);
     assert.equal(ledger.predictions[0].reviews.length, 0);
-    const metrics = horizonPredictionMetrics(first.ledger);
+    const metrics = dividendPredictionMetrics(first.ledger);
     assert.equal(metrics.accuracy, 1);
     assert.equal(metrics.persistenceAccuracy, 1);
     assert.ok(metrics.meanCalendarLeadDays! > 250 && metrics.meanCalendarLeadDays! < 260);
   });
   test("outcome and comparison-value revisions append and may retract a hit without rewriting prior reviews", () => {
-    const first = reviewHorizonPredictions(makeCall(), outcomeSnapshot(), reviewedAt).ledger;
-    const revised = reviewHorizonPredictions(first, outcomeSnapshot(1.01, "Revised", 99), "2027-10-18T12:02:00Z");
+    const first = reviewDividendPredictions(makeCall(), outcomeSnapshot(), reviewedAt).ledger;
+    const revised = reviewDividendPredictions(first, outcomeSnapshot(1.01, "Revised", 99), "2027-10-18T12:02:00Z");
     assert.equal(revised.revised, 1);
     assert.equal(revised.ledger.predictions[0].reviews.length, 2);
     assert.equal(revised.ledger.predictions[0].reviews[0].result, "hit");
     assert.equal(revised.ledger.predictions[0].reviews[1].result, "false_alarm");
     assert.equal(revised.ledger.predictions[0].reviews[1].comparisonValue, 99);
     assert.equal(first.predictions[0].reviews.length, 1);
-    const metrics = horizonPredictionMetrics(revised.ledger);
+    const metrics = dividendPredictionMetrics(revised.ledger);
     assert.equal(metrics.scored, 1);
     assert.equal(metrics.counts.hit, 0);
     assert.equal(metrics.counts.false_alarm, 1);
@@ -210,51 +210,51 @@ describe("Horizon prospective ledger and revisions", () => {
   });
   test("classification metrics distinguish hits, false alarms, misses and correct non-declines", () => {
     for (const [prediction, factor, expected] of [["decline", 0.99, "hit"], ["decline", 1, "false_alarm"], ["not_decline", 0.99, "miss"], ["not_decline", 1, "correct_clear"]] as const) {
-      const ledger = reviewHorizonPredictions(makeCall(prediction), outcomeSnapshot(factor), reviewedAt).ledger;
+      const ledger = reviewDividendPredictions(makeCall(prediction), outcomeSnapshot(factor), reviewedAt).ledger;
       assert.equal(ledger.predictions[0].reviews[0].result, expected);
-      assert.equal(horizonPredictionMetrics(ledger).counts[expected], 1);
+      assert.equal(dividendPredictionMetrics(ledger).counts[expected], 1);
     }
   });
   test("unverified outcome evidence cannot silently change an earlier saved result", () => {
-    const first = reviewHorizonPredictions(makeCall(), outcomeSnapshot(), reviewedAt).ledger;
+    const first = reviewDividendPredictions(makeCall(), outcomeSnapshot(), reviewedAt).ledger;
     const failed = outcomeSnapshot(1.01);
     failed.sources.find(item => item.source === "bls")!.health = "unavailable";
-    const review = reviewHorizonPredictions(first, failed, "2027-10-18T12:02:00Z");
+    const review = reviewDividendPredictions(first, failed, "2027-10-18T12:02:00Z");
     assert.equal(review.unverified, 1);
     assert.equal(review.ledger.predictions[0].reviews.length, 1);
     assert.equal(review.ledger.predictions[0].reviews[0].result, "hit");
   });
   test("invalid/corrupt/oversize records and forged dates, settings or outcome arithmetic are rejected", () => {
     const ledger = makeCall();
-    for (const input of ["not json", "null", "[]", JSON.stringify({ ...ledger, version: 2 }), JSON.stringify({ ...ledger, ruleVersion: "future" }), " ".repeat(HORIZON_LEDGER_MAX_BYTES + 1)]) assert.throws(() => parseHorizonLedger(input));
+    for (const input of ["not json", "null", "[]", JSON.stringify({ ...ledger, version: 2 }), JSON.stringify({ ...ledger, ruleVersion: "future" }), " ".repeat(DIVIDEND_LEDGER_MAX_BYTES + 1)]) assert.throws(() => parseDividendLedger(input));
     const changed = structuredClone(ledger);
     changed.checkpoints[0].assessment.settings.unemploymentRise = 0.9;
-    assert.throws(() => parseHorizonLedger(JSON.stringify(changed)), /assessment/);
+    assert.throws(() => parseDividendLedger(JSON.stringify(changed)), /assessment/);
     const backdated = structuredClone(ledger);
     backdated.predictions[0].createdAt = "2027-07-01T00:00:00Z";
-    assert.throws(() => parseHorizonLedger(JSON.stringify(backdated)), /prospectively/);
-    const scored = reviewHorizonPredictions(ledger, outcomeSnapshot(), reviewedAt).ledger;
+    assert.throws(() => parseDividendLedger(JSON.stringify(backdated)), /prospectively/);
+    const scored = reviewDividendPredictions(ledger, outcomeSnapshot(), reviewedAt).ledger;
     scored.predictions[0].reviews[0].annualChange = 50;
-    assert.throws(() => parseHorizonLedger(JSON.stringify(scored)), /match/);
+    assert.throws(() => parseDividendLedger(JSON.stringify(scored)), /match/);
     const corrupt = structuredClone(ledger);
     corrupt.checkpoints[0].snapshot.indicators[0].points[0].value = NaN;
-    assert.throws(() => parseHorizonLedger(JSON.stringify(corrupt)), /observation/);
+    assert.throws(() => parseDividendLedger(JSON.stringify(corrupt)), /observation/);
   });
 });
 
-describe("Horizon scenario-only pressure windows", () => {
+describe("Dividend scenario-only pressure windows", () => {
   const anchor = { period: "2026-Q2", year: 2026, productivity: 103, realCompensation: 98, snapshotGeneratedAt: checkedAt, evidence: [] };
   test("scenario windows distinguish no crossing from an annual two-sample budget-gap spell", () => {
-    const broad = scenarioStressWindows(runHorizonScenario(anchor, HORIZON_SCENARIOS[0].assumptions));
+    const broad = scenarioStressWindows(runDividendScenario(anchor, DIVIDEND_SCENARIOS[0].assumptions));
     assert.equal(broad[0].firstSample, null);
-    const disruption = scenarioStressWindows(runHorizonScenario(anchor, HORIZON_SCENARIOS[2].assumptions));
+    const disruption = scenarioStressWindows(runDividendScenario(anchor, DIVIDEND_SCENARIOS[2].assumptions));
     assert.ok(disruption[0].firstSample);
     assert.ok(disruption[0].secondSample);
     assert.ok(disruption[0].windowAfter! < disruption[0].windowBy!);
     assert.equal(disruption[1].firstSample, null);
   });
   test("a transient breach is not labelled persistent; a later spell has its own onset bracket", () => {
-    const run = runHorizonScenario(anchor, HORIZON_SCENARIOS[0].assumptions);
+    const run = runDividendScenario(anchor, DIVIDEND_SCENARIOS[0].assumptions);
     run.points[2].households[0].roomReal = -1;
     let window = scenarioStressWindows(run)[0];
     assert.equal(window.firstSample, "2028-Q2");
@@ -267,7 +267,7 @@ describe("Horizon scenario-only pressure windows", () => {
     assert.equal(window.secondSample, "2033-Q2");
   });
   test("zero spending room and an energy ratio exactly 1.1 are not strict threshold breaches", () => {
-    const run = runHorizonScenario(anchor, HORIZON_SCENARIOS[0].assumptions);
+    const run = runDividendScenario(anchor, DIVIDEND_SCENARIOS[0].assumptions);
     run.points.forEach(item => { item.households[0].roomReal = 0; item.demandSupplyRatio = 1.1; });
     const windows = scenarioStressWindows(run);
     assert.equal(windows[0].firstSample, null);

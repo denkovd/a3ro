@@ -33,7 +33,7 @@ import type {
   GoldCycleReport, GoldFlowCycleReport, BtcCycleReport, BtcFlowCycleReport,
 } from "@a3ro/oil-backend";
 import { requireCronAuth } from "../../_lib/cronAuth";
-import { runHorizonCycle, type HorizonCycleReport } from "../../../../backend/src/ingest/horizonCycle";
+import { runDividendCycle, type DividendCycleReport } from "../../../../backend/src/ingest/dividendCycle";
 
 export const runtime = "nodejs";
 // Never statically pre-render at build time — this route runs a full
@@ -163,11 +163,11 @@ export async function GET(request: Request) {
 
     // Australia Watch has its own cron and execution budget at 02:15 UTC.
 
-    let horizon: HorizonCycleReport | { error: string };
+    let dividend: DividendCycleReport | { error: string };
     try {
-      horizon = await runHorizonCycle(db);
+      dividend = await runDividendCycle(db);
     } catch {
-      horizon = { error: "Macro Horizon source cycle failed" };
+      dividend = { error: "AI Dividend source cycle failed" };
     }
 
     return Response.json({
@@ -183,7 +183,7 @@ export async function GET(request: Request) {
       goldFlow,
       btc,
       btcFlow,
-      horizon,
+      dividend,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

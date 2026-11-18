@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { HorizonPoint } from "../../../../backend/src/horizon/types";
+import type { DividendPoint } from "../../../../backend/src/dividend/types";
 
-export interface HorizonChartSeries {
+export interface DividendChartSeries {
   key: string;
   label: string;
   color: string;
-  points: HorizonPoint[];
+  points: DividendPoint[];
 }
 
-export default function HorizonChart({ series, unit, indexed = false, projection = false }: { series: HorizonChartSeries[]; unit: string; indexed?: boolean; projection?: boolean }) {
+export default function DividendChart({ series, unit, indexed = false, projection = false }: { series: DividendChartSeries[]; unit: string; indexed?: boolean; projection?: boolean }) {
   const container = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const [selectedPeriod, setSelectedPeriod] = useState<string | null>(null);

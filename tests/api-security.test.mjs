@@ -193,15 +193,15 @@ test("Australia dedicated cron surfaces partial source failure", async (t) => {
   assert.equal(response.status, 502);
 });
 
-test("Horizon successful snapshots do not expose persisted errors", async (t) => {
+test("Dividend successful snapshots do not expose persisted errors", async (t) => {
   setEnv(t, "DATABASE_URL", "test-only");
-  const { GET } = loadModule("app/api/horizon/latest/route.ts", {
+  const { GET } = loadModule("app/api/dividend/latest/route.ts", {
     "next/cache": { unstable_cache: (fn) => fn },
-    "../../../../backend/src/horizon/indicators": { HORIZON_SOURCES: ["test"] },
-    "../../../../backend/src/horizon/engine": { buildHorizonSnapshot: (_datasets, states) => ({ sources: states }) },
-    "../../../../backend/src/horizon/sources": { fetchHorizonDataset: async () => { throw new Error("must use stored data"); } },
+    "../../../../backend/src/dividend/indicators": { DIVIDEND_SOURCES: ["test"] },
+    "../../../../backend/src/dividend/engine": { buildDividendSnapshot: (_datasets, states) => ({ sources: states }) },
+    "../../../../backend/src/dividend/sources": { fetchDividendDataset: async () => { throw new Error("must use stored data"); } },
     "../../../../backend/src/storage/db": { createDb: async () => ({}) },
-    "../../../../backend/src/storage/horizonRepo": { getStoredHorizon: async () => ({
+    "../../../../backend/src/storage/dividendRepo": { getStoredDividend: async () => ({
       datasets: [{ source: "test" }], states: [{ source: "test", health: "healthy", checkedAt: new Date().toISOString(), error: SECRET_ERROR }],
     }) },
   });

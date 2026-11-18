@@ -24,6 +24,12 @@ const nextConfig = {
         destination: "/Projects/Bull-Market-Finder",
         permanent: true,
       },
+      {
+        // Macro Horizon was renamed AI Dividend (build step 1, Nov 2026).
+        source: "/Projects/Macro-Horizon",
+        destination: "/Projects/AI-Dividend",
+        permanent: true,
+      },
     ];
   },
 };

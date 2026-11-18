@@ -1,13 +1,13 @@
 import * as XLSX from "xlsx";
-import { HORIZON_INDICATORS, HORIZON_SOURCES } from "./indicators";
-import { horizonDatasetComplete, horizonPeriodEnd } from "./engine";
-import type { HorizonDataset, HorizonPoint, HorizonSource, HorizonSourceState } from "./types";
+import { DIVIDEND_INDICATORS, DIVIDEND_SOURCES } from "./indicators";
+import { dividendDatasetComplete, dividendPeriodEnd } from "./engine";
+import type { DividendDataset, DividendPoint, DividendSource, DividendSourceState } from "./types";
 
-export const BLS_HORIZON_URL = "https://api.bls.gov/publicAPI/v2/timeseries/data/";
-export const BEA_HORIZON_URL = "https://apps.bea.gov/data/special-topics/distribution-of-personal-income/national/summary-file.csv";
-export const DFA_HORIZON_URL = "https://www.federalreserve.gov/releases/z1/dataviz/download/zips/dfa.zip";
+export const BLS_DIVIDEND_URL = "https://api.bls.gov/publicAPI/v2/timeseries/data/";
+export const BEA_DIVIDEND_URL = "https://apps.bea.gov/data/special-topics/distribution-of-personal-income/national/summary-file.csv";
+export const DFA_DIVIDEND_URL = "https://www.federalreserve.gov/releases/z1/dataviz/download/zips/dfa.zip";
 
-export function parseHorizonCsv(text: string): Record<string, string>[] {
+export function parseDividendCsv(text: string): Record<string, string>[] {
   const rows: string[][] = [];
   let row: string[] = [];
   let field = "";
@@ -41,18 +41,18 @@ function numeric(value: unknown): number | null {
   return Number.isFinite(result) ? result : null;
 }
 
-export function parseBlsHorizon(payload: unknown): HorizonDataset["series"] {
+export function parseBlsDividend(payload: unknown): DividendDataset["series"] {
   const body = payload as { status?: string; Results?: { series?: { seriesID: string; data?: { year: string; period: string; value: string; footnotes?: { code?: string; text?: string }[] }[] }[] } };
   if (body?.status !== "REQUEST_SUCCEEDED" || !Array.isArray(body.Results?.series)) throw new Error("BLS did not return a successful series response");
-  return HORIZON_INDICATORS.filter(indicator => indicator.source === "bls").map(indicator => {
+  return DIVIDEND_INDICATORS.filter(indicator => indicator.source === "bls").map(indicator => {
     const source = body.Results!.series!.find(item => item.seriesID === indicator.sourceSeries);
-    const points: HorizonPoint[] = [];
+    const points: DividendPoint[] = [];
     for (const observation of source?.data ?? []) {
       const quarter = observation.period.match(/^Q0([1-4])$/);
       const month = observation.period.match(/^M(0[1-9]|1[0-2])$/);
       const period = indicator.frequency === "quarterly" && quarter ? `${observation.year}-Q${quarter[1]}` : indicator.frequency === "monthly" && month ? `${observation.year}-${month[1]}` : null;
       const value = numeric(observation.value);
-      if (!period || value === null || !horizonPeriodEnd(period, indicator.frequency)) continue;
+      if (!period || value === null || !dividendPeriodEnd(period, indicator.frequency)) continue;
       const status = observation.footnotes?.map(note => note.text || note.code).filter(Boolean).join("; ") || null;
       points.push({ period, value, status });
     }
@@ -60,8 +60,8 @@ export function parseBlsHorizon(payload: unknown): HorizonDataset["series"] {
   });
 }
 
-export function parseBeaHorizon(csv: string): HorizonDataset["series"] {
-  const rows = parseHorizonCsv(csv);
+export function parseBeaDividend(csv: string): DividendDataset["series"] {
+  const rows = parseDividendCsv(csv);
   if (!rows[0] || !Object.hasOwn(rows[0], "Quantile or Summary Metric") || !Object.hasOwn(rows[0], "Ranking")) throw new Error("BEA income CSV header changed");
   const byYear = new Map<string, Map<string, number>>();
   for (const row of rows) {
@@ -73,7 +73,7 @@ export function parseBeaHorizon(csv: string): HorizonDataset["series"] {
     if (year.has(metric)) throw new Error("BEA returned duplicate income metrics");
     year.set(metric, value); byYear.set(row.Year, year);
   }
-  const out = new Map<string, HorizonPoint[]>(HORIZON_INDICATORS.filter(indicator => indicator.source === "bea").map(indicator => [indicator.key, []]));
+  const out = new Map<string, DividendPoint[]>(DIVIDEND_INDICATORS.filter(indicator => indicator.source === "bea").map(indicator => [indicator.key, []]));
   for (const [period, metrics] of byYear) {
     const quintiles = ["0-20%", "20-40%", "40-60%", "60-80%", "80-100%"].map(key => metrics.get(key));
     if (quintiles.every((value): value is number => value !== undefined && value >= 0 && value <= 1)) {
@@ -88,8 +88,8 @@ export function parseBeaHorizon(csv: string): HorizonDataset["series"] {
   return [...out].map(([key, points]) => ({ key, points: points.sort((first, second) => first.period.localeCompare(second.period)) }));
 }
 
-export function parseDfaHorizon(csv: string): HorizonDataset["series"] {
-  const rows = parseHorizonCsv(csv);
+export function parseDfaDividend(csv: string): DividendDataset["series"] {
+  const rows = parseDividendCsv(csv);
   if (!rows[0] || !Object.hasOwn(rows[0], "Net worth") || !Object.hasOwn(rows[0], "Category")) throw new Error("Federal Reserve wealth CSV header changed");
   const byPeriod = new Map<string, Map<string, number>>();
   for (const row of rows) {
@@ -101,8 +101,8 @@ export function parseDfaHorizon(csv: string): HorizonDataset["series"] {
     if (groups.has(row.Category)) throw new Error("Federal Reserve returned duplicate wealth categories");
     groups.set(row.Category, value); byPeriod.set(period, groups);
   }
-  const top: HorizonPoint[] = [];
-  const bottom: HorizonPoint[] = [];
+  const top: DividendPoint[] = [];
+  const bottom: DividendPoint[] = [];
   for (const [period, groups] of byPeriod) {
     const categories = ["TopPt1", "RemainingTop1", "Next9", "Next40", "Bottom50"];
     if (groups.size !== categories.length || categories.some(key => !groups.has(key))) throw new Error("Federal Reserve wealth categories changed");
@@ -123,32 +123,32 @@ export function readDfaArchive(bytes: ArrayBuffer): string {
   return Buffer.from(entries[0].entry.content).toString("utf8");
 }
 
-export async function fetchHorizonDataset(source: HorizonSource, opts: { now?: Date; fetchImpl?: typeof fetch } = {}): Promise<HorizonDataset> {
+export async function fetchDividendDataset(source: DividendSource, opts: { now?: Date; fetchImpl?: typeof fetch } = {}): Promise<DividendDataset> {
   const now = opts.now ?? new Date();
-  const dataUrl = source === "bls" ? BLS_HORIZON_URL : source === "bea" ? BEA_HORIZON_URL : DFA_HORIZON_URL;
+  const dataUrl = source === "bls" ? BLS_DIVIDEND_URL : source === "bea" ? BEA_DIVIDEND_URL : DFA_DIVIDEND_URL;
   const request = {
     signal: AbortSignal.timeout(15_000), cache: "no-store" as const,
-    ...(source === "bls" ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ seriesid: HORIZON_INDICATORS.filter(indicator => indicator.source === "bls").map(indicator => indicator.sourceSeries), startyear: String(now.getUTCFullYear() - 9), endyear: String(now.getUTCFullYear()) }) } : {}),
+    ...(source === "bls" ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ seriesid: DIVIDEND_INDICATORS.filter(indicator => indicator.source === "bls").map(indicator => indicator.sourceSeries), startyear: String(now.getUTCFullYear() - 9), endyear: String(now.getUTCFullYear()) }) } : {}),
   };
   const response = await (opts.fetchImpl ?? fetch)(dataUrl, request);
   if (!response.ok) throw new Error(`${source.toUpperCase()} source HTTP ${response.status}`);
   const bytes = await response.arrayBuffer();
   if (bytes.byteLength > 15_000_000) throw new Error("Source download exceeds the supported size");
   const text = source === "dfa" ? readDfaArchive(bytes) : Buffer.from(bytes).toString("utf8");
-  const series = source === "bls" ? parseBlsHorizon(JSON.parse(text)) : source === "bea" ? parseBeaHorizon(text) : parseDfaHorizon(text);
+  const series = source === "bls" ? parseBlsDividend(JSON.parse(text)) : source === "bea" ? parseBeaDividend(text) : parseDfaDividend(text);
   if (series.every(item => item.points.length === 0)) throw new Error(`${source.toUpperCase()} returned no usable observations`);
   return { source, retrievedAt: now.toISOString(), publicationDate: null, dataUrl, series };
 }
 
-export async function fetchHorizonBaseline(opts: { now?: Date; fetchImpl?: typeof fetch } = {}): Promise<{ datasets: HorizonDataset[]; states: HorizonSourceState[] }> {
+export async function fetchDividendBaseline(opts: { now?: Date; fetchImpl?: typeof fetch } = {}): Promise<{ datasets: DividendDataset[]; states: DividendSourceState[] }> {
   const now = opts.now ?? new Date();
-  const results = await Promise.allSettled(HORIZON_SOURCES.map(source => fetchHorizonDataset(source, { ...opts, now })));
-  const datasets: HorizonDataset[] = [];
-  const states = results.map((result, index): HorizonSourceState => {
+  const results = await Promise.allSettled(DIVIDEND_SOURCES.map(source => fetchDividendDataset(source, { ...opts, now })));
+  const datasets: DividendDataset[] = [];
+  const states = results.map((result, index): DividendSourceState => {
     if (result.status === "fulfilled") datasets.push(result.value);
-    if (result.status === "rejected") console.warn("Macro Horizon source check failed", HORIZON_SOURCES[index], result.reason instanceof Error ? result.reason.message : "Unknown source error");
-    const complete = result.status === "fulfilled" && horizonDatasetComplete(result.value);
-    return { source: HORIZON_SOURCES[index], health: result.status === "fulfilled" ? complete ? "healthy" : "degraded" : "unavailable", checkedAt: now.toISOString(), error: result.status === "rejected" ? "Official source could not be verified on this attempt" : complete ? null : "Some official series are missing" };
+    if (result.status === "rejected") console.warn("AI Dividend source check failed", DIVIDEND_SOURCES[index], result.reason instanceof Error ? result.reason.message : "Unknown source error");
+    const complete = result.status === "fulfilled" && dividendDatasetComplete(result.value);
+    return { source: DIVIDEND_SOURCES[index], health: result.status === "fulfilled" ? complete ? "healthy" : "degraded" : "unavailable", checkedAt: now.toISOString(), error: result.status === "rejected" ? "Official source could not be verified on this attempt" : complete ? null : "Some official series are missing" };
   });
   return { datasets, states };
 }
