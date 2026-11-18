@@ -26,6 +26,9 @@ jobs:
             backend/package-lock.json
       - run: npm ci
       - run: npm --prefix backend ci
-      - run: npm audit
+      # Production dependencies only (2026-11-18). GHSA-fc5q-39xc-vjpf (picomatch ReDoS, no patched
+      # release) reaches us only via Tailwind v3 build tooling, a devDependency. Restore the full
+      # `npm audit` once picomatch ships a fix or after migrating to Tailwind v4.
+      - run: npm audit --omit=dev
       - run: npm --prefix backend audit
       - run: npm run test:security
