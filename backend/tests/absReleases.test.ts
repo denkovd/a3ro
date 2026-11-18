@@ -22,7 +22,8 @@ test("employment and hours share the headline Labour Force release, not detailed
   const schedules = await fetchAustraliaReleaseSchedules({ now, fetchImpl: (async (url: string) => {
     urls.push(url); return new Response(url.includes("consumer-price") ? cpi : labour);
   }) as typeof fetch });
-  assert.equal(urls.length, 2);
+  assert.equal(urls.filter((u) => u.includes("consumer-price")).length, 1);
+  assert.equal(new Set(urls).size, urls.length);
   assert.equal(schedules.hours_worked, schedules.unemployment_rate);
   assert.deepEqual(schedules.hours_worked.next, { referencePeriod: "2026-10", releaseAt: "2026-11-19T00:30:00.000Z" });
   assert.equal(schedules.hours_worked.latestReferencePeriod, "2026-09");

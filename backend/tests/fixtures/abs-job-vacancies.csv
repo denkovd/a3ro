@@ -1,0 +1,5 @@
+STRUCTURE,STRUCTURE_ID,STRUCTURE_NAME,ACTION,MEASURE,Measure,SECTOR,Sector,INDUSTRY,Industry,TSEST,Adjustment Type,REGION,Region,FREQ,Frequency,TIME_PERIOD,Time Period,OBS_VALUE,Observation Value,UNIT_MEASURE,Unit of Measure,UNIT_MULT,Unit of Multiplier,OBS_STATUS,Observation Status,OBS_COMMENT,Observation Comment
+DATAFLOW,ABS:JV(1.0),Job Vacancies,I,M1,Job Vacancies,7,Private and Public,TOT,All Industries,20,Seasonally Adjusted,AUS,Australia,Q,Quarterly,2025-Q3,,340.2,,NUM,Number,3,Thousands,,,,
+DATAFLOW,ABS:JV(1.0),Job Vacancies,I,M1,Job Vacancies,7,Private and Public,TOT,All Industries,20,Seasonally Adjusted,AUS,Australia,Q,Quarterly,2026-Q1,,335.5,,NUM,Number,3,Thousands,,,,
+DATAFLOW,ABS:JV(1.0),Job Vacancies,I,M1,Job Vacancies,7,Private and Public,TOT,All Industries,20,Seasonally Adjusted,AUS,Australia,Q,Quarterly,2026-Q2,,328,,NUM,Number,3,Thousands,,,,
+DATAFLOW,ABS:JV(1.0),Job Vacancies,I,M1,Job Vacancies,7,Private and Public,TOT,All Industries,20,Seasonally Adjusted,AUS,Australia,Q,Quarterly,2026-Q3,,325,,NUM,Number,3,Thousands,,,,

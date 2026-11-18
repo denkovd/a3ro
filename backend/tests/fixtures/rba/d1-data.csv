@@ -1,0 +1,14 @@
+D1 GROWTH IN SELECTED FINANCIAL AGGREGATES
+Title,Credit; Housing; Monthly growth,Credit; Housing; 12-month ended growth,Credit; Non-financial Business; Monthly growth,Credit; Non-financial Business; 12-month ended growth,Credit; Business; Monthly growth,Credit; Business; 12-month ended growth
+Description,Credit; Housing; Monthly growth – Includes securitisations,Credit; Housing; 12-month ended growth – Includes securitisations,Credit; Non-financial Business; Monthly growth – Includes securitisations,Credit; Non-financial Business; 12-month ended growth – Includes securitisations,Credit; Business; Monthly growth – Includes securitisations,Credit; Business; 12-month ended growth – Includes securitisations
+Frequency,Monthly,Monthly,Monthly,Monthly,Monthly,Monthly
+Type,Seasonally adjusted,Seasonally adjusted,Seasonally adjusted,Seasonally adjusted,Seasonally adjusted,Seasonally adjusted
+Units,Per cent,Per cent,Per cent,Per cent,Per cent,Per cent
+
+
+Source,RBA,RBA,RBA,RBA,RBA,RBA
+Publication date,30-Oct-2026,30-Oct-2026,30-Oct-2026,30-Oct-2026,30-Oct-2026,30-Oct-2026
+Series ID,DGFACHM,DGFACH12,DGFACBNFM,DGFACBNF12,DGFACBM,DGFACB12
+31/07/2026,0.5,7.5,1.0,10.6,,
+31/08/2026,0.4,7.3,0.9,10.9,,
+30/09/2026,0.4,7.0,0.9,11.3,,

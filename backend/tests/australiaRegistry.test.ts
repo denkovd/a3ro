@@ -1,7 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { AUSTRALIA_INDICATORS, AUSTRALIA_REGISTRY, indicatorsInSection, isAustraliaIndicator } from "../src/australia/registry";
+import { AUSTRALIA_INDICATORS, AUSTRALIA_REGISTRY, absSpec, indicatorsInSection, isAustraliaIndicator, primaryByPillar } from "../src/australia/registry";
 import { estimateFreshness, historicalContext } from "../src/australia/watch";
 import { parseAbsCsv } from "../src/sources/abs";
 import { fetchAustraliaReleaseSchedules } from "../src/sources/absReleases";
@@ -10,7 +10,8 @@ const fixture = (name: string) => readFile(new URL(`./fixtures/${name}`, import.
 
 describe("Australia Watch registry", () => {
   test("monthly CPI is primary and quarterly CPI sits in the comparison section", () => {
-    assert.deepEqual(indicatorsInSection("primary"), ["monthly_headline_cpi_yoy", "monthly_trimmed_mean_cpi_yoy", "unemployment_rate", "hours_worked"]);
+    assert.deepEqual(indicatorsInSection("primary").slice(0, 4), ["monthly_headline_cpi_yoy", "monthly_trimmed_mean_cpi_yoy", "unemployment_rate", "hours_worked"]);
+    assert.ok(indicatorsInSection("primary").indexOf("monthly_headline_cpi_yoy") < indicatorsInSection("primary").indexOf("ppi_final_demand_yoy"));
     assert.deepEqual(indicatorsInSection("comparison"), ["trimmed_mean_cpi_yoy", "headline_cpi_yoy"]);
     assert.equal(AUSTRALIA_INDICATORS.length, Object.keys(AUSTRALIA_REGISTRY).length);
   });
@@ -21,11 +22,21 @@ describe("Australia Watch registry", () => {
     assert.equal(AUSTRALIA_REGISTRY.monthly_headline_cpi_yoy.key, "3.10001.10.50.M");
     assert.equal(AUSTRALIA_REGISTRY.monthly_trimmed_mean_cpi_yoy.key, "3.999902.20.50.M");
   });
-  test("every key's frequency suffix matches the declared frequency", () => {
-    for (const id of AUSTRALIA_INDICATORS) {
-      const def = AUSTRALIA_REGISTRY[id];
+  test("every ABS key's frequency suffix matches the declared frequency", () => {
+    for (const id of AUSTRALIA_INDICATORS.filter((i) => AUSTRALIA_REGISTRY[i].source === "abs_sdmx")) {
+      const def = absSpec(id);
       assert.equal(def.key.at(-1), def.frequency === "monthly" ? "M" : "Q", id);
     }
+  });
+  test("primary series group into pillars in a fixed order; comparison series are excluded", () => {
+    const groups = primaryByPillar();
+    assert.deepEqual(groups.map((g) => g.pillar), ["inflation", "labour", "financial", "housing", "demand", "external", "composite"]);
+    assert.equal(groups.flatMap((g) => g.indicators).length, indicatorsInSection("primary").length);
+    assert.ok(!groups.flatMap((g) => g.indicators).includes("headline_cpi_yoy"));
+  });
+  test("registry orders are unique so page order is deterministic", () => {
+    const orders = AUSTRALIA_INDICATORS.map((i) => AUSTRALIA_REGISTRY[i].order);
+    assert.equal(new Set(orders).size, orders.length);
   });
   test("unknown ids are rejected", () => {
     assert.equal(isAustraliaIndicator("monthly_headline_cpi_yoy"), true);
@@ -61,13 +72,21 @@ describe("Monthly CPI", () => {
     assert.equal(estimateFreshness("monthly", "2026-08", new Date("2026-10-25T00:00:00Z")), "aging");
     assert.equal(estimateFreshness("monthly", "2026-08", new Date("2026-10-29T00:00:00Z"), null, 29), "aging");
   });
+  test("lags longer than a month (RBA D1, ~33 days) look back the right number of months", () => {
+    // 18 Nov: September D1 (due ~2 Nov) is expected; October (due ~3 Dec) is not.
+    assert.equal(estimateFreshness("monthly", "2026-09", new Date("2026-11-18T00:00:00Z"), null, 33), "fresh");
+    assert.equal(estimateFreshness("monthly", "2026-08", new Date("2026-11-18T00:00:00Z"), null, 33), "aging");
+    // 1 Nov: September is not yet due, so August is still current.
+    assert.equal(estimateFreshness("monthly", "2026-08", new Date("2026-11-01T00:00:00Z"), null, 33), "fresh");
+  });
   test("monthly and quarterly CPI share one CPI page request but use their own frequency", async () => {
     const cpi = await fixture("abs-release-cpi.html"), labour = await fixture("abs-release-labour.html");
     const urls: string[] = [];
     const schedules = await fetchAustraliaReleaseSchedules({ now: new Date("2026-11-02T00:00:00Z"), fetchImpl: (async (url: string) => {
       urls.push(url); return new Response(url.includes("consumer-price") ? cpi : labour);
     }) as typeof fetch });
-    assert.equal(urls.length, 2);
+    assert.equal(urls.filter((u) => u.includes("consumer-price")).length, 1);
+    assert.equal(new Set(urls).size, urls.length);
     assert.equal(schedules.monthly_headline_cpi_yoy, schedules.monthly_trimmed_mean_cpi_yoy);
     assert.equal(schedules.monthly_headline_cpi_yoy.latestReferencePeriod, "2026-09");
     assert.deepEqual(schedules.monthly_headline_cpi_yoy.next, { referencePeriod: "2026-10", releaseAt: "2026-11-25T00:30:00.000Z" });

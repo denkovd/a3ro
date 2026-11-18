@@ -16,19 +16,27 @@ export function startPeriodFor(indicator: AustraliaIndicator, now: Date): string
   return `${d.getUTCFullYear()}-Q${Math.floor(d.getUTCMonth() / 3) + 1}`;
 }
 
+/**
+ * Latest reference period that should be published by `now`: the most recent period whose end plus
+ * `lagDays` has passed. Handles lags longer than a month (e.g. RBA D1 at ~33 days).
+ */
 function expectedPeriod(frequency: AustraliaFrequency, now: Date, lagDays = DEFAULT_LAG_DAYS[frequency]): string {
   const y = now.getUTCFullYear();
   const m = now.getUTCMonth();
   if (frequency === "monthly") {
-    const deadline = new Date(Date.UTC(y, m, lagDays)); // prior month end + estimated lag
-    const d = new Date(Date.UTC(y, m - (now >= deadline ? 1 : 2), 1));
-    return d.toISOString().slice(0, 7);
+    for (let k = 1; ; k++) {
+      // Day `lagDays` after the end of month (m - k): Date.UTC(y, m - k + 1, lagDays).
+      if (now.getTime() >= Date.UTC(y, m - k + 1, lagDays)) return new Date(Date.UTC(y, m - k, 1)).toISOString().slice(0, 7);
+    }
   }
   const q = Math.floor(m / 3);
-  const endMonth = q * 3 + 2;
-  const deadline = new Date(Date.UTC(y, q * 3, lagDays)); // previous quarter end + estimated lag
-  const d = new Date(Date.UTC(y, endMonth - (now >= deadline ? 3 : 6), 1));
-  return `${d.getUTCFullYear()}-Q${Math.floor(d.getUTCMonth() / 3) + 1}`;
+  for (let k = 1; ; k++) {
+    const startMonth = (q - k) * 3; // first month of the candidate quarter
+    if (now.getTime() >= Date.UTC(y, startMonth + 3, lagDays)) {
+      const d = new Date(Date.UTC(y, startMonth, 1));
+      return `${d.getUTCFullYear()}-Q${Math.floor(d.getUTCMonth() / 3) + 1}`;
+    }
+  }
 }
 
 /** Release-based when the ABS calendar supplied the published period; otherwise an estimated lag (per indicator when given). */
@@ -67,7 +75,8 @@ export function historicalContext(rows: Pick<AustraliaObservation, "indicator" |
   const growth = def?.transform === "yoy_from_level";
   const baselineYears = def?.baselineYears ?? 10;
   const minimum = def?.minimumBaseline ?? (latest.frequency === "monthly" ? 60 : 20);
-  const unit = growth ? "% YoY" : "%";
+  const display = def && "display" in def ? def.display : undefined;
+  const unit = growth ? "% YoY" : display === "percentage_points" ? " pp" : display === "aud_millions" ? " $m" : display === "index" || display === "count" ? "" : display === "thousands" ? "k" : "%";
   const values = new Map(sorted.map(o => [o.referencePeriod,o.value]));
   const points = sorted.flatMap(o => {
     const priorYear = `${Number(o.referencePeriod.slice(0,4))-1}${o.referencePeriod.slice(4)}`;

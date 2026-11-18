@@ -1,6 +1,14 @@
 # Australia Watch upgrade — leading indicators plan
 
-Status (17 Nov 2026): **Phase 0 implemented.** Indicator registry, monthly CPI primary, quarterly CPI moved to a comparison section. Phases 1–4 not started.
+Status (18 Nov 2026): **Phases 0–4 implemented.**
+- Phase 0: indicator registry, Monthly CPI as primary, quarterly CPI moved to a comparison section.
+- Phase 1: nine RBA series (cash rate, 3y less cash, 10y–3y curve, 10y yield, BBB spread, housing and business credit growth, AUD TWI, commodity prices), and the page grouped by pillar.
+
+- Phase 2: ten ABS series (dwelling and house approvals, housing lending, job vacancies, underemployment, household spending, goods trade balance, PPI, import prices, WPI). Business Turnover was discontinued by the ABS and capex expectations are deferred.
+
+- Phase 3: OECD composite leading indicator, plus OECD composite consumer and business confidence (no manual sources, per the v1 decision).
+
+- Phase 4: Australia Pulse band (growth and inflation diffusion, quadrant, per-section counts, what moved, coverage) and measured lead times on cards. Not built: stored pulse snapshots and alerts (Phase 5 options). Implementation notes and confirmed series IDs are in [australia-watch.md](australia-watch.md).
 Read with [australia-watch.md](australia-watch.md) for how the current refresh, freshness and release-date logic works.
 
 ## 1. Where the module is today

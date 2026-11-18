@@ -1,0 +1,16 @@
+F3 AGGREGATE MEASURES OF AUSTRALIAN CORPORATE BOND YIELDS: NON-FINANCIAL CORPORATE (NFC) BONDS
+Title,Non-financial corporate A-rated bonds – Effective tenor – 3 year target tenor,Non-financial corporate A-rated bonds – Yield – 3 year target tenor,Non-financial corporate BBB-rated bonds – Effective tenor – 3 year target tenor,Non-financial corporate BBB-rated bonds – Yield – 3 year target tenor
+Description,"Non-financial corporate A-rated bonds – Effective tenor – 3 year target tenor: monthly, years; See notes for more details","Non-financial corporate A-rated bonds – Yield – 3 year target tenor: monthly, per cent; See notes for more details","Non-financial corporate BBB-rated bonds – Effective tenor – 3 year target tenor: monthly, years; See notes for more details","Non-financial corporate BBB-rated bonds – Yield – 3 year target tenor: monthly, per cent; See notes for more details"
+Frequency,Monthly,Monthly,Monthly,Monthly
+Type,Original,Original,Original,Original
+Units,Years,Per cent,Years,Per cent
+
+
+Source,Bloomberg; RBA,Bloomberg; RBA,Bloomberg; RBA,Bloomberg; RBA
+Publication date,13-Nov-26,13-Nov-26,13-Nov-26,13-Nov-26
+Series ID,FNFTA3M,FNFYA3M,FNFTBBB3M,FNFYBBB3M
+31/05/2026,2.89,5.29,3.29,5.46
+30/06/2026,2.89,5.17,3.27,5.29
+31/07/2026,2.85,5.30,3.27,5.42
+31/08/2026,2.82,5.43,3.26,5.56
+30/09/2026,2.82,5.75,3.29,5.91

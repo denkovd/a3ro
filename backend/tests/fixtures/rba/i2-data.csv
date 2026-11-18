@@ -1,0 +1,19 @@
+I2 COMMODITY PRICES
+Title,Commodity prices – A$,Commodity prices – SDR,Commodity prices – US$
+Description,Index of commodity prices; All items; A$,Index of commodity prices; All items; SDR,Index of commodity prices; All items; US$
+Frequency,Monthly,Monthly,Monthly
+Type,Original,Original,Original
+Units,"Index, 2024/25=100","Index, 2024/25=100","Index, 2024/25=100"
+
+
+Source,RBA,RBA,RBA
+Publication date,02-Nov-2026,02-Nov-2026,02-Nov-2026
+Series ID,GRCPAIAD,GRCPAISDR,GRCPAIUSD
+30/09/2025,100.0,98.9,101.9
+31/10/2025,101.9,100.6,103.1
+31/08/2026,106.4,113.5,116.7
+30/09/2026,106.9,114.6,117.7
+31/10/2026,106.6,113.1,115.1
+30/11/2026
+31/12/2026
+31/01/2027

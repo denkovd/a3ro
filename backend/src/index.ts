@@ -61,6 +61,11 @@ export {
   profitsCycle, liquidityCycle, positioningCycle,
 } from "./macro/cycles";
 export { fetchGlobalBondStress, readGlobalBonds, GLOBAL_BOND_SYMBOLS } from "./macro/globalBonds";
+export { computeMacroWeather, WEATHER_RULES } from "./macro/weather";
+export type { WeatherReading, WeatherInput, WeatherResult } from "./macro/weather";
+export { overlayObservations } from "./macro/panelOverlay";
+export { computeQuoteChanges } from "./core/quoteChanges";
+export type { QuoteChanges, DatedClose } from "./core/quoteChanges";
 export type { GlobalBondRead } from "./macro/globalBonds";
 export type {
   MacroRegimeSnapshot, MacroPressureSnapshot, MacroQuadrant, MacroAxisRead,
