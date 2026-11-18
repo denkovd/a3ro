@@ -1,4 +1,4 @@
-import { SIGNAL_SOURCES, type EciModel, type SignalDatasets, type SignalSource } from "./types";
+import { STEP3_SOURCES, type EciModel, type SignalDatasets, type SignalSource } from "./types";
 import type { SignalSourceState } from "../../storage/signalRepo";
 
 export interface MonthPoint { period: string; value: number }
@@ -149,6 +149,6 @@ export function buildSignalsSnapshot(datasets: SignalDatasets, states: SignalSou
     capability: capability ? { ...capability, ...meta("epoch") } : null,
     adoption: adoption ? { ...adoption, ...meta("btos") } : null,
     postings: postings ? { ...postings, ...meta("indeed") } : null,
-    sources: SIGNAL_SOURCES.map(source => states.find(state => state.source === source) ?? { source, health: "unavailable", checkedAt: null, error: null }),
+    sources: STEP3_SOURCES.map(source => states.find(state => state.source === source) ?? { source, health: "unavailable", checkedAt: null, error: null }),
   };
 }

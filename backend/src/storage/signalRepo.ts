@@ -47,3 +47,15 @@ export async function getStoredSignals(db: Queryable): Promise<{ datasets: Signa
   }));
   return { datasets, states };
 }
+
+/**
+ * The most recent stored version of a source that is at least `minAgeDays`
+ * older than `asOf`: the comparison point for growth rates.
+ */
+export async function getEarlierSignal<S extends SignalSource>(db: Queryable, source: S, asOf: string, minAgeDays = 90): Promise<SignalDataset<S> | undefined> {
+  const cutoff = new Date(Date.parse(asOf) - minAgeDays * 86_400_000).toISOString();
+  const result = await db.query(`select payload, data_url, last_verified_at from public.dividend_signal_vintages where source_key=$1 and last_verified_at <= $2 order by last_verified_at desc limit 1`, [source, cutoff]);
+  const row = result.rows[0];
+  if (!row?.payload || typeof row.payload !== "object") return undefined;
+  return { source, payload: row.payload as never, dataUrl: String(row.data_url), retrievedAt: new Date(String(row.last_verified_at)).toISOString() } as SignalDataset<S>;
+}

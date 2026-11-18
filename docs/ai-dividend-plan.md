@@ -35,8 +35,8 @@ adopters, workers & households.
    cash flow per layer. Entry-level jobs in AI-exposed occupations.
 3. **Capability, adoption, the conversion gap and entry-level jobs** — done.
    See below.
-4. **Constraint gauges**: each reads tailwind / neutral / headwind with a
-   written rule for what flips it. Replaces the proxy flags in `stress.ts`.
+4. **Constraint gauges** — done. See below. Replaces the proxy flags in
+   `stress.ts` (still in the repo, unwired; remove in step 5).
 5. **Outlook to 2031**: three scenarios (dividend arrives, infrastructure
    bubble deflates, gains pool upstream), five or fewer drivers tied to stages
    1–5, replacing the 16-slider model in `scenarios.ts`. Generalise
@@ -143,3 +143,45 @@ entry-level part of Who benefits.
    `-- --archive` to store. The daily cron keeps it current after that.
 3. The baseline's BLS request now includes the two age-group series; the next
    baseline refresh picks them up automatically.
+
+## Step 4 — what changed
+
+The Constraints stage now shows eight gauges. Each reads the pressure on the
+AI build-out as **easy** (not holding it back), **watch** or **tight** (likely
+to slow it or raise its cost), with the threshold written on the card and a
+note on who gains when it's tight.
+
+| Gauge | Measure | Source | Easy / watch / tight |
+|---|---|---|---|
+| Electricity demand | US 12-month sales growth (Virginia commercial shown alongside) | EIA retail sales API | <1% / 1–2.5% / ≥2.5% |
+| Electricity prices | US commercial price, 12-month average vs year before | EIA | <2.5% / 2.5–5% / ≥5% |
+| Build-out | Power drawn by tracked frontier AI data centres; annualised growth between snapshots ≥90 days apart | Epoch AI data centres | <20% / 20–50% / ≥50% a year |
+| Water | Share of tracked US data-centre power in states with ≥25% of land in severe drought or worse | US Drought Monitor + Epoch | <10% / 10–30% / ≥30% |
+| Uranium | Price vs 5-year average | IMF via FRED `PURANUSDM` | <1.15× / 1.15–1.5× / ≥1.5× |
+| Copper | Price vs 5-year average | IMF via FRED `PCOPPUSDM` | same |
+| Financing | Hyperscaler capex as a share of operating cash flow | Value chain (step 2) | <65% / 65–85% / ≥85% |
+| Chips and memory | Not scored: no public lead-time data | — | — |
+
+- Code: `backend/src/dividend/constraints/` (parsers, gauges). The four new
+  sources share the signal archive (`dividend_signal_vintages` / `_runs`) and
+  fetch code; daily cron `/api/cron/dividend-constraints` →
+  `/api/dividend/constraints`.
+- The build-out growth rate needs history: it shows "not scored" until the
+  archive holds two data-centre snapshots at least 90 days apart.
+- Thresholds are judgement calls, written in `gauges.ts` and on the page.
+
+### Setup needed before data appears
+
+1. Apply `supabase/migrations/20261118070000_ai_dividend_constraints.sql`.
+2. `EIA_API_KEY` must be set in Vercel (other modules already use it).
+3. `npm --prefix backend run run:signals -- --constraints` to preview, then add
+   `--archive` to store.
+
+### Verified vs assumed
+
+- Epoch data-centre CSV: tested on a real copy (April 2026).
+- EIA route and parameters: from EIA's API documentation.
+- FRED CSV: same endpoint and parser as the existing macro module.
+- Drought Monitor: URL and field names taken from public code using it;
+  not called from here. The parser accepts either field-name case and both date
+  formats, and the fetch fails if fewer than 40 states return.

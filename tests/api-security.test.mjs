@@ -258,6 +258,33 @@ test("Signal cron authenticates before opening the database", async (t) => {
   assert.equal((await GET(new Request("https://a3ro.test/api/cron/dividend-signals", { headers: { authorization: "Bearer regression-secret" } }))).status, 200);
 });
 
+test("Constraint gauges survive an unreadable archive without leaking errors", async (t) => {
+  setEnv(t, "DATABASE_URL", "test-only");
+  const { GET } = loadModule("app/api/dividend/constraints/route.ts", {
+    "../../../../backend/src/storage/db": { createDb: async () => { throw new Error(SECRET_ERROR); } },
+    "../../../../backend/src/storage/signalRepo": { getStoredSignals: async () => ({ datasets: {}, states: [] }), getEarlierSignal: async () => undefined },
+    "../../../../backend/src/storage/valueChainRepo": { getStoredValueChain: async () => null },
+    "../../../../backend/src/sources/fredMacro": { parseFredCsv: () => [] },
+  });
+  const response = await GET();
+  const body = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(body.gauges.length, 8);
+  assert.ok(!JSON.stringify(body).includes(SECRET_ERROR));
+});
+
+test("Constraint cron authenticates before opening the database", async (t) => {
+  setEnv(t, "CRON_SECRET", "regression-secret");
+  let opened = false;
+  const { GET } = loadModule("app/api/cron/dividend-constraints/route.ts", {
+    "../../../../backend/src/storage/db": { createDb: async () => { opened = true; return {}; } },
+    "../../../../backend/src/ingest/signalCycle": { runSignalCycle: async () => ({ startedAt: "", results: [{ source: "eia", archived: true, error: null }] }) },
+  });
+  assert.equal((await GET(new Request("https://a3ro.test/api/cron/dividend-constraints"))).status, 401);
+  assert.equal(opened, false);
+  assert.equal((await GET(new Request("https://a3ro.test/api/cron/dividend-constraints", { headers: { authorization: "Bearer regression-secret" } }))).status, 200);
+});
+
 test("cron auth fails closed in production and development, including blank secrets", (t) => {
   const { requireCronAuth } = loadModule("app/api/_lib/cronAuth.ts");
   for (const mode of ["production", "development", "test"]) {

@@ -6,6 +6,7 @@ import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
 import DividendChart, { type DividendChartSeries } from "../../components/projects/dividend/DividendChart";
 import AustraliaBaseline from "../../components/projects/dividend/AustraliaBaseline";
 import ValueChainPanel from "../../components/projects/dividend/ValueChainPanel";
+import ConstraintsPanel from "../../components/projects/dividend/ConstraintsPanel";
 import { AdoptionPanel, CapabilityPanel, ConversionPanel, EntryLevelPanel, useSignals } from "../../components/projects/dividend/SignalsPanels";
 import { DIVIDEND_ACCENT, dividendChange, dividendNumber, useDividendBaseline } from "../../components/projects/dividend/dividendData";
 import { DIVIDEND_BUILD_STEPS, DIVIDEND_CURRENT_STEP, DIVIDEND_OUTLOOK_END_YEAR, DIVIDEND_STAGES, nextStageStep, stageStatus, type DividendBuildStep, type DividendStage, type DividendStageId } from "../../../backend/src/dividend/framework";
@@ -110,7 +111,7 @@ export default function AIDividendView() {
       <div className="mx-auto flex min-h-14 max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-3 md:px-10"><div className="flex items-center gap-4"><Link href="/#modules" className="font-mono text-[10px] uppercase tracking-[.15em] text-[var(--ink-2)]">← Index</Link><span className="text-[var(--ink-3)]">/</span><span className="font-mono text-[10px] uppercase tracking-[.15em]">AI Dividend</span></div><ModuleSwitcher current="dividend" /></div>
     </header>
     <div className="mx-auto max-w-7xl px-5 py-9 md:px-10 md:py-14">
-      <div className="flex flex-wrap items-center justify-between gap-4"><p className="font-mono text-[10px] uppercase tracking-[.26em] text-[var(--ink-2)]">Experiment · 2026–{DIVIDEND_OUTLOOK_END_YEAR}</p><span className="border border-[var(--line-2)] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.15em]" style={{ color: DIVIDEND_ACCENT }}>Build {DIVIDEND_CURRENT_STEP} of 5 · Capability, adoption and jobs live</span></div>
+      <div className="flex flex-wrap items-center justify-between gap-4"><p className="font-mono text-[10px] uppercase tracking-[.26em] text-[var(--ink-2)]">Experiment · 2026–{DIVIDEND_OUTLOOK_END_YEAR}</p><span className="border border-[var(--line-2)] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.15em]" style={{ color: DIVIDEND_ACCENT }}>Build {DIVIDEND_CURRENT_STEP} of 5 · Constraint gauges live</span></div>
       <h1 className="mt-5 text-4xl font-medium tracking-tight md:text-6xl">Where is the AI dividend going?</h1>
       <p className="mt-5 max-w-3xl text-base leading-8 text-[var(--ink-2)]">AI capability is rising fast. This module tracks how much of it turns into real output, who captures the value, and what physical limits could stop it. Every figure comes from published data. Stages without data yet say so.</p>
 
@@ -161,11 +162,15 @@ export default function AIDividendView() {
             <article className="mt-5 min-w-0 border border-[var(--line)] bg-[var(--depth-1)] p-5 md:p-6"><div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-base">Output and worker compensation</h3><p className="mt-2 text-xs text-[var(--ink-2)]">US nonfarm business sector · indexed to the first shared quarter</p></div><YearsSelect years={years} onChange={setYears} /></div><DividendChart series={capacitySeries} unit="index" indexed /><p className="mt-4 text-xs leading-6 text-[var(--ink-2)]">This is the whole-economy context, so it can’t separate AI from everything else. Industry-level productivity would get closer, but BLS publishes it only once a year for a limited set of industries; the job-postings split under “Who benefits” is the closer, faster signal for now.</p></article>
           </>)}
 
-          {stage.id === "constraints" && (!snapshot ? awaiting : <>
-            <div className="mt-8 grid gap-4 md:grid-cols-2"><Tile label="Household electricity prices" value={formatChange(find("electricity_prices"))} detail="Change over one year · US CPI electricity component" meta={indicatorMeta(find("electricity_prices"))} /></div>
-            <p className="mt-4 max-w-3xl text-xs leading-6 text-[var(--ink-2)]">Household electricity prices are the only constraint measure live today. They show price pressure, not grid capacity or data-centre demand.</p>
-            <Inspector readings={readings} keys={stage.liveIndicatorKeys} years={years} />
-          </>)}
+          {stage.id === "constraints" && <>
+            <ConstraintsPanel />
+            <h3 className="mt-12 text-xl">What households pay for power</h3>
+            {!snapshot ? awaiting : <>
+              <div className="mt-5 grid gap-4 md:grid-cols-2"><Tile label="Household electricity prices" value={formatChange(find("electricity_prices"))} detail="Change over one year · US CPI electricity component" meta={indicatorMeta(find("electricity_prices"))} /></div>
+              <p className="mt-4 max-w-3xl text-xs leading-6 text-[var(--ink-2)]">The household side of the power gauges: if data-centre demand pushes prices up, this is where people feel it.</p>
+              <Inspector readings={readings} keys={stage.liveIndicatorKeys} years={years} />
+            </>}
+          </>}
 
           <StagePlan stage={stage} />
         </section>}

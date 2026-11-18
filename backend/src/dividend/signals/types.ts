@@ -1,5 +1,9 @@
-export type SignalSource = "epoch" | "btos" | "indeed";
-export const SIGNAL_SOURCES: SignalSource[] = ["epoch", "btos", "indeed"];
+export type SignalSource = "epoch" | "btos" | "indeed" | "eia" | "fred" | "datacentres" | "drought";
+/** Step 3: capability, adoption and jobs. */
+export const STEP3_SOURCES: SignalSource[] = ["epoch", "btos", "indeed"];
+/** Step 4: constraint gauges. */
+export const CONSTRAINT_SOURCES: SignalSource[] = ["eia", "fred", "datacentres", "drought"];
+export const SIGNAL_SOURCES: SignalSource[] = [...STEP3_SOURCES, ...CONSTRAINT_SOURCES];
 
 /** One model on the Epoch Capabilities Index. */
 export interface EciModel {
@@ -35,7 +39,27 @@ export interface IndeedPayload {
   latestDay: string;
 }
 
-export type SignalPayload = { epoch: EpochPayload; btos: BtosPayload; indeed: IndeedPayload };
+/** EIA retail electricity: monthly sales (million kWh) and price (cents/kWh). */
+export interface EiaPayload {
+  rows: { period: string; state: string; sector: string; sales: number | null; price: number | null }[];
+}
+
+/** IMF commodity prices via FRED, monthly USD. */
+export interface FredPayload {
+  series: { uranium: { date: string; value: number }[]; copper: { date: string; value: number }[] };
+}
+
+/** Epoch AI's tracked frontier data centres (current state). */
+export interface DataCentresPayload {
+  sites: { name: string; country: string; state: string | null; powerMw: number; h100e: number | null; capexBn: number | null; owner: string }[];
+}
+
+/** US Drought Monitor: latest share of each state's area in severe drought or worse (D2–D4). */
+export interface DroughtPayload {
+  states: { state: string; date: string; severeOrWorse: number }[];
+}
+
+export type SignalPayload = { epoch: EpochPayload; btos: BtosPayload; indeed: IndeedPayload; eia: EiaPayload; fred: FredPayload; datacentres: DataCentresPayload; drought: DroughtPayload };
 
 export interface SignalDataset<S extends SignalSource = SignalSource> {
   source: S;

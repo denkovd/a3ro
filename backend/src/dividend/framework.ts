@@ -35,11 +35,11 @@ export const DIVIDEND_BUILD_STEPS: Record<DividendBuildStep, string> = {
   1: "Rename and restructure around the measurement chain",
   2: "Value-chain profit and loss from company filings",
   3: "Capability, adoption, the conversion gap and entry-level jobs",
-  4: "Energy, water, uranium and compute constraint gauges",
+  4: "Constraint gauges: power, water, uranium, copper and financing",
   5: "Five-year outlook and the prediction ledger",
 };
 
-export const DIVIDEND_CURRENT_STEP: DividendBuildStep = 3;
+export const DIVIDEND_CURRENT_STEP: DividendBuildStep = 4;
 export const DIVIDEND_OUTLOOK_END_YEAR = 2031;
 
 const m = (step: DividendBuildStep, ...labels: string[]): DividendMeasure[] => labels.map(label => ({ label, step }));
@@ -84,13 +84,12 @@ export const DIVIDEND_STAGES: DividendStage[] = [
   {
     id: "constraints", title: "Constraints",
     question: "What physical or financial limits could slow it down?",
-    measures: [...m(1, "Household electricity prices"), ...m(4, "Data-centre electricity demand vs new firm capacity", "Water use in water-stressed regions", "Uranium demand vs mine supply", "Chip and memory lead times", "AI capex relative to AI revenue")],
+    measures: [...m(1, "Household electricity prices"), ...m(4, "Electricity demand and business power prices (US and Virginia)", "Power drawn by tracked AI data centres", "Drought where AI data centres are built", "Uranium and copper prices against their 5-year averages", "Hyperscaler capex against operating cash flow")],
     sources: [
-      { label: "EIA electricity data", url: "https://www.eia.gov/electricity/" },
-      { label: "IEA Energy and AI", url: "https://www.iea.org/reports/energy-and-ai" },
-      { label: "NERC reliability assessments", url: "https://www.nerc.com/our-work/assessments" },
-      { label: "WRI Aqueduct water risk", url: "https://www.wri.org/aqueduct" },
-      { label: "EIA uranium marketing", url: "https://www.eia.gov/uranium/marketing/" },
+      { label: "EIA electricity data", url: "https://www.eia.gov/electricity/data/browser/" },
+      { label: "Epoch AI frontier data centres", url: "https://epoch.ai/data/data-centers" },
+      { label: "US Drought Monitor", url: "https://droughtmonitor.unl.edu/" },
+      { label: "IMF commodity prices via FRED", url: "https://fred.stlouisfed.org/series/PURANUSDM" },
     ],
     liveIndicatorKeys: ["electricity_prices"],
   },
