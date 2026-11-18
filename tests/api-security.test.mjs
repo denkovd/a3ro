@@ -235,6 +235,29 @@ test("Value-chain cron authenticates before opening the database", async (t) => 
   assert.equal(opened, true);
 });
 
+test("Signal snapshots do not expose stored source errors", async (t) => {
+  setEnv(t, "DATABASE_URL", "test-only");
+  const { GET } = loadModule("app/api/dividend/signals/route.ts", {
+    "../../../../backend/src/storage/db": { createDb: async () => ({}) },
+    "../../../../backend/src/storage/signalRepo": { getStoredSignals: async () => ({ datasets: {}, states: [{ source: "epoch", health: "unavailable", checkedAt: new Date().toISOString(), error: SECRET_ERROR }] }) },
+  });
+  const body = await (await GET()).json();
+  assert.equal(body.sources[0].error, "Latest source check failed");
+  assert.ok(!JSON.stringify(body).includes(SECRET_ERROR));
+});
+
+test("Signal cron authenticates before opening the database", async (t) => {
+  setEnv(t, "CRON_SECRET", "regression-secret");
+  let opened = false;
+  const { GET } = loadModule("app/api/cron/dividend-signals/route.ts", {
+    "../../../../backend/src/storage/db": { createDb: async () => { opened = true; return {}; } },
+    "../../../../backend/src/ingest/signalCycle": { runSignalCycle: async () => ({ startedAt: "", results: [{ source: "epoch", archived: true, error: null }] }) },
+  });
+  assert.equal((await GET(new Request("https://a3ro.test/api/cron/dividend-signals"))).status, 401);
+  assert.equal(opened, false);
+  assert.equal((await GET(new Request("https://a3ro.test/api/cron/dividend-signals", { headers: { authorization: "Bearer regression-secret" } }))).status, 200);
+});
+
 test("cron auth fails closed in production and development, including blank secrets", (t) => {
   const { requireCronAuth } = loadModule("app/api/_lib/cronAuth.ts");
   for (const mode of ["production", "development", "test"]) {

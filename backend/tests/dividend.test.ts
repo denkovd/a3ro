@@ -130,7 +130,7 @@ describe("Dividend source and archival failures", () => {
     await fetchDividendDataset("bls", { now, fetchImpl });
     assert.equal(body!.startyear, "2017");
     assert.equal(body!.endyear, "2026");
-    assert.equal(body!.seriesid.length, 4);
+    assert.equal(body!.seriesid.length, 6);
   });
   test("content fingerprints ignore retrieval time and detect data revisions", () => {
     const original = dataset();

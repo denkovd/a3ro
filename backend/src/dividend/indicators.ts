@@ -28,6 +28,18 @@ export const DIVIDEND_INDICATORS: DividendIndicator[] = [
     note: "Measures household price pressure. It does not measure regional grid adequacy, wholesale power prices or industrial tariffs.",
   },
   {
+    key: "unemployment_20_24", title: "Unemployment, ages 20–24", area: "households", source: "bls", sourceSeries: "LNS14000036",
+    frequency: "monthly", unit: "percent", adjustment: "Seasonally adjusted", population: "US civilian labour force, age 20 to 24",
+    basis: "Percent of the labour force", change: "percentage_points", sourceUrl: "https://www.bls.gov/cps/",
+    note: "The age group most likely to be looking for a first or early-career job. Compared with ages 25–54 to separate an entry-level squeeze from the overall job market; it does not identify AI as the cause.",
+  },
+  {
+    key: "unemployment_25_54", title: "Unemployment, ages 25–54", area: "households", source: "bls", sourceSeries: "LNS14000060",
+    frequency: "monthly", unit: "percent", adjustment: "Seasonally adjusted", population: "US civilian labour force, age 25 to 54",
+    basis: "Percent of the labour force", change: "percentage_points", sourceUrl: "https://www.bls.gov/cps/",
+    note: "Prime working-age comparison group for the 20–24 rate.",
+  },
+  {
     key: "real_median_dpi", title: "Real median disposable income", area: "households", source: "bea", sourceSeries: "DPI · Median ($2017)",
     frequency: "annual", unit: "usd2017", adjustment: "Not seasonally adjusted", population: "US households; ranked by equivalized disposable personal income",
     basis: "BEA median disposable personal income, 2017 dollars", change: "percent", sourceUrl: "https://www.bea.gov/data/special-topics/distribution-of-personal-income",

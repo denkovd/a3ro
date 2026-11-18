@@ -33,9 +33,8 @@ adopters, workers & households.
 1. **Rename and restructure** — done. See below.
 2. **Value-chain P&L** — done (entry-level jobs moved to step 3). See below. From SEC XBRL: revenue, operating margin, capex, free
    cash flow per layer. Entry-level jobs in AI-exposed occupations.
-3. **Capability, adoption and the conversion gap**: Epoch AI / AI Index /
-   Artificial Analysis, Census BTOS, BLS industry productivity (AI-exposed vs
-   less-exposed industries).
+3. **Capability, adoption, the conversion gap and entry-level jobs** — done.
+   See below.
 4. **Constraint gauges**: each reads tailwind / neutral / headwind with a
    written rule for what flips it. Replaces the proxy flags in `stress.ts`.
 5. **Outlook to 2031**: three scenarios (dividend arrives, infrastructure
@@ -103,3 +102,44 @@ cash flow for each layer of the value chain, for the latest reported 12 months.
 3. Load the first dataset without waiting for Tuesday:
    `npm --prefix backend run run:value-chain` to preview, then
    `npm --prefix backend run run:value-chain -- --archive` to store it.
+
+## Step 3 — what changed
+
+Four stages gained data: Capability, Adoption, Productivity and the
+entry-level part of Who benefits.
+
+| Measure | Source | Refresh |
+|---|---|---|
+| Frontier capability, open-weights gap | Epoch AI Capabilities Index (`benchmark_data.zip` → `epoch_capabilities_index.csv`) | Daily check |
+| Businesses using AI now / expecting to within 6 months | Census BTOS `National.xlsx`, questions found by wording | Fortnightly |
+| Job postings, AI-exposed vs hands-on occupations | Indeed Hiring Lab sector CSV on GitHub | Daily |
+| Unemployment ages 20–24 vs 25–54 | BLS CPS `LNS14000036`, `LNS14000060` (added to the baseline) | Monthly |
+| Conversion gap | Computed: productivity growth since 2022-Q4 minus the 2016-Q4→2019-Q4 trend | With BLS |
+
+- Code: `backend/src/dividend/signals/` (parsers, fetch, snapshot); daily
+  cron `/api/cron/dividend-signals` → `dividend_signal_vintages` and
+  `dividend_signal_runs` → `/api/dividend/signals`. Sources fail independently.
+- Parsers were tested against real copies of each file
+  (`backend/tests/fixtures/dividend/`). Each one checks headers or question
+  wording and fails loudly if the source changes format.
+- Occupation groups (`EXPOSURE_GROUPS`) are our judgement, guided by research
+  on which tasks language models can do (Eloundou et al., 2023). Every
+  occupation is also listed on its own.
+- Census broadened its AI question in November 2025, so the adoption series
+  starts there; earlier figures aren't comparable.
+
+### Dropped or deferred, and why
+
+- **Industry productivity, AI-exposed vs less-exposed:** BLS publishes it
+  once a year for selected industries (latest: 2025). Revisit when the 2026
+  data lands; job postings are the faster split for now.
+- **Cost per task at fixed capability:** no reliable machine-readable
+  source found. Worth adding if Epoch or Artificial Analysis publish one.
+
+### Setup needed before data appears
+
+1. Apply `supabase/migrations/20261118060000_ai_dividend_signals.sql`.
+2. Run `npm --prefix backend run run:signals` to preview, then with
+   `-- --archive` to store. The daily cron keeps it current after that.
+3. The baseline's BLS request now includes the two age-group series; the next
+   baseline refresh picks them up automatically.

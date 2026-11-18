@@ -6,6 +6,7 @@ import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
 import DividendChart, { type DividendChartSeries } from "../../components/projects/dividend/DividendChart";
 import AustraliaBaseline from "../../components/projects/dividend/AustraliaBaseline";
 import ValueChainPanel from "../../components/projects/dividend/ValueChainPanel";
+import { AdoptionPanel, CapabilityPanel, ConversionPanel, EntryLevelPanel, useSignals } from "../../components/projects/dividend/SignalsPanels";
 import { DIVIDEND_ACCENT, dividendChange, dividendNumber, useDividendBaseline } from "../../components/projects/dividend/dividendData";
 import { DIVIDEND_BUILD_STEPS, DIVIDEND_CURRENT_STEP, DIVIDEND_OUTLOOK_END_YEAR, DIVIDEND_STAGES, nextStageStep, stageStatus, type DividendBuildStep, type DividendStage, type DividendStageId } from "../../../backend/src/dividend/framework";
 import type { DividendRead } from "../../../backend/src/dividend/types";
@@ -93,6 +94,7 @@ function YearsSelect({ years, onChange }: { years: number; onChange: (value: num
 
 export default function AIDividendView() {
   const { snapshot, loading, error, retry } = useDividendBaseline();
+  const signals = useSignals();
   const [view, setView] = useState<View>("distribution");
   const [years, setYears] = useState(10);
   const [distribution, setDistribution] = useState<"income" | "wealth">("income");
@@ -108,7 +110,7 @@ export default function AIDividendView() {
       <div className="mx-auto flex min-h-14 max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-3 md:px-10"><div className="flex items-center gap-4"><Link href="/#modules" className="font-mono text-[10px] uppercase tracking-[.15em] text-[var(--ink-2)]">← Index</Link><span className="text-[var(--ink-3)]">/</span><span className="font-mono text-[10px] uppercase tracking-[.15em]">AI Dividend</span></div><ModuleSwitcher current="dividend" /></div>
     </header>
     <div className="mx-auto max-w-7xl px-5 py-9 md:px-10 md:py-14">
-      <div className="flex flex-wrap items-center justify-between gap-4"><p className="font-mono text-[10px] uppercase tracking-[.26em] text-[var(--ink-2)]">Experiment · 2026–{DIVIDEND_OUTLOOK_END_YEAR}</p><span className="border border-[var(--line-2)] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.15em]" style={{ color: DIVIDEND_ACCENT }}>Build {DIVIDEND_CURRENT_STEP} of 5 · Value chain live</span></div>
+      <div className="flex flex-wrap items-center justify-between gap-4"><p className="font-mono text-[10px] uppercase tracking-[.26em] text-[var(--ink-2)]">Experiment · 2026–{DIVIDEND_OUTLOOK_END_YEAR}</p><span className="border border-[var(--line-2)] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.15em]" style={{ color: DIVIDEND_ACCENT }}>Build {DIVIDEND_CURRENT_STEP} of 5 · Capability, adoption and jobs live</span></div>
       <h1 className="mt-5 text-4xl font-medium tracking-tight md:text-6xl">Where is the AI dividend going?</h1>
       <p className="mt-5 max-w-3xl text-base leading-8 text-[var(--ink-2)]">AI capability is rising fast. This module tracks how much of it turns into real output, who captures the value, and what physical limits could stop it. Every figure comes from published data. Stages without data yet say so.</p>
 
@@ -141,16 +143,22 @@ export default function AIDividendView() {
                 <Tile label="Bottom 40% income share" value={dividendNumber(find("income_bottom40")?.latest?.value ?? null, "percent")} detail="Share of disposable personal income" meta={indicatorMeta(find("income_bottom40"))} />
               </div>
               <article className="mt-5 min-w-0 border border-[var(--line)] bg-[var(--depth-1)] p-5 md:p-6"><div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><h4 className="text-base">Who receives household gains?</h4><p className="mt-2 text-xs text-[var(--ink-2)]">{distribution === "income" ? "Annual disposable income · income-ranked groups" : "Quarterly net worth · wealth-ranked groups"}</p></div><div className="flex flex-wrap items-center gap-3"><div className="flex gap-1">{(["income", "wealth"] as const).map(value => <button type="button" key={value} aria-pressed={distribution === value} onClick={() => setDistribution(value)} className={`min-h-10 px-3 text-xs capitalize ${distribution === value ? "bg-[var(--depth-3)]" : "text-[var(--ink-2)]"}`}>{value}</button>)}</div><YearsSelect years={years} onChange={setYears} /></div></div><DividendChart series={distributionSeries} unit="%" /><p className="mt-4 text-xs leading-6 text-[var(--ink-2)]">{distribution === "income" ? "Shares of aggregate disposable personal income. A change in share does not establish real income gains or losses within a group." : "Net worth includes illiquid assets and liabilities. The bottom 50% by wealth is a different population from the bottom 40% by income."}</p></article>
+              <EntryLevelPanel state={signals} readings={readings} />
               <Inspector readings={readings} keys={stage.liveIndicatorKeys} years={years} />
             </>}
           </>}
 
+          {stage.id === "capability" && <CapabilityPanel state={signals} />}
+
+          {stage.id === "adoption" && <AdoptionPanel state={signals} />}
+
           {stage.id === "productivity" && (!snapshot ? awaiting : <>
-            <div className="mt-8 grid gap-4 md:grid-cols-2">
+            <ConversionPanel state={signals} productivity={find("productivity")} />
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
               <Tile label="Output per hour · economy-wide" value={formatChange(find("productivity"))} detail="Change over one year" meta={indicatorMeta(find("productivity"))} />
               <Tile label="Real hourly compensation" value={formatChange(find("real_compensation"))} detail="Change over one year" meta={indicatorMeta(find("real_compensation"))} />
             </div>
-            <article className="mt-5 min-w-0 border border-[var(--line)] bg-[var(--depth-1)] p-5 md:p-6"><div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-base">Output and worker compensation</h3><p className="mt-2 text-xs text-[var(--ink-2)]">US nonfarm business sector · indexed to the first shared quarter</p></div><YearsSelect years={years} onChange={setYears} /></div><DividendChart series={capacitySeries} unit="index" indexed /><p className="mt-4 text-xs leading-6 text-[var(--ink-2)]">This is the whole-economy context. It cannot separate AI from everything else. Step 3 compares AI-exposed industries with less-exposed ones to get closer to AI’s contribution.</p></article>
+            <article className="mt-5 min-w-0 border border-[var(--line)] bg-[var(--depth-1)] p-5 md:p-6"><div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-base">Output and worker compensation</h3><p className="mt-2 text-xs text-[var(--ink-2)]">US nonfarm business sector · indexed to the first shared quarter</p></div><YearsSelect years={years} onChange={setYears} /></div><DividendChart series={capacitySeries} unit="index" indexed /><p className="mt-4 text-xs leading-6 text-[var(--ink-2)]">This is the whole-economy context, so it can’t separate AI from everything else. Industry-level productivity would get closer, but BLS publishes it only once a year for a limited set of industries; the job-postings split under “Who benefits” is the closer, faster signal for now.</p></article>
           </>)}
 
           {stage.id === "constraints" && (!snapshot ? awaiting : <>

@@ -1,0 +1,2881 @@
+date,jobcountry,indeed_job_postings_index,variable,display_name
+2020-02-01,US,100,total postings,Accounting
+2020-02-02,US,100.3,total postings,Accounting
+2020-02-03,US,100.56,total postings,Accounting
+2020-02-04,US,100.57,total postings,Accounting
+2020-02-05,US,100.57,total postings,Accounting
+2020-02-06,US,100.7,total postings,Accounting
+2020-02-07,US,100.69,total postings,Accounting
+2020-02-08,US,101.27,total postings,Accounting
+2020-02-09,US,101.22,total postings,Accounting
+2020-02-10,US,101.25,total postings,Accounting
+2020-02-11,US,101.49,total postings,Accounting
+2020-02-12,US,101.68,total postings,Accounting
+2020-02-13,US,101.72,total postings,Accounting
+2020-02-14,US,101.88,total postings,Accounting
+2020-02-15,US,101.59,total postings,Accounting
+2020-02-16,US,101.67,total postings,Accounting
+2020-02-17,US,101.66,total postings,Accounting
+2020-02-18,US,101.58,total postings,Accounting
+2020-02-19,US,101.57,total postings,Accounting
+2020-02-20,US,101.31,total postings,Accounting
+2020-02-21,US,100.98,total postings,Accounting
+2020-02-22,US,100.71,total postings,Accounting
+2020-02-23,US,100.36,total postings,Accounting
+2020-02-24,US,100.32,total postings,Accounting
+2020-02-25,US,100.09,total postings,Accounting
+2020-02-26,US,100.36,total postings,Accounting
+2020-02-27,US,100.99,total postings,Accounting
+2020-02-28,US,101.67,total postings,Accounting
+2020-02-29,US,102.46,total postings,Accounting
+2026-10-01,US,104,total postings,Accounting
+2026-10-02,US,104.01,total postings,Accounting
+2026-10-03,US,103.98,total postings,Accounting
+2026-10-04,US,104.09,total postings,Accounting
+2026-10-05,US,104.17,total postings,Accounting
+2026-10-06,US,104.26,total postings,Accounting
+2026-10-07,US,104.3,total postings,Accounting
+2026-10-08,US,104.41,total postings,Accounting
+2026-10-09,US,104.65,total postings,Accounting
+2026-10-10,US,104.89,total postings,Accounting
+2026-10-11,US,105.08,total postings,Accounting
+2026-10-12,US,105.3,total postings,Accounting
+2026-10-13,US,105.44,total postings,Accounting
+2026-10-14,US,105.67,total postings,Accounting
+2026-10-15,US,105.93,total postings,Accounting
+2026-10-16,US,106.08,total postings,Accounting
+2026-10-17,US,106.24,total postings,Accounting
+2026-10-18,US,106.41,total postings,Accounting
+2026-10-19,US,106.59,total postings,Accounting
+2026-10-20,US,106.8,total postings,Accounting
+2026-10-21,US,106.97,total postings,Accounting
+2026-10-22,US,107.11,total postings,Accounting
+2026-10-23,US,107.11,total postings,Accounting
+2026-10-24,US,107.09,total postings,Accounting
+2026-10-25,US,107.01,total postings,Accounting
+2026-10-26,US,106.91,total postings,Accounting
+2026-10-27,US,106.86,total postings,Accounting
+2026-10-28,US,106.82,total postings,Accounting
+2026-10-29,US,106.76,total postings,Accounting
+2026-10-30,US,106.77,total postings,Accounting
+2026-10-31,US,106.76,total postings,Accounting
+2020-02-01,US,100,total postings,Administrative Assistance
+2020-02-02,US,99.93,total postings,Administrative Assistance
+2020-02-03,US,100.02,total postings,Administrative Assistance
+2020-02-04,US,100,total postings,Administrative Assistance
+2020-02-05,US,100.02,total postings,Administrative Assistance
+2020-02-06,US,100.11,total postings,Administrative Assistance
+2020-02-07,US,100.18,total postings,Administrative Assistance
+2020-02-08,US,100.3,total postings,Administrative Assistance
+2020-02-09,US,100.39,total postings,Administrative Assistance
+2020-02-10,US,100.48,total postings,Administrative Assistance
+2020-02-11,US,100.62,total postings,Administrative Assistance
+2020-02-12,US,100.64,total postings,Administrative Assistance
+2020-02-13,US,100.64,total postings,Administrative Assistance
+2020-02-14,US,100.71,total postings,Administrative Assistance
+2020-02-15,US,100.55,total postings,Administrative Assistance
+2020-02-16,US,100.55,total postings,Administrative Assistance
+2020-02-17,US,100.59,total postings,Administrative Assistance
+2020-02-18,US,100.51,total postings,Administrative Assistance
+2020-02-19,US,100.5,total postings,Administrative Assistance
+2020-02-20,US,100.35,total postings,Administrative Assistance
+2020-02-21,US,100.24,total postings,Administrative Assistance
+2020-02-22,US,100.15,total postings,Administrative Assistance
+2020-02-23,US,100.02,total postings,Administrative Assistance
+2020-02-24,US,99.97,total postings,Administrative Assistance
+2020-02-25,US,100.01,total postings,Administrative Assistance
+2020-02-26,US,100.14,total postings,Administrative Assistance
+2020-02-27,US,100.39,total postings,Administrative Assistance
+2020-02-28,US,100.61,total postings,Administrative Assistance
+2020-02-29,US,101,total postings,Administrative Assistance
+2026-10-01,US,95.96,total postings,Administrative Assistance
+2026-10-02,US,95.92,total postings,Administrative Assistance
+2026-10-03,US,95.9,total postings,Administrative Assistance
+2026-10-04,US,95.89,total postings,Administrative Assistance
+2026-10-05,US,95.91,total postings,Administrative Assistance
+2026-10-06,US,95.84,total postings,Administrative Assistance
+2026-10-07,US,95.81,total postings,Administrative Assistance
+2026-10-08,US,95.84,total postings,Administrative Assistance
+2026-10-09,US,95.55,total postings,Administrative Assistance
+2026-10-10,US,95.19,total postings,Administrative Assistance
+2026-10-11,US,94.81,total postings,Administrative Assistance
+2026-10-12,US,94.41,total postings,Administrative Assistance
+2026-10-13,US,94.03,total postings,Administrative Assistance
+2026-10-14,US,93.65,total postings,Administrative Assistance
+2026-10-15,US,93.43,total postings,Administrative Assistance
+2026-10-16,US,93.42,total postings,Administrative Assistance
+2026-10-17,US,93.42,total postings,Administrative Assistance
+2026-10-18,US,93.44,total postings,Administrative Assistance
+2026-10-19,US,93.41,total postings,Administrative Assistance
+2026-10-20,US,93.44,total postings,Administrative Assistance
+2026-10-21,US,93.5,total postings,Administrative Assistance
+2026-10-22,US,93.47,total postings,Administrative Assistance
+2026-10-23,US,93.41,total postings,Administrative Assistance
+2026-10-24,US,93.34,total postings,Administrative Assistance
+2026-10-25,US,93.26,total postings,Administrative Assistance
+2026-10-26,US,93.22,total postings,Administrative Assistance
+2026-10-27,US,93.13,total postings,Administrative Assistance
+2026-10-28,US,93.07,total postings,Administrative Assistance
+2026-10-29,US,92.95,total postings,Administrative Assistance
+2026-10-30,US,92.93,total postings,Administrative Assistance
+2026-10-31,US,92.86,total postings,Administrative Assistance
+2020-02-01,US,100,total postings,Architecture
+2020-02-02,US,100.02,total postings,Architecture
+2020-02-03,US,100.11,total postings,Architecture
+2020-02-04,US,100.15,total postings,Architecture
+2020-02-05,US,100.22,total postings,Architecture
+2020-02-06,US,100.38,total postings,Architecture
+2020-02-07,US,100.34,total postings,Architecture
+2020-02-08,US,100.32,total postings,Architecture
+2020-02-09,US,100.27,total postings,Architecture
+2020-02-10,US,100.19,total postings,Architecture
+2020-02-11,US,100.28,total postings,Architecture
+2020-02-12,US,100.36,total postings,Architecture
+2020-02-13,US,100.45,total postings,Architecture
+2020-02-14,US,100.65,total postings,Architecture
+2020-02-15,US,100.84,total postings,Architecture
+2020-02-16,US,101.15,total postings,Architecture
+2020-02-17,US,101.5,total postings,Architecture
+2020-02-18,US,101.66,total postings,Architecture
+2020-02-19,US,101.76,total postings,Architecture
+2020-02-20,US,101.8,total postings,Architecture
+2020-02-21,US,101.77,total postings,Architecture
+2020-02-22,US,101.65,total postings,Architecture
+2020-02-23,US,101.59,total postings,Architecture
+2020-02-24,US,101.45,total postings,Architecture
+2020-02-25,US,101.39,total postings,Architecture
+2020-02-26,US,101.27,total postings,Architecture
+2020-02-27,US,101.07,total postings,Architecture
+2020-02-28,US,100.91,total postings,Architecture
+2020-02-29,US,100.79,total postings,Architecture
+2026-10-01,US,92.27,total postings,Architecture
+2026-10-02,US,92.17,total postings,Architecture
+2026-10-03,US,91.98,total postings,Architecture
+2026-10-04,US,91.86,total postings,Architecture
+2026-10-05,US,91.85,total postings,Architecture
+2026-10-06,US,91.82,total postings,Architecture
+2026-10-07,US,91.9,total postings,Architecture
+2026-10-08,US,92,total postings,Architecture
+2026-10-09,US,91.98,total postings,Architecture
+2026-10-10,US,92.12,total postings,Architecture
+2026-10-11,US,92.12,total postings,Architecture
+2026-10-12,US,92.02,total postings,Architecture
+2026-10-13,US,91.99,total postings,Architecture
+2026-10-14,US,91.94,total postings,Architecture
+2026-10-15,US,92,total postings,Architecture
+2026-10-16,US,92.03,total postings,Architecture
+2026-10-17,US,92.01,total postings,Architecture
+2026-10-18,US,91.99,total postings,Architecture
+2026-10-19,US,92.13,total postings,Architecture
+2026-10-20,US,92.06,total postings,Architecture
+2026-10-21,US,91.98,total postings,Architecture
+2026-10-22,US,91.94,total postings,Architecture
+2026-10-23,US,92.02,total postings,Architecture
+2026-10-24,US,92.02,total postings,Architecture
+2026-10-25,US,92.12,total postings,Architecture
+2026-10-26,US,92.06,total postings,Architecture
+2026-10-27,US,92.11,total postings,Architecture
+2026-10-28,US,92.06,total postings,Architecture
+2026-10-29,US,91.95,total postings,Architecture
+2026-10-30,US,91.86,total postings,Architecture
+2026-10-31,US,91.72,total postings,Architecture
+2020-02-01,US,100,total postings,Arts & Entertainment
+2020-02-02,US,99.86,total postings,Arts & Entertainment
+2020-02-03,US,99.74,total postings,Arts & Entertainment
+2020-02-04,US,99.46,total postings,Arts & Entertainment
+2020-02-05,US,99.37,total postings,Arts & Entertainment
+2020-02-06,US,99.27,total postings,Arts & Entertainment
+2020-02-07,US,99.21,total postings,Arts & Entertainment
+2020-02-08,US,99.15,total postings,Arts & Entertainment
+2020-02-09,US,99.1,total postings,Arts & Entertainment
+2020-02-10,US,99.07,total postings,Arts & Entertainment
+2020-02-11,US,99.21,total postings,Arts & Entertainment
+2020-02-12,US,99.27,total postings,Arts & Entertainment
+2020-02-13,US,99.34,total postings,Arts & Entertainment
+2020-02-14,US,99.3,total postings,Arts & Entertainment
+2020-02-15,US,99.2,total postings,Arts & Entertainment
+2020-02-16,US,99.36,total postings,Arts & Entertainment
+2020-02-17,US,99.54,total postings,Arts & Entertainment
+2020-02-18,US,99.46,total postings,Arts & Entertainment
+2020-02-19,US,99.48,total postings,Arts & Entertainment
+2020-02-20,US,99.44,total postings,Arts & Entertainment
+2020-02-21,US,99.42,total postings,Arts & Entertainment
+2020-02-22,US,99.18,total postings,Arts & Entertainment
+2020-02-23,US,98.97,total postings,Arts & Entertainment
+2020-02-24,US,98.67,total postings,Arts & Entertainment
+2020-02-25,US,98.61,total postings,Arts & Entertainment
+2020-02-26,US,98.41,total postings,Arts & Entertainment
+2020-02-27,US,98.27,total postings,Arts & Entertainment
+2020-02-28,US,98.14,total postings,Arts & Entertainment
+2020-02-29,US,98.3,total postings,Arts & Entertainment
+2026-10-01,US,87.69,total postings,Arts & Entertainment
+2026-10-02,US,87.81,total postings,Arts & Entertainment
+2026-10-03,US,87.87,total postings,Arts & Entertainment
+2026-10-04,US,87.9,total postings,Arts & Entertainment
+2026-10-05,US,87.81,total postings,Arts & Entertainment
+2026-10-06,US,87.73,total postings,Arts & Entertainment
+2026-10-07,US,87.56,total postings,Arts & Entertainment
+2026-10-08,US,87.38,total postings,Arts & Entertainment
+2026-10-09,US,87.24,total postings,Arts & Entertainment
+2026-10-10,US,87.13,total postings,Arts & Entertainment
+2026-10-11,US,87,total postings,Arts & Entertainment
+2026-10-12,US,87.11,total postings,Arts & Entertainment
+2026-10-13,US,87.27,total postings,Arts & Entertainment
+2026-10-14,US,87.46,total postings,Arts & Entertainment
+2026-10-15,US,87.72,total postings,Arts & Entertainment
+2026-10-16,US,87.52,total postings,Arts & Entertainment
+2026-10-17,US,87.63,total postings,Arts & Entertainment
+2026-10-18,US,87.75,total postings,Arts & Entertainment
+2026-10-19,US,87.84,total postings,Arts & Entertainment
+2026-10-20,US,87.66,total postings,Arts & Entertainment
+2026-10-21,US,87.5,total postings,Arts & Entertainment
+2026-10-22,US,87.29,total postings,Arts & Entertainment
+2026-10-23,US,87.37,total postings,Arts & Entertainment
+2026-10-24,US,87.16,total postings,Arts & Entertainment
+2026-10-25,US,86.93,total postings,Arts & Entertainment
+2026-10-26,US,86.63,total postings,Arts & Entertainment
+2026-10-27,US,86.54,total postings,Arts & Entertainment
+2026-10-28,US,86.49,total postings,Arts & Entertainment
+2026-10-29,US,86.52,total postings,Arts & Entertainment
+2026-10-30,US,86.57,total postings,Arts & Entertainment
+2026-10-31,US,86.58,total postings,Arts & Entertainment
+2020-02-01,US,100,total postings,Aviation
+2020-02-02,US,99.2,total postings,Aviation
+2020-02-03,US,99.69,total postings,Aviation
+2020-02-04,US,99.99,total postings,Aviation
+2020-02-05,US,100.27,total postings,Aviation
+2020-02-06,US,100.63,total postings,Aviation
+2020-02-07,US,100.75,total postings,Aviation
+2020-02-08,US,100.82,total postings,Aviation
+2020-02-09,US,100.78,total postings,Aviation
+2020-02-10,US,100.58,total postings,Aviation
+2020-02-11,US,100.45,total postings,Aviation
+2020-02-12,US,100.35,total postings,Aviation
+2020-02-13,US,100.17,total postings,Aviation
+2020-02-14,US,100.16,total postings,Aviation
+2020-02-15,US,100.13,total postings,Aviation
+2020-02-16,US,100.37,total postings,Aviation
+2020-02-17,US,100.32,total postings,Aviation
+2020-02-18,US,100.44,total postings,Aviation
+2020-02-19,US,100.09,total postings,Aviation
+2020-02-20,US,100.11,total postings,Aviation
+2020-02-21,US,99.7,total postings,Aviation
+2020-02-22,US,99.14,total postings,Aviation
+2020-02-23,US,98.69,total postings,Aviation
+2020-02-24,US,98.66,total postings,Aviation
+2020-02-25,US,98.33,total postings,Aviation
+2020-02-26,US,98.52,total postings,Aviation
+2020-02-27,US,98.29,total postings,Aviation
+2020-02-28,US,98.48,total postings,Aviation
+2020-02-29,US,98.76,total postings,Aviation
+2026-10-01,US,120.34,total postings,Aviation
+2026-10-02,US,120.48,total postings,Aviation
+2026-10-03,US,120.45,total postings,Aviation
+2026-10-04,US,120.47,total postings,Aviation
+2026-10-05,US,120.67,total postings,Aviation
+2026-10-06,US,120.92,total postings,Aviation
+2026-10-07,US,121.22,total postings,Aviation
+2026-10-08,US,120.74,total postings,Aviation
+2026-10-09,US,120.11,total postings,Aviation
+2026-10-10,US,119.51,total postings,Aviation
+2026-10-11,US,118.91,total postings,Aviation
+2026-10-12,US,118.35,total postings,Aviation
+2026-10-13,US,117.78,total postings,Aviation
+2026-10-14,US,117.27,total postings,Aviation
+2026-10-15,US,117.77,total postings,Aviation
+2026-10-16,US,118.03,total postings,Aviation
+2026-10-17,US,118.25,total postings,Aviation
+2026-10-18,US,118.53,total postings,Aviation
+2026-10-19,US,118.64,total postings,Aviation
+2026-10-20,US,118.81,total postings,Aviation
+2026-10-21,US,119.02,total postings,Aviation
+2026-10-22,US,118.98,total postings,Aviation
+2026-10-23,US,118.92,total postings,Aviation
+2026-10-24,US,118.86,total postings,Aviation
+2026-10-25,US,118.68,total postings,Aviation
+2026-10-26,US,118.62,total postings,Aviation
+2026-10-27,US,118.42,total postings,Aviation
+2026-10-28,US,118.12,total postings,Aviation
+2026-10-29,US,118.02,total postings,Aviation
+2026-10-30,US,117.96,total postings,Aviation
+2026-10-31,US,117.91,total postings,Aviation
+2020-02-01,US,100,total postings,Personal Care & Home Health
+2020-02-02,US,100.08,total postings,Personal Care & Home Health
+2020-02-03,US,100.19,total postings,Personal Care & Home Health
+2020-02-04,US,100.38,total postings,Personal Care & Home Health
+2020-02-05,US,100.57,total postings,Personal Care & Home Health
+2020-02-06,US,100.62,total postings,Personal Care & Home Health
+2020-02-07,US,100.84,total postings,Personal Care & Home Health
+2020-02-08,US,101.02,total postings,Personal Care & Home Health
+2020-02-09,US,101.24,total postings,Personal Care & Home Health
+2020-02-10,US,101.53,total postings,Personal Care & Home Health
+2020-02-11,US,101.81,total postings,Personal Care & Home Health
+2020-02-12,US,102.01,total postings,Personal Care & Home Health
+2020-02-13,US,102.31,total postings,Personal Care & Home Health
+2020-02-14,US,102.34,total postings,Personal Care & Home Health
+2020-02-15,US,102.41,total postings,Personal Care & Home Health
+2020-02-16,US,102.56,total postings,Personal Care & Home Health
+2020-02-17,US,102.62,total postings,Personal Care & Home Health
+2020-02-18,US,102.67,total postings,Personal Care & Home Health
+2020-02-19,US,102.87,total postings,Personal Care & Home Health
+2020-02-20,US,103,total postings,Personal Care & Home Health
+2020-02-21,US,103.11,total postings,Personal Care & Home Health
+2020-02-22,US,103.16,total postings,Personal Care & Home Health
+2020-02-23,US,103.14,total postings,Personal Care & Home Health
+2020-02-24,US,103.16,total postings,Personal Care & Home Health
+2020-02-25,US,103.12,total postings,Personal Care & Home Health
+2020-02-26,US,103.15,total postings,Personal Care & Home Health
+2020-02-27,US,103.21,total postings,Personal Care & Home Health
+2020-02-28,US,103.4,total postings,Personal Care & Home Health
+2020-02-29,US,103.57,total postings,Personal Care & Home Health
+2026-10-01,US,155.26,total postings,Personal Care & Home Health
+2026-10-02,US,154.41,total postings,Personal Care & Home Health
+2026-10-03,US,153.46,total postings,Personal Care & Home Health
+2026-10-04,US,152.58,total postings,Personal Care & Home Health
+2026-10-05,US,151.66,total postings,Personal Care & Home Health
+2026-10-06,US,150.78,total postings,Personal Care & Home Health
+2026-10-07,US,150.89,total postings,Personal Care & Home Health
+2026-10-08,US,151.13,total postings,Personal Care & Home Health
+2026-10-09,US,151.16,total postings,Personal Care & Home Health
+2026-10-10,US,151.08,total postings,Personal Care & Home Health
+2026-10-11,US,150.89,total postings,Personal Care & Home Health
+2026-10-12,US,150.8,total postings,Personal Care & Home Health
+2026-10-13,US,150.61,total postings,Personal Care & Home Health
+2026-10-14,US,150.73,total postings,Personal Care & Home Health
+2026-10-15,US,150.68,total postings,Personal Care & Home Health
+2026-10-16,US,150.68,total postings,Personal Care & Home Health
+2026-10-17,US,150.79,total postings,Personal Care & Home Health
+2026-10-18,US,151.03,total postings,Personal Care & Home Health
+2026-10-19,US,151.26,total postings,Personal Care & Home Health
+2026-10-20,US,151.58,total postings,Personal Care & Home Health
+2026-10-21,US,151.78,total postings,Personal Care & Home Health
+2026-10-22,US,153.14,total postings,Personal Care & Home Health
+2026-10-23,US,154.68,total postings,Personal Care & Home Health
+2026-10-24,US,156.06,total postings,Personal Care & Home Health
+2026-10-25,US,157,total postings,Personal Care & Home Health
+2026-10-26,US,158.07,total postings,Personal Care & Home Health
+2026-10-27,US,159.22,total postings,Personal Care & Home Health
+2026-10-28,US,160.54,total postings,Personal Care & Home Health
+2026-10-29,US,160.67,total postings,Personal Care & Home Health
+2026-10-30,US,160.7,total postings,Personal Care & Home Health
+2026-10-31,US,160.5,total postings,Personal Care & Home Health
+2020-02-01,US,100,total postings,Childcare
+2020-02-02,US,99.57,total postings,Childcare
+2020-02-03,US,99.11,total postings,Childcare
+2020-02-04,US,99.02,total postings,Childcare
+2020-02-05,US,99.06,total postings,Childcare
+2020-02-06,US,99.17,total postings,Childcare
+2020-02-07,US,99.21,total postings,Childcare
+2020-02-08,US,99.17,total postings,Childcare
+2020-02-09,US,99.02,total postings,Childcare
+2020-02-10,US,98.83,total postings,Childcare
+2020-02-11,US,98.75,total postings,Childcare
+2020-02-12,US,98.77,total postings,Childcare
+2020-02-13,US,98.79,total postings,Childcare
+2020-02-14,US,98.8,total postings,Childcare
+2020-02-15,US,98.87,total postings,Childcare
+2020-02-16,US,98.94,total postings,Childcare
+2020-02-17,US,99,total postings,Childcare
+2020-02-18,US,98.94,total postings,Childcare
+2020-02-19,US,98.87,total postings,Childcare
+2020-02-20,US,98.86,total postings,Childcare
+2020-02-21,US,98.92,total postings,Childcare
+2020-02-22,US,99,total postings,Childcare
+2020-02-23,US,99.02,total postings,Childcare
+2020-02-24,US,99.11,total postings,Childcare
+2020-02-25,US,99.23,total postings,Childcare
+2020-02-26,US,99.3,total postings,Childcare
+2020-02-27,US,99.35,total postings,Childcare
+2020-02-28,US,99.34,total postings,Childcare
+2020-02-29,US,99.27,total postings,Childcare
+2026-10-01,US,84.31,total postings,Childcare
+2026-10-02,US,84.21,total postings,Childcare
+2026-10-03,US,84.1,total postings,Childcare
+2026-10-04,US,83.97,total postings,Childcare
+2026-10-05,US,83.9,total postings,Childcare
+2026-10-06,US,83.88,total postings,Childcare
+2026-10-07,US,84.05,total postings,Childcare
+2026-10-08,US,84.06,total postings,Childcare
+2026-10-09,US,84.16,total postings,Childcare
+2026-10-10,US,84.3,total postings,Childcare
+2026-10-11,US,84.42,total postings,Childcare
+2026-10-12,US,84.62,total postings,Childcare
+2026-10-13,US,84.76,total postings,Childcare
+2026-10-14,US,84.79,total postings,Childcare
+2026-10-15,US,85.03,total postings,Childcare
+2026-10-16,US,85.21,total postings,Childcare
+2026-10-17,US,85.39,total postings,Childcare
+2026-10-18,US,85.49,total postings,Childcare
+2026-10-19,US,85.46,total postings,Childcare
+2026-10-20,US,85.41,total postings,Childcare
+2026-10-21,US,85.45,total postings,Childcare
+2026-10-22,US,85.37,total postings,Childcare
+2026-10-23,US,85.26,total postings,Childcare
+2026-10-24,US,85.14,total postings,Childcare
+2026-10-25,US,85.16,total postings,Childcare
+2026-10-26,US,85.19,total postings,Childcare
+2026-10-27,US,85.38,total postings,Childcare
+2026-10-28,US,85.27,total postings,Childcare
+2026-10-29,US,85.14,total postings,Childcare
+2026-10-30,US,84.95,total postings,Childcare
+2026-10-31,US,84.84,total postings,Childcare
+2020-02-01,US,100,total postings,Construction
+2020-02-02,US,99.74,total postings,Construction
+2020-02-03,US,99.57,total postings,Construction
+2020-02-04,US,99.32,total postings,Construction
+2020-02-05,US,99.3,total postings,Construction
+2020-02-06,US,99.25,total postings,Construction
+2020-02-07,US,99.19,total postings,Construction
+2020-02-08,US,99.04,total postings,Construction
+2020-02-09,US,98.88,total postings,Construction
+2020-02-10,US,98.69,total postings,Construction
+2020-02-11,US,98.49,total postings,Construction
+2020-02-12,US,98.32,total postings,Construction
+2020-02-13,US,98.2,total postings,Construction
+2020-02-14,US,98.16,total postings,Construction
+2020-02-15,US,98.05,total postings,Construction
+2020-02-16,US,98.12,total postings,Construction
+2020-02-17,US,98.13,total postings,Construction
+2020-02-18,US,98.3,total postings,Construction
+2020-02-19,US,98.44,total postings,Construction
+2020-02-20,US,98.56,total postings,Construction
+2020-02-21,US,98.73,total postings,Construction
+2020-02-22,US,98.93,total postings,Construction
+2020-02-23,US,99.07,total postings,Construction
+2020-02-24,US,99.22,total postings,Construction
+2020-02-25,US,99.25,total postings,Construction
+2020-02-26,US,99.35,total postings,Construction
+2020-02-27,US,99.47,total postings,Construction
+2020-02-28,US,99.55,total postings,Construction
+2020-02-29,US,99.64,total postings,Construction
+2026-10-01,US,129.63,total postings,Construction
+2026-10-02,US,129.8,total postings,Construction
+2026-10-03,US,129.84,total postings,Construction
+2026-10-04,US,129.92,total postings,Construction
+2026-10-05,US,129.92,total postings,Construction
+2026-10-06,US,129.88,total postings,Construction
+2026-10-07,US,129.8,total postings,Construction
+2026-10-08,US,129.52,total postings,Construction
+2026-10-09,US,129.14,total postings,Construction
+2026-10-10,US,128.89,total postings,Construction
+2026-10-11,US,128.52,total postings,Construction
+2026-10-12,US,128.27,total postings,Construction
+2026-10-13,US,128.06,total postings,Construction
+2026-10-14,US,127.96,total postings,Construction
+2026-10-15,US,128.22,total postings,Construction
+2026-10-16,US,128.39,total postings,Construction
+2026-10-17,US,128.59,total postings,Construction
+2026-10-18,US,128.87,total postings,Construction
+2026-10-19,US,129.17,total postings,Construction
+2026-10-20,US,129.35,total postings,Construction
+2026-10-21,US,129.27,total postings,Construction
+2026-10-22,US,129.16,total postings,Construction
+2026-10-23,US,129.21,total postings,Construction
+2026-10-24,US,129.11,total postings,Construction
+2026-10-25,US,129.04,total postings,Construction
+2026-10-26,US,128.87,total postings,Construction
+2026-10-27,US,128.79,total postings,Construction
+2026-10-28,US,128.94,total postings,Construction
+2026-10-29,US,128.94,total postings,Construction
+2026-10-30,US,128.91,total postings,Construction
+2026-10-31,US,128.87,total postings,Construction
+2020-02-01,US,100,total postings,Customer Service
+2020-02-02,US,100.06,total postings,Customer Service
+2020-02-03,US,100.2,total postings,Customer Service
+2020-02-04,US,100.25,total postings,Customer Service
+2020-02-05,US,100.36,total postings,Customer Service
+2020-02-06,US,100.6,total postings,Customer Service
+2020-02-07,US,100.54,total postings,Customer Service
+2020-02-08,US,100.6,total postings,Customer Service
+2020-02-09,US,100.52,total postings,Customer Service
+2020-02-10,US,100.43,total postings,Customer Service
+2020-02-11,US,100.44,total postings,Customer Service
+2020-02-12,US,100.47,total postings,Customer Service
+2020-02-13,US,100.47,total postings,Customer Service
+2020-02-14,US,100.46,total postings,Customer Service
+2020-02-15,US,100.1,total postings,Customer Service
+2020-02-16,US,99.84,total postings,Customer Service
+2020-02-17,US,99.54,total postings,Customer Service
+2020-02-18,US,99.2,total postings,Customer Service
+2020-02-19,US,98.89,total postings,Customer Service
+2020-02-20,US,98.59,total postings,Customer Service
+2020-02-21,US,98.31,total postings,Customer Service
+2020-02-22,US,98.25,total postings,Customer Service
+2020-02-23,US,98.23,total postings,Customer Service
+2020-02-24,US,98.29,total postings,Customer Service
+2020-02-25,US,98.37,total postings,Customer Service
+2020-02-26,US,98.3,total postings,Customer Service
+2020-02-27,US,98.2,total postings,Customer Service
+2020-02-28,US,98.2,total postings,Customer Service
+2020-02-29,US,98.41,total postings,Customer Service
+2026-10-01,US,87.58,total postings,Customer Service
+2026-10-02,US,87.5,total postings,Customer Service
+2026-10-03,US,87.41,total postings,Customer Service
+2026-10-04,US,87.38,total postings,Customer Service
+2026-10-05,US,87.34,total postings,Customer Service
+2026-10-06,US,87.35,total postings,Customer Service
+2026-10-07,US,87.31,total postings,Customer Service
+2026-10-08,US,87.31,total postings,Customer Service
+2026-10-09,US,87.27,total postings,Customer Service
+2026-10-10,US,87.22,total postings,Customer Service
+2026-10-11,US,87.17,total postings,Customer Service
+2026-10-12,US,87.03,total postings,Customer Service
+2026-10-13,US,86.86,total postings,Customer Service
+2026-10-14,US,86.76,total postings,Customer Service
+2026-10-15,US,86.68,total postings,Customer Service
+2026-10-16,US,86.58,total postings,Customer Service
+2026-10-17,US,86.49,total postings,Customer Service
+2026-10-18,US,86.4,total postings,Customer Service
+2026-10-19,US,86.52,total postings,Customer Service
+2026-10-20,US,86.64,total postings,Customer Service
+2026-10-21,US,86.68,total postings,Customer Service
+2026-10-22,US,86.67,total postings,Customer Service
+2026-10-23,US,86.77,total postings,Customer Service
+2026-10-24,US,86.83,total postings,Customer Service
+2026-10-25,US,86.87,total postings,Customer Service
+2026-10-26,US,86.85,total postings,Customer Service
+2026-10-27,US,86.85,total postings,Customer Service
+2026-10-28,US,86.9,total postings,Customer Service
+2026-10-29,US,86.92,total postings,Customer Service
+2026-10-30,US,86.95,total postings,Customer Service
+2026-10-31,US,86.99,total postings,Customer Service
+2020-02-01,US,100,total postings,Driving
+2020-02-02,US,99.52,total postings,Driving
+2020-02-03,US,99.22,total postings,Driving
+2020-02-04,US,99.19,total postings,Driving
+2020-02-05,US,98.89,total postings,Driving
+2020-02-06,US,98.77,total postings,Driving
+2020-02-07,US,97.8,total postings,Driving
+2020-02-08,US,97.5,total postings,Driving
+2020-02-09,US,97.31,total postings,Driving
+2020-02-10,US,97.17,total postings,Driving
+2020-02-11,US,97.12,total postings,Driving
+2020-02-12,US,97.3,total postings,Driving
+2020-02-13,US,97.42,total postings,Driving
+2020-02-14,US,98.85,total postings,Driving
+2020-02-15,US,98.96,total postings,Driving
+2020-02-16,US,99.15,total postings,Driving
+2020-02-17,US,99.27,total postings,Driving
+2020-02-18,US,99.39,total postings,Driving
+2020-02-19,US,99.47,total postings,Driving
+2020-02-20,US,99.48,total postings,Driving
+2020-02-21,US,99.7,total postings,Driving
+2020-02-22,US,99.99,total postings,Driving
+2020-02-23,US,100.27,total postings,Driving
+2020-02-24,US,99.88,total postings,Driving
+2020-02-25,US,100.3,total postings,Driving
+2020-02-26,US,100.23,total postings,Driving
+2020-02-27,US,100.4,total postings,Driving
+2020-02-28,US,100.56,total postings,Driving
+2020-02-29,US,100.73,total postings,Driving
+2026-10-01,US,80.93,total postings,Driving
+2026-10-02,US,80.96,total postings,Driving
+2026-10-03,US,81.03,total postings,Driving
+2026-10-04,US,81.18,total postings,Driving
+2026-10-05,US,81.34,total postings,Driving
+2026-10-06,US,81.32,total postings,Driving
+2026-10-07,US,81.31,total postings,Driving
+2026-10-08,US,81.19,total postings,Driving
+2026-10-09,US,81.44,total postings,Driving
+2026-10-10,US,81.62,total postings,Driving
+2026-10-11,US,81.73,total postings,Driving
+2026-10-12,US,82.03,total postings,Driving
+2026-10-13,US,82.5,total postings,Driving
+2026-10-14,US,83.04,total postings,Driving
+2026-10-15,US,83.49,total postings,Driving
+2026-10-16,US,83.53,total postings,Driving
+2026-10-17,US,83.51,total postings,Driving
+2026-10-18,US,83.52,total postings,Driving
+2026-10-19,US,83.37,total postings,Driving
+2026-10-20,US,83.23,total postings,Driving
+2026-10-21,US,82.94,total postings,Driving
+2026-10-22,US,82.8,total postings,Driving
+2026-10-23,US,83.03,total postings,Driving
+2026-10-24,US,83.33,total postings,Driving
+2026-10-25,US,83.58,total postings,Driving
+2026-10-26,US,83.8,total postings,Driving
+2026-10-27,US,83.91,total postings,Driving
+2026-10-28,US,84.37,total postings,Driving
+2026-10-29,US,84.65,total postings,Driving
+2026-10-30,US,84.5,total postings,Driving
+2026-10-31,US,84.28,total postings,Driving
+2020-02-01,US,100,total postings,Education & Instruction
+2020-02-02,US,100.14,total postings,Education & Instruction
+2020-02-03,US,100.19,total postings,Education & Instruction
+2020-02-04,US,100.33,total postings,Education & Instruction
+2020-02-05,US,100.49,total postings,Education & Instruction
+2020-02-06,US,100.64,total postings,Education & Instruction
+2020-02-07,US,100.72,total postings,Education & Instruction
+2020-02-08,US,100.72,total postings,Education & Instruction
+2020-02-09,US,100.66,total postings,Education & Instruction
+2020-02-10,US,100.63,total postings,Education & Instruction
+2020-02-11,US,100.53,total postings,Education & Instruction
+2020-02-12,US,100.46,total postings,Education & Instruction
+2020-02-13,US,100.45,total postings,Education & Instruction
+2020-02-14,US,100.43,total postings,Education & Instruction
+2020-02-15,US,100.4,total postings,Education & Instruction
+2020-02-16,US,100.47,total postings,Education & Instruction
+2020-02-17,US,100.54,total postings,Education & Instruction
+2020-02-18,US,100.56,total postings,Education & Instruction
+2020-02-19,US,100.47,total postings,Education & Instruction
+2020-02-20,US,100.36,total postings,Education & Instruction
+2020-02-21,US,100.27,total postings,Education & Instruction
+2020-02-22,US,100.18,total postings,Education & Instruction
+2020-02-23,US,100.11,total postings,Education & Instruction
+2020-02-24,US,100.05,total postings,Education & Instruction
+2020-02-25,US,100.11,total postings,Education & Instruction
+2020-02-26,US,100.16,total postings,Education & Instruction
+2020-02-27,US,100.15,total postings,Education & Instruction
+2020-02-28,US,100.23,total postings,Education & Instruction
+2020-02-29,US,100.33,total postings,Education & Instruction
+2026-10-01,US,107.09,total postings,Education & Instruction
+2026-10-02,US,107.14,total postings,Education & Instruction
+2026-10-03,US,107.11,total postings,Education & Instruction
+2026-10-04,US,107.14,total postings,Education & Instruction
+2026-10-05,US,107.25,total postings,Education & Instruction
+2026-10-06,US,107.25,total postings,Education & Instruction
+2026-10-07,US,107.3,total postings,Education & Instruction
+2026-10-08,US,107.43,total postings,Education & Instruction
+2026-10-09,US,107.44,total postings,Education & Instruction
+2026-10-10,US,107.5,total postings,Education & Instruction
+2026-10-11,US,107.53,total postings,Education & Instruction
+2026-10-12,US,107.53,total postings,Education & Instruction
+2026-10-13,US,107.56,total postings,Education & Instruction
+2026-10-14,US,107.6,total postings,Education & Instruction
+2026-10-15,US,107.7,total postings,Education & Instruction
+2026-10-16,US,107.78,total postings,Education & Instruction
+2026-10-17,US,107.76,total postings,Education & Instruction
+2026-10-18,US,107.79,total postings,Education & Instruction
+2026-10-19,US,107.82,total postings,Education & Instruction
+2026-10-20,US,107.86,total postings,Education & Instruction
+2026-10-21,US,107.92,total postings,Education & Instruction
+2026-10-22,US,107.95,total postings,Education & Instruction
+2026-10-23,US,107.98,total postings,Education & Instruction
+2026-10-24,US,107.99,total postings,Education & Instruction
+2026-10-25,US,107.93,total postings,Education & Instruction
+2026-10-26,US,107.82,total postings,Education & Instruction
+2026-10-27,US,107.78,total postings,Education & Instruction
+2026-10-28,US,107.7,total postings,Education & Instruction
+2026-10-29,US,107.6,total postings,Education & Instruction
+2026-10-30,US,107.45,total postings,Education & Instruction
+2026-10-31,US,107.4,total postings,Education & Instruction
+2020-02-01,US,100,total postings,Civil Engineering
+2020-02-02,US,99.91,total postings,Civil Engineering
+2020-02-03,US,99.97,total postings,Civil Engineering
+2020-02-04,US,99.86,total postings,Civil Engineering
+2020-02-05,US,99.89,total postings,Civil Engineering
+2020-02-06,US,99.98,total postings,Civil Engineering
+2020-02-07,US,100.01,total postings,Civil Engineering
+2020-02-08,US,99.99,total postings,Civil Engineering
+2020-02-09,US,100.08,total postings,Civil Engineering
+2020-02-10,US,100.03,total postings,Civil Engineering
+2020-02-11,US,100.04,total postings,Civil Engineering
+2020-02-12,US,100.08,total postings,Civil Engineering
+2020-02-13,US,100.09,total postings,Civil Engineering
+2020-02-14,US,100.13,total postings,Civil Engineering
+2020-02-15,US,100.07,total postings,Civil Engineering
+2020-02-16,US,100.17,total postings,Civil Engineering
+2020-02-17,US,100.4,total postings,Civil Engineering
+2020-02-18,US,100.5,total postings,Civil Engineering
+2020-02-19,US,100.44,total postings,Civil Engineering
+2020-02-20,US,100.25,total postings,Civil Engineering
+2020-02-21,US,100.03,total postings,Civil Engineering
+2020-02-22,US,99.93,total postings,Civil Engineering
+2020-02-23,US,99.82,total postings,Civil Engineering
+2020-02-24,US,99.59,total postings,Civil Engineering
+2020-02-25,US,99.49,total postings,Civil Engineering
+2020-02-26,US,99.47,total postings,Civil Engineering
+2020-02-27,US,99.37,total postings,Civil Engineering
+2020-02-28,US,99.31,total postings,Civil Engineering
+2020-02-29,US,99.46,total postings,Civil Engineering
+2026-10-01,US,162.92,total postings,Civil Engineering
+2026-10-02,US,163.09,total postings,Civil Engineering
+2026-10-03,US,163.28,total postings,Civil Engineering
+2026-10-04,US,163.51,total postings,Civil Engineering
+2026-10-05,US,163.59,total postings,Civil Engineering
+2026-10-06,US,163.62,total postings,Civil Engineering
+2026-10-07,US,163.43,total postings,Civil Engineering
+2026-10-08,US,163.23,total postings,Civil Engineering
+2026-10-09,US,163,total postings,Civil Engineering
+2026-10-10,US,162.91,total postings,Civil Engineering
+2026-10-11,US,162.65,total postings,Civil Engineering
+2026-10-12,US,162.47,total postings,Civil Engineering
+2026-10-13,US,162.35,total postings,Civil Engineering
+2026-10-14,US,162.31,total postings,Civil Engineering
+2026-10-15,US,162.3,total postings,Civil Engineering
+2026-10-16,US,162.21,total postings,Civil Engineering
+2026-10-17,US,162.11,total postings,Civil Engineering
+2026-10-18,US,162.17,total postings,Civil Engineering
+2026-10-19,US,162.23,total postings,Civil Engineering
+2026-10-20,US,162.02,total postings,Civil Engineering
+2026-10-21,US,161.79,total postings,Civil Engineering
+2026-10-22,US,161.56,total postings,Civil Engineering
+2026-10-23,US,161.39,total postings,Civil Engineering
+2026-10-24,US,161.1,total postings,Civil Engineering
+2026-10-25,US,160.79,total postings,Civil Engineering
+2026-10-26,US,160.43,total postings,Civil Engineering
+2026-10-27,US,160.29,total postings,Civil Engineering
+2026-10-28,US,160.34,total postings,Civil Engineering
+2026-10-29,US,160.45,total postings,Civil Engineering
+2026-10-30,US,160.58,total postings,Civil Engineering
+2026-10-31,US,160.6,total postings,Civil Engineering
+2020-02-01,US,100,total postings,Electrical Engineering
+2020-02-02,US,99.92,total postings,Electrical Engineering
+2020-02-03,US,99.88,total postings,Electrical Engineering
+2020-02-04,US,99.79,total postings,Electrical Engineering
+2020-02-05,US,99.71,total postings,Electrical Engineering
+2020-02-06,US,99.67,total postings,Electrical Engineering
+2020-02-07,US,99.64,total postings,Electrical Engineering
+2020-02-08,US,99.69,total postings,Electrical Engineering
+2020-02-09,US,99.71,total postings,Electrical Engineering
+2020-02-10,US,99.75,total postings,Electrical Engineering
+2020-02-11,US,99.82,total postings,Electrical Engineering
+2020-02-12,US,99.89,total postings,Electrical Engineering
+2020-02-13,US,99.89,total postings,Electrical Engineering
+2020-02-14,US,99.88,total postings,Electrical Engineering
+2020-02-15,US,99.84,total postings,Electrical Engineering
+2020-02-16,US,99.95,total postings,Electrical Engineering
+2020-02-17,US,100.02,total postings,Electrical Engineering
+2020-02-18,US,99.94,total postings,Electrical Engineering
+2020-02-19,US,99.91,total postings,Electrical Engineering
+2020-02-20,US,99.93,total postings,Electrical Engineering
+2020-02-21,US,99.93,total postings,Electrical Engineering
+2020-02-22,US,99.85,total postings,Electrical Engineering
+2020-02-23,US,99.82,total postings,Electrical Engineering
+2020-02-24,US,99.77,total postings,Electrical Engineering
+2020-02-25,US,99.85,total postings,Electrical Engineering
+2020-02-26,US,99.82,total postings,Electrical Engineering
+2020-02-27,US,99.75,total postings,Electrical Engineering
+2020-02-28,US,99.7,total postings,Electrical Engineering
+2020-02-29,US,99.73,total postings,Electrical Engineering
+2026-10-01,US,151.68,total postings,Electrical Engineering
+2026-10-02,US,152.09,total postings,Electrical Engineering
+2026-10-03,US,152.36,total postings,Electrical Engineering
+2026-10-04,US,152.56,total postings,Electrical Engineering
+2026-10-05,US,152.7,total postings,Electrical Engineering
+2026-10-06,US,152.92,total postings,Electrical Engineering
+2026-10-07,US,152.99,total postings,Electrical Engineering
+2026-10-08,US,153.09,total postings,Electrical Engineering
+2026-10-09,US,153,total postings,Electrical Engineering
+2026-10-10,US,152.82,total postings,Electrical Engineering
+2026-10-11,US,152.58,total postings,Electrical Engineering
+2026-10-12,US,152.39,total postings,Electrical Engineering
+2026-10-13,US,152.28,total postings,Electrical Engineering
+2026-10-14,US,152.15,total postings,Electrical Engineering
+2026-10-15,US,152.25,total postings,Electrical Engineering
+2026-10-16,US,152.17,total postings,Electrical Engineering
+2026-10-17,US,152.27,total postings,Electrical Engineering
+2026-10-18,US,152.4,total postings,Electrical Engineering
+2026-10-19,US,152.87,total postings,Electrical Engineering
+2026-10-20,US,153,total postings,Electrical Engineering
+2026-10-21,US,153.07,total postings,Electrical Engineering
+2026-10-22,US,152.97,total postings,Electrical Engineering
+2026-10-23,US,153.19,total postings,Electrical Engineering
+2026-10-24,US,153.5,total postings,Electrical Engineering
+2026-10-25,US,153.81,total postings,Electrical Engineering
+2026-10-26,US,153.6,total postings,Electrical Engineering
+2026-10-27,US,153.75,total postings,Electrical Engineering
+2026-10-28,US,154.17,total postings,Electrical Engineering
+2026-10-29,US,154.74,total postings,Electrical Engineering
+2026-10-30,US,155.22,total postings,Electrical Engineering
+2026-10-31,US,155.17,total postings,Electrical Engineering
+2020-02-01,US,100,total postings,Industrial Engineering
+2020-02-02,US,100,total postings,Industrial Engineering
+2020-02-03,US,99.95,total postings,Industrial Engineering
+2020-02-04,US,99.84,total postings,Industrial Engineering
+2020-02-05,US,99.83,total postings,Industrial Engineering
+2020-02-06,US,99.86,total postings,Industrial Engineering
+2020-02-07,US,99.88,total postings,Industrial Engineering
+2020-02-08,US,99.97,total postings,Industrial Engineering
+2020-02-09,US,100.07,total postings,Industrial Engineering
+2020-02-10,US,100.19,total postings,Industrial Engineering
+2020-02-11,US,100.27,total postings,Industrial Engineering
+2020-02-12,US,100.33,total postings,Industrial Engineering
+2020-02-13,US,100.36,total postings,Industrial Engineering
+2020-02-14,US,100.34,total postings,Industrial Engineering
+2020-02-15,US,100.31,total postings,Industrial Engineering
+2020-02-16,US,100.4,total postings,Industrial Engineering
+2020-02-17,US,100.44,total postings,Industrial Engineering
+2020-02-18,US,100.42,total postings,Industrial Engineering
+2020-02-19,US,100.31,total postings,Industrial Engineering
+2020-02-20,US,100.3,total postings,Industrial Engineering
+2020-02-21,US,100.3,total postings,Industrial Engineering
+2020-02-22,US,100.12,total postings,Industrial Engineering
+2020-02-23,US,100.05,total postings,Industrial Engineering
+2020-02-24,US,99.9,total postings,Industrial Engineering
+2020-02-25,US,99.98,total postings,Industrial Engineering
+2020-02-26,US,100.07,total postings,Industrial Engineering
+2020-02-27,US,100.02,total postings,Industrial Engineering
+2020-02-28,US,100.05,total postings,Industrial Engineering
+2020-02-29,US,100.26,total postings,Industrial Engineering
+2026-10-01,US,123.16,total postings,Industrial Engineering
+2026-10-02,US,123.64,total postings,Industrial Engineering
+2026-10-03,US,123.96,total postings,Industrial Engineering
+2026-10-04,US,124.17,total postings,Industrial Engineering
+2026-10-05,US,124.2,total postings,Industrial Engineering
+2026-10-06,US,124.25,total postings,Industrial Engineering
+2026-10-07,US,124.31,total postings,Industrial Engineering
+2026-10-08,US,124.24,total postings,Industrial Engineering
+2026-10-09,US,123.98,total postings,Industrial Engineering
+2026-10-10,US,123.54,total postings,Industrial Engineering
+2026-10-11,US,123.12,total postings,Industrial Engineering
+2026-10-12,US,122.92,total postings,Industrial Engineering
+2026-10-13,US,122.69,total postings,Industrial Engineering
+2026-10-14,US,122.52,total postings,Industrial Engineering
+2026-10-15,US,122.42,total postings,Industrial Engineering
+2026-10-16,US,122.32,total postings,Industrial Engineering
+2026-10-17,US,122.36,total postings,Industrial Engineering
+2026-10-18,US,122.45,total postings,Industrial Engineering
+2026-10-19,US,122.49,total postings,Industrial Engineering
+2026-10-20,US,122.53,total postings,Industrial Engineering
+2026-10-21,US,122.66,total postings,Industrial Engineering
+2026-10-22,US,122.72,total postings,Industrial Engineering
+2026-10-23,US,122.99,total postings,Industrial Engineering
+2026-10-24,US,123.29,total postings,Industrial Engineering
+2026-10-25,US,123.73,total postings,Industrial Engineering
+2026-10-26,US,124.01,total postings,Industrial Engineering
+2026-10-27,US,124.3,total postings,Industrial Engineering
+2026-10-28,US,124.42,total postings,Industrial Engineering
+2026-10-29,US,124.71,total postings,Industrial Engineering
+2026-10-30,US,124.95,total postings,Industrial Engineering
+2026-10-31,US,125.15,total postings,Industrial Engineering
+2020-02-01,US,100,total postings,Mechanical Engineering
+2020-02-02,US,100.09,total postings,Mechanical Engineering
+2020-02-03,US,100.19,total postings,Mechanical Engineering
+2020-02-04,US,100.27,total postings,Mechanical Engineering
+2020-02-05,US,100.36,total postings,Mechanical Engineering
+2020-02-06,US,100.51,total postings,Mechanical Engineering
+2020-02-07,US,100.7,total postings,Mechanical Engineering
+2020-02-08,US,100.87,total postings,Mechanical Engineering
+2020-02-09,US,100.99,total postings,Mechanical Engineering
+2020-02-10,US,101.1,total postings,Mechanical Engineering
+2020-02-11,US,101.12,total postings,Mechanical Engineering
+2020-02-12,US,101.17,total postings,Mechanical Engineering
+2020-02-13,US,101.1,total postings,Mechanical Engineering
+2020-02-14,US,101.05,total postings,Mechanical Engineering
+2020-02-15,US,101.01,total postings,Mechanical Engineering
+2020-02-16,US,101.12,total postings,Mechanical Engineering
+2020-02-17,US,101.16,total postings,Mechanical Engineering
+2020-02-18,US,101.16,total postings,Mechanical Engineering
+2020-02-19,US,101.22,total postings,Mechanical Engineering
+2020-02-20,US,101.25,total postings,Mechanical Engineering
+2020-02-21,US,101.17,total postings,Mechanical Engineering
+2020-02-22,US,100.91,total postings,Mechanical Engineering
+2020-02-23,US,100.75,total postings,Mechanical Engineering
+2020-02-24,US,100.61,total postings,Mechanical Engineering
+2020-02-25,US,100.58,total postings,Mechanical Engineering
+2020-02-26,US,100.37,total postings,Mechanical Engineering
+2020-02-27,US,100.15,total postings,Mechanical Engineering
+2020-02-28,US,99.98,total postings,Mechanical Engineering
+2020-02-29,US,99.97,total postings,Mechanical Engineering
+2026-10-01,US,167.67,total postings,Mechanical Engineering
+2026-10-02,US,167.97,total postings,Mechanical Engineering
+2026-10-03,US,168.12,total postings,Mechanical Engineering
+2026-10-04,US,168.15,total postings,Mechanical Engineering
+2026-10-05,US,168.18,total postings,Mechanical Engineering
+2026-10-06,US,168.19,total postings,Mechanical Engineering
+2026-10-07,US,168.05,total postings,Mechanical Engineering
+2026-10-08,US,168.02,total postings,Mechanical Engineering
+2026-10-09,US,167.78,total postings,Mechanical Engineering
+2026-10-10,US,167.64,total postings,Mechanical Engineering
+2026-10-11,US,167.54,total postings,Mechanical Engineering
+2026-10-12,US,167.55,total postings,Mechanical Engineering
+2026-10-13,US,167.64,total postings,Mechanical Engineering
+2026-10-14,US,167.85,total postings,Mechanical Engineering
+2026-10-15,US,168.17,total postings,Mechanical Engineering
+2026-10-16,US,168.65,total postings,Mechanical Engineering
+2026-10-17,US,169.11,total postings,Mechanical Engineering
+2026-10-18,US,169.71,total postings,Mechanical Engineering
+2026-10-19,US,170.25,total postings,Mechanical Engineering
+2026-10-20,US,170.71,total postings,Mechanical Engineering
+2026-10-21,US,171.17,total postings,Mechanical Engineering
+2026-10-22,US,171.44,total postings,Mechanical Engineering
+2026-10-23,US,171.8,total postings,Mechanical Engineering
+2026-10-24,US,172.07,total postings,Mechanical Engineering
+2026-10-25,US,172.23,total postings,Mechanical Engineering
+2026-10-26,US,172.19,total postings,Mechanical Engineering
+2026-10-27,US,172.21,total postings,Mechanical Engineering
+2026-10-28,US,171.95,total postings,Mechanical Engineering
+2026-10-29,US,171.87,total postings,Mechanical Engineering
+2026-10-30,US,171.67,total postings,Mechanical Engineering
+2026-10-31,US,171.43,total postings,Mechanical Engineering
+2020-02-01,US,100,total postings,Banking & Finance
+2020-02-02,US,99.92,total postings,Banking & Finance
+2020-02-03,US,99.86,total postings,Banking & Finance
+2020-02-04,US,99.64,total postings,Banking & Finance
+2020-02-05,US,99.58,total postings,Banking & Finance
+2020-02-06,US,99.57,total postings,Banking & Finance
+2020-02-07,US,99.57,total postings,Banking & Finance
+2020-02-08,US,99.67,total postings,Banking & Finance
+2020-02-09,US,99.57,total postings,Banking & Finance
+2020-02-10,US,100.16,total postings,Banking & Finance
+2020-02-11,US,100.75,total postings,Banking & Finance
+2020-02-12,US,101.48,total postings,Banking & Finance
+2020-02-13,US,102.05,total postings,Banking & Finance
+2020-02-14,US,102.64,total postings,Banking & Finance
+2020-02-15,US,103.09,total postings,Banking & Finance
+2020-02-16,US,103.82,total postings,Banking & Finance
+2020-02-17,US,103.91,total postings,Banking & Finance
+2020-02-18,US,103.85,total postings,Banking & Finance
+2020-02-19,US,103.8,total postings,Banking & Finance
+2020-02-20,US,103.82,total postings,Banking & Finance
+2020-02-21,US,103.81,total postings,Banking & Finance
+2020-02-22,US,103.63,total postings,Banking & Finance
+2020-02-23,US,103.65,total postings,Banking & Finance
+2020-02-24,US,103.71,total postings,Banking & Finance
+2020-02-25,US,103.96,total postings,Banking & Finance
+2020-02-26,US,104.09,total postings,Banking & Finance
+2020-02-27,US,104.29,total postings,Banking & Finance
+2020-02-28,US,104.46,total postings,Banking & Finance
+2020-02-29,US,104.97,total postings,Banking & Finance
+2026-10-01,US,106.32,total postings,Banking & Finance
+2026-10-02,US,106.22,total postings,Banking & Finance
+2026-10-03,US,106.04,total postings,Banking & Finance
+2026-10-04,US,105.83,total postings,Banking & Finance
+2026-10-05,US,105.64,total postings,Banking & Finance
+2026-10-06,US,105.75,total postings,Banking & Finance
+2026-10-07,US,105.81,total postings,Banking & Finance
+2026-10-08,US,106.19,total postings,Banking & Finance
+2026-10-09,US,106.17,total postings,Banking & Finance
+2026-10-10,US,106.43,total postings,Banking & Finance
+2026-10-11,US,106.78,total postings,Banking & Finance
+2026-10-12,US,107.02,total postings,Banking & Finance
+2026-10-13,US,106.89,total postings,Banking & Finance
+2026-10-14,US,106.79,total postings,Banking & Finance
+2026-10-15,US,106.72,total postings,Banking & Finance
+2026-10-16,US,106.89,total postings,Banking & Finance
+2026-10-17,US,106.81,total postings,Banking & Finance
+2026-10-18,US,106.74,total postings,Banking & Finance
+2026-10-19,US,106.7,total postings,Banking & Finance
+2026-10-20,US,106.73,total postings,Banking & Finance
+2026-10-21,US,106.85,total postings,Banking & Finance
+2026-10-22,US,107.01,total postings,Banking & Finance
+2026-10-23,US,107.2,total postings,Banking & Finance
+2026-10-24,US,107.35,total postings,Banking & Finance
+2026-10-25,US,107.4,total postings,Banking & Finance
+2026-10-26,US,107.55,total postings,Banking & Finance
+2026-10-27,US,107.84,total postings,Banking & Finance
+2026-10-28,US,108.12,total postings,Banking & Finance
+2026-10-29,US,108.3,total postings,Banking & Finance
+2026-10-30,US,108.47,total postings,Banking & Finance
+2026-10-31,US,108.64,total postings,Banking & Finance
+2020-02-01,US,100,total postings,Food Preparation & Service
+2020-02-02,US,99.96,total postings,Food Preparation & Service
+2020-02-03,US,99.92,total postings,Food Preparation & Service
+2020-02-04,US,99.79,total postings,Food Preparation & Service
+2020-02-05,US,99.72,total postings,Food Preparation & Service
+2020-02-06,US,99.71,total postings,Food Preparation & Service
+2020-02-07,US,99.68,total postings,Food Preparation & Service
+2020-02-08,US,99.74,total postings,Food Preparation & Service
+2020-02-09,US,99.62,total postings,Food Preparation & Service
+2020-02-10,US,99.51,total postings,Food Preparation & Service
+2020-02-11,US,99.42,total postings,Food Preparation & Service
+2020-02-12,US,99.36,total postings,Food Preparation & Service
+2020-02-13,US,99.36,total postings,Food Preparation & Service
+2020-02-14,US,99.33,total postings,Food Preparation & Service
+2020-02-15,US,99.14,total postings,Food Preparation & Service
+2020-02-16,US,99.08,total postings,Food Preparation & Service
+2020-02-17,US,99.02,total postings,Food Preparation & Service
+2020-02-18,US,98.93,total postings,Food Preparation & Service
+2020-02-19,US,98.86,total postings,Food Preparation & Service
+2020-02-20,US,98.75,total postings,Food Preparation & Service
+2020-02-21,US,98.5,total postings,Food Preparation & Service
+2020-02-22,US,98.28,total postings,Food Preparation & Service
+2020-02-23,US,98.02,total postings,Food Preparation & Service
+2020-02-24,US,97.78,total postings,Food Preparation & Service
+2020-02-25,US,97.59,total postings,Food Preparation & Service
+2020-02-26,US,97.53,total postings,Food Preparation & Service
+2020-02-27,US,97.47,total postings,Food Preparation & Service
+2020-02-28,US,97.6,total postings,Food Preparation & Service
+2020-02-29,US,97.75,total postings,Food Preparation & Service
+2026-10-01,US,94.72,total postings,Food Preparation & Service
+2026-10-02,US,94.82,total postings,Food Preparation & Service
+2026-10-03,US,94.98,total postings,Food Preparation & Service
+2026-10-04,US,95.2,total postings,Food Preparation & Service
+2026-10-05,US,95.45,total postings,Food Preparation & Service
+2026-10-06,US,95.57,total postings,Food Preparation & Service
+2026-10-07,US,95.79,total postings,Food Preparation & Service
+2026-10-08,US,95.94,total postings,Food Preparation & Service
+2026-10-09,US,95.98,total postings,Food Preparation & Service
+2026-10-10,US,95.95,total postings,Food Preparation & Service
+2026-10-11,US,95.94,total postings,Food Preparation & Service
+2026-10-12,US,95.86,total postings,Food Preparation & Service
+2026-10-13,US,95.82,total postings,Food Preparation & Service
+2026-10-14,US,95.71,total postings,Food Preparation & Service
+2026-10-15,US,95.76,total postings,Food Preparation & Service
+2026-10-16,US,95.8,total postings,Food Preparation & Service
+2026-10-17,US,95.82,total postings,Food Preparation & Service
+2026-10-18,US,95.77,total postings,Food Preparation & Service
+2026-10-19,US,95.64,total postings,Food Preparation & Service
+2026-10-20,US,95.58,total postings,Food Preparation & Service
+2026-10-21,US,95.67,total postings,Food Preparation & Service
+2026-10-22,US,95.74,total postings,Food Preparation & Service
+2026-10-23,US,95.78,total postings,Food Preparation & Service
+2026-10-24,US,95.81,total postings,Food Preparation & Service
+2026-10-25,US,95.86,total postings,Food Preparation & Service
+2026-10-26,US,95.94,total postings,Food Preparation & Service
+2026-10-27,US,96.08,total postings,Food Preparation & Service
+2026-10-28,US,96.02,total postings,Food Preparation & Service
+2026-10-29,US,96,total postings,Food Preparation & Service
+2026-10-30,US,95.98,total postings,Food Preparation & Service
+2026-10-31,US,96.02,total postings,Food Preparation & Service
+2020-02-01,US,100,total postings,Hospitality & Tourism
+2020-02-02,US,99.98,total postings,Hospitality & Tourism
+2020-02-03,US,99.9,total postings,Hospitality & Tourism
+2020-02-04,US,100.08,total postings,Hospitality & Tourism
+2020-02-05,US,100.45,total postings,Hospitality & Tourism
+2020-02-06,US,100.61,total postings,Hospitality & Tourism
+2020-02-07,US,100.36,total postings,Hospitality & Tourism
+2020-02-08,US,100.22,total postings,Hospitality & Tourism
+2020-02-09,US,99.98,total postings,Hospitality & Tourism
+2020-02-10,US,99.91,total postings,Hospitality & Tourism
+2020-02-11,US,99.76,total postings,Hospitality & Tourism
+2020-02-12,US,99.65,total postings,Hospitality & Tourism
+2020-02-13,US,99.6,total postings,Hospitality & Tourism
+2020-02-14,US,99.6,total postings,Hospitality & Tourism
+2020-02-15,US,99.58,total postings,Hospitality & Tourism
+2020-02-16,US,99.61,total postings,Hospitality & Tourism
+2020-02-17,US,99.56,total postings,Hospitality & Tourism
+2020-02-18,US,99.41,total postings,Hospitality & Tourism
+2020-02-19,US,99.2,total postings,Hospitality & Tourism
+2020-02-20,US,99.11,total postings,Hospitality & Tourism
+2020-02-21,US,99.13,total postings,Hospitality & Tourism
+2020-02-22,US,99.03,total postings,Hospitality & Tourism
+2020-02-23,US,98.99,total postings,Hospitality & Tourism
+2020-02-24,US,99.03,total postings,Hospitality & Tourism
+2020-02-25,US,99.09,total postings,Hospitality & Tourism
+2020-02-26,US,99.09,total postings,Hospitality & Tourism
+2020-02-27,US,98.88,total postings,Hospitality & Tourism
+2020-02-28,US,98.81,total postings,Hospitality & Tourism
+2020-02-29,US,98.92,total postings,Hospitality & Tourism
+2026-10-01,US,85.31,total postings,Hospitality & Tourism
+2026-10-02,US,85.07,total postings,Hospitality & Tourism
+2026-10-03,US,84.78,total postings,Hospitality & Tourism
+2026-10-04,US,84.45,total postings,Hospitality & Tourism
+2026-10-05,US,83.95,total postings,Hospitality & Tourism
+2026-10-06,US,83.46,total postings,Hospitality & Tourism
+2026-10-07,US,83.24,total postings,Hospitality & Tourism
+2026-10-08,US,83.13,total postings,Hospitality & Tourism
+2026-10-09,US,83.1,total postings,Hospitality & Tourism
+2026-10-10,US,83.07,total postings,Hospitality & Tourism
+2026-10-11,US,83.02,total postings,Hospitality & Tourism
+2026-10-12,US,83.23,total postings,Hospitality & Tourism
+2026-10-13,US,83.42,total postings,Hospitality & Tourism
+2026-10-14,US,83.62,total postings,Hospitality & Tourism
+2026-10-15,US,83.83,total postings,Hospitality & Tourism
+2026-10-16,US,83.66,total postings,Hospitality & Tourism
+2026-10-17,US,83.78,total postings,Hospitality & Tourism
+2026-10-18,US,83.95,total postings,Hospitality & Tourism
+2026-10-19,US,84.11,total postings,Hospitality & Tourism
+2026-10-20,US,84.24,total postings,Hospitality & Tourism
+2026-10-21,US,84.42,total postings,Hospitality & Tourism
+2026-10-22,US,84.58,total postings,Hospitality & Tourism
+2026-10-23,US,84.98,total postings,Hospitality & Tourism
+2026-10-24,US,85.18,total postings,Hospitality & Tourism
+2026-10-25,US,85.18,total postings,Hospitality & Tourism
+2026-10-26,US,85.24,total postings,Hospitality & Tourism
+2026-10-27,US,85.32,total postings,Hospitality & Tourism
+2026-10-28,US,85.31,total postings,Hospitality & Tourism
+2026-10-29,US,85.28,total postings,Hospitality & Tourism
+2026-10-30,US,85.27,total postings,Hospitality & Tourism
+2026-10-31,US,85.13,total postings,Hospitality & Tourism
+2020-02-01,US,100,total postings,Human Resources
+2020-02-02,US,99.72,total postings,Human Resources
+2020-02-03,US,99.68,total postings,Human Resources
+2020-02-04,US,99.67,total postings,Human Resources
+2020-02-05,US,99.71,total postings,Human Resources
+2020-02-06,US,99.8,total postings,Human Resources
+2020-02-07,US,99.87,total postings,Human Resources
+2020-02-08,US,99.98,total postings,Human Resources
+2020-02-09,US,100.06,total postings,Human Resources
+2020-02-10,US,100.22,total postings,Human Resources
+2020-02-11,US,100.32,total postings,Human Resources
+2020-02-12,US,100.37,total postings,Human Resources
+2020-02-13,US,100.4,total postings,Human Resources
+2020-02-14,US,100.42,total postings,Human Resources
+2020-02-15,US,100.33,total postings,Human Resources
+2020-02-16,US,100.38,total postings,Human Resources
+2020-02-17,US,100.36,total postings,Human Resources
+2020-02-18,US,100.32,total postings,Human Resources
+2020-02-19,US,100.22,total postings,Human Resources
+2020-02-20,US,100.21,total postings,Human Resources
+2020-02-21,US,100.23,total postings,Human Resources
+2020-02-22,US,100.04,total postings,Human Resources
+2020-02-23,US,99.97,total postings,Human Resources
+2020-02-24,US,99.88,total postings,Human Resources
+2020-02-25,US,99.86,total postings,Human Resources
+2020-02-26,US,99.89,total postings,Human Resources
+2020-02-27,US,99.83,total postings,Human Resources
+2020-02-28,US,99.73,total postings,Human Resources
+2020-02-29,US,99.9,total postings,Human Resources
+2026-10-01,US,97.57,total postings,Human Resources
+2026-10-02,US,97.72,total postings,Human Resources
+2026-10-03,US,97.99,total postings,Human Resources
+2026-10-04,US,98.25,total postings,Human Resources
+2026-10-05,US,98.52,total postings,Human Resources
+2026-10-06,US,98.7,total postings,Human Resources
+2026-10-07,US,98.71,total postings,Human Resources
+2026-10-08,US,98.87,total postings,Human Resources
+2026-10-09,US,98.88,total postings,Human Resources
+2026-10-10,US,98.77,total postings,Human Resources
+2026-10-11,US,98.58,total postings,Human Resources
+2026-10-12,US,98.47,total postings,Human Resources
+2026-10-13,US,98.32,total postings,Human Resources
+2026-10-14,US,98.3,total postings,Human Resources
+2026-10-15,US,98.35,total postings,Human Resources
+2026-10-16,US,98.5,total postings,Human Resources
+2026-10-17,US,98.65,total postings,Human Resources
+2026-10-18,US,98.84,total postings,Human Resources
+2026-10-19,US,99.02,total postings,Human Resources
+2026-10-20,US,99.23,total postings,Human Resources
+2026-10-21,US,99.39,total postings,Human Resources
+2026-10-22,US,99.35,total postings,Human Resources
+2026-10-23,US,99.32,total postings,Human Resources
+2026-10-24,US,99.18,total postings,Human Resources
+2026-10-25,US,99.02,total postings,Human Resources
+2026-10-26,US,98.81,total postings,Human Resources
+2026-10-27,US,98.62,total postings,Human Resources
+2026-10-28,US,98.56,total postings,Human Resources
+2026-10-29,US,98.55,total postings,Human Resources
+2026-10-30,US,98.55,total postings,Human Resources
+2026-10-31,US,98.52,total postings,Human Resources
+2020-02-01,US,100,total postings,Installation & Maintenance
+2020-02-02,US,100.06,total postings,Installation & Maintenance
+2020-02-03,US,100.19,total postings,Installation & Maintenance
+2020-02-04,US,100.33,total postings,Installation & Maintenance
+2020-02-05,US,100.49,total postings,Installation & Maintenance
+2020-02-06,US,100.69,total postings,Installation & Maintenance
+2020-02-07,US,100.57,total postings,Installation & Maintenance
+2020-02-08,US,100.55,total postings,Installation & Maintenance
+2020-02-09,US,100.44,total postings,Installation & Maintenance
+2020-02-10,US,100.39,total postings,Installation & Maintenance
+2020-02-11,US,100.33,total postings,Installation & Maintenance
+2020-02-12,US,100.26,total postings,Installation & Maintenance
+2020-02-13,US,100.18,total postings,Installation & Maintenance
+2020-02-14,US,100.11,total postings,Installation & Maintenance
+2020-02-15,US,99.63,total postings,Installation & Maintenance
+2020-02-16,US,99.3,total postings,Installation & Maintenance
+2020-02-17,US,98.9,total postings,Installation & Maintenance
+2020-02-18,US,98.57,total postings,Installation & Maintenance
+2020-02-19,US,98.16,total postings,Installation & Maintenance
+2020-02-20,US,97.84,total postings,Installation & Maintenance
+2020-02-21,US,97.54,total postings,Installation & Maintenance
+2020-02-22,US,97.57,total postings,Installation & Maintenance
+2020-02-23,US,97.61,total postings,Installation & Maintenance
+2020-02-24,US,97.63,total postings,Installation & Maintenance
+2020-02-25,US,97.58,total postings,Installation & Maintenance
+2020-02-26,US,97.63,total postings,Installation & Maintenance
+2020-02-27,US,97.47,total postings,Installation & Maintenance
+2020-02-28,US,97.4,total postings,Installation & Maintenance
+2020-02-29,US,97.48,total postings,Installation & Maintenance
+2026-10-01,US,117.02,total postings,Installation & Maintenance
+2026-10-02,US,117.24,total postings,Installation & Maintenance
+2026-10-03,US,117.44,total postings,Installation & Maintenance
+2026-10-04,US,117.61,total postings,Installation & Maintenance
+2026-10-05,US,117.74,total postings,Installation & Maintenance
+2026-10-06,US,117.78,total postings,Installation & Maintenance
+2026-10-07,US,117.83,total postings,Installation & Maintenance
+2026-10-08,US,117.81,total postings,Installation & Maintenance
+2026-10-09,US,117.71,total postings,Installation & Maintenance
+2026-10-10,US,117.57,total postings,Installation & Maintenance
+2026-10-11,US,117.43,total postings,Installation & Maintenance
+2026-10-12,US,117.32,total postings,Installation & Maintenance
+2026-10-13,US,117.22,total postings,Installation & Maintenance
+2026-10-14,US,117.1,total postings,Installation & Maintenance
+2026-10-15,US,117.05,total postings,Installation & Maintenance
+2026-10-16,US,117.04,total postings,Installation & Maintenance
+2026-10-17,US,117,total postings,Installation & Maintenance
+2026-10-18,US,116.94,total postings,Installation & Maintenance
+2026-10-19,US,116.96,total postings,Installation & Maintenance
+2026-10-20,US,116.94,total postings,Installation & Maintenance
+2026-10-21,US,117.01,total postings,Installation & Maintenance
+2026-10-22,US,117.03,total postings,Installation & Maintenance
+2026-10-23,US,117.05,total postings,Installation & Maintenance
+2026-10-24,US,117.1,total postings,Installation & Maintenance
+2026-10-25,US,117.26,total postings,Installation & Maintenance
+2026-10-26,US,117.3,total postings,Installation & Maintenance
+2026-10-27,US,117.38,total postings,Installation & Maintenance
+2026-10-28,US,117.42,total postings,Installation & Maintenance
+2026-10-29,US,117.48,total postings,Installation & Maintenance
+2026-10-30,US,117.49,total postings,Installation & Maintenance
+2026-10-31,US,117.57,total postings,Installation & Maintenance
+2020-02-01,US,100,total postings,Insurance
+2020-02-02,US,100.21,total postings,Insurance
+2020-02-03,US,100.46,total postings,Insurance
+2020-02-04,US,100.67,total postings,Insurance
+2020-02-05,US,100.98,total postings,Insurance
+2020-02-06,US,101.05,total postings,Insurance
+2020-02-07,US,101.18,total postings,Insurance
+2020-02-08,US,101.19,total postings,Insurance
+2020-02-09,US,101.12,total postings,Insurance
+2020-02-10,US,101.13,total postings,Insurance
+2020-02-11,US,101.08,total postings,Insurance
+2020-02-12,US,101.16,total postings,Insurance
+2020-02-13,US,101.25,total postings,Insurance
+2020-02-14,US,101.22,total postings,Insurance
+2020-02-15,US,101.24,total postings,Insurance
+2020-02-16,US,101.38,total postings,Insurance
+2020-02-17,US,101.33,total postings,Insurance
+2020-02-18,US,101.4,total postings,Insurance
+2020-02-19,US,101.49,total postings,Insurance
+2020-02-20,US,101.53,total postings,Insurance
+2020-02-21,US,101.72,total postings,Insurance
+2020-02-22,US,101.74,total postings,Insurance
+2020-02-23,US,101.9,total postings,Insurance
+2020-02-24,US,102.16,total postings,Insurance
+2020-02-25,US,102.42,total postings,Insurance
+2020-02-26,US,102.66,total postings,Insurance
+2020-02-27,US,102.96,total postings,Insurance
+2020-02-28,US,102.87,total postings,Insurance
+2020-02-29,US,103.12,total postings,Insurance
+2026-10-01,US,126.14,total postings,Insurance
+2026-10-02,US,126.24,total postings,Insurance
+2026-10-03,US,126.32,total postings,Insurance
+2026-10-04,US,126.43,total postings,Insurance
+2026-10-05,US,126.66,total postings,Insurance
+2026-10-06,US,126.87,total postings,Insurance
+2026-10-07,US,126.91,total postings,Insurance
+2026-10-08,US,127.02,total postings,Insurance
+2026-10-09,US,126.92,total postings,Insurance
+2026-10-10,US,126.66,total postings,Insurance
+2026-10-11,US,126.36,total postings,Insurance
+2026-10-12,US,126.03,total postings,Insurance
+2026-10-13,US,125.75,total postings,Insurance
+2026-10-14,US,125.63,total postings,Insurance
+2026-10-15,US,125.63,total postings,Insurance
+2026-10-16,US,125.7,total postings,Insurance
+2026-10-17,US,125.92,total postings,Insurance
+2026-10-18,US,126.34,total postings,Insurance
+2026-10-19,US,126.72,total postings,Insurance
+2026-10-20,US,126.82,total postings,Insurance
+2026-10-21,US,126.79,total postings,Insurance
+2026-10-22,US,126.53,total postings,Insurance
+2026-10-23,US,126.49,total postings,Insurance
+2026-10-24,US,126.28,total postings,Insurance
+2026-10-25,US,125.81,total postings,Insurance
+2026-10-26,US,125.29,total postings,Insurance
+2026-10-27,US,125.1,total postings,Insurance
+2026-10-28,US,125.42,total postings,Insurance
+2026-10-29,US,125.91,total postings,Insurance
+2026-10-30,US,125.58,total postings,Insurance
+2026-10-31,US,125.45,total postings,Insurance
+2020-02-01,US,100,total postings,Legal
+2020-02-02,US,99.98,total postings,Legal
+2020-02-03,US,99.98,total postings,Legal
+2020-02-04,US,100,total postings,Legal
+2020-02-05,US,99.89,total postings,Legal
+2020-02-06,US,99.8,total postings,Legal
+2020-02-07,US,99.71,total postings,Legal
+2020-02-08,US,99.67,total postings,Legal
+2020-02-09,US,99.62,total postings,Legal
+2020-02-10,US,99.6,total postings,Legal
+2020-02-11,US,99.49,total postings,Legal
+2020-02-12,US,99.48,total postings,Legal
+2020-02-13,US,99.53,total postings,Legal
+2020-02-14,US,99.56,total postings,Legal
+2020-02-15,US,99.51,total postings,Legal
+2020-02-16,US,99.58,total postings,Legal
+2020-02-17,US,99.58,total postings,Legal
+2020-02-18,US,99.54,total postings,Legal
+2020-02-19,US,99.49,total postings,Legal
+2020-02-20,US,99.48,total postings,Legal
+2020-02-21,US,99.48,total postings,Legal
+2020-02-22,US,99.28,total postings,Legal
+2020-02-23,US,99.2,total postings,Legal
+2020-02-24,US,99.08,total postings,Legal
+2020-02-25,US,99.11,total postings,Legal
+2020-02-26,US,99.22,total postings,Legal
+2020-02-27,US,99.19,total postings,Legal
+2020-02-28,US,99.15,total postings,Legal
+2020-02-29,US,99.32,total postings,Legal
+2026-10-01,US,121.91,total postings,Legal
+2026-10-02,US,121.95,total postings,Legal
+2026-10-03,US,121.93,total postings,Legal
+2026-10-04,US,122.02,total postings,Legal
+2026-10-05,US,122.03,total postings,Legal
+2026-10-06,US,122.05,total postings,Legal
+2026-10-07,US,122.1,total postings,Legal
+2026-10-08,US,122.08,total postings,Legal
+2026-10-09,US,122.03,total postings,Legal
+2026-10-10,US,122.19,total postings,Legal
+2026-10-11,US,122.23,total postings,Legal
+2026-10-12,US,122.34,total postings,Legal
+2026-10-13,US,122.44,total postings,Legal
+2026-10-14,US,122.68,total postings,Legal
+2026-10-15,US,123.32,total postings,Legal
+2026-10-16,US,123.88,total postings,Legal
+2026-10-17,US,124.29,total postings,Legal
+2026-10-18,US,124.81,total postings,Legal
+2026-10-19,US,125.38,total postings,Legal
+2026-10-20,US,125.94,total postings,Legal
+2026-10-21,US,126.07,total postings,Legal
+2026-10-22,US,125.9,total postings,Legal
+2026-10-23,US,125.85,total postings,Legal
+2026-10-24,US,125.68,total postings,Legal
+2026-10-25,US,125.42,total postings,Legal
+2026-10-26,US,125.02,total postings,Legal
+2026-10-27,US,124.77,total postings,Legal
+2026-10-28,US,124.61,total postings,Legal
+2026-10-29,US,124.51,total postings,Legal
+2026-10-30,US,124.34,total postings,Legal
+2026-10-31,US,124.28,total postings,Legal
+2020-02-01,US,100,total postings,Management
+2020-02-02,US,100.25,total postings,Management
+2020-02-03,US,100.46,total postings,Management
+2020-02-04,US,100.62,total postings,Management
+2020-02-05,US,100.94,total postings,Management
+2020-02-06,US,101.36,total postings,Management
+2020-02-07,US,100.82,total postings,Management
+2020-02-08,US,100.88,total postings,Management
+2020-02-09,US,100.87,total postings,Management
+2020-02-10,US,101.01,total postings,Management
+2020-02-11,US,101.15,total postings,Management
+2020-02-12,US,101.18,total postings,Management
+2020-02-13,US,101.22,total postings,Management
+2020-02-14,US,101.71,total postings,Management
+2020-02-15,US,101,total postings,Management
+2020-02-16,US,100.42,total postings,Management
+2020-02-17,US,99.68,total postings,Management
+2020-02-18,US,98.82,total postings,Management
+2020-02-19,US,98.03,total postings,Management
+2020-02-20,US,97.2,total postings,Management
+2020-02-21,US,96.48,total postings,Management
+2020-02-22,US,96.41,total postings,Management
+2020-02-23,US,96.42,total postings,Management
+2020-02-24,US,96.48,total postings,Management
+2020-02-25,US,96.71,total postings,Management
+2020-02-26,US,96.98,total postings,Management
+2020-02-27,US,97.2,total postings,Management
+2020-02-28,US,97.31,total postings,Management
+2020-02-29,US,97.39,total postings,Management
+2026-10-01,US,103.85,total postings,Management
+2026-10-02,US,103.88,total postings,Management
+2026-10-03,US,103.96,total postings,Management
+2026-10-04,US,104.05,total postings,Management
+2026-10-05,US,104.08,total postings,Management
+2026-10-06,US,104.09,total postings,Management
+2026-10-07,US,104.11,total postings,Management
+2026-10-08,US,104.21,total postings,Management
+2026-10-09,US,104.2,total postings,Management
+2026-10-10,US,104.12,total postings,Management
+2026-10-11,US,104.06,total postings,Management
+2026-10-12,US,104.1,total postings,Management
+2026-10-13,US,104.14,total postings,Management
+2026-10-14,US,104.08,total postings,Management
+2026-10-15,US,104.06,total postings,Management
+2026-10-16,US,104.16,total postings,Management
+2026-10-17,US,104.23,total postings,Management
+2026-10-18,US,104.35,total postings,Management
+2026-10-19,US,104.41,total postings,Management
+2026-10-20,US,104.5,total postings,Management
+2026-10-21,US,104.68,total postings,Management
+2026-10-22,US,104.79,total postings,Management
+2026-10-23,US,104.84,total postings,Management
+2026-10-24,US,104.94,total postings,Management
+2026-10-25,US,104.98,total postings,Management
+2026-10-26,US,104.99,total postings,Management
+2026-10-27,US,104.98,total postings,Management
+2026-10-28,US,104.9,total postings,Management
+2026-10-29,US,104.99,total postings,Management
+2026-10-30,US,105.03,total postings,Management
+2026-10-31,US,105.02,total postings,Management
+2020-02-01,US,100,total postings,Production & Manufacturing
+2020-02-02,US,99.92,total postings,Production & Manufacturing
+2020-02-03,US,99.87,total postings,Production & Manufacturing
+2020-02-04,US,99.81,total postings,Production & Manufacturing
+2020-02-05,US,99.84,total postings,Production & Manufacturing
+2020-02-06,US,99.92,total postings,Production & Manufacturing
+2020-02-07,US,100,total postings,Production & Manufacturing
+2020-02-08,US,100.03,total postings,Production & Manufacturing
+2020-02-09,US,100.03,total postings,Production & Manufacturing
+2020-02-10,US,100.01,total postings,Production & Manufacturing
+2020-02-11,US,100.01,total postings,Production & Manufacturing
+2020-02-12,US,100.02,total postings,Production & Manufacturing
+2020-02-13,US,100.04,total postings,Production & Manufacturing
+2020-02-14,US,100.08,total postings,Production & Manufacturing
+2020-02-15,US,100.1,total postings,Production & Manufacturing
+2020-02-16,US,100.22,total postings,Production & Manufacturing
+2020-02-17,US,100.34,total postings,Production & Manufacturing
+2020-02-18,US,100.32,total postings,Production & Manufacturing
+2020-02-19,US,100.33,total postings,Production & Manufacturing
+2020-02-20,US,100.38,total postings,Production & Manufacturing
+2020-02-21,US,100.42,total postings,Production & Manufacturing
+2020-02-22,US,100.31,total postings,Production & Manufacturing
+2020-02-23,US,100.3,total postings,Production & Manufacturing
+2020-02-24,US,100.23,total postings,Production & Manufacturing
+2020-02-25,US,100.28,total postings,Production & Manufacturing
+2020-02-26,US,100.37,total postings,Production & Manufacturing
+2020-02-27,US,100.31,total postings,Production & Manufacturing
+2020-02-28,US,100.32,total postings,Production & Manufacturing
+2020-02-29,US,100.48,total postings,Production & Manufacturing
+2026-10-01,US,124.23,total postings,Production & Manufacturing
+2026-10-02,US,124.36,total postings,Production & Manufacturing
+2026-10-03,US,124.34,total postings,Production & Manufacturing
+2026-10-04,US,124.24,total postings,Production & Manufacturing
+2026-10-05,US,124.16,total postings,Production & Manufacturing
+2026-10-06,US,124.17,total postings,Production & Manufacturing
+2026-10-07,US,124.26,total postings,Production & Manufacturing
+2026-10-08,US,124.46,total postings,Production & Manufacturing
+2026-10-09,US,124.42,total postings,Production & Manufacturing
+2026-10-10,US,124.47,total postings,Production & Manufacturing
+2026-10-11,US,124.5,total postings,Production & Manufacturing
+2026-10-12,US,124.52,total postings,Production & Manufacturing
+2026-10-13,US,124.43,total postings,Production & Manufacturing
+2026-10-14,US,124.28,total postings,Production & Manufacturing
+2026-10-15,US,124.29,total postings,Production & Manufacturing
+2026-10-16,US,124.24,total postings,Production & Manufacturing
+2026-10-17,US,124.32,total postings,Production & Manufacturing
+2026-10-18,US,124.28,total postings,Production & Manufacturing
+2026-10-19,US,124.37,total postings,Production & Manufacturing
+2026-10-20,US,124.59,total postings,Production & Manufacturing
+2026-10-21,US,124.9,total postings,Production & Manufacturing
+2026-10-22,US,124.88,total postings,Production & Manufacturing
+2026-10-23,US,125.14,total postings,Production & Manufacturing
+2026-10-24,US,125.23,total postings,Production & Manufacturing
+2026-10-25,US,125.56,total postings,Production & Manufacturing
+2026-10-26,US,125.72,total postings,Production & Manufacturing
+2026-10-27,US,125.81,total postings,Production & Manufacturing
+2026-10-28,US,125.9,total postings,Production & Manufacturing
+2026-10-29,US,126.15,total postings,Production & Manufacturing
+2026-10-30,US,126.24,total postings,Production & Manufacturing
+2026-10-31,US,126.26,total postings,Production & Manufacturing
+2020-02-01,US,100,total postings,Marketing
+2020-02-02,US,99.97,total postings,Marketing
+2020-02-03,US,99.99,total postings,Marketing
+2020-02-04,US,99.99,total postings,Marketing
+2020-02-05,US,100.03,total postings,Marketing
+2020-02-06,US,100.09,total postings,Marketing
+2020-02-07,US,100.13,total postings,Marketing
+2020-02-08,US,100.17,total postings,Marketing
+2020-02-09,US,100.19,total postings,Marketing
+2020-02-10,US,100.33,total postings,Marketing
+2020-02-11,US,100.46,total postings,Marketing
+2020-02-12,US,100.56,total postings,Marketing
+2020-02-13,US,100.68,total postings,Marketing
+2020-02-14,US,100.77,total postings,Marketing
+2020-02-15,US,100.82,total postings,Marketing
+2020-02-16,US,100.99,total postings,Marketing
+2020-02-17,US,101.01,total postings,Marketing
+2020-02-18,US,100.95,total postings,Marketing
+2020-02-19,US,100.94,total postings,Marketing
+2020-02-20,US,100.86,total postings,Marketing
+2020-02-21,US,100.93,total postings,Marketing
+2020-02-22,US,100.81,total postings,Marketing
+2020-02-23,US,100.83,total postings,Marketing
+2020-02-24,US,100.81,total postings,Marketing
+2020-02-25,US,100.95,total postings,Marketing
+2020-02-26,US,100.98,total postings,Marketing
+2020-02-27,US,101.06,total postings,Marketing
+2020-02-28,US,101.06,total postings,Marketing
+2020-02-29,US,101.24,total postings,Marketing
+2026-10-01,US,75.53,total postings,Marketing
+2026-10-02,US,75.45,total postings,Marketing
+2026-10-03,US,75.37,total postings,Marketing
+2026-10-04,US,75.38,total postings,Marketing
+2026-10-05,US,75.34,total postings,Marketing
+2026-10-06,US,75.31,total postings,Marketing
+2026-10-07,US,75.33,total postings,Marketing
+2026-10-08,US,75.34,total postings,Marketing
+2026-10-09,US,75.32,total postings,Marketing
+2026-10-10,US,75.29,total postings,Marketing
+2026-10-11,US,75.25,total postings,Marketing
+2026-10-12,US,75.34,total postings,Marketing
+2026-10-13,US,75.38,total postings,Marketing
+2026-10-14,US,75.41,total postings,Marketing
+2026-10-15,US,75.59,total postings,Marketing
+2026-10-16,US,75.75,total postings,Marketing
+2026-10-17,US,75.87,total postings,Marketing
+2026-10-18,US,76.01,total postings,Marketing
+2026-10-19,US,76.04,total postings,Marketing
+2026-10-20,US,76.11,total postings,Marketing
+2026-10-21,US,76.36,total postings,Marketing
+2026-10-22,US,76.57,total postings,Marketing
+2026-10-23,US,76.8,total postings,Marketing
+2026-10-24,US,77,total postings,Marketing
+2026-10-25,US,77.16,total postings,Marketing
+2026-10-26,US,77.33,total postings,Marketing
+2026-10-27,US,77.42,total postings,Marketing
+2026-10-28,US,77.37,total postings,Marketing
+2026-10-29,US,77.32,total postings,Marketing
+2026-10-30,US,77.32,total postings,Marketing
+2026-10-31,US,77.28,total postings,Marketing
+2020-02-01,US,100,total postings,Data & Analytics
+2020-02-02,US,99.97,total postings,Data & Analytics
+2020-02-03,US,99.84,total postings,Data & Analytics
+2020-02-04,US,99.71,total postings,Data & Analytics
+2020-02-05,US,99.66,total postings,Data & Analytics
+2020-02-06,US,99.61,total postings,Data & Analytics
+2020-02-07,US,99.61,total postings,Data & Analytics
+2020-02-08,US,99.71,total postings,Data & Analytics
+2020-02-09,US,99.73,total postings,Data & Analytics
+2020-02-10,US,99.96,total postings,Data & Analytics
+2020-02-11,US,100.11,total postings,Data & Analytics
+2020-02-12,US,100.17,total postings,Data & Analytics
+2020-02-13,US,100.19,total postings,Data & Analytics
+2020-02-14,US,100.13,total postings,Data & Analytics
+2020-02-15,US,99.98,total postings,Data & Analytics
+2020-02-16,US,100.03,total postings,Data & Analytics
+2020-02-17,US,100,total postings,Data & Analytics
+2020-02-18,US,99.8,total postings,Data & Analytics
+2020-02-19,US,99.74,total postings,Data & Analytics
+2020-02-20,US,99.72,total postings,Data & Analytics
+2020-02-21,US,99.68,total postings,Data & Analytics
+2020-02-22,US,99.53,total postings,Data & Analytics
+2020-02-23,US,99.5,total postings,Data & Analytics
+2020-02-24,US,99.41,total postings,Data & Analytics
+2020-02-25,US,99.59,total postings,Data & Analytics
+2020-02-26,US,99.65,total postings,Data & Analytics
+2020-02-27,US,99.78,total postings,Data & Analytics
+2020-02-28,US,99.93,total postings,Data & Analytics
+2020-02-29,US,100.21,total postings,Data & Analytics
+2026-10-01,US,63.05,total postings,Data & Analytics
+2026-10-02,US,63.18,total postings,Data & Analytics
+2026-10-03,US,63.31,total postings,Data & Analytics
+2026-10-04,US,63.51,total postings,Data & Analytics
+2026-10-05,US,63.51,total postings,Data & Analytics
+2026-10-06,US,63.8,total postings,Data & Analytics
+2026-10-07,US,64.01,total postings,Data & Analytics
+2026-10-08,US,64.22,total postings,Data & Analytics
+2026-10-09,US,64.24,total postings,Data & Analytics
+2026-10-10,US,64.31,total postings,Data & Analytics
+2026-10-11,US,64.25,total postings,Data & Analytics
+2026-10-12,US,64.4,total postings,Data & Analytics
+2026-10-13,US,64.23,total postings,Data & Analytics
+2026-10-14,US,63.93,total postings,Data & Analytics
+2026-10-15,US,63.75,total postings,Data & Analytics
+2026-10-16,US,63.62,total postings,Data & Analytics
+2026-10-17,US,63.36,total postings,Data & Analytics
+2026-10-18,US,63.16,total postings,Data & Analytics
+2026-10-19,US,63.01,total postings,Data & Analytics
+2026-10-20,US,62.75,total postings,Data & Analytics
+2026-10-21,US,62.64,total postings,Data & Analytics
+2026-10-22,US,62.39,total postings,Data & Analytics
+2026-10-23,US,62.39,total postings,Data & Analytics
+2026-10-24,US,62.3,total postings,Data & Analytics
+2026-10-25,US,62.2,total postings,Data & Analytics
+2026-10-26,US,61.99,total postings,Data & Analytics
+2026-10-27,US,61.86,total postings,Data & Analytics
+2026-10-28,US,61.74,total postings,Data & Analytics
+2026-10-29,US,61.81,total postings,Data & Analytics
+2026-10-30,US,61.75,total postings,Data & Analytics
+2026-10-31,US,61.79,total postings,Data & Analytics
+2020-02-01,US,100,total postings,Dental
+2020-02-02,US,100.17,total postings,Dental
+2020-02-03,US,100.41,total postings,Dental
+2020-02-04,US,100.66,total postings,Dental
+2020-02-05,US,100.88,total postings,Dental
+2020-02-06,US,101.01,total postings,Dental
+2020-02-07,US,101.07,total postings,Dental
+2020-02-08,US,101.08,total postings,Dental
+2020-02-09,US,100.82,total postings,Dental
+2020-02-10,US,100.63,total postings,Dental
+2020-02-11,US,100.38,total postings,Dental
+2020-02-12,US,100.14,total postings,Dental
+2020-02-13,US,99.92,total postings,Dental
+2020-02-14,US,99.75,total postings,Dental
+2020-02-15,US,99.71,total postings,Dental
+2020-02-16,US,99.76,total postings,Dental
+2020-02-17,US,99.73,total postings,Dental
+2020-02-18,US,99.68,total postings,Dental
+2020-02-19,US,99.64,total postings,Dental
+2020-02-20,US,99.57,total postings,Dental
+2020-02-21,US,99.48,total postings,Dental
+2020-02-22,US,99.33,total postings,Dental
+2020-02-23,US,99.31,total postings,Dental
+2020-02-24,US,99.31,total postings,Dental
+2020-02-25,US,99.34,total postings,Dental
+2020-02-26,US,99.51,total postings,Dental
+2020-02-27,US,99.72,total postings,Dental
+2020-02-28,US,100.03,total postings,Dental
+2020-02-29,US,100.37,total postings,Dental
+2026-10-01,US,116.92,total postings,Dental
+2026-10-02,US,116.96,total postings,Dental
+2026-10-03,US,116.87,total postings,Dental
+2026-10-04,US,116.83,total postings,Dental
+2026-10-05,US,116.79,total postings,Dental
+2026-10-06,US,116.77,total postings,Dental
+2026-10-07,US,117,total postings,Dental
+2026-10-08,US,117.2,total postings,Dental
+2026-10-09,US,117.34,total postings,Dental
+2026-10-10,US,117.48,total postings,Dental
+2026-10-11,US,117.69,total postings,Dental
+2026-10-12,US,117.83,total postings,Dental
+2026-10-13,US,118,total postings,Dental
+2026-10-14,US,117.95,total postings,Dental
+2026-10-15,US,117.93,total postings,Dental
+2026-10-16,US,117.98,total postings,Dental
+2026-10-17,US,118.18,total postings,Dental
+2026-10-18,US,118.22,total postings,Dental
+2026-10-19,US,118.25,total postings,Dental
+2026-10-20,US,118.26,total postings,Dental
+2026-10-21,US,118.32,total postings,Dental
+2026-10-22,US,118.3,total postings,Dental
+2026-10-23,US,118.33,total postings,Dental
+2026-10-24,US,118.28,total postings,Dental
+2026-10-25,US,118.26,total postings,Dental
+2026-10-26,US,118.19,total postings,Dental
+2026-10-27,US,118.16,total postings,Dental
+2026-10-28,US,118.17,total postings,Dental
+2026-10-29,US,118.19,total postings,Dental
+2026-10-30,US,118.1,total postings,Dental
+2026-10-31,US,118.09,total postings,Dental
+2020-02-01,US,100,total postings,Physicians & Surgeons
+2020-02-02,US,100.13,total postings,Physicians & Surgeons
+2020-02-03,US,100.23,total postings,Physicians & Surgeons
+2020-02-04,US,100.14,total postings,Physicians & Surgeons
+2020-02-05,US,100.19,total postings,Physicians & Surgeons
+2020-02-06,US,100.29,total postings,Physicians & Surgeons
+2020-02-07,US,100.36,total postings,Physicians & Surgeons
+2020-02-08,US,100.32,total postings,Physicians & Surgeons
+2020-02-09,US,100.32,total postings,Physicians & Surgeons
+2020-02-10,US,100.32,total postings,Physicians & Surgeons
+2020-02-11,US,100.41,total postings,Physicians & Surgeons
+2020-02-12,US,100.38,total postings,Physicians & Surgeons
+2020-02-13,US,100.19,total postings,Physicians & Surgeons
+2020-02-14,US,100.02,total postings,Physicians & Surgeons
+2020-02-15,US,99.93,total postings,Physicians & Surgeons
+2020-02-16,US,99.87,total postings,Physicians & Surgeons
+2020-02-17,US,99.76,total postings,Physicians & Surgeons
+2020-02-18,US,99.88,total postings,Physicians & Surgeons
+2020-02-19,US,99.97,total postings,Physicians & Surgeons
+2020-02-20,US,100.13,total postings,Physicians & Surgeons
+2020-02-21,US,100.29,total postings,Physicians & Surgeons
+2020-02-22,US,100.34,total postings,Physicians & Surgeons
+2020-02-23,US,100.42,total postings,Physicians & Surgeons
+2020-02-24,US,100.53,total postings,Physicians & Surgeons
+2020-02-25,US,100.61,total postings,Physicians & Surgeons
+2020-02-26,US,100.63,total postings,Physicians & Surgeons
+2020-02-27,US,100.65,total postings,Physicians & Surgeons
+2020-02-28,US,100.61,total postings,Physicians & Surgeons
+2020-02-29,US,100.82,total postings,Physicians & Surgeons
+2026-10-01,US,198.45,total postings,Physicians & Surgeons
+2026-10-02,US,198.93,total postings,Physicians & Surgeons
+2026-10-03,US,199.41,total postings,Physicians & Surgeons
+2026-10-04,US,199.92,total postings,Physicians & Surgeons
+2026-10-05,US,200.5,total postings,Physicians & Surgeons
+2026-10-06,US,200.85,total postings,Physicians & Surgeons
+2026-10-07,US,201.11,total postings,Physicians & Surgeons
+2026-10-08,US,201.29,total postings,Physicians & Surgeons
+2026-10-09,US,201.16,total postings,Physicians & Surgeons
+2026-10-10,US,201.39,total postings,Physicians & Surgeons
+2026-10-11,US,201.52,total postings,Physicians & Surgeons
+2026-10-12,US,201.52,total postings,Physicians & Surgeons
+2026-10-13,US,201.64,total postings,Physicians & Surgeons
+2026-10-14,US,202.11,total postings,Physicians & Surgeons
+2026-10-15,US,201.2,total postings,Physicians & Surgeons
+2026-10-16,US,200.62,total postings,Physicians & Surgeons
+2026-10-17,US,199.62,total postings,Physicians & Surgeons
+2026-10-18,US,198.8,total postings,Physicians & Surgeons
+2026-10-19,US,198.14,total postings,Physicians & Surgeons
+2026-10-20,US,197.31,total postings,Physicians & Surgeons
+2026-10-21,US,195.8,total postings,Physicians & Surgeons
+2026-10-22,US,195.89,total postings,Physicians & Surgeons
+2026-10-23,US,195.78,total postings,Physicians & Surgeons
+2026-10-24,US,195.73,total postings,Physicians & Surgeons
+2026-10-25,US,195.52,total postings,Physicians & Surgeons
+2026-10-26,US,195.05,total postings,Physicians & Surgeons
+2026-10-27,US,194.96,total postings,Physicians & Surgeons
+2026-10-28,US,195.4,total postings,Physicians & Surgeons
+2026-10-29,US,195.65,total postings,Physicians & Surgeons
+2026-10-30,US,196.08,total postings,Physicians & Surgeons
+2026-10-31,US,196.29,total postings,Physicians & Surgeons
+2020-02-01,US,100,total postings,Media & Communications
+2020-02-02,US,99.95,total postings,Media & Communications
+2020-02-03,US,99.98,total postings,Media & Communications
+2020-02-04,US,99.66,total postings,Media & Communications
+2020-02-05,US,99.66,total postings,Media & Communications
+2020-02-06,US,99.86,total postings,Media & Communications
+2020-02-07,US,100.02,total postings,Media & Communications
+2020-02-08,US,100.17,total postings,Media & Communications
+2020-02-09,US,100.45,total postings,Media & Communications
+2020-02-10,US,100.78,total postings,Media & Communications
+2020-02-11,US,101.44,total postings,Media & Communications
+2020-02-12,US,101.74,total postings,Media & Communications
+2020-02-13,US,101.89,total postings,Media & Communications
+2020-02-14,US,102.19,total postings,Media & Communications
+2020-02-15,US,102.27,total postings,Media & Communications
+2020-02-16,US,102.56,total postings,Media & Communications
+2020-02-17,US,102.88,total postings,Media & Communications
+2020-02-18,US,102.49,total postings,Media & Communications
+2020-02-19,US,102.18,total postings,Media & Communications
+2020-02-20,US,101.89,total postings,Media & Communications
+2020-02-21,US,101.3,total postings,Media & Communications
+2020-02-22,US,100.69,total postings,Media & Communications
+2020-02-23,US,100.51,total postings,Media & Communications
+2020-02-24,US,100.21,total postings,Media & Communications
+2020-02-25,US,100.54,total postings,Media & Communications
+2020-02-26,US,100.86,total postings,Media & Communications
+2020-02-27,US,101.18,total postings,Media & Communications
+2020-02-28,US,101.62,total postings,Media & Communications
+2020-02-29,US,102.29,total postings,Media & Communications
+2026-10-01,US,70.45,total postings,Media & Communications
+2026-10-02,US,70.35,total postings,Media & Communications
+2026-10-03,US,69.99,total postings,Media & Communications
+2026-10-04,US,69.61,total postings,Media & Communications
+2026-10-05,US,69.19,total postings,Media & Communications
+2026-10-06,US,68.98,total postings,Media & Communications
+2026-10-07,US,68.86,total postings,Media & Communications
+2026-10-08,US,68.87,total postings,Media & Communications
+2026-10-09,US,68.74,total postings,Media & Communications
+2026-10-10,US,68.7,total postings,Media & Communications
+2026-10-11,US,68.69,total postings,Media & Communications
+2026-10-12,US,68.75,total postings,Media & Communications
+2026-10-13,US,68.65,total postings,Media & Communications
+2026-10-14,US,68.49,total postings,Media & Communications
+2026-10-15,US,68.28,total postings,Media & Communications
+2026-10-16,US,68.13,total postings,Media & Communications
+2026-10-17,US,67.98,total postings,Media & Communications
+2026-10-18,US,67.83,total postings,Media & Communications
+2026-10-19,US,67.62,total postings,Media & Communications
+2026-10-20,US,67.59,total postings,Media & Communications
+2026-10-21,US,67.63,total postings,Media & Communications
+2026-10-22,US,67.56,total postings,Media & Communications
+2026-10-23,US,67.55,total postings,Media & Communications
+2026-10-24,US,67.49,total postings,Media & Communications
+2026-10-25,US,67.41,total postings,Media & Communications
+2026-10-26,US,67.43,total postings,Media & Communications
+2026-10-27,US,67.3,total postings,Media & Communications
+2026-10-28,US,67.2,total postings,Media & Communications
+2026-10-29,US,67.21,total postings,Media & Communications
+2026-10-30,US,67.19,total postings,Media & Communications
+2026-10-31,US,67.19,total postings,Media & Communications
+2020-02-01,US,100,total postings,Medical Information
+2020-02-02,US,100.06,total postings,Medical Information
+2020-02-03,US,100.12,total postings,Medical Information
+2020-02-04,US,100.15,total postings,Medical Information
+2020-02-05,US,100.19,total postings,Medical Information
+2020-02-06,US,100.26,total postings,Medical Information
+2020-02-07,US,100.29,total postings,Medical Information
+2020-02-08,US,100.36,total postings,Medical Information
+2020-02-09,US,100.37,total postings,Medical Information
+2020-02-10,US,100.4,total postings,Medical Information
+2020-02-11,US,100.41,total postings,Medical Information
+2020-02-12,US,100.66,total postings,Medical Information
+2020-02-13,US,100.86,total postings,Medical Information
+2020-02-14,US,101.11,total postings,Medical Information
+2020-02-15,US,101.26,total postings,Medical Information
+2020-02-16,US,101.46,total postings,Medical Information
+2020-02-17,US,101.68,total postings,Medical Information
+2020-02-18,US,102,total postings,Medical Information
+2020-02-19,US,101.98,total postings,Medical Information
+2020-02-20,US,101.92,total postings,Medical Information
+2020-02-21,US,101.94,total postings,Medical Information
+2020-02-22,US,101.95,total postings,Medical Information
+2020-02-23,US,101.97,total postings,Medical Information
+2020-02-24,US,101.99,total postings,Medical Information
+2020-02-25,US,102.05,total postings,Medical Information
+2020-02-26,US,102.21,total postings,Medical Information
+2020-02-27,US,102.43,total postings,Medical Information
+2020-02-28,US,102.57,total postings,Medical Information
+2020-02-29,US,102.94,total postings,Medical Information
+2026-10-01,US,88.82,total postings,Medical Information
+2026-10-02,US,88.93,total postings,Medical Information
+2026-10-03,US,88.99,total postings,Medical Information
+2026-10-04,US,89.06,total postings,Medical Information
+2026-10-05,US,89.12,total postings,Medical Information
+2026-10-06,US,88.93,total postings,Medical Information
+2026-10-07,US,88.86,total postings,Medical Information
+2026-10-08,US,88.73,total postings,Medical Information
+2026-10-09,US,88.58,total postings,Medical Information
+2026-10-10,US,88.44,total postings,Medical Information
+2026-10-11,US,88.3,total postings,Medical Information
+2026-10-12,US,88.18,total postings,Medical Information
+2026-10-13,US,88.09,total postings,Medical Information
+2026-10-14,US,87.98,total postings,Medical Information
+2026-10-15,US,87.93,total postings,Medical Information
+2026-10-16,US,87.73,total postings,Medical Information
+2026-10-17,US,87.74,total postings,Medical Information
+2026-10-18,US,87.85,total postings,Medical Information
+2026-10-19,US,87.98,total postings,Medical Information
+2026-10-20,US,88.04,total postings,Medical Information
+2026-10-21,US,88.18,total postings,Medical Information
+2026-10-22,US,88.36,total postings,Medical Information
+2026-10-23,US,88.74,total postings,Medical Information
+2026-10-24,US,88.93,total postings,Medical Information
+2026-10-25,US,89,total postings,Medical Information
+2026-10-26,US,88.96,total postings,Medical Information
+2026-10-27,US,88.99,total postings,Medical Information
+2026-10-28,US,88.97,total postings,Medical Information
+2026-10-29,US,88.85,total postings,Medical Information
+2026-10-30,US,88.83,total postings,Medical Information
+2026-10-31,US,88.78,total postings,Medical Information
+2020-02-01,US,100,total postings,Nursing
+2020-02-01,US,100,new postings,Nursing
+2020-02-02,US,99.82,total postings,Nursing
+2020-02-02,US,99.55,new postings,Nursing
+2020-02-03,US,99.72,total postings,Nursing
+2020-02-03,US,98.98,new postings,Nursing
+2020-02-04,US,99.62,total postings,Nursing
+2020-02-04,US,98.85,new postings,Nursing
+2020-02-05,US,99.56,total postings,Nursing
+2020-02-05,US,99.1,new postings,Nursing
+2020-02-06,US,99.59,total postings,Nursing
+2020-02-06,US,99.12,new postings,Nursing
+2020-02-07,US,99.55,total postings,Nursing
+2020-02-07,US,99.24,new postings,Nursing
+2020-02-08,US,99.46,total postings,Nursing
+2020-02-08,US,99.14,new postings,Nursing
+2020-02-09,US,99.44,total postings,Nursing
+2020-02-09,US,99.28,new postings,Nursing
+2020-02-10,US,99.44,total postings,Nursing
+2020-02-10,US,99.28,new postings,Nursing
+2020-02-11,US,99.45,total postings,Nursing
+2020-02-11,US,99.43,new postings,Nursing
+2020-02-12,US,99.53,total postings,Nursing
+2020-02-12,US,99.93,new postings,Nursing
+2020-02-13,US,99.48,total postings,Nursing
+2020-02-13,US,100.57,new postings,Nursing
+2020-02-14,US,99.56,total postings,Nursing
+2020-02-14,US,100.81,new postings,Nursing
+2020-02-15,US,99.55,total postings,Nursing
+2020-02-15,US,101.16,new postings,Nursing
+2020-02-16,US,99.6,total postings,Nursing
+2020-02-16,US,101.75,new postings,Nursing
+2020-02-17,US,99.66,total postings,Nursing
+2020-02-17,US,102.54,new postings,Nursing
+2020-02-18,US,99.72,total postings,Nursing
+2020-02-18,US,102.78,new postings,Nursing
+2020-02-19,US,99.75,total postings,Nursing
+2020-02-19,US,102.48,new postings,Nursing
+2020-02-20,US,99.83,total postings,Nursing
+2020-02-20,US,102.46,new postings,Nursing
+2020-02-21,US,99.8,total postings,Nursing
+2020-02-21,US,103.19,new postings,Nursing
+2020-02-22,US,99.87,total postings,Nursing
+2020-02-22,US,103.8,new postings,Nursing
+2020-02-23,US,99.95,total postings,Nursing
+2020-02-23,US,103.89,new postings,Nursing
+2020-02-24,US,99.97,total postings,Nursing
+2020-02-24,US,103.97,new postings,Nursing
+2020-02-25,US,100.04,total postings,Nursing
+2020-02-25,US,104.43,new postings,Nursing
+2020-02-26,US,100.14,total postings,Nursing
+2020-02-26,US,104.99,new postings,Nursing
+2020-02-27,US,100.27,total postings,Nursing
+2020-02-27,US,105.03,new postings,Nursing
+2020-02-28,US,100.47,total postings,Nursing
+2020-02-28,US,104.5,new postings,Nursing
+2020-02-29,US,100.8,total postings,Nursing
+2020-02-29,US,105.82,new postings,Nursing
+2026-10-01,US,110.05,total postings,Nursing
+2026-10-01,US,115.12,new postings,Nursing
+2026-10-02,US,110.41,total postings,Nursing
+2026-10-02,US,116.07,new postings,Nursing
+2026-10-03,US,110.76,total postings,Nursing
+2026-10-03,US,117.1,new postings,Nursing
+2026-10-04,US,111.14,total postings,Nursing
+2026-10-04,US,118.12,new postings,Nursing
+2026-10-05,US,111.55,total postings,Nursing
+2026-10-05,US,118.97,new postings,Nursing
+2026-10-06,US,111.72,total postings,Nursing
+2026-10-06,US,117.9,new postings,Nursing
+2026-10-07,US,111.84,total postings,Nursing
+2026-10-07,US,116.99,new postings,Nursing
+2026-10-08,US,112.01,total postings,Nursing
+2026-10-08,US,116.77,new postings,Nursing
+2026-10-09,US,112.07,total postings,Nursing
+2026-10-09,US,115.93,new postings,Nursing
+2026-10-10,US,112.09,total postings,Nursing
+2026-10-10,US,114.9,new postings,Nursing
+2026-10-11,US,112.08,total postings,Nursing
+2026-10-11,US,113.72,new postings,Nursing
+2026-10-12,US,112.02,total postings,Nursing
+2026-10-12,US,112.96,new postings,Nursing
+2026-10-13,US,112,total postings,Nursing
+2026-10-13,US,113.27,new postings,Nursing
+2026-10-14,US,112.1,total postings,Nursing
+2026-10-14,US,113.29,new postings,Nursing
+2026-10-15,US,111.75,total postings,Nursing
+2026-10-15,US,112.59,new postings,Nursing
+2026-10-16,US,111.36,total postings,Nursing
+2026-10-16,US,111.87,new postings,Nursing
+2026-10-17,US,111.07,total postings,Nursing
+2026-10-17,US,111.42,new postings,Nursing
+2026-10-18,US,110.81,total postings,Nursing
+2026-10-18,US,111.32,new postings,Nursing
+2026-10-19,US,110.6,total postings,Nursing
+2026-10-19,US,111.09,new postings,Nursing
+2026-10-20,US,110.35,total postings,Nursing
+2026-10-20,US,110.39,new postings,Nursing
+2026-10-21,US,110.11,total postings,Nursing
+2026-10-21,US,109.71,new postings,Nursing
+2026-10-22,US,110.35,total postings,Nursing
+2026-10-22,US,109.3,new postings,Nursing
+2026-10-23,US,110.61,total postings,Nursing
+2026-10-23,US,109.28,new postings,Nursing
+2026-10-24,US,110.79,total postings,Nursing
+2026-10-24,US,108.78,new postings,Nursing
+2026-10-25,US,110.93,total postings,Nursing
+2026-10-25,US,108.06,new postings,Nursing
+2026-10-26,US,110.97,total postings,Nursing
+2026-10-26,US,107.45,new postings,Nursing
+2026-10-27,US,111.06,total postings,Nursing
+2026-10-27,US,107.54,new postings,Nursing
+2026-10-28,US,111.13,total postings,Nursing
+2026-10-28,US,107.84,new postings,Nursing
+2026-10-29,US,111.12,total postings,Nursing
+2026-10-29,US,108.01,new postings,Nursing
+2026-10-30,US,111.13,total postings,Nursing
+2026-10-30,US,107.93,new postings,Nursing
+2026-10-31,US,111.12,total postings,Nursing
+2026-10-31,US,108.24,new postings,Nursing
+2020-02-01,US,100,total postings,Medical Technician
+2020-02-02,US,100.09,total postings,Medical Technician
+2020-02-03,US,100.24,total postings,Medical Technician
+2020-02-04,US,100.37,total postings,Medical Technician
+2020-02-05,US,100.37,total postings,Medical Technician
+2020-02-06,US,100.43,total postings,Medical Technician
+2020-02-07,US,100.41,total postings,Medical Technician
+2020-02-08,US,100.34,total postings,Medical Technician
+2020-02-09,US,100.26,total postings,Medical Technician
+2020-02-10,US,100.2,total postings,Medical Technician
+2020-02-11,US,100.11,total postings,Medical Technician
+2020-02-12,US,100.15,total postings,Medical Technician
+2020-02-13,US,100.05,total postings,Medical Technician
+2020-02-14,US,100.05,total postings,Medical Technician
+2020-02-15,US,100.01,total postings,Medical Technician
+2020-02-16,US,100.06,total postings,Medical Technician
+2020-02-17,US,100.12,total postings,Medical Technician
+2020-02-18,US,100.12,total postings,Medical Technician
+2020-02-19,US,100.19,total postings,Medical Technician
+2020-02-20,US,100.2,total postings,Medical Technician
+2020-02-21,US,100.27,total postings,Medical Technician
+2020-02-22,US,100.34,total postings,Medical Technician
+2020-02-23,US,100.39,total postings,Medical Technician
+2020-02-24,US,100.41,total postings,Medical Technician
+2020-02-25,US,100.55,total postings,Medical Technician
+2020-02-26,US,100.62,total postings,Medical Technician
+2020-02-27,US,100.76,total postings,Medical Technician
+2020-02-28,US,100.82,total postings,Medical Technician
+2020-02-29,US,101.06,total postings,Medical Technician
+2026-10-01,US,123.3,total postings,Medical Technician
+2026-10-02,US,123.62,total postings,Medical Technician
+2026-10-03,US,123.89,total postings,Medical Technician
+2026-10-04,US,124.14,total postings,Medical Technician
+2026-10-05,US,124.46,total postings,Medical Technician
+2026-10-06,US,124.63,total postings,Medical Technician
+2026-10-07,US,124.62,total postings,Medical Technician
+2026-10-08,US,124.61,total postings,Medical Technician
+2026-10-09,US,124.58,total postings,Medical Technician
+2026-10-10,US,124.57,total postings,Medical Technician
+2026-10-11,US,124.54,total postings,Medical Technician
+2026-10-12,US,124.38,total postings,Medical Technician
+2026-10-13,US,124.27,total postings,Medical Technician
+2026-10-14,US,124.39,total postings,Medical Technician
+2026-10-15,US,124.23,total postings,Medical Technician
+2026-10-16,US,124.08,total postings,Medical Technician
+2026-10-17,US,123.94,total postings,Medical Technician
+2026-10-18,US,123.82,total postings,Medical Technician
+2026-10-19,US,123.81,total postings,Medical Technician
+2026-10-20,US,123.77,total postings,Medical Technician
+2026-10-21,US,123.67,total postings,Medical Technician
+2026-10-22,US,123.93,total postings,Medical Technician
+2026-10-23,US,124.13,total postings,Medical Technician
+2026-10-24,US,124.36,total postings,Medical Technician
+2026-10-25,US,124.53,total postings,Medical Technician
+2026-10-26,US,124.56,total postings,Medical Technician
+2026-10-27,US,124.73,total postings,Medical Technician
+2026-10-28,US,124.82,total postings,Medical Technician
+2026-10-29,US,124.89,total postings,Medical Technician
+2026-10-30,US,124.96,total postings,Medical Technician
+2026-10-31,US,124.94,total postings,Medical Technician
+2020-02-01,US,100,total postings,Pharmacy
+2020-02-02,US,99.96,total postings,Pharmacy
+2020-02-03,US,96.48,total postings,Pharmacy
+2020-02-04,US,96.2,total postings,Pharmacy
+2020-02-05,US,96.01,total postings,Pharmacy
+2020-02-06,US,95.94,total postings,Pharmacy
+2020-02-07,US,95.89,total postings,Pharmacy
+2020-02-08,US,95.96,total postings,Pharmacy
+2020-02-09,US,95.89,total postings,Pharmacy
+2020-02-10,US,99.27,total postings,Pharmacy
+2020-02-11,US,99.43,total postings,Pharmacy
+2020-02-12,US,99.67,total postings,Pharmacy
+2020-02-13,US,99.84,total postings,Pharmacy
+2020-02-14,US,100.07,total postings,Pharmacy
+2020-02-15,US,100.31,total postings,Pharmacy
+2020-02-16,US,100.69,total postings,Pharmacy
+2020-02-17,US,100.98,total postings,Pharmacy
+2020-02-18,US,101.27,total postings,Pharmacy
+2020-02-19,US,101.45,total postings,Pharmacy
+2020-02-20,US,101.71,total postings,Pharmacy
+2020-02-21,US,101.92,total postings,Pharmacy
+2020-02-22,US,101.88,total postings,Pharmacy
+2020-02-23,US,101.32,total postings,Pharmacy
+2020-02-24,US,101.27,total postings,Pharmacy
+2020-02-25,US,101.25,total postings,Pharmacy
+2020-02-26,US,101.22,total postings,Pharmacy
+2020-02-27,US,101.01,total postings,Pharmacy
+2020-02-28,US,100.8,total postings,Pharmacy
+2020-02-29,US,100.8,total postings,Pharmacy
+2026-10-01,US,126.78,total postings,Pharmacy
+2026-10-02,US,126.85,total postings,Pharmacy
+2026-10-03,US,127.07,total postings,Pharmacy
+2026-10-04,US,127.19,total postings,Pharmacy
+2026-10-05,US,127.29,total postings,Pharmacy
+2026-10-06,US,127.26,total postings,Pharmacy
+2026-10-07,US,127.1,total postings,Pharmacy
+2026-10-08,US,126.88,total postings,Pharmacy
+2026-10-09,US,126.55,total postings,Pharmacy
+2026-10-10,US,126.08,total postings,Pharmacy
+2026-10-11,US,125.37,total postings,Pharmacy
+2026-10-12,US,124.74,total postings,Pharmacy
+2026-10-13,US,124.51,total postings,Pharmacy
+2026-10-14,US,124.45,total postings,Pharmacy
+2026-10-15,US,124.31,total postings,Pharmacy
+2026-10-16,US,124.22,total postings,Pharmacy
+2026-10-17,US,124.19,total postings,Pharmacy
+2026-10-18,US,124.39,total postings,Pharmacy
+2026-10-19,US,124.56,total postings,Pharmacy
+2026-10-20,US,124.37,total postings,Pharmacy
+2026-10-21,US,124.26,total postings,Pharmacy
+2026-10-22,US,124.3,total postings,Pharmacy
+2026-10-23,US,124.26,total postings,Pharmacy
+2026-10-24,US,124.14,total postings,Pharmacy
+2026-10-25,US,124.04,total postings,Pharmacy
+2026-10-26,US,123.87,total postings,Pharmacy
+2026-10-27,US,123.8,total postings,Pharmacy
+2026-10-28,US,123.74,total postings,Pharmacy
+2026-10-29,US,123.57,total postings,Pharmacy
+2026-10-30,US,123.39,total postings,Pharmacy
+2026-10-31,US,123.24,total postings,Pharmacy
+2020-02-01,US,100,total postings,Project Management
+2020-02-02,US,100.01,total postings,Project Management
+2020-02-03,US,100.03,total postings,Project Management
+2020-02-04,US,99.99,total postings,Project Management
+2020-02-05,US,99.98,total postings,Project Management
+2020-02-06,US,100.03,total postings,Project Management
+2020-02-07,US,100.03,total postings,Project Management
+2020-02-08,US,100.05,total postings,Project Management
+2020-02-09,US,100,total postings,Project Management
+2020-02-10,US,100.02,total postings,Project Management
+2020-02-11,US,99.98,total postings,Project Management
+2020-02-12,US,99.88,total postings,Project Management
+2020-02-13,US,99.81,total postings,Project Management
+2020-02-14,US,99.78,total postings,Project Management
+2020-02-15,US,99.72,total postings,Project Management
+2020-02-16,US,99.81,total postings,Project Management
+2020-02-17,US,99.87,total postings,Project Management
+2020-02-18,US,99.82,total postings,Project Management
+2020-02-19,US,99.86,total postings,Project Management
+2020-02-20,US,99.96,total postings,Project Management
+2020-02-21,US,100.01,total postings,Project Management
+2020-02-22,US,99.94,total postings,Project Management
+2020-02-23,US,99.99,total postings,Project Management
+2020-02-24,US,100.05,total postings,Project Management
+2020-02-25,US,100.26,total postings,Project Management
+2020-02-26,US,100.39,total postings,Project Management
+2020-02-27,US,100.44,total postings,Project Management
+2020-02-28,US,100.53,total postings,Project Management
+2020-02-29,US,100.76,total postings,Project Management
+2026-10-01,US,118.27,total postings,Project Management
+2026-10-02,US,118.23,total postings,Project Management
+2026-10-03,US,118.17,total postings,Project Management
+2026-10-04,US,118.17,total postings,Project Management
+2026-10-05,US,118.12,total postings,Project Management
+2026-10-06,US,118.12,total postings,Project Management
+2026-10-07,US,117.98,total postings,Project Management
+2026-10-08,US,117.89,total postings,Project Management
+2026-10-09,US,117.71,total postings,Project Management
+2026-10-10,US,117.52,total postings,Project Management
+2026-10-11,US,117.29,total postings,Project Management
+2026-10-12,US,117.14,total postings,Project Management
+2026-10-13,US,117,total postings,Project Management
+2026-10-14,US,117,total postings,Project Management
+2026-10-15,US,117.08,total postings,Project Management
+2026-10-16,US,117.15,total postings,Project Management
+2026-10-17,US,117.21,total postings,Project Management
+2026-10-18,US,117.28,total postings,Project Management
+2026-10-19,US,117.37,total postings,Project Management
+2026-10-20,US,117.42,total postings,Project Management
+2026-10-21,US,117.55,total postings,Project Management
+2026-10-22,US,117.67,total postings,Project Management
+2026-10-23,US,117.78,total postings,Project Management
+2026-10-24,US,117.8,total postings,Project Management
+2026-10-25,US,117.81,total postings,Project Management
+2026-10-26,US,117.75,total postings,Project Management
+2026-10-27,US,117.73,total postings,Project Management
+2026-10-28,US,117.76,total postings,Project Management
+2026-10-29,US,117.76,total postings,Project Management
+2026-10-30,US,117.8,total postings,Project Management
+2026-10-31,US,117.85,total postings,Project Management
+2020-02-01,US,100,total postings,Security & Public Safety
+2020-02-02,US,100.04,total postings,Security & Public Safety
+2020-02-03,US,100.05,total postings,Security & Public Safety
+2020-02-04,US,100.05,total postings,Security & Public Safety
+2020-02-05,US,100.07,total postings,Security & Public Safety
+2020-02-06,US,100.09,total postings,Security & Public Safety
+2020-02-07,US,100.04,total postings,Security & Public Safety
+2020-02-08,US,100.08,total postings,Security & Public Safety
+2020-02-09,US,100.02,total postings,Security & Public Safety
+2020-02-10,US,100.02,total postings,Security & Public Safety
+2020-02-11,US,99.97,total postings,Security & Public Safety
+2020-02-12,US,99.92,total postings,Security & Public Safety
+2020-02-13,US,99.95,total postings,Security & Public Safety
+2020-02-14,US,100,total postings,Security & Public Safety
+2020-02-15,US,99.98,total postings,Security & Public Safety
+2020-02-16,US,100.04,total postings,Security & Public Safety
+2020-02-17,US,100.03,total postings,Security & Public Safety
+2020-02-18,US,100.3,total postings,Security & Public Safety
+2020-02-19,US,100.35,total postings,Security & Public Safety
+2020-02-20,US,100.44,total postings,Security & Public Safety
+2020-02-21,US,100.55,total postings,Security & Public Safety
+2020-02-22,US,100.6,total postings,Security & Public Safety
+2020-02-23,US,100.56,total postings,Security & Public Safety
+2020-02-24,US,100.6,total postings,Security & Public Safety
+2020-02-25,US,100.38,total postings,Security & Public Safety
+2020-02-26,US,100.33,total postings,Security & Public Safety
+2020-02-27,US,100.22,total postings,Security & Public Safety
+2020-02-28,US,100.14,total postings,Security & Public Safety
+2020-02-29,US,100.23,total postings,Security & Public Safety
+2026-10-01,US,118.69,total postings,Security & Public Safety
+2026-10-02,US,118.67,total postings,Security & Public Safety
+2026-10-03,US,118.62,total postings,Security & Public Safety
+2026-10-04,US,118.58,total postings,Security & Public Safety
+2026-10-05,US,118.58,total postings,Security & Public Safety
+2026-10-06,US,118.65,total postings,Security & Public Safety
+2026-10-07,US,118.71,total postings,Security & Public Safety
+2026-10-08,US,118.79,total postings,Security & Public Safety
+2026-10-09,US,118.75,total postings,Security & Public Safety
+2026-10-10,US,118.73,total postings,Security & Public Safety
+2026-10-11,US,118.67,total postings,Security & Public Safety
+2026-10-12,US,118.57,total postings,Security & Public Safety
+2026-10-13,US,118.29,total postings,Security & Public Safety
+2026-10-14,US,118.11,total postings,Security & Public Safety
+2026-10-15,US,118.1,total postings,Security & Public Safety
+2026-10-16,US,118.04,total postings,Security & Public Safety
+2026-10-17,US,117.93,total postings,Security & Public Safety
+2026-10-18,US,117.77,total postings,Security & Public Safety
+2026-10-19,US,117.7,total postings,Security & Public Safety
+2026-10-20,US,117.74,total postings,Security & Public Safety
+2026-10-21,US,117.67,total postings,Security & Public Safety
+2026-10-22,US,117.62,total postings,Security & Public Safety
+2026-10-23,US,117.49,total postings,Security & Public Safety
+2026-10-24,US,117.38,total postings,Security & Public Safety
+2026-10-25,US,117.44,total postings,Security & Public Safety
+2026-10-26,US,117.36,total postings,Security & Public Safety
+2026-10-27,US,117.37,total postings,Security & Public Safety
+2026-10-28,US,117.29,total postings,Security & Public Safety
+2026-10-29,US,117.14,total postings,Security & Public Safety
+2026-10-30,US,117.08,total postings,Security & Public Safety
+2026-10-31,US,117.11,total postings,Security & Public Safety
+2020-02-01,US,100,total postings,Retail
+2020-02-02,US,99.67,total postings,Retail
+2020-02-03,US,99.12,total postings,Retail
+2020-02-04,US,99.02,total postings,Retail
+2020-02-05,US,98.87,total postings,Retail
+2020-02-06,US,98.72,total postings,Retail
+2020-02-07,US,97.89,total postings,Retail
+2020-02-08,US,97.84,total postings,Retail
+2020-02-09,US,97.7,total postings,Retail
+2020-02-10,US,97.76,total postings,Retail
+2020-02-11,US,97.53,total postings,Retail
+2020-02-12,US,97.29,total postings,Retail
+2020-02-13,US,97.18,total postings,Retail
+2020-02-14,US,97.57,total postings,Retail
+2020-02-15,US,97.52,total postings,Retail
+2020-02-16,US,97.6,total postings,Retail
+2020-02-17,US,97.86,total postings,Retail
+2020-02-18,US,97.96,total postings,Retail
+2020-02-19,US,98.24,total postings,Retail
+2020-02-20,US,98.41,total postings,Retail
+2020-02-21,US,98.87,total postings,Retail
+2020-02-22,US,98.9,total postings,Retail
+2020-02-23,US,99.07,total postings,Retail
+2020-02-24,US,99.09,total postings,Retail
+2020-02-25,US,99.2,total postings,Retail
+2020-02-26,US,99.11,total postings,Retail
+2020-02-27,US,99.09,total postings,Retail
+2020-02-28,US,98.98,total postings,Retail
+2020-02-29,US,99.01,total postings,Retail
+2026-10-01,US,89.65,total postings,Retail
+2026-10-02,US,89.78,total postings,Retail
+2026-10-03,US,90.01,total postings,Retail
+2026-10-04,US,89.99,total postings,Retail
+2026-10-05,US,89.97,total postings,Retail
+2026-10-06,US,90.12,total postings,Retail
+2026-10-07,US,90.08,total postings,Retail
+2026-10-08,US,90.07,total postings,Retail
+2026-10-09,US,89.96,total postings,Retail
+2026-10-10,US,89.82,total postings,Retail
+2026-10-11,US,89.81,total postings,Retail
+2026-10-12,US,89.77,total postings,Retail
+2026-10-13,US,89.66,total postings,Retail
+2026-10-14,US,89.64,total postings,Retail
+2026-10-15,US,89.67,total postings,Retail
+2026-10-16,US,89.78,total postings,Retail
+2026-10-17,US,89.87,total postings,Retail
+2026-10-18,US,89.89,total postings,Retail
+2026-10-19,US,89.84,total postings,Retail
+2026-10-20,US,89.85,total postings,Retail
+2026-10-21,US,89.81,total postings,Retail
+2026-10-22,US,89.78,total postings,Retail
+2026-10-23,US,89.72,total postings,Retail
+2026-10-24,US,89.61,total postings,Retail
+2026-10-25,US,89.54,total postings,Retail
+2026-10-26,US,89.57,total postings,Retail
+2026-10-27,US,89.58,total postings,Retail
+2026-10-28,US,89.64,total postings,Retail
+2026-10-29,US,89.64,total postings,Retail
+2026-10-30,US,89.57,total postings,Retail
+2026-10-31,US,89.54,total postings,Retail
+2020-02-01,US,100,total postings,Sales
+2020-02-02,US,99.84,total postings,Sales
+2020-02-03,US,99.71,total postings,Sales
+2020-02-04,US,99.6,total postings,Sales
+2020-02-05,US,99.53,total postings,Sales
+2020-02-06,US,99.48,total postings,Sales
+2020-02-07,US,99.2,total postings,Sales
+2020-02-08,US,99.18,total postings,Sales
+2020-02-09,US,99.21,total postings,Sales
+2020-02-10,US,99.26,total postings,Sales
+2020-02-11,US,99.28,total postings,Sales
+2020-02-12,US,99.3,total postings,Sales
+2020-02-13,US,99.25,total postings,Sales
+2020-02-14,US,99.46,total postings,Sales
+2020-02-15,US,99.33,total postings,Sales
+2020-02-16,US,99.24,total postings,Sales
+2020-02-17,US,99.08,total postings,Sales
+2020-02-18,US,98.92,total postings,Sales
+2020-02-19,US,98.78,total postings,Sales
+2020-02-20,US,98.82,total postings,Sales
+2020-02-21,US,98.85,total postings,Sales
+2020-02-22,US,98.83,total postings,Sales
+2020-02-23,US,98.95,total postings,Sales
+2020-02-24,US,99.02,total postings,Sales
+2020-02-25,US,99.2,total postings,Sales
+2020-02-26,US,99.33,total postings,Sales
+2020-02-27,US,99.34,total postings,Sales
+2020-02-28,US,99.39,total postings,Sales
+2020-02-29,US,99.64,total postings,Sales
+2026-10-01,US,92.16,total postings,Sales
+2026-10-02,US,92.08,total postings,Sales
+2026-10-03,US,92.01,total postings,Sales
+2026-10-04,US,91.87,total postings,Sales
+2026-10-05,US,91.69,total postings,Sales
+2026-10-06,US,91.71,total postings,Sales
+2026-10-07,US,91.75,total postings,Sales
+2026-10-08,US,91.8,total postings,Sales
+2026-10-09,US,91.72,total postings,Sales
+2026-10-10,US,91.65,total postings,Sales
+2026-10-11,US,91.59,total postings,Sales
+2026-10-12,US,91.66,total postings,Sales
+2026-10-13,US,91.65,total postings,Sales
+2026-10-14,US,91.69,total postings,Sales
+2026-10-15,US,91.76,total postings,Sales
+2026-10-16,US,91.87,total postings,Sales
+2026-10-17,US,91.99,total postings,Sales
+2026-10-18,US,92.09,total postings,Sales
+2026-10-19,US,92.05,total postings,Sales
+2026-10-20,US,92.14,total postings,Sales
+2026-10-21,US,92.2,total postings,Sales
+2026-10-22,US,92.25,total postings,Sales
+2026-10-23,US,92.33,total postings,Sales
+2026-10-24,US,92.32,total postings,Sales
+2026-10-25,US,92.35,total postings,Sales
+2026-10-26,US,92.41,total postings,Sales
+2026-10-27,US,92.49,total postings,Sales
+2026-10-28,US,92.52,total postings,Sales
+2026-10-29,US,92.52,total postings,Sales
+2026-10-30,US,92.49,total postings,Sales
+2026-10-31,US,92.5,total postings,Sales
+2020-02-01,US,100,total postings,Cleaning & Sanitation
+2020-02-02,US,99.96,total postings,Cleaning & Sanitation
+2020-02-03,US,99.95,total postings,Cleaning & Sanitation
+2020-02-04,US,99.83,total postings,Cleaning & Sanitation
+2020-02-05,US,99.72,total postings,Cleaning & Sanitation
+2020-02-06,US,99.67,total postings,Cleaning & Sanitation
+2020-02-07,US,99.58,total postings,Cleaning & Sanitation
+2020-02-08,US,99.44,total postings,Cleaning & Sanitation
+2020-02-09,US,99.26,total postings,Cleaning & Sanitation
+2020-02-10,US,99.05,total postings,Cleaning & Sanitation
+2020-02-11,US,98.98,total postings,Cleaning & Sanitation
+2020-02-12,US,98.9,total postings,Cleaning & Sanitation
+2020-02-13,US,98.82,total postings,Cleaning & Sanitation
+2020-02-14,US,98.79,total postings,Cleaning & Sanitation
+2020-02-15,US,98.71,total postings,Cleaning & Sanitation
+2020-02-16,US,98.68,total postings,Cleaning & Sanitation
+2020-02-17,US,98.65,total postings,Cleaning & Sanitation
+2020-02-18,US,98.64,total postings,Cleaning & Sanitation
+2020-02-19,US,98.66,total postings,Cleaning & Sanitation
+2020-02-20,US,98.65,total postings,Cleaning & Sanitation
+2020-02-21,US,98.59,total postings,Cleaning & Sanitation
+2020-02-22,US,98.58,total postings,Cleaning & Sanitation
+2020-02-23,US,98.55,total postings,Cleaning & Sanitation
+2020-02-24,US,98.54,total postings,Cleaning & Sanitation
+2020-02-25,US,98.56,total postings,Cleaning & Sanitation
+2020-02-26,US,98.74,total postings,Cleaning & Sanitation
+2020-02-27,US,98.87,total postings,Cleaning & Sanitation
+2020-02-28,US,99.08,total postings,Cleaning & Sanitation
+2020-02-29,US,99.26,total postings,Cleaning & Sanitation
+2026-10-01,US,101.07,total postings,Cleaning & Sanitation
+2026-10-02,US,101.08,total postings,Cleaning & Sanitation
+2026-10-03,US,101.1,total postings,Cleaning & Sanitation
+2026-10-04,US,101.07,total postings,Cleaning & Sanitation
+2026-10-05,US,101.06,total postings,Cleaning & Sanitation
+2026-10-06,US,101.07,total postings,Cleaning & Sanitation
+2026-10-07,US,101.17,total postings,Cleaning & Sanitation
+2026-10-08,US,101.32,total postings,Cleaning & Sanitation
+2026-10-09,US,101.44,total postings,Cleaning & Sanitation
+2026-10-10,US,101.57,total postings,Cleaning & Sanitation
+2026-10-11,US,101.74,total postings,Cleaning & Sanitation
+2026-10-12,US,101.85,total postings,Cleaning & Sanitation
+2026-10-13,US,101.96,total postings,Cleaning & Sanitation
+2026-10-14,US,102.03,total postings,Cleaning & Sanitation
+2026-10-15,US,102.09,total postings,Cleaning & Sanitation
+2026-10-16,US,102.04,total postings,Cleaning & Sanitation
+2026-10-17,US,102.03,total postings,Cleaning & Sanitation
+2026-10-18,US,102.04,total postings,Cleaning & Sanitation
+2026-10-19,US,102.1,total postings,Cleaning & Sanitation
+2026-10-20,US,102.05,total postings,Cleaning & Sanitation
+2026-10-21,US,102.04,total postings,Cleaning & Sanitation
+2026-10-22,US,102.02,total postings,Cleaning & Sanitation
+2026-10-23,US,102.09,total postings,Cleaning & Sanitation
+2026-10-24,US,102.08,total postings,Cleaning & Sanitation
+2026-10-25,US,102.09,total postings,Cleaning & Sanitation
+2026-10-26,US,102.06,total postings,Cleaning & Sanitation
+2026-10-27,US,102.11,total postings,Cleaning & Sanitation
+2026-10-28,US,102.16,total postings,Cleaning & Sanitation
+2026-10-29,US,102.16,total postings,Cleaning & Sanitation
+2026-10-30,US,102.12,total postings,Cleaning & Sanitation
+2026-10-31,US,102.14,total postings,Cleaning & Sanitation
+2020-02-01,US,100,total postings,Scientific Research & Development
+2020-02-02,US,100,total postings,Scientific Research & Development
+2020-02-03,US,99.95,total postings,Scientific Research & Development
+2020-02-04,US,99.93,total postings,Scientific Research & Development
+2020-02-05,US,99.89,total postings,Scientific Research & Development
+2020-02-06,US,99.93,total postings,Scientific Research & Development
+2020-02-07,US,100.01,total postings,Scientific Research & Development
+2020-02-08,US,99.99,total postings,Scientific Research & Development
+2020-02-09,US,99.95,total postings,Scientific Research & Development
+2020-02-10,US,99.92,total postings,Scientific Research & Development
+2020-02-11,US,99.86,total postings,Scientific Research & Development
+2020-02-12,US,99.81,total postings,Scientific Research & Development
+2020-02-13,US,99.72,total postings,Scientific Research & Development
+2020-02-14,US,99.78,total postings,Scientific Research & Development
+2020-02-15,US,99.7,total postings,Scientific Research & Development
+2020-02-16,US,99.84,total postings,Scientific Research & Development
+2020-02-17,US,99.99,total postings,Scientific Research & Development
+2020-02-18,US,100.13,total postings,Scientific Research & Development
+2020-02-19,US,100.28,total postings,Scientific Research & Development
+2020-02-20,US,100.4,total postings,Scientific Research & Development
+2020-02-21,US,100.46,total postings,Scientific Research & Development
+2020-02-22,US,100.46,total postings,Scientific Research & Development
+2020-02-23,US,100.55,total postings,Scientific Research & Development
+2020-02-24,US,100.56,total postings,Scientific Research & Development
+2020-02-25,US,100.69,total postings,Scientific Research & Development
+2020-02-26,US,100.78,total postings,Scientific Research & Development
+2020-02-27,US,100.95,total postings,Scientific Research & Development
+2020-02-28,US,101.1,total postings,Scientific Research & Development
+2020-02-29,US,101.5,total postings,Scientific Research & Development
+2026-10-01,US,83.34,total postings,Scientific Research & Development
+2026-10-02,US,83.33,total postings,Scientific Research & Development
+2026-10-03,US,83.35,total postings,Scientific Research & Development
+2026-10-04,US,83.47,total postings,Scientific Research & Development
+2026-10-05,US,83.5,total postings,Scientific Research & Development
+2026-10-06,US,83.65,total postings,Scientific Research & Development
+2026-10-07,US,83.69,total postings,Scientific Research & Development
+2026-10-08,US,83.76,total postings,Scientific Research & Development
+2026-10-09,US,83.79,total postings,Scientific Research & Development
+2026-10-10,US,83.88,total postings,Scientific Research & Development
+2026-10-11,US,83.81,total postings,Scientific Research & Development
+2026-10-12,US,83.86,total postings,Scientific Research & Development
+2026-10-13,US,83.81,total postings,Scientific Research & Development
+2026-10-14,US,83.8,total postings,Scientific Research & Development
+2026-10-15,US,83.84,total postings,Scientific Research & Development
+2026-10-16,US,83.94,total postings,Scientific Research & Development
+2026-10-17,US,83.81,total postings,Scientific Research & Development
+2026-10-18,US,83.81,total postings,Scientific Research & Development
+2026-10-19,US,83.84,total postings,Scientific Research & Development
+2026-10-20,US,83.83,total postings,Scientific Research & Development
+2026-10-21,US,83.8,total postings,Scientific Research & Development
+2026-10-22,US,83.72,total postings,Scientific Research & Development
+2026-10-23,US,83.75,total postings,Scientific Research & Development
+2026-10-24,US,83.87,total postings,Scientific Research & Development
+2026-10-25,US,83.95,total postings,Scientific Research & Development
+2026-10-26,US,83.92,total postings,Scientific Research & Development
+2026-10-27,US,83.94,total postings,Scientific Research & Development
+2026-10-28,US,84.01,total postings,Scientific Research & Development
+2026-10-29,US,84.14,total postings,Scientific Research & Development
+2026-10-30,US,84.12,total postings,Scientific Research & Development
+2026-10-31,US,84.13,total postings,Scientific Research & Development
+2020-02-01,US,100,total postings,Community & Social Service
+2020-02-02,US,100.15,total postings,Community & Social Service
+2020-02-03,US,100.28,total postings,Community & Social Service
+2020-02-04,US,100.32,total postings,Community & Social Service
+2020-02-05,US,100.38,total postings,Community & Social Service
+2020-02-06,US,100.47,total postings,Community & Social Service
+2020-02-07,US,100.53,total postings,Community & Social Service
+2020-02-08,US,100.55,total postings,Community & Social Service
+2020-02-09,US,100.48,total postings,Community & Social Service
+2020-02-10,US,100.45,total postings,Community & Social Service
+2020-02-11,US,100.44,total postings,Community & Social Service
+2020-02-12,US,100.45,total postings,Community & Social Service
+2020-02-13,US,100.36,total postings,Community & Social Service
+2020-02-14,US,100.26,total postings,Community & Social Service
+2020-02-15,US,100.15,total postings,Community & Social Service
+2020-02-16,US,100.14,total postings,Community & Social Service
+2020-02-17,US,100.09,total postings,Community & Social Service
+2020-02-18,US,100.17,total postings,Community & Social Service
+2020-02-19,US,100.09,total postings,Community & Social Service
+2020-02-20,US,100.12,total postings,Community & Social Service
+2020-02-21,US,100.21,total postings,Community & Social Service
+2020-02-22,US,100.16,total postings,Community & Social Service
+2020-02-23,US,100.12,total postings,Community & Social Service
+2020-02-24,US,100.11,total postings,Community & Social Service
+2020-02-25,US,100.02,total postings,Community & Social Service
+2020-02-26,US,100.14,total postings,Community & Social Service
+2020-02-27,US,100.13,total postings,Community & Social Service
+2020-02-28,US,100.12,total postings,Community & Social Service
+2020-02-29,US,100.22,total postings,Community & Social Service
+2026-10-01,US,104.73,total postings,Community & Social Service
+2026-10-02,US,104.73,total postings,Community & Social Service
+2026-10-03,US,104.73,total postings,Community & Social Service
+2026-10-04,US,104.78,total postings,Community & Social Service
+2026-10-05,US,104.75,total postings,Community & Social Service
+2026-10-06,US,104.76,total postings,Community & Social Service
+2026-10-07,US,104.86,total postings,Community & Social Service
+2026-10-08,US,105,total postings,Community & Social Service
+2026-10-09,US,105.07,total postings,Community & Social Service
+2026-10-10,US,105.17,total postings,Community & Social Service
+2026-10-11,US,105.19,total postings,Community & Social Service
+2026-10-12,US,105.28,total postings,Community & Social Service
+2026-10-13,US,105.26,total postings,Community & Social Service
+2026-10-14,US,105.32,total postings,Community & Social Service
+2026-10-15,US,105.39,total postings,Community & Social Service
+2026-10-16,US,105.38,total postings,Community & Social Service
+2026-10-17,US,105.35,total postings,Community & Social Service
+2026-10-18,US,105.36,total postings,Community & Social Service
+2026-10-19,US,105.37,total postings,Community & Social Service
+2026-10-20,US,105.47,total postings,Community & Social Service
+2026-10-21,US,105.58,total postings,Community & Social Service
+2026-10-22,US,105.74,total postings,Community & Social Service
+2026-10-23,US,105.94,total postings,Community & Social Service
+2026-10-24,US,106.07,total postings,Community & Social Service
+2026-10-25,US,106.17,total postings,Community & Social Service
+2026-10-26,US,106.2,total postings,Community & Social Service
+2026-10-27,US,106.24,total postings,Community & Social Service
+2026-10-28,US,106.18,total postings,Community & Social Service
+2026-10-29,US,106.07,total postings,Community & Social Service
+2026-10-30,US,105.93,total postings,Community & Social Service
+2026-10-31,US,105.83,total postings,Community & Social Service
+2020-02-01,US,100,total postings,Social Science
+2020-02-02,US,100.12,total postings,Social Science
+2020-02-03,US,100.36,total postings,Social Science
+2020-02-04,US,100.49,total postings,Social Science
+2020-02-05,US,100.73,total postings,Social Science
+2020-02-06,US,100.8,total postings,Social Science
+2020-02-07,US,100.78,total postings,Social Science
+2020-02-08,US,100.5,total postings,Social Science
+2020-02-09,US,100.28,total postings,Social Science
+2020-02-10,US,100.06,total postings,Social Science
+2020-02-11,US,100,total postings,Social Science
+2020-02-12,US,99.86,total postings,Social Science
+2020-02-13,US,99.71,total postings,Social Science
+2020-02-14,US,99.63,total postings,Social Science
+2020-02-15,US,99.66,total postings,Social Science
+2020-02-16,US,99.67,total postings,Social Science
+2020-02-17,US,99.63,total postings,Social Science
+2020-02-18,US,99.63,total postings,Social Science
+2020-02-19,US,99.28,total postings,Social Science
+2020-02-20,US,98.96,total postings,Social Science
+2020-02-21,US,98.71,total postings,Social Science
+2020-02-22,US,98.53,total postings,Social Science
+2020-02-23,US,98.47,total postings,Social Science
+2020-02-24,US,98.44,total postings,Social Science
+2020-02-25,US,98.36,total postings,Social Science
+2020-02-26,US,98.54,total postings,Social Science
+2020-02-27,US,98.84,total postings,Social Science
+2020-02-28,US,98.8,total postings,Social Science
+2020-02-29,US,98.92,total postings,Social Science
+2026-10-01,US,125.16,total postings,Social Science
+2026-10-02,US,125.3,total postings,Social Science
+2026-10-03,US,125.36,total postings,Social Science
+2026-10-04,US,125.36,total postings,Social Science
+2026-10-05,US,125.38,total postings,Social Science
+2026-10-06,US,125.48,total postings,Social Science
+2026-10-07,US,125.58,total postings,Social Science
+2026-10-08,US,125.51,total postings,Social Science
+2026-10-09,US,125.37,total postings,Social Science
+2026-10-10,US,125.33,total postings,Social Science
+2026-10-11,US,125.4,total postings,Social Science
+2026-10-12,US,125.4,total postings,Social Science
+2026-10-13,US,125.05,total postings,Social Science
+2026-10-14,US,124.82,total postings,Social Science
+2026-10-15,US,124.4,total postings,Social Science
+2026-10-16,US,123.92,total postings,Social Science
+2026-10-17,US,123.28,total postings,Social Science
+2026-10-18,US,122.66,total postings,Social Science
+2026-10-19,US,121.87,total postings,Social Science
+2026-10-20,US,121.47,total postings,Social Science
+2026-10-21,US,121.02,total postings,Social Science
+2026-10-22,US,121.02,total postings,Social Science
+2026-10-23,US,121.01,total postings,Social Science
+2026-10-24,US,121.05,total postings,Social Science
+2026-10-25,US,120.95,total postings,Social Science
+2026-10-26,US,121.06,total postings,Social Science
+2026-10-27,US,121.07,total postings,Social Science
+2026-10-28,US,120.98,total postings,Social Science
+2026-10-29,US,120.89,total postings,Social Science
+2026-10-30,US,120.84,total postings,Social Science
+2026-10-31,US,120.71,total postings,Social Science
+2020-02-01,US,100,total postings,"IT Infrastructure, Operations & Support"
+2020-02-02,US,99.91,total postings,"IT Infrastructure, Operations & Support"
+2020-02-03,US,99.84,total postings,"IT Infrastructure, Operations & Support"
+2020-02-04,US,99.58,total postings,"IT Infrastructure, Operations & Support"
+2020-02-05,US,99.49,total postings,"IT Infrastructure, Operations & Support"
+2020-02-06,US,99.48,total postings,"IT Infrastructure, Operations & Support"
+2020-02-07,US,99.48,total postings,"IT Infrastructure, Operations & Support"
+2020-02-08,US,99.41,total postings,"IT Infrastructure, Operations & Support"
+2020-02-09,US,99.34,total postings,"IT Infrastructure, Operations & Support"
+2020-02-10,US,99.31,total postings,"IT Infrastructure, Operations & Support"
+2020-02-11,US,99.3,total postings,"IT Infrastructure, Operations & Support"
+2020-02-12,US,99.22,total postings,"IT Infrastructure, Operations & Support"
+2020-02-13,US,99.18,total postings,"IT Infrastructure, Operations & Support"
+2020-02-14,US,99.13,total postings,"IT Infrastructure, Operations & Support"
+2020-02-15,US,99.14,total postings,"IT Infrastructure, Operations & Support"
+2020-02-16,US,99.23,total postings,"IT Infrastructure, Operations & Support"
+2020-02-17,US,99.24,total postings,"IT Infrastructure, Operations & Support"
+2020-02-18,US,99.27,total postings,"IT Infrastructure, Operations & Support"
+2020-02-19,US,99.27,total postings,"IT Infrastructure, Operations & Support"
+2020-02-20,US,99.23,total postings,"IT Infrastructure, Operations & Support"
+2020-02-21,US,99.24,total postings,"IT Infrastructure, Operations & Support"
+2020-02-22,US,98.9,total postings,"IT Infrastructure, Operations & Support"
+2020-02-23,US,98.64,total postings,"IT Infrastructure, Operations & Support"
+2020-02-24,US,98.36,total postings,"IT Infrastructure, Operations & Support"
+2020-02-25,US,98.15,total postings,"IT Infrastructure, Operations & Support"
+2020-02-26,US,97.94,total postings,"IT Infrastructure, Operations & Support"
+2020-02-27,US,97.74,total postings,"IT Infrastructure, Operations & Support"
+2020-02-28,US,97.51,total postings,"IT Infrastructure, Operations & Support"
+2020-02-29,US,97.66,total postings,"IT Infrastructure, Operations & Support"
+2026-10-01,US,69.1,total postings,"IT Infrastructure, Operations & Support"
+2026-10-02,US,69.33,total postings,"IT Infrastructure, Operations & Support"
+2026-10-03,US,69.48,total postings,"IT Infrastructure, Operations & Support"
+2026-10-04,US,69.64,total postings,"IT Infrastructure, Operations & Support"
+2026-10-05,US,69.74,total postings,"IT Infrastructure, Operations & Support"
+2026-10-06,US,69.9,total postings,"IT Infrastructure, Operations & Support"
+2026-10-07,US,70.02,total postings,"IT Infrastructure, Operations & Support"
+2026-10-08,US,70.05,total postings,"IT Infrastructure, Operations & Support"
+2026-10-09,US,69.8,total postings,"IT Infrastructure, Operations & Support"
+2026-10-10,US,69.45,total postings,"IT Infrastructure, Operations & Support"
+2026-10-11,US,69.07,total postings,"IT Infrastructure, Operations & Support"
+2026-10-12,US,68.86,total postings,"IT Infrastructure, Operations & Support"
+2026-10-13,US,68.63,total postings,"IT Infrastructure, Operations & Support"
+2026-10-14,US,68.46,total postings,"IT Infrastructure, Operations & Support"
+2026-10-15,US,68.49,total postings,"IT Infrastructure, Operations & Support"
+2026-10-16,US,68.48,total postings,"IT Infrastructure, Operations & Support"
+2026-10-17,US,68.64,total postings,"IT Infrastructure, Operations & Support"
+2026-10-18,US,68.86,total postings,"IT Infrastructure, Operations & Support"
+2026-10-19,US,69.09,total postings,"IT Infrastructure, Operations & Support"
+2026-10-20,US,69.2,total postings,"IT Infrastructure, Operations & Support"
+2026-10-21,US,69.32,total postings,"IT Infrastructure, Operations & Support"
+2026-10-22,US,69.58,total postings,"IT Infrastructure, Operations & Support"
+2026-10-23,US,69.74,total postings,"IT Infrastructure, Operations & Support"
+2026-10-24,US,69.81,total postings,"IT Infrastructure, Operations & Support"
+2026-10-25,US,69.89,total postings,"IT Infrastructure, Operations & Support"
+2026-10-26,US,69.84,total postings,"IT Infrastructure, Operations & Support"
+2026-10-27,US,69.91,total postings,"IT Infrastructure, Operations & Support"
+2026-10-28,US,69.83,total postings,"IT Infrastructure, Operations & Support"
+2026-10-29,US,69.47,total postings,"IT Infrastructure, Operations & Support"
+2026-10-30,US,69.33,total postings,"IT Infrastructure, Operations & Support"
+2026-10-31,US,69.2,total postings,"IT Infrastructure, Operations & Support"
+2020-02-01,US,100,total postings,IT Systems & Solutions
+2020-02-02,US,99.61,total postings,IT Systems & Solutions
+2020-02-03,US,99.43,total postings,IT Systems & Solutions
+2020-02-04,US,99.18,total postings,IT Systems & Solutions
+2020-02-05,US,99.09,total postings,IT Systems & Solutions
+2020-02-06,US,99.02,total postings,IT Systems & Solutions
+2020-02-07,US,98.93,total postings,IT Systems & Solutions
+2020-02-08,US,98.93,total postings,IT Systems & Solutions
+2020-02-09,US,98.88,total postings,IT Systems & Solutions
+2020-02-10,US,98.88,total postings,IT Systems & Solutions
+2020-02-11,US,98.82,total postings,IT Systems & Solutions
+2020-02-12,US,98.7,total postings,IT Systems & Solutions
+2020-02-13,US,98.59,total postings,IT Systems & Solutions
+2020-02-14,US,98.48,total postings,IT Systems & Solutions
+2020-02-15,US,98.34,total postings,IT Systems & Solutions
+2020-02-16,US,98.38,total postings,IT Systems & Solutions
+2020-02-17,US,98.36,total postings,IT Systems & Solutions
+2020-02-18,US,98.31,total postings,IT Systems & Solutions
+2020-02-19,US,98.28,total postings,IT Systems & Solutions
+2020-02-20,US,98.38,total postings,IT Systems & Solutions
+2020-02-21,US,98.45,total postings,IT Systems & Solutions
+2020-02-22,US,98.37,total postings,IT Systems & Solutions
+2020-02-23,US,98.38,total postings,IT Systems & Solutions
+2020-02-24,US,98.36,total postings,IT Systems & Solutions
+2020-02-25,US,98.49,total postings,IT Systems & Solutions
+2020-02-26,US,98.55,total postings,IT Systems & Solutions
+2020-02-27,US,98.55,total postings,IT Systems & Solutions
+2020-02-28,US,98.6,total postings,IT Systems & Solutions
+2020-02-29,US,98.78,total postings,IT Systems & Solutions
+2026-10-01,US,76.17,total postings,IT Systems & Solutions
+2026-10-02,US,76.39,total postings,IT Systems & Solutions
+2026-10-03,US,76.51,total postings,IT Systems & Solutions
+2026-10-04,US,76.7,total postings,IT Systems & Solutions
+2026-10-05,US,76.77,total postings,IT Systems & Solutions
+2026-10-06,US,76.9,total postings,IT Systems & Solutions
+2026-10-07,US,76.94,total postings,IT Systems & Solutions
+2026-10-08,US,76.95,total postings,IT Systems & Solutions
+2026-10-09,US,76.96,total postings,IT Systems & Solutions
+2026-10-10,US,77.07,total postings,IT Systems & Solutions
+2026-10-11,US,77.06,total postings,IT Systems & Solutions
+2026-10-12,US,77.22,total postings,IT Systems & Solutions
+2026-10-13,US,77.28,total postings,IT Systems & Solutions
+2026-10-14,US,77.36,total postings,IT Systems & Solutions
+2026-10-15,US,77.6,total postings,IT Systems & Solutions
+2026-10-16,US,77.56,total postings,IT Systems & Solutions
+2026-10-17,US,77.49,total postings,IT Systems & Solutions
+2026-10-18,US,77.48,total postings,IT Systems & Solutions
+2026-10-19,US,77.45,total postings,IT Systems & Solutions
+2026-10-20,US,77.38,total postings,IT Systems & Solutions
+2026-10-21,US,77.47,total postings,IT Systems & Solutions
+2026-10-22,US,77.43,total postings,IT Systems & Solutions
+2026-10-23,US,77.57,total postings,IT Systems & Solutions
+2026-10-24,US,77.52,total postings,IT Systems & Solutions
+2026-10-25,US,77.47,total postings,IT Systems & Solutions
+2026-10-26,US,77.4,total postings,IT Systems & Solutions
+2026-10-27,US,77.45,total postings,IT Systems & Solutions
+2026-10-28,US,77.32,total postings,IT Systems & Solutions
+2026-10-29,US,77.25,total postings,IT Systems & Solutions
+2026-10-30,US,77.12,total postings,IT Systems & Solutions
+2026-10-31,US,77.12,total postings,IT Systems & Solutions
+2020-02-01,US,100,total postings,Software Development
+2020-02-02,US,99.84,total postings,Software Development
+2020-02-03,US,99.73,total postings,Software Development
+2020-02-04,US,99.55,total postings,Software Development
+2020-02-05,US,99.46,total postings,Software Development
+2020-02-06,US,99.46,total postings,Software Development
+2020-02-07,US,99.44,total postings,Software Development
+2020-02-08,US,99.51,total postings,Software Development
+2020-02-09,US,99.54,total postings,Software Development
+2020-02-10,US,99.61,total postings,Software Development
+2020-02-11,US,99.65,total postings,Software Development
+2020-02-12,US,99.65,total postings,Software Development
+2020-02-13,US,99.62,total postings,Software Development
+2020-02-14,US,99.63,total postings,Software Development
+2020-02-15,US,99.6,total postings,Software Development
+2020-02-16,US,99.69,total postings,Software Development
+2020-02-17,US,99.71,total postings,Software Development
+2020-02-18,US,99.69,total postings,Software Development
+2020-02-19,US,99.68,total postings,Software Development
+2020-02-20,US,99.74,total postings,Software Development
+2020-02-21,US,99.74,total postings,Software Development
+2020-02-22,US,99.59,total postings,Software Development
+2020-02-23,US,99.59,total postings,Software Development
+2020-02-24,US,99.54,total postings,Software Development
+2020-02-25,US,99.63,total postings,Software Development
+2020-02-26,US,99.65,total postings,Software Development
+2020-02-27,US,99.65,total postings,Software Development
+2020-02-28,US,99.71,total postings,Software Development
+2020-02-29,US,99.97,total postings,Software Development
+2026-10-01,US,78.25,total postings,Software Development
+2026-10-02,US,78.34,total postings,Software Development
+2026-10-03,US,78.31,total postings,Software Development
+2026-10-04,US,78.32,total postings,Software Development
+2026-10-05,US,78.29,total postings,Software Development
+2026-10-06,US,78.25,total postings,Software Development
+2026-10-07,US,78.2,total postings,Software Development
+2026-10-08,US,78.2,total postings,Software Development
+2026-10-09,US,78.09,total postings,Software Development
+2026-10-10,US,78.08,total postings,Software Development
+2026-10-11,US,77.92,total postings,Software Development
+2026-10-12,US,78.03,total postings,Software Development
+2026-10-13,US,78.12,total postings,Software Development
+2026-10-14,US,78.37,total postings,Software Development
+2026-10-15,US,78.65,total postings,Software Development
+2026-10-16,US,78.86,total postings,Software Development
+2026-10-17,US,79.12,total postings,Software Development
+2026-10-18,US,79.48,total postings,Software Development
+2026-10-19,US,79.82,total postings,Software Development
+2026-10-20,US,80.12,total postings,Software Development
+2026-10-21,US,80.39,total postings,Software Development
+2026-10-22,US,80.46,total postings,Software Development
+2026-10-23,US,80.79,total postings,Software Development
+2026-10-24,US,80.96,total postings,Software Development
+2026-10-25,US,81.14,total postings,Software Development
+2026-10-26,US,81.16,total postings,Software Development
+2026-10-27,US,81.24,total postings,Software Development
+2026-10-28,US,81.23,total postings,Software Development
+2026-10-29,US,81.49,total postings,Software Development
+2026-10-30,US,81.58,total postings,Software Development
+2026-10-31,US,81.57,total postings,Software Development
+2020-02-01,US,100,total postings,Therapy
+2020-02-02,US,100.03,total postings,Therapy
+2020-02-03,US,99.96,total postings,Therapy
+2020-02-04,US,99.68,total postings,Therapy
+2020-02-05,US,99.48,total postings,Therapy
+2020-02-06,US,99.58,total postings,Therapy
+2020-02-07,US,99.62,total postings,Therapy
+2020-02-08,US,99.58,total postings,Therapy
+2020-02-09,US,99.53,total postings,Therapy
+2020-02-10,US,99.52,total postings,Therapy
+2020-02-11,US,99.57,total postings,Therapy
+2020-02-12,US,99.53,total postings,Therapy
+2020-02-13,US,99.26,total postings,Therapy
+2020-02-14,US,99.01,total postings,Therapy
+2020-02-15,US,98.77,total postings,Therapy
+2020-02-16,US,98.56,total postings,Therapy
+2020-02-17,US,98.33,total postings,Therapy
+2020-02-18,US,98.11,total postings,Therapy
+2020-02-19,US,98.03,total postings,Therapy
+2020-02-20,US,97.9,total postings,Therapy
+2020-02-21,US,97.78,total postings,Therapy
+2020-02-22,US,97.66,total postings,Therapy
+2020-02-23,US,97.64,total postings,Therapy
+2020-02-24,US,97.55,total postings,Therapy
+2020-02-25,US,97.44,total postings,Therapy
+2020-02-26,US,97.48,total postings,Therapy
+2020-02-27,US,97.37,total postings,Therapy
+2020-02-28,US,97.47,total postings,Therapy
+2020-02-29,US,97.44,total postings,Therapy
+2026-10-01,US,186.97,total postings,Therapy
+2026-10-02,US,187.14,total postings,Therapy
+2026-10-03,US,187.3,total postings,Therapy
+2026-10-04,US,187.44,total postings,Therapy
+2026-10-05,US,187.76,total postings,Therapy
+2026-10-06,US,187.74,total postings,Therapy
+2026-10-07,US,187.84,total postings,Therapy
+2026-10-08,US,187.99,total postings,Therapy
+2026-10-09,US,188.14,total postings,Therapy
+2026-10-10,US,188.4,total postings,Therapy
+2026-10-11,US,188.67,total postings,Therapy
+2026-10-12,US,188.67,total postings,Therapy
+2026-10-13,US,189.01,total postings,Therapy
+2026-10-14,US,189.35,total postings,Therapy
+2026-10-15,US,189.45,total postings,Therapy
+2026-10-16,US,189.52,total postings,Therapy
+2026-10-17,US,189.51,total postings,Therapy
+2026-10-18,US,189.61,total postings,Therapy
+2026-10-19,US,189.99,total postings,Therapy
+2026-10-20,US,190.04,total postings,Therapy
+2026-10-21,US,190.08,total postings,Therapy
+2026-10-22,US,190.41,total postings,Therapy
+2026-10-23,US,190.79,total postings,Therapy
+2026-10-24,US,191.12,total postings,Therapy
+2026-10-25,US,191.17,total postings,Therapy
+2026-10-26,US,190.92,total postings,Therapy
+2026-10-27,US,190.85,total postings,Therapy
+2026-10-28,US,190.95,total postings,Therapy
+2026-10-29,US,191.02,total postings,Therapy
+2026-10-30,US,191.1,total postings,Therapy
+2026-10-31,US,191.25,total postings,Therapy
+2020-02-01,US,100,total postings,Logistic Support
+2020-02-02,US,99.89,total postings,Logistic Support
+2020-02-03,US,99.78,total postings,Logistic Support
+2020-02-04,US,99.56,total postings,Logistic Support
+2020-02-05,US,99.54,total postings,Logistic Support
+2020-02-06,US,99.5,total postings,Logistic Support
+2020-02-07,US,99.3,total postings,Logistic Support
+2020-02-08,US,99.32,total postings,Logistic Support
+2020-02-09,US,99.2,total postings,Logistic Support
+2020-02-10,US,98.74,total postings,Logistic Support
+2020-02-11,US,98.4,total postings,Logistic Support
+2020-02-12,US,97.99,total postings,Logistic Support
+2020-02-13,US,97.6,total postings,Logistic Support
+2020-02-14,US,97.34,total postings,Logistic Support
+2020-02-15,US,96.92,total postings,Logistic Support
+2020-02-16,US,96.58,total postings,Logistic Support
+2020-02-17,US,96.51,total postings,Logistic Support
+2020-02-18,US,96.54,total postings,Logistic Support
+2020-02-19,US,96.54,total postings,Logistic Support
+2020-02-20,US,96.56,total postings,Logistic Support
+2020-02-21,US,96.5,total postings,Logistic Support
+2020-02-22,US,96.3,total postings,Logistic Support
+2020-02-23,US,96.28,total postings,Logistic Support
+2020-02-24,US,96.28,total postings,Logistic Support
+2020-02-25,US,96.15,total postings,Logistic Support
+2020-02-26,US,96.02,total postings,Logistic Support
+2020-02-27,US,95.81,total postings,Logistic Support
+2020-02-28,US,95.76,total postings,Logistic Support
+2020-02-29,US,96.04,total postings,Logistic Support
+2026-10-01,US,119.28,total postings,Logistic Support
+2026-10-02,US,119.19,total postings,Logistic Support
+2026-10-03,US,119.2,total postings,Logistic Support
+2026-10-04,US,119.1,total postings,Logistic Support
+2026-10-05,US,119.07,total postings,Logistic Support
+2026-10-06,US,119.04,total postings,Logistic Support
+2026-10-07,US,119.1,total postings,Logistic Support
+2026-10-08,US,119.2,total postings,Logistic Support
+2026-10-09,US,119.06,total postings,Logistic Support
+2026-10-10,US,118.89,total postings,Logistic Support
+2026-10-11,US,119,total postings,Logistic Support
+2026-10-12,US,119.09,total postings,Logistic Support
+2026-10-13,US,119.03,total postings,Logistic Support
+2026-10-14,US,118.93,total postings,Logistic Support
+2026-10-15,US,118.76,total postings,Logistic Support
+2026-10-16,US,118.68,total postings,Logistic Support
+2026-10-17,US,118.63,total postings,Logistic Support
+2026-10-18,US,118.46,total postings,Logistic Support
+2026-10-19,US,118.38,total postings,Logistic Support
+2026-10-20,US,118.36,total postings,Logistic Support
+2026-10-21,US,118.49,total postings,Logistic Support
+2026-10-22,US,118.73,total postings,Logistic Support
+2026-10-23,US,119.3,total postings,Logistic Support
+2026-10-24,US,119.82,total postings,Logistic Support
+2026-10-25,US,120.11,total postings,Logistic Support
+2026-10-26,US,120.35,total postings,Logistic Support
+2026-10-27,US,120.64,total postings,Logistic Support
+2026-10-28,US,120.75,total postings,Logistic Support
+2026-10-29,US,120.77,total postings,Logistic Support
+2026-10-30,US,120.55,total postings,Logistic Support
+2026-10-31,US,120.39,total postings,Logistic Support
+2020-02-01,US,100,total postings,Loading & Stocking
+2020-02-02,US,99.91,total postings,Loading & Stocking
+2020-02-03,US,99.83,total postings,Loading & Stocking
+2020-02-04,US,99.81,total postings,Loading & Stocking
+2020-02-05,US,99.85,total postings,Loading & Stocking
+2020-02-06,US,99.94,total postings,Loading & Stocking
+2020-02-07,US,99.94,total postings,Loading & Stocking
+2020-02-08,US,99.94,total postings,Loading & Stocking
+2020-02-09,US,99.89,total postings,Loading & Stocking
+2020-02-10,US,99.86,total postings,Loading & Stocking
+2020-02-11,US,99.74,total postings,Loading & Stocking
+2020-02-12,US,99.7,total postings,Loading & Stocking
+2020-02-13,US,99.65,total postings,Loading & Stocking
+2020-02-14,US,99.61,total postings,Loading & Stocking
+2020-02-15,US,99.43,total postings,Loading & Stocking
+2020-02-16,US,99.41,total postings,Loading & Stocking
+2020-02-17,US,99.4,total postings,Loading & Stocking
+2020-02-18,US,99.3,total postings,Loading & Stocking
+2020-02-19,US,99.27,total postings,Loading & Stocking
+2020-02-20,US,99.24,total postings,Loading & Stocking
+2020-02-21,US,99.13,total postings,Loading & Stocking
+2020-02-22,US,98.98,total postings,Loading & Stocking
+2020-02-23,US,98.97,total postings,Loading & Stocking
+2020-02-24,US,98.92,total postings,Loading & Stocking
+2020-02-25,US,99,total postings,Loading & Stocking
+2020-02-26,US,98.87,total postings,Loading & Stocking
+2020-02-27,US,98.82,total postings,Loading & Stocking
+2020-02-28,US,98.91,total postings,Loading & Stocking
+2020-02-29,US,99.14,total postings,Loading & Stocking
+2026-10-01,US,110.24,total postings,Loading & Stocking
+2026-10-02,US,110.19,total postings,Loading & Stocking
+2026-10-03,US,110.16,total postings,Loading & Stocking
+2026-10-04,US,109.98,total postings,Loading & Stocking
+2026-10-05,US,109.83,total postings,Loading & Stocking
+2026-10-06,US,109.74,total postings,Loading & Stocking
+2026-10-07,US,109.47,total postings,Loading & Stocking
+2026-10-08,US,109.29,total postings,Loading & Stocking
+2026-10-09,US,109.06,total postings,Loading & Stocking
+2026-10-10,US,108.76,total postings,Loading & Stocking
+2026-10-11,US,108.51,total postings,Loading & Stocking
+2026-10-12,US,108.29,total postings,Loading & Stocking
+2026-10-13,US,107.96,total postings,Loading & Stocking
+2026-10-14,US,107.85,total postings,Loading & Stocking
+2026-10-15,US,107.77,total postings,Loading & Stocking
+2026-10-16,US,107.84,total postings,Loading & Stocking
+2026-10-17,US,107.9,total postings,Loading & Stocking
+2026-10-18,US,108.06,total postings,Loading & Stocking
+2026-10-19,US,108.2,total postings,Loading & Stocking
+2026-10-20,US,108.35,total postings,Loading & Stocking
+2026-10-21,US,108.42,total postings,Loading & Stocking
+2026-10-22,US,108.49,total postings,Loading & Stocking
+2026-10-23,US,108.38,total postings,Loading & Stocking
+2026-10-24,US,108.3,total postings,Loading & Stocking
+2026-10-25,US,108.21,total postings,Loading & Stocking
+2026-10-26,US,108.15,total postings,Loading & Stocking
+2026-10-27,US,108.13,total postings,Loading & Stocking
+2026-10-28,US,108.11,total postings,Loading & Stocking
+2026-10-29,US,107.98,total postings,Loading & Stocking
+2026-10-30,US,107.82,total postings,Loading & Stocking
+2026-10-31,US,107.72,total postings,Loading & Stocking

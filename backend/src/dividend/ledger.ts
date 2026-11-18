@@ -73,9 +73,9 @@ function validId(value: unknown): value is string {
 
 function validateFrozenSnapshot(input: unknown): DividendSnapshot {
   const value = record(input);
-  if (value.version !== 1 || value.stage !== 1 || !validDate(value.generatedAt) || !Array.isArray(value.indicators) || value.indicators.length > 10 || !Array.isArray(value.sources) || value.sources.length > 3 || !["available", "unavailable"].includes(String(value.archive)) || !["ready", "partial", "unavailable"].includes(String(value.status))) throw new Error("Invalid frozen source snapshot.");
+  if (value.version !== 1 || value.stage !== 1 || !validDate(value.generatedAt) || !Array.isArray(value.indicators) || value.indicators.length > 16 || !Array.isArray(value.sources) || value.sources.length > 3 || !["available", "unavailable"].includes(String(value.archive)) || !["ready", "partial", "unavailable"].includes(String(value.status))) throw new Error("Invalid frozen source snapshot.");
   const coverage = record(value.coverage);
-  if (![coverage.available, coverage.current, coverage.total].every(item => typeof item === "number" && Number.isInteger(item) && item >= 0 && item <= 10)) throw new Error("Invalid source coverage.");
+  if (![coverage.available, coverage.current, coverage.total].every(item => typeof item === "number" && Number.isInteger(item) && item >= 0 && item <= 16)) throw new Error("Invalid source coverage.");
   const keys = new Set<string>();
   for (const item of value.indicators) {
     const reading = record(item);

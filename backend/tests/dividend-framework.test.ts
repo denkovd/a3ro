@@ -28,7 +28,8 @@ describe("AI Dividend measurement chain", () => {
       assert.equal(status === "complete", next === null);
       if (next !== null) assert.ok(next > DIVIDEND_CURRENT_STEP);
     }
-    assert.equal(stageStatus(DIVIDEND_STAGES.find(stage => stage.id === "capability")!), "planned");
+    assert.equal(stageStatus(DIVIDEND_STAGES.find(stage => stage.id === "capability")!, 2), "planned");
+    assert.equal(stageStatus(DIVIDEND_STAGES.find(stage => stage.id === "capability")!, 3), "complete");
     assert.equal(stageStatus(DIVIDEND_STAGES.find(stage => stage.id === "distribution")!, 1), "partial");
   });
 
@@ -37,7 +38,7 @@ describe("AI Dividend measurement chain", () => {
   });
 
   test("every value-chain layer is live by step 2", () => {
-    assert.equal(DIVIDEND_CURRENT_STEP, 2);
+    assert.ok(DIVIDEND_CURRENT_STEP >= 2);
     for (const layer of VALUE_CHAIN_LAYERS) assert.ok(layer.step <= DIVIDEND_CURRENT_STEP, layer.id);
   });
 });

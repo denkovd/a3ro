@@ -34,12 +34,12 @@ export interface DividendStage {
 export const DIVIDEND_BUILD_STEPS: Record<DividendBuildStep, string> = {
   1: "Rename and restructure around the measurement chain",
   2: "Value-chain profit and loss from company filings",
-  3: "Capability, adoption and the conversion gap",
+  3: "Capability, adoption, the conversion gap and entry-level jobs",
   4: "Energy, water, uranium and compute constraint gauges",
   5: "Five-year outlook and the prediction ledger",
 };
 
-export const DIVIDEND_CURRENT_STEP: DividendBuildStep = 2;
+export const DIVIDEND_CURRENT_STEP: DividendBuildStep = 3;
 export const DIVIDEND_OUTLOOK_END_YEAR = 2031;
 
 const m = (step: DividendBuildStep, ...labels: string[]): DividendMeasure[] => labels.map(label => ({ label, step }));
@@ -47,42 +47,39 @@ const m = (step: DividendBuildStep, ...labels: string[]): DividendMeasure[] => l
 export const DIVIDEND_STAGES: DividendStage[] = [
   {
     id: "capability", title: "Capability",
-    question: "How fast is AI getting more capable, and cheaper to use?",
-    measures: m(3, "Frontier benchmark scores over time", "Cost per task at a fixed capability level", "Training compute of frontier models"),
+    question: "How fast is AI getting more capable, and how quickly can others catch up?",
+    measures: m(3, "Frontier capability over time (Epoch Capabilities Index)", "Gap between the best closed and best open-weights models"),
     sources: [
-      { label: "Epoch AI", url: "https://epoch.ai/data" },
-      { label: "Stanford AI Index", url: "https://hai.stanford.edu/ai-index" },
-      { label: "Artificial Analysis", url: "https://artificialanalysis.ai" },
+      { label: "Epoch AI Capabilities Index", url: "https://epoch.ai/benchmarks" },
     ],
     liveIndicatorKeys: [],
   },
   {
     id: "adoption", title: "Adoption",
     question: "How many firms and workers actually use it?",
-    measures: m(3, "Share of firms using AI to produce goods or services", "Worker usage rates", "Enterprise AI revenue"),
+    measures: m(3, "Share of US businesses using AI in the last two weeks", "Share expecting to use AI within six months"),
     sources: [
       { label: "US Census Business Trends and Outlook Survey", url: "https://www.census.gov/hfp/btos/data_downloads" },
-      { label: "ABS business characteristics", url: "https://www.abs.gov.au/statistics/industry/technology-and-innovation/characteristics-australian-business" },
     ],
     liveIndicatorKeys: [],
   },
   {
     id: "productivity", title: "Productivity",
     question: "Is capability turning into measurable output?",
-    measures: [...m(1, "Economy-wide output per hour"), ...m(3, "Productivity in AI-exposed vs less-exposed industries", "The conversion gap: capability growth vs measured productivity growth")],
-    sources: [{ label: "BLS industry productivity", url: "https://www.bls.gov/productivity/" }],
+    measures: [...m(1, "Economy-wide output per hour"), ...m(3, "The conversion gap: productivity growth since ChatGPT vs the pre-pandemic trend")],
+    sources: [{ label: "BLS productivity and costs", url: "https://www.bls.gov/productivity/" }],
     liveIndicatorKeys: ["productivity"],
   },
   {
     id: "distribution", title: "Who benefits",
     question: "Where does each dollar of AI spending end up?",
-    measures: [...m(1, "Wages, jobs, household income and wealth shares"), ...m(2, "Revenue, operating margin, capex and free cash flow for each value-chain layer"), ...m(3, "Entry-level employment in AI-exposed occupations")],
+    measures: [...m(1, "Wages, jobs, household income and wealth shares"), ...m(2, "Revenue, operating margin, capex and free cash flow for each value-chain layer"), ...m(3, "Job postings in AI-exposed vs hands-on occupations", "Unemployment for ages 20–24 vs 25–54")],
     sources: [
       { label: "SEC EDGAR XBRL data", url: "https://www.sec.gov/search-filings/edgar-application-programming-interfaces" },
-      { label: "NY Fed labour market for recent graduates", url: "https://www.newyorkfed.org/research/college-labor-market" },
-      { label: "Indeed Hiring Lab", url: "https://data.indeed.com" },
+      { label: "Indeed Hiring Lab job postings", url: "https://github.com/hiring-lab/job_postings_tracker" },
+      { label: "BLS Current Population Survey", url: "https://www.bls.gov/cps/" },
     ],
-    liveIndicatorKeys: ["real_compensation", "unemployment", "real_median_dpi", "income_bottom40", "income_middle40", "income_top20", "wealth_top1", "wealth_bottom50"],
+    liveIndicatorKeys: ["real_compensation", "unemployment", "unemployment_20_24", "unemployment_25_54", "real_median_dpi", "income_bottom40", "income_middle40", "income_top20", "wealth_top1", "wealth_bottom50"],
   },
   {
     id: "constraints", title: "Constraints",
