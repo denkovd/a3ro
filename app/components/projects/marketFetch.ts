@@ -3,7 +3,7 @@ const PUBLIC_SNAPSHOTS = new Set([
   "/api/bull/latest", "/api/bull/transitions", "/api/regime/latest",
   "/api/macro/latest", "/api/leaderboard/earnings-beats",
   "/api/australia-watch/latest", "/api/gold/latest", "/api/btc/latest",
-  "/api/dividend/latest",
+  "/api/dividend/latest", "/api/dividend/value-chain",
 ]);
 
 type Entry = { response: Promise<Response>; expiresAt: number };

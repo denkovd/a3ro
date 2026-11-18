@@ -209,6 +209,32 @@ test("Dividend successful snapshots do not expose persisted errors", async (t) =
   assert.equal(body.sources[0].error, "Official source could not be verified on this attempt");
 });
 
+test("Value-chain snapshots do not expose stored SEC errors", async (t) => {
+  setEnv(t, "DATABASE_URL", "test-only");
+  const { GET } = loadModule("app/api/dividend/value-chain/route.ts", {
+    "../../../../backend/src/storage/db": { createDb: async () => ({}) },
+    "../../../../backend/src/storage/valueChainRepo": { getStoredValueChain: async () => ({
+      version: 1, retrievedAt: new Date().toISOString(), companies: [], failures: [{ ticker: "MSFT", error: SECRET_ERROR }],
+    }) },
+  });
+  const body = await (await GET()).json();
+  assert.deepEqual(body.failures, [{ ticker: "MSFT", error: "Latest filings could not be read" }]);
+  assert.ok(!JSON.stringify(body).includes(SECRET_ERROR));
+});
+
+test("Value-chain cron authenticates before opening the database", async (t) => {
+  setEnv(t, "CRON_SECRET", "regression-secret");
+  let opened = false;
+  const { GET } = loadModule("app/api/cron/value-chain/route.ts", {
+    "../../../../backend/src/storage/db": { createDb: async () => { opened = true; return {}; } },
+    "../../../../backend/src/ingest/valueChainCycle": { runValueChainCycle: async () => ({ startedAt: "", loaded: 1, failures: [], archived: true }) },
+  });
+  assert.equal((await GET(new Request("https://a3ro.test/api/cron/value-chain"))).status, 401);
+  assert.equal(opened, false);
+  assert.equal((await GET(new Request("https://a3ro.test/api/cron/value-chain", { headers: { authorization: "Bearer regression-secret" } }))).status, 200);
+  assert.equal(opened, true);
+});
+
 test("cron auth fails closed in production and development, including blank secrets", (t) => {
   const { requireCronAuth } = loadModule("app/api/_lib/cronAuth.ts");
   for (const mode of ["production", "development", "test"]) {

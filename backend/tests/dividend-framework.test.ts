@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { DIVIDEND_BUILD_STEPS, DIVIDEND_CURRENT_STEP, DIVIDEND_STAGES, VALUE_CHAIN_LAYERS, stageStatus } from "../src/dividend/framework";
+import { DIVIDEND_BUILD_STEPS, DIVIDEND_CURRENT_STEP, DIVIDEND_STAGES, VALUE_CHAIN_LAYERS, nextStageStep, stageStatus } from "../src/dividend/framework";
 import { DIVIDEND_INDICATORS } from "../src/dividend/indicators";
 
 describe("AI Dividend measurement chain", () => {
@@ -19,15 +19,25 @@ describe("AI Dividend measurement chain", () => {
     assert.equal(DIVIDEND_STAGES.at(-1)?.id, "outlook");
   });
 
-  test("planned stages point to a build step that has not happened yet", () => {
+  test("every measure belongs to a real build step and status follows them", () => {
     for (const stage of DIVIDEND_STAGES) {
-      assert.ok(stage.step in DIVIDEND_BUILD_STEPS);
-      if (stageStatus(stage) === "planned") assert.ok(stage.step > DIVIDEND_CURRENT_STEP, `${stage.id} is planned but its step has passed`);
       assert.ok(stage.measures.length > 0);
+      for (const measure of stage.measures) assert.ok(measure.step in DIVIDEND_BUILD_STEPS);
+      const status = stageStatus(stage);
+      const next = nextStageStep(stage);
+      assert.equal(status === "complete", next === null);
+      if (next !== null) assert.ok(next > DIVIDEND_CURRENT_STEP);
     }
+    assert.equal(stageStatus(DIVIDEND_STAGES.find(stage => stage.id === "capability")!), "planned");
+    assert.equal(stageStatus(DIVIDEND_STAGES.find(stage => stage.id === "distribution")!, 1), "partial");
   });
 
-  test("only the households layer is live in step 1", () => {
-    assert.deepEqual(VALUE_CHAIN_LAYERS.filter(layer => layer.live).map(layer => layer.id), ["households"]);
+  test("a stage that shows baseline indicators already has a live measure", () => {
+    for (const stage of DIVIDEND_STAGES) if (stage.liveIndicatorKeys.length) assert.notEqual(stageStatus(stage), "planned", stage.id);
+  });
+
+  test("every value-chain layer is live by step 2", () => {
+    assert.equal(DIVIDEND_CURRENT_STEP, 2);
+    for (const layer of VALUE_CHAIN_LAYERS) assert.ok(layer.step <= DIVIDEND_CURRENT_STEP, layer.id);
   });
 });

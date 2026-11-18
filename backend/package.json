@@ -43,6 +43,7 @@
     "run:macro": "tsx scripts/run-macro.ts",
     "run:dividend": "tsx scripts/run-dividend.ts",
     "verify:dividend": "tsx scripts/verify-dividend.ts",
+    "run:value-chain": "tsx scripts/run-value-chain.ts",
     "backfill:gold": "tsx scripts/backfill-gold.ts",
     "run:gold": "tsx scripts/run-gold.ts",
     "run:gold-flow": "tsx scripts/run-gold-flow.ts",

@@ -5,8 +5,9 @@ import Link from "next/link";
 import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
 import DividendChart, { type DividendChartSeries } from "../../components/projects/dividend/DividendChart";
 import AustraliaBaseline from "../../components/projects/dividend/AustraliaBaseline";
+import ValueChainPanel from "../../components/projects/dividend/ValueChainPanel";
 import { DIVIDEND_ACCENT, dividendChange, dividendNumber, useDividendBaseline } from "../../components/projects/dividend/dividendData";
-import { DIVIDEND_BUILD_STEPS, DIVIDEND_CURRENT_STEP, DIVIDEND_OUTLOOK_END_YEAR, DIVIDEND_STAGES, VALUE_CHAIN_LAYERS, stageStatus, type DividendStage, type DividendStageId } from "../../../backend/src/dividend/framework";
+import { DIVIDEND_BUILD_STEPS, DIVIDEND_CURRENT_STEP, DIVIDEND_OUTLOOK_END_YEAR, DIVIDEND_STAGES, nextStageStep, stageStatus, type DividendBuildStep, type DividendStage, type DividendStageId } from "../../../backend/src/dividend/framework";
 import type { DividendRead } from "../../../backend/src/dividend/types";
 
 const SOURCE_LABELS = { bls: "Bureau of Labor Statistics", bea: "Bureau of Economic Analysis", dfa: "Federal Reserve" };
@@ -43,21 +44,25 @@ function SourceDetails({ indicator }: { indicator: DividendRead }) {
 }
 
 function StatusChip({ stage }: { stage: DividendStage }) {
-  const partial = stageStatus(stage) === "partial";
-  return <span className="font-mono text-[9px] uppercase tracking-[.12em]" style={{ color: partial ? DIVIDEND_ACCENT : "var(--ink-3)" }}>{partial ? "Partial data" : `Step ${stage.step}`}</span>;
+  const status = stageStatus(stage);
+  const label = status === "complete" ? "Live" : status === "partial" ? "Partial data" : `Step ${nextStageStep(stage)}`;
+  return <span className="font-mono text-[9px] uppercase tracking-[.12em]" style={{ color: status === "planned" ? "var(--ink-3)" : DIVIDEND_ACCENT }}>{label}</span>;
 }
 
 function StageHeader({ stage }: { stage: DividendStage }) {
   return <div className="max-w-3xl"><p className="font-mono text-[10px] uppercase tracking-[.2em] text-[var(--ink-2)]">Stage {DIVIDEND_STAGES.indexOf(stage) + 1} · {stage.title}</p><h2 className="mt-3 text-2xl md:text-3xl">{stage.question}</h2></div>;
 }
 
-/** What a stage will measure once its build step lands. Shown openly for planned stages, as a footer for partial ones. */
+/** What a stage still needs. Shown openly for planned stages, as a footer for partial ones, and not at all once complete. */
 function StagePlan({ stage }: { stage: DividendStage }) {
-  const planned = stageStatus(stage) === "planned";
-  return <section className={`${planned ? "mt-8" : "mt-10 border-t border-[var(--line)] pt-8"}`} aria-label={`${stage.title} build plan`}>
-    <div className="flex flex-wrap items-baseline justify-between gap-3"><h3 className="text-base">{planned ? "Not measured yet" : "Still to build"}</h3><p className="font-mono text-[10px] uppercase tracking-[.12em] text-[var(--ink-2)]">Build step {stage.step} · {DIVIDEND_BUILD_STEPS[stage.step]}</p></div>
+  const status = stageStatus(stage);
+  const pending = stage.measures.filter(measure => measure.step > DIVIDEND_CURRENT_STEP);
+  if (status === "complete") return null;
+  const steps = [...new Set(pending.map(measure => measure.step))].sort() as DividendBuildStep[];
+  return <section className={`${status === "planned" ? "mt-8" : "mt-10 border-t border-[var(--line)] pt-8"}`} aria-label={`${stage.title} build plan`}>
+    <div className="flex flex-wrap items-baseline justify-between gap-3"><h3 className="text-base">{status === "planned" ? "Not measured yet" : "Still to build"}</h3><p className="font-mono text-[10px] uppercase tracking-[.12em] text-[var(--ink-2)]">{steps.map(step => `Build step ${step} · ${DIVIDEND_BUILD_STEPS[step]}`).join(" / ")}</p></div>
     <div className="mt-5 grid gap-5 md:grid-cols-2">
-      <div className="border border-[var(--line)] p-5"><p className="text-xs text-[var(--ink-2)]">Will measure</p><ul className="mt-3 space-y-2 text-sm leading-6">{stage.measures.map(item => <li key={item}>— {item}</li>)}</ul></div>
+      <div className="border border-[var(--line)] p-5"><p className="text-xs text-[var(--ink-2)]">Will measure</p><ul className="mt-3 space-y-2 text-sm leading-6">{pending.map(item => <li key={item.label}>— {item.label}{steps.length > 1 ? <span className="text-[var(--ink-2)]"> · step {item.step}</span> : null}</li>)}</ul></div>
       <div className="border border-[var(--line)] p-5"><p className="text-xs text-[var(--ink-2)]">Planned sources</p>{stage.sources.length ? <ul className="mt-3 space-y-2 text-sm leading-6">{stage.sources.map(source => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer" className="underline decoration-[var(--line-2)] underline-offset-4">{source.label} ↗</a></li>)}</ul> : <p className="mt-3 text-sm leading-6 text-[var(--ink-2)]">Built from the measured stages before it. Scenarios and predictions are dated and scored as new data arrives.</p>}</div>
     </div>
   </section>;
@@ -103,7 +108,7 @@ export default function AIDividendView() {
       <div className="mx-auto flex min-h-14 max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-3 md:px-10"><div className="flex items-center gap-4"><Link href="/#modules" className="font-mono text-[10px] uppercase tracking-[.15em] text-[var(--ink-2)]">← Index</Link><span className="text-[var(--ink-3)]">/</span><span className="font-mono text-[10px] uppercase tracking-[.15em]">AI Dividend</span></div><ModuleSwitcher current="dividend" /></div>
     </header>
     <div className="mx-auto max-w-7xl px-5 py-9 md:px-10 md:py-14">
-      <div className="flex flex-wrap items-center justify-between gap-4"><p className="font-mono text-[10px] uppercase tracking-[.26em] text-[var(--ink-2)]">Experiment · 2026–{DIVIDEND_OUTLOOK_END_YEAR}</p><span className="border border-[var(--line-2)] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.15em]" style={{ color: DIVIDEND_ACCENT }}>Build {DIVIDEND_CURRENT_STEP} of 5 · Workers & households live</span></div>
+      <div className="flex flex-wrap items-center justify-between gap-4"><p className="font-mono text-[10px] uppercase tracking-[.26em] text-[var(--ink-2)]">Experiment · 2026–{DIVIDEND_OUTLOOK_END_YEAR}</p><span className="border border-[var(--line-2)] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.15em]" style={{ color: DIVIDEND_ACCENT }}>Build {DIVIDEND_CURRENT_STEP} of 5 · Value chain live</span></div>
       <h1 className="mt-5 text-4xl font-medium tracking-tight md:text-6xl">Where is the AI dividend going?</h1>
       <p className="mt-5 max-w-3xl text-base leading-8 text-[var(--ink-2)]">AI capability is rising fast. This module tracks how much of it turns into real output, who captures the value, and what physical limits could stop it. Every figure comes from published data. Stages without data yet say so.</p>
 
@@ -127,9 +132,8 @@ export default function AIDividendView() {
           <StageHeader stage={stage} />
 
           {stage.id === "distribution" && <>
-            <div className="mt-8 border border-[var(--line)]"><div className="grid grid-cols-[1.1fr_1.6fr_auto] gap-4 border-b border-[var(--line)] px-4 py-3 font-mono text-[10px] uppercase tracking-[.12em] text-[var(--ink-2)]"><span>Value-chain layer</span><span>Covers · data</span><span>Status</span></div>{VALUE_CHAIN_LAYERS.map(layer => <div key={layer.id} className="grid grid-cols-[1.1fr_1.6fr_auto] items-center gap-4 border-b border-[var(--line)] px-4 py-3 last:border-0"><span className="text-sm">{layer.title}</span><span className="text-xs leading-5 text-[var(--ink-2)]">{layer.examples} · {layer.data}{layer.confidence === "reported" ? " (lower confidence)" : ""}</span><span className="font-mono text-[10px] uppercase tracking-[.1em]" style={{ color: layer.live ? DIVIDEND_ACCENT : "var(--ink-3)" }}>{layer.live ? "Live" : "Step 2"}</span></div>)}</div>
-            <p className="mt-3 max-w-3xl text-xs leading-6 text-[var(--ink-2)]">Step 2 adds revenue, margin, capex and cash flow for each company layer, so you can see where profit pools along the chain. The workers and households layer below is live today.</p>
-            <h3 className="mt-10 text-xl">Workers & households</h3>
+            <ValueChainPanel />
+            <h3 className="mt-12 text-xl">Workers & households</h3><p className="mt-2 max-w-3xl text-xs leading-6 text-[var(--ink-2)]">The last layer of the chain: what reaches people as wages, jobs and income. US official statistics.</p>
             {!snapshot ? awaiting : <>
               <div className="mt-5 grid gap-4 md:grid-cols-3">
                 <Tile label="Real hourly compensation" value={formatChange(find("real_compensation"))} detail="Change over one year" meta={indicatorMeta(find("real_compensation"))} />
