@@ -34,6 +34,14 @@ describe("OECD composite indicators", () => {
     assert.equal(urls[0], "https://sdmx.oecd.org/public/rest/data/OECD.SDD.STES,DSD_STES@DF_CLI,/AUS.M.LI.IX._Z.AA.IX._Z.H?startPeriod=2015-11&format=csvfilewithlabels");
     assert.equal(rows.length, 4);
   });
+  test("retries a throttled OECD request (bare 500) before giving up", async () => {
+    const csv = await readFile(new URL("./fixtures/oecd-cli.csv", import.meta.url), "utf8");
+    let calls = 0;
+    const rows = await fetchOecdSeries("oecd_cli", { now: NOW, retryDelaysMs: [0, 0], fetchImpl: (async () =>
+      ++calls < 3 ? new Response("Internal server error", { status: 500 }) : new Response(csv)) as typeof fetch });
+    assert.equal(calls, 3);
+    assert.ok(rows.length > 0);
+  });
   test("an OECD rate limit (429) degrades only OECD cards", async () => {
     const runs: [string, string, string | null][] = [];
     const db = { query: async (sql: string, params: unknown[] = []) => {
@@ -41,7 +49,7 @@ describe("OECD composite indicators", () => {
       return { rows: [] };
     } };
     const abs = await readFile(new URL("./fixtures/abs-labour.csv", import.meta.url), "utf8");
-    const report = await runAustraliaWatchCycle(db as never, { now: () => NOW, fetchImpl: (async (url: string) =>
+    const report = await runAustraliaWatchCycle(db as never, { now: () => NOW, oecdRetryDelaysMs: [0, 0], fetchImpl: (async (url: string) =>
       url.includes("oecd.org") ? new Response("Too Many Requests", { status: 429 }) : url.includes("ABS,LF,") ? new Response(abs) : new Response("NoRecordsFound")) as typeof fetch });
     assert.match(report.results.oecd_cli.error ?? "", /OECD HTTP 429/);
     assert.equal(report.results.unemployment_rate.error, undefined);

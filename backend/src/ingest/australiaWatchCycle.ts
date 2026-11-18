@@ -8,7 +8,7 @@ import type { Queryable } from "../storage/db";
 export interface AustraliaWatchCycleReport { startedAt: string; results: Record<string, { written: number; error?: string }>; }
 
 /** Each series is isolated: a failed fetch records degraded health and never touches valid observations. */
-export async function runAustraliaWatchCycle(db: Queryable, opts: { now?: () => Date; fetchImpl?: typeof fetch } = {}): Promise<AustraliaWatchCycleReport> {
+export async function runAustraliaWatchCycle(db: Queryable, opts: { now?: () => Date; fetchImpl?: typeof fetch; oecdRetryDelaysMs?: readonly number[] } = {}): Promise<AustraliaWatchCycleReport> {
   const startedAt = (opts.now ?? (() => new Date()))().toISOString();
   const results: AustraliaWatchCycleReport["results"] = {};
   // Several RBA indicators share a table (e.g. F2.1); each table is downloaded once per cycle.
@@ -19,7 +19,7 @@ export async function runAustraliaWatchCycle(db: Queryable, opts: { now?: () => 
       const rows = source === "rba_csv"
         ? await fetchRbaSeries(indicator, loadRbaTable, new Date(startedAt))
         : source === "oecd_sdmx"
-          ? await fetchOecdSeries(indicator, { fetchImpl: opts.fetchImpl, now: new Date(startedAt) })
+          ? await fetchOecdSeries(indicator, { fetchImpl: opts.fetchImpl, now: new Date(startedAt), retryDelaysMs: opts.oecdRetryDelaysMs })
           : await fetchAbsSeries(indicator, { fetchImpl: opts.fetchImpl, now: new Date(startedAt) });
       if (!rows.length) throw new Error(`${source === "rba_csv" ? "RBA" : source === "oecd_sdmx" ? "OECD" : "ABS"} returned no valid observations`);
       const written = await upsertAustraliaObservations(db, rows);
