@@ -75,6 +75,15 @@ describe("Dividend measurement rules", () => {
     points.unshift({ period: "2025-Q2", value: 110, status: null });
     assert.ok(Math.abs(annualDividendChange(points, "percent").value! - 100 / 11) < 1e-10);
   });
+  test("a skipped year-earlier month is estimated from the months either side, and flagged", () => {
+    const points: DividendPoint[] = [{ period: "2025-09", value: 4.3, status: null }, { period: "2025-11", value: 4.5, status: null }, { period: "2026-10", value: 4.1, status: null }];
+    const change = annualDividendChange(points, "percentage_points");
+    assert.ok(Math.abs(change.value! - (4.1 - 4.4)) < 1e-10);
+    assert.equal(change.estimated, true);
+    assert.equal(change.fromPeriod, "2025-10");
+    assert.equal(annualDividendChange(points.slice(1), "percentage_points").value, null);
+    assert.equal(annualDividendChange([...points.slice(0, 2), { period: "2025-10", value: 4.4, status: null }, points[2]], "percentage_points").estimated, false);
+  });
   test("shares and rates use percentage-point changes, preserving a zero reference", () => {
     const points = [{ period: "2025", value: 0, status: null }, { period: "2026", value: 2, status: null }];
     assert.equal(annualDividendChange(points, "percentage_points").value, 2);

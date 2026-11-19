@@ -38,6 +38,7 @@ function SourceDetails({ indicator }: { indicator: DividendRead }) {
     <summary className="cursor-pointer">Definition, source and observation values</summary>
     <p className="mt-3">{indicator.population}. {indicator.basis}. {indicator.adjustment}.</p>
     <p className="mt-2">{indicator.note}</p>
+    {indicator.changeEstimated && <p className="mt-2">The source published no figure for {indicator.changeFromPeriod}, so the one-year change uses the average of the months either side.</p>}
     <p className="mt-2">Source: {SOURCE_LABELS[indicator.source]} · {indicator.sourceSeries}</p>
     <p>Last verified: {indicator.verifiedAt ? new Date(indicator.verifiedAt).toISOString().replace("T", " ").slice(0, 16) + " UTC" : "Unavailable"}. Publication date: {indicator.publicationDate ?? "Not supplied by this download"}.</p>
     {indicator.latest?.status && <p>Source status: {indicator.latest.status}.</p>}
@@ -76,7 +77,7 @@ function Tile({ label, value, detail, meta }: { label: string; value: string; de
 }
 
 function indicatorMeta(indicator: DividendRead | undefined): string {
-  return `${indicator?.latest?.period ?? "No observation"} · ${indicator?.freshness ?? "unavailable"} · ${indicator?.sourceHealth ?? "unavailable"} source`;
+  return `${indicator?.changeEstimated ? "Year-earlier month estimated (not published) · " : ""}${indicator?.latest?.period ?? "No observation"} · ${indicator?.freshness ?? "unavailable"} · ${indicator?.sourceHealth ?? "unavailable"} source`;
 }
 
 function Inspector({ readings, keys, years }: { readings: DividendRead[]; keys: string[]; years: number }) {

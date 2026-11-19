@@ -20,8 +20,10 @@ export async function GET() {
     try {
       stored = await getStoredDividend(await createDb());
       archive = "available";
-    } catch {
-      console.warn("AI Dividend revision archive could not be read; checking official sources");
+    } catch (error) {
+      // Log only the database error code (e.g. 42P01 = table missing), never the message or connection details.
+      const code = typeof (error as { code?: unknown })?.code === "string" ? (error as { code: string }).code : "unknown";
+      console.warn(`AI Dividend revision archive could not be read (code ${code}); checking official sources`);
     }
   }
   const recent = DIVIDEND_SOURCES.every(source => {
