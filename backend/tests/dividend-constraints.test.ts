@@ -135,6 +135,12 @@ describe("Constraint gauges", () => {
     assert.equal(financingGauge(null).status, "no_data");
   });
 
+  test("source status says whether each constraint source was loaded or last checked", () => {
+    const centres = { source: "datacentres" as const, retrievedAt: "2026-11-18T00:00:00Z", dataUrl: "", payload: parseDataCentres(centresCsv) };
+    const snapshot = buildConstraintsSnapshot({ datacentres: centres }, undefined, null, new Date(), [{ source: "eia", health: "unavailable", checkedAt: "2026-11-18T08:50:00Z" }]);
+    assert.deepEqual(snapshot.sources.map(item => [item.source, item.loaded, item.checkedAt]), [["eia", false, "2026-11-18T08:50:00Z"], ["fred", false, null], ["datacentres", true, null], ["drought", false, null]]);
+  });
+
   test("the snapshot always lists every gauge, counting the ones without data", () => {
     const snapshot = buildConstraintsSnapshot({}, undefined, null);
     assert.equal(snapshot.gauges.length, 8);

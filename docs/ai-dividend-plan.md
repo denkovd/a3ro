@@ -222,9 +222,19 @@ build-out.
 
 ### Known gaps found while checking production
 
-- The constraint sources (EIA, FRED, data centres, drought) had not loaded.
-- The baseline revision archive read fails (`archive: unavailable`).
-- Monthly baseline series show no annual change (no Oct 2025 observation,
-  likely the 2025 government shutdown).
-- No capex concept matched for ANET, EQIX, DLR, FCX; no operating income for
-  ETN; DLR's latest TTM is March 2026 (marked stale).
+Fixed in code:
+- Monthly annual change: a missing year-earlier month (Oct 2025, shutdown) is
+  now interpolated from its neighbours and labelled as estimated.
+- Renamed XBRL capex concepts are joined when their shared periods agree within
+  0.5% (fixes ANET). EQIX split its capex into two concepts, so the join refuses.
+- The constraints API now reports which sources have never loaded.
+- The baseline archive failure now logs the database error code.
+
+Still open (needs data or ops, not code):
+- Constraint sources (EIA, FRED, data centres, drought) not loaded in production:
+  run `npm --prefix backend run run:signals -- --constraints --archive` or check
+  the `/api/cron/dividend-constraints` cron.
+- Baseline archive `unavailable`: the `horizon_*` tables are likely missing;
+  apply `20261018031814_macro_horizon_baseline.sql`.
+- Genuine SEC gaps: DLR filings end March 2026 (stale), FCX capex ends March
+  2026, EQIX capex split, ETN reports no operating income.

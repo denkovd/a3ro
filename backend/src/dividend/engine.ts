@@ -22,13 +22,31 @@ export function dividendFreshness(period: string | null, frequency: DividendFreq
   return age <= limits[0] ? "current" : age <= limits[1] ? "aging" : "stale";
 }
 
-export function annualDividendChange(points: DividendPoint[], kind: "percent" | "percentage_points"): { value: number | null; fromPeriod: string | null } {
+const shiftMonth = (period: string, months: number) => {
+  const index = Number(period.slice(0, 4)) * 12 + Number(period.slice(5, 7)) - 1 + months;
+  return `${Math.floor(index / 12)}-${String(index % 12 + 1).padStart(2, "0")}`;
+};
+
+/**
+ * Change against the same period a year earlier. If a monthly source skipped
+ * that month (BLS published no October 2025 data during the government
+ * shutdown), the year-earlier value is estimated as the average of the months
+ * either side, and `estimated` says so. Nothing else is filled in.
+ */
+export function annualDividendChange(points: DividendPoint[], kind: "percent" | "percentage_points"): { value: number | null; fromPeriod: string | null; estimated: boolean } {
+  const none = { value: null, fromPeriod: null, estimated: false };
   const latest = points.at(-1);
-  if (!latest) return { value: null, fromPeriod: null };
+  if (!latest) return none;
   const priorPeriod = String(Number(latest.period.slice(0, 4)) - 1) + latest.period.slice(4);
-  const previous = points.find(point => point.period === priorPeriod);
-  if (!previous || (kind === "percent" && previous.value <= 0)) return { value: null, fromPeriod: null };
-  return { value: kind === "percentage_points" ? latest.value - previous.value : (latest.value / previous.value - 1) * 100, fromPeriod: previous.period };
+  let previous = points.find(point => point.period === priorPeriod)?.value ?? null;
+  let estimated = false;
+  if (previous === null && /^\d{4}-\d{2}$/.test(priorPeriod)) {
+    const before = points.find(point => point.period === shiftMonth(priorPeriod, -1))?.value;
+    const after = points.find(point => point.period === shiftMonth(priorPeriod, 1))?.value;
+    if (before !== undefined && after !== undefined) { previous = (before + after) / 2; estimated = true; }
+  }
+  if (previous === null || (kind === "percent" && previous <= 0)) return none;
+  return { value: kind === "percentage_points" ? latest.value - previous : (latest.value / previous - 1) * 100, fromPeriod: priorPeriod, estimated };
 }
 
 export function buildDividendSnapshot(datasets: DividendDataset[], states: DividendSourceState[], now = new Date(), archive: DividendSnapshot["archive"] = "unavailable"): DividendSnapshot {
@@ -44,7 +62,7 @@ export function buildDividendSnapshot(datasets: DividendDataset[], states: Divid
     const latest = points.at(-1) ?? null;
     const change = annualDividendChange(points, indicator.change);
     return {
-      ...indicator, points, latest, annualChange: change.value, changeFromPeriod: change.fromPeriod,
+      ...indicator, points, latest, annualChange: change.value, changeFromPeriod: change.fromPeriod, changeEstimated: change.estimated,
       freshness: dividendFreshness(latest?.period ?? null, indicator.frequency, now),
       verifiedAt: dataset?.retrievedAt ?? null, publicationDate: dataset?.publicationDate ?? null,
       dataUrl: dataset?.dataUrl ?? null, sourceHealth: state?.health ?? "unavailable" as const,
