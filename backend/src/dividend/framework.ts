@@ -36,10 +36,10 @@ export const DIVIDEND_BUILD_STEPS: Record<DividendBuildStep, string> = {
   2: "Value-chain profit and loss from company filings",
   3: "Capability, adoption, the conversion gap and entry-level jobs",
   4: "Constraint gauges: power, water, uranium, copper and financing",
-  5: "Five-year outlook and the prediction ledger",
+  5: "Outlook to 2031: signposts, scenarios and dated predictions",
 };
 
-export const DIVIDEND_CURRENT_STEP: DividendBuildStep = 4;
+export const DIVIDEND_CURRENT_STEP: DividendBuildStep = 5;
 export const DIVIDEND_OUTLOOK_END_YEAR = 2031;
 
 const m = (step: DividendBuildStep, ...labels: string[]): DividendMeasure[] => labels.map(label => ({ label, step }));
@@ -96,7 +96,7 @@ export const DIVIDEND_STAGES: DividendStage[] = [
   {
     id: "outlook", title: "Outlook",
     question: `What could the economy look like by ${DIVIDEND_OUTLOOK_END_YEAR}?`,
-    measures: m(5, "Three scenarios: dividend arrives, infrastructure bubble deflates, gains pool upstream", "Dated quarterly predictions, scored when the data arrives"),
+    measures: m(5, "Signposts: which scenario the live evidence leans toward", "Three scenarios to 2031: dividend arrives, build-out deflates, gains pool upstream", "Dated predictions, scored when the data arrives"),
     sources: [],
     liveIndicatorKeys: [],
   },

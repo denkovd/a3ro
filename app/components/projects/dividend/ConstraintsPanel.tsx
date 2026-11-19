@@ -13,7 +13,7 @@ const STATUS: Record<GaugeStatus, { label: string; color: string; meaning: strin
 };
 const SERIES_COLORS = ["#8b9dff", "#5fc9a4"];
 
-function useConstraints() {
+export function useConstraints() {
   const [data, setData] = useState<ConstraintsSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
