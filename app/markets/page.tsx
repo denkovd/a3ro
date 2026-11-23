@@ -15,6 +15,13 @@ export const metadata: Metadata = {
 };
 
 /** Widget tabs: every name in ASX_NAMES lands in exactly one tab. */
+/** Global overview tabs. CFD/futures symbols: TradingView's free widgets don't show most index feeds directly. */
+const GLOBAL_TABS = [
+  { title: "Indices", symbols: [{ s: "FOREXCOM:SPXUSD", d: "S&P 500" }, { s: "FOREXCOM:NSXUSD", d: "Nasdaq 100" }, { s: "FOREXCOM:DJI", d: "Dow 30" }, { s: "INDEX:NKY", d: "Nikkei 225" }, { s: "INDEX:DEU40", d: "DAX" }, { s: "FOREXCOM:UKXGBP", d: "FTSE 100" }] },
+  { title: "Futures", symbols: [{ s: "COMEX:GC1!", d: "Gold" }, { s: "NYMEX:CL1!", d: "WTI crude" }, { s: "COMEX:HG1!", d: "Copper" }, { s: "CBOT:ZN1!", d: "US 10-year note" }] },
+  { title: "Currencies", symbols: [{ s: "FX:AUDUSD", d: "AUD/USD" }, { s: "FX:EURUSD", d: "EUR/USD" }, { s: "FX:USDJPY", d: "USD/JPY" }, { s: "FX:GBPUSD", d: "GBP/USD" }, { s: "FX_IDC:AUDCNY", d: "AUD/CNY" }] },
+];
+
 const SECTOR_TABS: { title: string; sectors: string[] }[] = [
   { title: "Resources", sectors: ["Resources", "Energy"] },
   { title: "Financials", sectors: ["Banks", "Financials"] },
@@ -39,6 +46,24 @@ export default async function MarketsPage() {
         <h1 className="mt-4 text-3xl font-semibold tracking-tight">Markets at a glance</h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--ink-2)]">Where the world&rsquo;s money sits, the ASX&rsquo;s largest companies, and the screens we watch. ASX prices and charts come from TradingView; company detail links go to Market Index.</p>
       </header>
+
+      <section aria-labelledby="global-markets">
+        <h2 id="global-markets" className="text-lg font-medium">Global markets</h2>
+        <p className="mt-1 mb-4 max-w-3xl text-xs leading-relaxed text-[var(--ink-3)]">Major stock indices, futures and currencies, priced in their own markets. Index and futures prices are from TradingView and may be delayed.</p>
+        <TradingViewWidget widget="market-overview" height={480} label="Global market overview" config={{ showChart: true, showSymbolLogo: true, dateRange: "12M", tabs: GLOBAL_TABS }} />
+        <div className="mt-10 grid gap-10 lg:grid-cols-2">
+          <div>
+            <h3 className="text-sm font-medium">Currencies: today&rsquo;s moves</h3>
+            <p className="mt-1 mb-4 text-xs text-[var(--ink-3)]">Each cell is one currency against another (row against column), including the Australian dollar.</p>
+            <TradingViewWidget widget="forex-heat-map" height={420} label="Forex heatmap" config={{ currencies: ["USD", "EUR", "JPY", "GBP", "CNY", "AUD", "CAD", "CHF"] }} />
+          </div>
+          <div>
+            <h3 className="text-sm font-medium">US market breadth</h3>
+            <p className="mt-1 mb-4 text-xs text-[var(--ink-3)]">S&amp;P 500 companies sized by market value and coloured by today&rsquo;s move: a quick read of how broad a rally or sell-off is.</p>
+            <TradingViewWidget widget="stock-heatmap" height={420} label="S&P 500 heatmap" config={{ dataSource: "SPX500", grouping: "sector", blockSize: "market_cap_basic", blockColor: "change", hasTopBar: false, isDataSetEnabled: false, isZoomEnabled: true, hasSymbolTooltip: true }} />
+          </div>
+        </div>
+      </section>
 
       <section aria-labelledby="world-assets">
         <h2 id="world-assets" className="text-lg font-medium">The world&rsquo;s assets</h2>

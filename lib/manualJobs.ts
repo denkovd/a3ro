@@ -12,12 +12,26 @@ export interface ManualJob {
   steps: string[];
   /** File(s) to edit. */
   where: string;
+  /** Repeat every N months, or every N days when everyDays is set. */
   everyMonths: number;
+  everyDays?: number;
   /** Date the data in the code was last checked, used until a run is recorded. */
   lastCheckedInCode: string;
 }
 
 export const MANUAL_JOBS: readonly ManualJob[] = [
+  {
+    id: "newsletter-signups",
+    title: "Copy newsletter sign-ups into Loops",
+    steps: [
+      "Open Ops → Growth and look for new leads whose form starts with newsletter: or waitlist:.",
+      "Add those emails to the Loops audience (tag them with the page they came from).",
+    ],
+    where: "Ops → Growth, then Loops",
+    everyMonths: 0,
+    everyDays: 7,
+    lastCheckedInCode: "2026-11-23",
+  },
   {
     id: "world-assets",
     title: "World assets figures (/markets)",
@@ -66,10 +80,22 @@ export function addMonths(isoDate: string, months: number): string {
   return target.toISOString().slice(0, 10);
 }
 
+export function addDays(isoDate: string, days: number): string {
+  return new Date(Date.parse(`${isoDate.slice(0, 10)}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+}
+
+/** "Every week", "Every 3 months" etc. */
+export function cadenceLabel(job: ManualJob): string {
+  if (job.everyDays) return job.everyDays === 7 ? "Every week" : `Every ${job.everyDays} days`;
+  return job.everyMonths === 12 ? "Every year" : `Every ${job.everyMonths} months`;
+}
+
 export function jobSchedule(job: ManualJob, lastDone: string | null, now = new Date()) {
   const last = (lastDone ?? job.lastCheckedInCode).slice(0, 10);
-  const nextDue = addMonths(last, job.everyMonths);
+  const nextDue = job.everyDays ? addDays(last, job.everyDays) : addMonths(last, job.everyMonths);
   const daysLeft = Math.floor((Date.parse(`${nextDue}T00:00:00Z`) - Date.parse(now.toISOString().slice(0, 10) + "T00:00:00Z")) / 86_400_000);
-  const status: JobStatus = daysLeft < 0 ? "overdue" : daysLeft <= DUE_SOON_DAYS ? "due soon" : "ok";
+  // Weekly jobs only turn amber in their last 2 days; longer ones 14 days ahead.
+  const soon = job.everyDays && job.everyDays < 30 ? 2 : DUE_SOON_DAYS;
+  const status: JobStatus = daysLeft < 0 ? "overdue" : daysLeft <= soon ? "due soon" : "ok";
   return { last, nextDue, daysLeft, status };
 }

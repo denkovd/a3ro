@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import SiteTracker from "./components/SiteTracker";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "A3RO — Market Intelligence Platform",
@@ -27,7 +28,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="antialiased">{children}<SiteTracker /></body>
+      <body className="antialiased">{children}<SiteTracker /><Analytics /></body>
     </html>
   );
 }

@@ -191,5 +191,18 @@ test("manual jobs: due dates, month-end clamping and status", () => {
   const late = mj.jobSchedule(job, null, at("2027-03-01"));
   assert.equal(late.status, "overdue"); assert.equal(late.daysLeft, -6);
   assert.equal(mj.jobSchedule(job, "2027-03-01T05:00:00Z", at("2027-03-02")).nextDue, "2027-06-01", "a recorded run restarts the clock");
-  for (const j of mj.MANUAL_JOBS) assert.ok(j.steps.length && j.where && j.everyMonths > 0, j.id);
+  for (const j of mj.MANUAL_JOBS) assert.ok(j.steps.length && j.where && (j.everyMonths > 0 || j.everyDays > 0), j.id);
+  const weekly = mj.MANUAL_JOBS.find((j) => j.id === "newsletter-signups");
+  assert.equal(mj.jobSchedule(weekly, "2026-11-23T01:00:00Z", at("2026-11-26")).nextDue, "2026-11-30");
+  assert.equal(mj.cadenceLabel(weekly), "Every week");
+  assert.equal(mj.jobSchedule(weekly, "2026-11-23T01:00:00Z", at("2026-11-25")).status, "ok");
+  assert.equal(mj.jobSchedule(weekly, "2026-11-23T01:00:00Z", at("2026-11-28")).status, "due soon");
+});
+
+test("sitemap lists public pages only", () => {
+  const sm = load("app/sitemap.ts", { "next": {} }).default();
+  const urls = sm.map((x) => x.url);
+  assert.ok(urls.includes("https://a3ro.com.au/Projects/Australia-Watch"));
+  assert.ok(urls.includes("https://a3ro.com.au/markets"));
+  for (const gated of ["Bull-Market-Finder", "Gold-Tracker", "BTC-Tracker", "Earnings-Beat", "Regime-Shift", "/owner"]) assert.ok(!urls.some((u) => u.includes(gated)), gated);
 });

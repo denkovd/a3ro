@@ -18,6 +18,9 @@ export function currentMetrics(metrics: CorridorMetricLatest[] | null, now = Dat
 
 export function quoteStatus(q: LatestQuote | undefined, now = Date.now()) {
   if (!q) return "Unavailable";
+  // Official daily closes (EIA/FRED) publish a few business days late; the server already
+  // judges their freshness against each source's publication lag, so use that, not wall-clock age.
+  if (q.kind === "settlement" || q.kind === "historical") return q.staleness === "stale" || q.staleness === "dead" ? "Stale" : "Settlement";
   const age = now - Date.parse(q.observedAt);
   if (!Number.isFinite(age) || age > 4 * DAY) return "Stale";
   if ((q.kind === "live" || q.kind === "delayed") && (q.staleness === "stale" || q.staleness === "dead" || age > 30 * 60_000)) return "Last trade";

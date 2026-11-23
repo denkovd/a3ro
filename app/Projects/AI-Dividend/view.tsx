@@ -12,6 +12,7 @@ import { DIVIDEND_ACCENT, dividendChange, dividendNumber, useDividendBaseline } 
 import { DIVIDEND_BUILD_STEPS, DIVIDEND_CURRENT_STEP, DIVIDEND_OUTLOOK_END_YEAR, DIVIDEND_STAGES, nextStageStep, stageStatus, type DividendBuildStep, type DividendStage, type DividendStageId } from "../../../backend/src/dividend/framework";
 import type { DividendRead } from "../../../backend/src/dividend/types";
 import SiteFooter from "../../components/SiteFooter";
+import NewsletterSignup from "../../components/NewsletterSignup";
 
 const SOURCE_LABELS = { bls: "Bureau of Labor Statistics", bea: "Bureau of Economic Analysis", dfa: "Federal Reserve" };
 const COLORS = ["#8b9dff", "#d4a157", "#5fc9a4"];
@@ -175,6 +176,8 @@ export default function AIDividendView() {
 
           <StagePlan stage={stage} />
         </section>}
+      <NewsletterSignup context="ai-dividend" title="The AI dividend, every week"
+        blurb="How much of AI's capability is turning into real output, who is capturing the value, and what could stop it. One short email a week." />
       </div>
     </div>
     <SiteFooter />

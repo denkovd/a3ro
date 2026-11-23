@@ -10,7 +10,7 @@
 ──────────────────────────────────────────────────────────────── */
 import { useEffect, useRef } from "react";
 
-export type TradingViewWidgetName = "events" | "market-overview" | "mini-symbol-overview" | "symbol-overview" | "advanced-chart" | "stock-heatmap";
+export type TradingViewWidgetName = "events" | "market-overview" | "mini-symbol-overview" | "symbol-overview" | "advanced-chart" | "stock-heatmap" | "forex-heat-map";
 
 export default function TradingViewWidget({ widget, config, height, label }: {
   widget: TradingViewWidgetName;

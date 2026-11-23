@@ -49,6 +49,9 @@ test("prices preserve delayed, settlement and stale semantics", () => {
   assert.equal(quoteStatus({ ...quote, observedAt: "2026-07-29T06:00:00Z" }, now), "Stale");
   assert.equal(quoteStatus({ ...quote, staleness: "dead" }, now), "Last trade");
   assert.equal(quoteStatus(undefined, now), "Unavailable");
+  // An official close days old but within its source's publication lag is a settlement, not stale.
+  assert.equal(quoteStatus({ kind: "settlement", observedAt: "2026-10-04T00:00:00Z", staleness: "fresh" }, now), "Settlement");
+  assert.equal(quoteStatus({ kind: "settlement", observedAt: "2026-10-04T00:00:00Z", staleness: "stale" }, now), "Stale");
 });
 
 test("margin proxy requires matched source dates and providers", () => {

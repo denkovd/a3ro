@@ -1,6 +1,6 @@
 // Manual jobs (Ops): recurring hand-done updates, when each was last done and when it's next due.
 import { createDb, getManualJobRuns } from "@a3ro/oil-backend";
-import { MANUAL_JOBS, jobSchedule } from "../../../lib/manualJobs";
+import { MANUAL_JOBS, cadenceLabel, jobSchedule } from "../../../lib/manualJobs";
 import { requireOwner } from "../../../lib/ownerGuard";
 import { OpsPage, OpsSection, OpsTable } from "../ui";
 import MarkDone from "./MarkDone";
@@ -26,7 +26,7 @@ export default async function ManualJobsPage() {
     {overdue ? <p className="text-sm" style={{ color: TONE.overdue }}>{overdue} job{overdue === 1 ? " is" : "s are"} overdue.</p> : null}
     <div className="flex flex-col gap-4">
       {jobs.map(({ job, last, nextDue, daysLeft, status }) => <OpsSection key={job.id} title={job.title}
-        note={<>Every {job.everyMonths === 12 ? "year" : `${job.everyMonths} months`} · edit <code>{job.where}</code></>}>
+        note={<>{cadenceLabel(job)} · <code>{job.where}</code></>}>
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <ol className="list-decimal space-y-1 pl-5 text-xs leading-relaxed text-[var(--ink-2)] md:max-w-2xl">
             {job.steps.map((s) => <li key={s}>{s}</li>)}

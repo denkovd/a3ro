@@ -14,7 +14,7 @@ export default function PrivacyPage() {
       <li><strong>Email address and message</strong> when you send an enquiry or request access through a form on the site, along with the page you sent it from.</li>
       <li><strong>Email address</strong> when you subscribe to the newsletter.</li>
       <li><strong>Sign-in details</strong> if you have an A3RO account: your email address and, if you sign in with Google, your name and email as provided by Google. A sign-in cookie keeps you logged in.</li>
-      <li><strong>Anonymous usage events</strong>: which pages are viewed, which outside sites are clicked through to, what is typed into site search, which assets are opened and which forms are submitted. These events carry no name, email address, IP address or account, and can&rsquo;t be linked to you.</li>
+      <li><strong>Anonymous usage events</strong>: which pages are viewed, which outside sites are clicked through to, what is typed into site search, which assets are opened and which forms are submitted. These events carry no name, email address, IP address or account, and can&rsquo;t be linked to you. We also use Vercel Web Analytics, which counts page views without cookies.</li>
       <li><strong>Technical information</strong> such as error reports from our servers. These record what failed (for example a data source timing out), not who was using the site.</li>
     </ul>
     <p>You can use the public parts of A3RO without giving us any personal information. We don&rsquo;t collect sensitive information.</p>
