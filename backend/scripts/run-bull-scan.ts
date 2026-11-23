@@ -14,6 +14,7 @@ import { ensureDatabaseUrl } from "./loadEnv";
 ensureDatabaseUrl();
 
 import { createDb } from "../src/storage/db";
+import { pruneBullSnapshots, BULL_SNAPSHOT_RETENTION_DAYS } from "../src/storage/bullRepo";
 import { runBullScan } from "../src/bull/pipeline";
 import { BULL_UNIVERSE } from "../src/bull/universe";
 
@@ -57,6 +58,14 @@ async function main(): Promise<void> {
   console.log(`transitions     ${report.transitions}`);
   console.log(`newly bullish   ${report.newlyBullish.join(", ") || "none"}`);
   console.log(`rows written    ${report.written}`);
+
+  // Keep the table bounded: only the latest and previous runs are read (#50 database limit).
+  try {
+    const removed = await pruneBullSnapshots(db);
+    console.log(`pruned          ${removed} snapshot rows older than ${BULL_SNAPSHOT_RETENTION_DAYS} days`);
+  } catch (e) {
+    console.error(`prune failed: ${e instanceof Error ? e.message : String(e)}`);
+  }
 
   // Fail the workflow only on systemic breakage, not routine per-symbol
   // misses: >25% failures suggests an outage worth a red run.

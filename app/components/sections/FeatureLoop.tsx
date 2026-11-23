@@ -221,9 +221,6 @@ function LoopScene() {
             >
               ∞
             </span>
-            <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
-              Endless index — loops with scroll
-            </p>
           </div>
         </div>
 

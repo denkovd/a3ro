@@ -191,6 +191,16 @@ export async function upsertBullSnapshots(
  *  diffs are per-lens — spec §3). An empty map on a strategy's first
  *  ever run is exactly what computeTransitions' first-scan noise
  *  guard keys on, so a newly added strategy never spams the feed. */
+/** Days of daily scan snapshots kept. Only the latest and the previous run are ever read. */
+export const BULL_SNAPSHOT_RETENTION_DAYS = 90;
+
+/** Deletes scan snapshots older than the retention window; returns rows removed. */
+export async function pruneBullSnapshots(db: Queryable, keepDays = BULL_SNAPSHOT_RETENTION_DAYS): Promise<number> {
+  if (!Number.isInteger(keepDays) || keepDays < 7) throw new Error("Refusing to keep fewer than 7 days of snapshots");
+  const res = await db.query(`delete from bull_snapshots where run_date < current_date - $1::int`, [keepDays]);
+  return res.rowCount ?? 0;
+}
+
 export async function getPreviousVerdicts(
   db: Queryable,
   beforeRunDate: string,

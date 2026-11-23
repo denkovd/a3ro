@@ -38,7 +38,7 @@ export default function PrivacyPage() {
     <p>Personal information is stored with our service providers using access controls and encryption in transit. Only A3RO&rsquo;s owner can access it.</p>
 
     <h2>Access, correction and complaints</h2>
-    <p>You can ask to see, correct or delete the personal information we hold about you, or unsubscribe at any time, by emailing <a href="mailto:hello@a3ro.com.au">hello@a3ro.com.au</a>. If you have a privacy complaint, email us first and we&rsquo;ll respond within 30 days. If you&rsquo;re not satisfied, you can contact the Office of the Australian Information Commissioner at <a href="https://www.oaic.gov.au">oaic.gov.au</a>.</p>
+    <p>You can ask to see, correct or delete the personal information we hold about you, or unsubscribe at any time, by emailing <a href="mailto:a3ro.helpdesk@gmail.com">a3ro.helpdesk@gmail.com</a>. If you have a privacy complaint, email us first and we&rsquo;ll respond within 30 days. If you&rsquo;re not satisfied, you can contact the Office of the Australian Information Commissioner at <a href="https://www.oaic.gov.au">oaic.gov.au</a>.</p>
 
     <h2>Changes</h2>
     <p>We&rsquo;ll update this policy when what we collect changes. The date at the top shows when it last changed.</p>

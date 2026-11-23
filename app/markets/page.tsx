@@ -19,7 +19,9 @@ const SECTOR_TABS: { title: string; sectors: string[] }[] = [
 
 export default function MarketsPage() {
   const tabs = [
-    { title: "Index", symbols: [{ s: "ASX:XJO", d: "S&P/ASX 200" }, { s: "ASX:XKO", d: "S&P/ASX 300" }, { s: "ASX:XSO", d: "S&P/ASX Small Ordinaries" }] },
+    // TradingView's free widgets don't show S&P/ASX index symbols (ASX:XJO etc.), so the index tab
+    // uses the ASX-listed ETFs that track each index.
+    { title: "Index", symbols: [{ s: "ASX:STW", d: "S&P/ASX 200 (STW ETF)" }, { s: "ASX:VAS", d: "S&P/ASX 300 (VAS ETF)" }, { s: "ASX:ISO", d: "S&P/ASX Small Ordinaries (ISO ETF)" }] },
     ...SECTOR_TABS.map((tab) => ({ title: tab.title, symbols: ASX_NAMES.filter((n) => tab.sectors.includes(n.sector)).map((n) => ({ s: `ASX:${n.code}`, d: n.name })) })),
   ];
 
@@ -35,7 +37,7 @@ export default function MarketsPage() {
       <section aria-labelledby="asx" className="grid gap-10 lg:grid-cols-[1.2fr_1fr]">
         <div>
           <h2 id="asx" className="text-lg font-medium">ASX</h2>
-          <p className="mt-1 mb-4 text-xs text-[var(--ink-3)]">Delayed prices. Switch tabs for the index and each sector.</p>
+          <p className="mt-1 mb-4 text-xs text-[var(--ink-3)]">Delayed prices. Switch tabs for the index and each sector. Indices are shown through the ETFs that track them.</p>
           <TradingViewWidget widget="market-overview" height={520} label="ASX market overview"
             config={{ tabs, showChart: true, showSymbolLogo: true, dateRange: "12M" }} />
         </div>

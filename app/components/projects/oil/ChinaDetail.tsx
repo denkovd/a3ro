@@ -2,7 +2,7 @@
 import type { CorridorMetricLatest } from "@a3ro/oil-backend";
 import { useState } from "react";
 import CorridorSpark from "../CorridorSpark";
-import { chinaRows, chinaPeriod, chinaSummary, chinaYoy } from "./china";
+import { chinaNextRelease, chinaRows, chinaPeriod, chinaSummary, chinaYoy } from "./china";
 import { metricFreshness } from "./dataQuality";
 
 export default function ChinaDetail({ metrics, failed }: { metrics: CorridorMetricLatest[] | null; failed: boolean }) {
@@ -10,6 +10,7 @@ export default function ChinaDetail({ metrics, failed }: { metrics: CorridorMetr
   return <div className="space-y-5">
     <header><p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">China · Monthly oil activity</p><h3 className="mt-2 text-xl text-[var(--ink)]">Crude buying &amp; refining</h3><p className="mt-2 text-[11px] text-[var(--ink-3)]">National coverage · coastal marker is a navigation anchor</p></header>
     <p className="border-l-2 border-[var(--asset-accent)] pl-3 text-xs leading-relaxed text-[var(--ink-2)]">{chinaSummary(metrics)}</p>
+    {(() => { const latest = chinaRows(metrics).find((x) => x.row)?.row; return latest ? <p className="font-mono text-[10px] text-[var(--ink-3)]">Monthly data · {chinaNextRelease(latest)} (China Customs ~7th–10th, NBS ~15th)</p> : null; })()}
     {failed && <p className="text-[11px] text-[var(--asset-accent)]">Physical feed could not be loaded · retained readings shown where available.</p>}
     {chinaRows(metrics).map(({ metric, title, detail, source, row }) => {
       const open = expanded === metric;

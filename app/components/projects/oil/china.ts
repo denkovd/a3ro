@@ -13,6 +13,20 @@ export function chinaPeriod(row: Pick<CorridorMetricLatest, "periodDate" | "meta
   return `${row.meta?.periodStart?.slice(5, 7) === "01" && row.periodDate.slice(5, 7) === "02" ? "Jan–Feb" : month} ${year}`;
 }
 
+/**
+ * When the next month's figures are due. China Customs publishes crude imports around the 7th–10th
+ * of the following month and the NBS publishes refinery runs around the 15th, so both are in by
+ * mid-month. Jan and Feb are released together in March.
+ */
+export function chinaNextRelease(row: Pick<CorridorMetricLatest, "periodDate">): string {
+  const y = Number(row.periodDate.slice(0, 4)), m = Number(row.periodDate.slice(5, 7));
+  const next = new Date(Date.UTC(y, m, 1));              // month after the latest reading
+  const due = new Date(Date.UTC(y, m + 1, 1));           // published the month after that
+  const fmt = (d: Date, opts: Intl.DateTimeFormatOptions) => d.toLocaleDateString("en-AU", { timeZone: "UTC", ...opts });
+  if (next.getUTCMonth() === 0) return `Jan–Feb ${next.getUTCFullYear()} figures due mid-Mar ${next.getUTCFullYear()}`;
+  return `${fmt(next, { month: "short", year: "numeric" })} figures due mid-${fmt(due, { month: "short", year: "numeric" })}`;
+}
+
 export function chinaRows(metrics: CorridorMetricLatest[] | null) {
   return CHINA_METRICS.map(spec => ({ ...spec, row: metrics?.find(m => m.corridor === "china" && m.metric === spec.metric && m.unit === "Mt" && Number.isFinite(m.value) && m.value > 0) }));
 }

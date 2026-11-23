@@ -17,7 +17,7 @@ export default function SiteFooter() {
       <nav aria-label="Legal" className="flex flex-wrap gap-5 font-mono text-[11px] text-[var(--ink-3)]">
         <a href="/terms" className="hover:text-[var(--ink)]">Terms of use</a>
         <a href="/privacy" className="hover:text-[var(--ink)]">Privacy</a>
-        <a href="mailto:hello@a3ro.com.au" className="hover:text-[var(--ink)]">hello@a3ro.com.au</a>
+        <a href="mailto:a3ro.helpdesk@gmail.com" className="hover:text-[var(--ink)]">a3ro.helpdesk@gmail.com</a>
       </nav>
     </div>
   </footer>;

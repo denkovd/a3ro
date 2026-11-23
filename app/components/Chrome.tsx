@@ -4,16 +4,28 @@
 ──────────────────────────────────────────────────────────────── */
 import { motion, useScroll, useSpring } from "framer-motion";
 import { useMotionPreference } from "./motion";
+import { useOwner } from "./useOwner";
 
 // Section links are "/#…" so they also work from pages other than the homepage.
 const LINKS = [
   { label: "Commodity Watch", href: "/#top" },
   { label: "Modules", href: "/#modules" },
-  { label: "Index", href: "/#index" },
   { label: "Markets", href: "/markets" },
   { label: "Calendar", href: "/calendar" },
   { label: "Contact", href: "/#contact" },
 ];
+
+const authClass = "rounded-sm border border-[var(--line)] px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--ink)] transition-colors duration-[var(--dur-micro)] hover:border-[var(--line-2)]";
+
+/** Log in when signed out; Ops and Log out for the signed-in owner. */
+function AuthLinks() {
+  const owner = useOwner();
+  if (!owner) return <a href="/login" className={authClass}>Log in</a>;
+  return <span className="flex items-center gap-3">
+    <a href="/owner" className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--ink-2)] hover:text-[var(--ink)]">Ops</a>
+    <form method="post" action="/auth/logout"><button type="submit" className={authClass}>Log out</button></form>
+  </span>;
+}
 
 export function Nav() {
   return (
@@ -39,12 +51,15 @@ export function Nav() {
             </a>
           ))}
         </nav>
-        <a
-          href="/#contact"
-          className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--acid)] md:hidden"
-        >
-          Contact
-        </a>
+        <div className="flex items-center gap-4">
+          <a
+            href="/#contact"
+            className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--acid)] md:hidden"
+          >
+            Contact
+          </a>
+          <AuthLinks />
+        </div>
       </div>
     </header>
   );

@@ -43,10 +43,10 @@ export interface SavedScreen { id: string; title: string; summary: string; url: 
 export const SAVED_SCREENS: readonly SavedScreen[] = [
   {
     id: "fcf-machines",
-    title: "Free cash flow machines in uptrends",
-    summary: "US companies worth $2bn or more, trading under 20 times free cash flow and above their 200-day average: cash generators the market is already rewarding.",
-    url: "https://finviz.com/screener.ashx?v=111&f=cap_midover,fa_pfcf_u20,ta_sma200_pa&o=-marketcap",
+    title: "Free cash flow machines",
+    summary: "US companies worth $2bn or more, trading under 20 times free cash flow: businesses that turn a lot of their value into cash.",
+    url: "https://finviz.com/screener.ashx?v=111&f=cap_midover,fa_pfcf_u20&o=-marketcap",
     source: "Finviz",
-    filters: ["Market cap over $2bn", "Price / free cash flow under 20", "Price above 200-day moving average"],
+    filters: ["Market cap over $2bn", "Price / free cash flow under 20"],
   },
 ];

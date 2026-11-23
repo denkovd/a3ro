@@ -37,6 +37,6 @@ export default function TermsPage() {
     <p>These terms are governed by the laws of New South Wales, Australia, and you submit to the courts of New South Wales.</p>
 
     <h2>Contact</h2>
-    <p>Questions about these terms: <a href="mailto:hello@a3ro.com.au">hello@a3ro.com.au</a>. See also our <a href="/privacy">privacy policy</a>.</p>
+    <p>Questions about these terms: <a href="mailto:a3ro.helpdesk@gmail.com">a3ro.helpdesk@gmail.com</a>. See also our <a href="/privacy">privacy policy</a>.</p>
   </LegalPage>;
 }
