@@ -9,6 +9,7 @@ import ReleaseSchedule from "../../components/projects/australia/ReleaseSchedule
 import PulseBand from "../../components/projects/australia/PulseBand";
 import { computePulse, type MeasuredLead } from "../../../backend/src/australia/pulse";
 import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
+import SiteFooter from "../../components/SiteFooter";
 
 const label = (indicator: string) => isAustraliaIndicator(indicator) ? AUSTRALIA_REGISTRY[indicator].label : indicator;
 const PILLARS = primaryByPillar();
@@ -88,5 +89,6 @@ export default function AustraliaWatchView() {
       {COMPARISON.length>0 && <section aria-label="Quarterly CPI comparison" className="mt-14 border-t border-[var(--line)] pt-8"><p className="font-mono text-[10px] uppercase tracking-[.3em] text-[var(--ink-3)]">Comparison series</p><h2 className="mt-2 text-xl font-medium text-[var(--ink)]">Quarterly CPI</h2><p className="mt-2 max-w-3xl text-xs leading-relaxed text-[var(--ink-3)]">Kept for continuity with the long quarterly history. The Monthly CPI above is Australia’s primary inflation measure and the RBA’s target measure.</p><div className="mt-6 grid gap-5 lg:grid-cols-2">{COMPARISON.map(indicator=><IndicatorSlot key={indicator} indicator={indicator} data={data}/>)}</div></section>}
     </>}
     </div>
+    <SiteFooter />
   </main>;
 }

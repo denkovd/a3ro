@@ -24,6 +24,8 @@ export interface ModuleAccess {
   pages: readonly string[];
   /** API route prefixes serving this module's data. */
   apis: readonly string[];
+  /** What the module does, shown on the private page to visitors who can't open it yet (#35). */
+  preview?: string;
 }
 
 export const MODULE_ACCESS: readonly ModuleAccess[] = [
@@ -31,11 +33,16 @@ export const MODULE_ACCESS: readonly ModuleAccess[] = [
   { id: "dividend", label: "AI Dividend", level: "public", data: "open", pages: ["/Projects/AI-Dividend"], apis: ["/api/dividend"] },
   { id: "commodity", label: "Commodity Watch (oil corridors)", level: "public", data: "open", pages: ["/Projects/Oil-Tracker"], apis: ["/api/oil"] },
   { id: "macro", label: "Macro view", level: "public", data: "open", pages: [], apis: ["/api/macro", "/api/capital"] },
-  { id: "trend", label: "Bull Market Finder", level: "owner", data: "market", pages: ["/Projects/Bull-Market-Finder", "/Projects/Regime-Finder"], apis: ["/api/bull"] },
-  { id: "earnings", label: "Earnings Beat Leaderboard", level: "owner", data: "market", pages: ["/Projects/Earnings-Beat"], apis: ["/api/leaderboard", "/api/watchlist"] },
-  { id: "regime", label: "US regime", level: "owner", data: "market", pages: ["/Projects/Regime-Shift"], apis: ["/api/regime"] },
-  { id: "gold", label: "Gold", level: "owner", data: "market", pages: ["/Projects/Gold-Tracker"], apis: ["/api/gold"] },
-  { id: "btc", label: "BTC", level: "owner", data: "market", pages: ["/Projects/BTC-Tracker"], apis: ["/api/btc"] },
+  { id: "trend", label: "Bull Market Finder", level: "owner", data: "market", pages: ["/Projects/Bull-Market-Finder", "/Projects/Regime-Finder"], apis: ["/api/bull"],
+    preview: "Finds the assets that have just turned bullish on both daily and weekly closes, ranked by how recent and how strong the turn is, with a chart and profile for each." },
+  { id: "earnings", label: "Earnings Beat Leaderboard", level: "owner", data: "market", pages: ["/Projects/Earnings-Beat"], apis: ["/api/leaderboard", "/api/watchlist"],
+    preview: "Ranks companies by how consistently they beat earnings expectations quarter after quarter, and by how big the surprises are." },
+  { id: "regime", label: "US regime", level: "owner", data: "market", pages: ["/Projects/Regime-Shift"], apis: ["/api/regime"],
+    preview: "Places the US economy in one of four growth and inflation regimes from official releases, then checks whether markets are pricing the same regime." },
+  { id: "gold", label: "Gold", level: "owner", data: "market", pages: ["/Projects/Gold-Tracker"], apis: ["/api/gold"],
+    preview: "Follows gold across its main trading hubs, with prices, COMEX vault stocks and the macro drivers behind the moves." },
+  { id: "btc", label: "BTC", level: "owner", data: "market", pages: ["/Projects/BTC-Tracker"], apis: ["/api/btc"],
+    preview: "Follows bitcoin across major venues, with price, market structure and the macro backdrop in one view." },
 ];
 
 /**

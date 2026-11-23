@@ -11,6 +11,7 @@ import { AdoptionPanel, CapabilityPanel, ConversionPanel, EntryLevelPanel, useSi
 import { DIVIDEND_ACCENT, dividendChange, dividendNumber, useDividendBaseline } from "../../components/projects/dividend/dividendData";
 import { DIVIDEND_BUILD_STEPS, DIVIDEND_CURRENT_STEP, DIVIDEND_OUTLOOK_END_YEAR, DIVIDEND_STAGES, nextStageStep, stageStatus, type DividendBuildStep, type DividendStage, type DividendStageId } from "../../../backend/src/dividend/framework";
 import type { DividendRead } from "../../../backend/src/dividend/types";
+import SiteFooter from "../../components/SiteFooter";
 
 const SOURCE_LABELS = { bls: "Bureau of Labor Statistics", bea: "Bureau of Economic Analysis", dfa: "Federal Reserve" };
 const COLORS = ["#8b9dff", "#d4a157", "#5fc9a4"];
@@ -176,5 +177,6 @@ export default function AIDividendView() {
         </section>}
       </div>
     </div>
+    <SiteFooter />
   </main>;
 }

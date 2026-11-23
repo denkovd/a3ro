@@ -9,15 +9,22 @@
 ──────────────────────────────────────────────────────────────── */
 import type { MacroSnapshotRow } from "../storage/macroRepo";
 
-/** Liquidity legs whose raw value is market data. Their normalized 0..1 score stays. */
-const MARKET_DATA_LEGS = new Set(["global_bonds", "equity_vol"]);
+/**
+ * Legs whose raw value is licensed data. Their normalized 0..1 score stays.
+ * - global_bonds: Yahoo Finance ETF return
+ * - equity_vol: VIX level (Cboe; FRED VIXCLS is copyrighted, plus a same-day Yahoo close)
+ * - credit_hy_oas: ICE BofA HY OAS (FRED BAMLH0A0HYM2 is ICE-copyrighted)
+ */
+const LICENSED_LEGS = new Set(["global_bonds", "equity_vol", "credit_hy_oas"]);
+const strip = <T extends { key: string; value: number | null; source?: string }>(leg: T): T =>
+  leg.source === "yahoo" || LICENSED_LEGS.has(leg.key) ? { ...leg, value: null } : leg;
 
 export function publicMacroSnapshot(row: MacroSnapshotRow): MacroSnapshotRow {
   return {
     ...row,
     globalBonds: null,
-    liquidityLegs: (row.liquidityLegs ?? []).map((leg) =>
-      leg.source === "yahoo" || MARKET_DATA_LEGS.has(leg.key) ? { ...leg, value: null } : leg),
+    liquidityLegs: (row.liquidityLegs ?? []).map(strip),
+    components: (row.components ?? []).map(strip),
     vamsReads: (row.vamsReads ?? []).map((read) => ({ ...read, z: null, return63: null, spotReturn63: null })),
   };
 }

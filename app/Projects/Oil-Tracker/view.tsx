@@ -173,9 +173,9 @@ export default function OilTrackerView() {
         <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
           P·01 — Oil Tracker
         </p>
-        <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-          Live data where shown · not investment advice
-        </p>
+        <a href="/terms" className="pointer-events-auto font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)] hover:text-[var(--ink)]">
+          General information only · not financial advice
+        </a>
       </footer>
     </motion.main>
   );

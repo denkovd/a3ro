@@ -99,3 +99,7 @@ test("middleware fails closed when Supabase isn't configured", async (t) => {
   const prev = process.env.OWNER_EMAILS; process.env.OWNER_EMAILS = "owner@a3ro.test"; t.after(() => prev === undefined ? delete process.env.OWNER_EMAILS : process.env.OWNER_EMAILS = prev);
   assert.equal((await middlewareWith("owner@a3ro.test")(req("/api/gold/latest"))).status, 401);
 });
+
+test("every owner-only module has a coming-soon preview (#35)", () => {
+  for (const m of access.MODULE_ACCESS.filter((x) => x.level !== "public")) assert.ok(m.preview && m.preview.length > 40, `${m.id} needs a preview`);
+});
