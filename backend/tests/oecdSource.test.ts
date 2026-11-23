@@ -6,7 +6,7 @@ import { fetchOecdSeries } from "../src/sources/oecd";
 import { fetchAustraliaReleaseSchedules } from "../src/sources/absReleases";
 import { AUSTRALIA_INDICATORS, AUSTRALIA_REGISTRY, indicatorsInSection, oecdSpec, primaryByPillar } from "../src/australia/registry";
 import { historicalContext } from "../src/australia/watch";
-import { runAustraliaWatchCycle } from "../src/ingest/australiaWatchCycle";
+import { BUDGET_SKIP_ERROR, runAustraliaWatchCycle } from "../src/ingest/australiaWatchCycle";
 
 const fixture = (name: string) => readFile(new URL(`./fixtures/${name}`, import.meta.url), "utf8");
 const NOW = new Date("2026-11-18T00:00:00Z");
@@ -49,11 +49,41 @@ describe("OECD composite indicators", () => {
       return { rows: [] };
     } };
     const abs = await readFile(new URL("./fixtures/abs-labour.csv", import.meta.url), "utf8");
-    const report = await runAustraliaWatchCycle(db as never, { now: () => NOW, oecdRetryDelaysMs: [0, 0], fetchImpl: (async (url: string) =>
+    const report = await runAustraliaWatchCycle(db as never, { now: () => NOW, oecdRetryDelaysMs: [0, 0], oecdSpacingMs: 0, fetchImpl: (async (url: string) =>
       url.includes("oecd.org") ? new Response("Too Many Requests", { status: 429 }) : url.includes("ABS,LF,") ? new Response(abs) : new Response("NoRecordsFound")) as typeof fetch });
     assert.match(report.results.oecd_cli.error ?? "", /OECD HTTP 429/);
     assert.equal(report.results.unemployment_rate.error, undefined);
     assert.ok(runs.some(([id, h]) => id === "oecd_business_confidence" && h === "degraded"));
+  });
+  test("a retry that would overrun the deadline is skipped", async () => {
+    let calls = 0;
+    await assert.rejects(fetchOecdSeries("oecd_cli", { now: NOW, retryDelaysMs: [5_000, 15_000], deadlineMs: 10_000, clock: () => 0,
+      fetchImpl: (async () => { calls++; return new Response("Too Many Requests", { status: 429 }); }) as typeof fetch }), /OECD HTTP 429/);
+    assert.equal(calls, 1);
+  });
+  test("OECD requests are spaced out; other sources are not", async () => {
+    const oecdTimes: number[] = [];
+    const t0 = Date.now();
+    await runAustraliaWatchCycle({ query: async () => ({ rows: [] }) } as never, { now: () => NOW, oecdRetryDelaysMs: [], oecdSpacingMs: 60,
+      fetchImpl: (async (url: string) => { if (url.includes("oecd.org")) oecdTimes.push(Date.now() - t0); return new Response("NoRecordsFound"); }) as typeof fetch });
+    assert.equal(oecdTimes.length, 3);
+    for (let i = 1; i < oecdTimes.length; i++) assert.ok(oecdTimes[i] - oecdTimes[i - 1] >= 55, `gap ${oecdTimes[i] - oecdTimes[i - 1]}ms`);
+  });
+  test("series not reached within the time budget are recorded as degraded without being fetched", async () => {
+    const runs: [string, string, string | null][] = [];
+    const db = { query: async (sql: string, params: unknown[] = []) => {
+      if (sql.includes("australia_watch_fetch_runs")) runs.push([String(params[0]), String(params[2]), params[4] as string | null]);
+      return { rows: [] };
+    } };
+    let fakeNow = 0, fetches = 0;
+    const report = await runAustraliaWatchCycle(db as never, { now: () => NOW, oecdSpacingMs: 0, oecdRetryDelaysMs: [], budgetMs: 1_000,
+      clock: () => fakeNow, fetchImpl: (async () => { fetches++; fakeNow += 600; return new Response("NoRecordsFound"); }) as typeof fetch });
+    const skipped = Object.entries(report.results).filter(([, r]) => r.error === BUDGET_SKIP_ERROR).map(([id]) => id);
+    assert.ok(skipped.length > 0 && skipped.length < AUSTRALIA_INDICATORS.length);
+    assert.ok(skipped.includes("oecd_cli"));
+    assert.ok(fetches < AUSTRALIA_INDICATORS.length);
+    assert.equal(runs.length, AUSTRALIA_INDICATORS.length);
+    assert.ok(runs.filter(([, h, e]) => h === "degraded" && e === BUDGET_SKIP_ERROR).length === skipped.length);
   });
   test("OECD cards get no invented release date; they link to the OECD CLI page", async () => {
     const schedules = await fetchAustraliaReleaseSchedules({ now: NOW, fetchImpl: (async () => new Response("down", { status: 503 })) as typeof fetch });

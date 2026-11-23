@@ -117,11 +117,11 @@ describe("RBA loading", () => {
     const writes: string[] = []; const runs: [string, string][] = [];
     const db = { query: async (sql: string, params: unknown[] = []) => {
       if (sql.includes("australia_watch_fetch_runs")) runs.push([String(params[0]), String(params[2])]);
-      else if (sql.includes("insert into australia_watch_observations")) writes.push(String(params[0]));
+      else if (sql.includes("insert into australia_watch_observations")) writes.push(...[params[0]].flat().map(String));
       return { rows: [] };
     } };
     const abs = await readFile(new URL("./fixtures/abs-labour.csv", import.meta.url), "utf8");
-    const report = await runAustraliaWatchCycle(db as never, { now: () => new Date(NOW), fetchImpl: (async (url: string) =>
+    const report = await runAustraliaWatchCycle(db as never, { now: () => new Date(NOW), oecdSpacingMs: 0, oecdRetryDelaysMs: [0, 0], fetchImpl: (async (url: string) =>
       url.includes("rba.gov.au") ? new Response("down", { status: 503 }) : new Response(url.includes("ABS,LF,") ? abs : "NoRecordsFound")) as typeof fetch });
     assert.equal(report.results.unemployment_rate.error, undefined);
     assert.ok(writes.includes("unemployment_rate"));
