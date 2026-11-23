@@ -8,6 +8,8 @@
    (they already switch assets via their own tab row).
 ──────────────────────────────────────────────────────────────── */
 import { useRouter } from "next/navigation";
+import { canSeeRoute } from "../../../lib/access";
+import { useOwner } from "../useOwner";
 
 export type ModuleId = "trend" | "regime" | "earnings" | "australia" | "dividend";
 
@@ -26,9 +28,12 @@ const switchButtonClass =
 
 export default function ModuleSwitcher({ current }: { current: ModuleId }) {
   const router = useRouter();
-  const idx = MODULE_SEQUENCE.indexOf(current);
-  const prevId = MODULE_SEQUENCE[(idx - 1 + MODULE_SEQUENCE.length) % MODULE_SEQUENCE.length];
-  const nextId = MODULE_SEQUENCE[(idx + 1) % MODULE_SEQUENCE.length];
+  const owner = useOwner();
+  // Owner-only modules are left out of the cycle for everyone else (lib/access.ts).
+  const sequence = MODULE_SEQUENCE.filter((id) => id === current || canSeeRoute(MODULE_META[id].route, owner));
+  const idx = sequence.indexOf(current);
+  const prevId = sequence[(idx - 1 + sequence.length) % sequence.length];
+  const nextId = sequence[(idx + 1) % sequence.length];
 
   return (
     <div className="flex items-center gap-1.5">
@@ -41,7 +46,7 @@ export default function ModuleSwitcher({ current }: { current: ModuleId }) {
         ‹
       </button>
       <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">
-        {idx + 1}/{MODULE_SEQUENCE.length}
+        {idx + 1}/{sequence.length}
       </span>
       <button
         type="button"

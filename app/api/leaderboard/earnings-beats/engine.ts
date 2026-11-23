@@ -33,7 +33,8 @@ export const RANKING_CONFIG = {
   DEFAULT_MIN_QUARTERS: 0,
   DEFAULT_LIMIT: 100,
   DEFAULT_ORDER: "desc" as const,
-  CACHE_CONTROL: "public, s-maxage=3600, stale-while-revalidate=86400",
+  // Owner-only module (lib/access.ts): never cached by the CDN or shared caches.
+  CACHE_CONTROL: "private, max-age=300",
 } as const;
 
 export type Confidence = "high" | "medium" | "low" | null;

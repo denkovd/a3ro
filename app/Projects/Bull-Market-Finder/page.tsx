@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import BullMarketFinderView from "./view";
 
 export const metadata: Metadata = {
+  robots: { index: false, follow: false }, // owner-only module (lib/access.ts)
   title: "A3RO — Bull Market Finder",
   description:
     "Whole-market bullish-state screener: ~650 assets across macro, US equities, crypto and ETFs, ranked by newly bullish state through switchable strategy lenses — Money Line D×W, weekly-only and daily-only.",

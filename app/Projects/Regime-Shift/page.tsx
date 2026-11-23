@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import RegimeShiftView from "./view";
 
 export const metadata: Metadata = {
+  robots: { index: false, follow: false }, // owner-only module (lib/access.ts)
   title: "US regime — A3RO Intelligence",
   description:
     "The current US growth × inflation regime (Goldilocks / Reflation / Inflation / Deflation), automatically updated from FRED releases, with cross-asset market confirmation and source dates.",

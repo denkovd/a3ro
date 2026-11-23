@@ -15,6 +15,7 @@ import OilTrackerPreview from "../../components/projects/OilTrackerPreview";
 import { AMBER_CSS, OT_SESSION, type OTView } from "../../components/projects/oilTrackerShared";
 import { ORANGE_CSS, BT_ROUTE } from "../../components/projects/btcTrackerShared";
 import { GOLD_CSS, GT_ROUTE } from "../../components/projects/goldTrackerShared";
+import { useOwner } from "../../components/useOwner";
 
 /* the heavy globe engine — loaded only on this route, after arrival */
 const OilTrackerCore = dynamic(() => import("../../components/projects/OilTrackerCore"), {
@@ -42,6 +43,8 @@ function readArrival(): OTView | null {
 export default function OilTrackerView() {
   const router = useRouter();
   const reduced = useReducedMotion();
+  // Gold and BTC are owner-only (lib/access.ts); their tabs show only for the signed-in owner.
+  const owner = useOwner();
   const [mounted, setMounted] = useState(false);
   const [arrive, setArrive] = useState<OTView | null>(null);
   const [coreReady, setCoreReady] = useState(false);
@@ -130,7 +133,7 @@ export default function OilTrackerView() {
             >
               Oil
             </span>
-            <a
+            {owner ? <><a
               href={GT_ROUTE}
               className="px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em] transition-colors hover:opacity-100"
               style={{ color: GOLD_CSS, opacity: 0.55 }}
@@ -145,7 +148,7 @@ export default function OilTrackerView() {
               title="Open BTC Tracker"
             >
               BTC
-            </a>
+            </a></> : null}
           </nav>
         </div>
         <p className="flex shrink-0 items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">

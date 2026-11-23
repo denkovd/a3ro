@@ -22,6 +22,8 @@
     "test:bull": "node --test tests/bull-columns.test.mjs tests/bull-chart.test.mjs"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.119.2",
     "framer-motion": "^11.3.0",
     "lightweight-charts": "^5.3.0",
     "next": "15.5.28",
