@@ -301,3 +301,32 @@ body {
   .grain::after { animation: none; }
   .hero-reveal, .commodity-illumination { animation: none; }
 }
+
+/* ── Module stage (#65) ───────────────────────────────────────────
+   Full-page module views with a pixel-dissolve step between them.
+   Staged (pinned) only ≥768px wide and ≥620px tall with motion on;
+   otherwise .stage-list stacks full-height sections in normal flow. */
+.module-staged { max-width: none; padding: 80px 0 0; }
+.module-staged .module-chapter { max-width: 1320px; margin: 0 auto; padding: 0 max(40px, 5vw) 40px; }
+.stage-runway { position: relative; }
+.stage-sticky { position: sticky; top: 0; height: 100svh; padding-top: 61px; overflow: clip; }
+.stage-frame { position: relative; height: 100%; }
+.stage-slot { position: absolute; inset: 0; }
+.stage-slot[hidden] { display: none; }
+.stage-dissolve { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
+.stage-page { display: grid; grid-template-columns: minmax(260px, .55fr) minmax(0, 1.6fr); gap: clamp(32px, 4vw, 64px); align-items: stretch; height: 100%; max-width: 1600px; margin: 0 auto; padding: clamp(20px, 3.5vh, 40px) max(40px, 5vw) clamp(24px, 4vh, 48px); }
+.stage-story { display: flex; flex-direction: column; justify-content: center; }
+.stage-story .landing-kicker { color: #9ca69f; letter-spacing: .14em; }
+.stage-story h3 { margin-top: 22px; font-size: clamp(34px, 3.6vw, 56px); line-height: 1.05; letter-spacing: -.045em; font-weight: 400; }
+.stage-description { margin-top: 20px; max-width: 360px; font-size: 15px; line-height: 1.75; color: var(--ink-2); }
+.stage-preview { min-width: 0; min-height: 0; display: flex; }
+.stage-preview > *, .stage-card-slot { flex: 1; height: 100%; min-height: 0; }
+.stage-index { position: absolute; z-index: 6; right: max(16px, 1.5vw); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 6px; }
+.stage-index button { display: flex; align-items: center; justify-content: center; width: 32px; height: 28px; border: 1px solid transparent; border-radius: 2px; font: 500 10px/1 "JetBrains Mono", monospace; letter-spacing: .12em; color: var(--ink-3); background: transparent; cursor: pointer; transition: color var(--dur-micro), border-color var(--dur-micro); }
+.stage-index button:hover { color: var(--ink); }
+.stage-index button[aria-current="true"] { color: #d4b17c; border-color: rgba(212, 177, 124, .4); }
+.stage-list { list-style: none; margin: 0; padding: 0; }
+.stage-list > li { border-top: 1px solid var(--line-2); }
+.stage-list .stage-page { display: grid; grid-template-columns: 1fr; height: auto; min-height: 100svh; padding: 48px 24px; gap: 28px; }
+.stage-list .stage-preview { height: 70svh; min-height: 420px; }
+@media (min-width: 768px) { .stage-list .stage-page { grid-template-columns: minmax(240px, .6fr) minmax(0, 1.6fr); padding: 56px max(40px, 5vw); } .stage-list .stage-preview { height: auto; min-height: 520px; } }

@@ -3,10 +3,15 @@ import { Nav } from "../components/Chrome";
 import SiteFooter from "../components/SiteFooter";
 import TradingViewWidget from "../components/TradingViewWidget";
 import { ASX_NAMES, SAVED_SCREENS, marketIndexUrl, tradingViewAsxUrl } from "../../lib/marketLinks";
+import { COFER_URL, WORLD_ASSETS, getReserveShares } from "../../lib/globalMarkets";
+import { CurrencySharesChart, WorldAssetsChart } from "./ShareCharts";
+
+// Reserve shares are refreshed from the IMF at most once a day.
+export const revalidate = 86400;
 
 export const metadata: Metadata = {
   title: "Markets — A3RO Intelligence",
-  description: "The ASX's largest companies at a glance, plus saved screens such as free cash flow machines in uptrends.",
+  description: "The world's assets and reserve currencies, the ASX's largest companies, and saved screens.",
 };
 
 /** Widget tabs: every name in ASX_NAMES lands in exactly one tab. */
@@ -17,7 +22,8 @@ const SECTOR_TABS: { title: string; sectors: string[] }[] = [
   { title: "Health, tech & other", sectors: ["Health care", "Technology", "Telecoms", "Property", "Infrastructure"] },
 ];
 
-export default function MarketsPage() {
+export default async function MarketsPage() {
+  const reserves = await getReserveShares();
   const tabs = [
     // TradingView's free widgets don't show S&P/ASX index symbols (ASX:XJO etc.), so the index tab
     // uses the ASX-listed ETFs that track each index.
@@ -31,8 +37,22 @@ export default function MarketsPage() {
       <header>
         <p className="landing-kicker">Markets</p>
         <h1 className="mt-4 text-3xl font-semibold tracking-tight">Markets at a glance</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--ink-2)]">The ASX&rsquo;s largest companies and the screens we watch. Prices and charts come from TradingView; company detail links go to Market Index.</p>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--ink-2)]">Where the world&rsquo;s money sits, the ASX&rsquo;s largest companies, and the screens we watch. ASX prices and charts come from TradingView; company detail links go to Market Index.</p>
       </header>
+
+      <section aria-labelledby="world-assets">
+        <h2 id="world-assets" className="text-lg font-medium">The world&rsquo;s assets</h2>
+        <p className="mt-1 mb-6 max-w-3xl text-xs leading-relaxed text-[var(--ink-3)]">Estimated total value of each asset class and its share of the whole. Figures come from the latest published estimates, which use different dates, so treat the total as a rough guide. Bitcoin is coins in circulation times a recent price.</p>
+        <WorldAssetsChart assets={WORLD_ASSETS} />
+      </section>
+
+      <section aria-labelledby="currencies">
+        <h2 id="currencies" className="text-lg font-medium">Reserve currencies</h2>
+        <p className="mt-1 mb-6 max-w-3xl text-xs leading-relaxed text-[var(--ink-3)]">
+          Each currency&rsquo;s share of the world&rsquo;s official foreign-exchange reserves, {reserves.quarter}. Source: <a href={COFER_URL} target="_blank" rel="noreferrer" className="underline">IMF COFER</a>{reserves.live ? "" : " (latest saved figures)"}.
+        </p>
+        <CurrencySharesChart shares={reserves.shares} />
+      </section>
 
       <section aria-labelledby="asx" className="grid gap-10 lg:grid-cols-[1.2fr_1fr]">
         <div>

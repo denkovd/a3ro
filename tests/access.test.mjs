@@ -161,3 +161,19 @@ test("scorecard: weights, verdicts, missing usage scaled, errors and staleness c
   assert.equal(g.verdict, "park");
   for (const r of busy) assert.ok(r.total >= 0 && r.total <= 100);
 });
+
+test("IMF COFER parser reads the latest quarter and rejects anything that doesn't add up", () => {
+  const gm = load("lib/globalMarkets.ts");
+  const head = "DATAFLOW,COUNTRY,INDICATOR,FXR_CURRENCY,TYPE_OF_TRANSFORMATION,FREQUENCY,TIME_PERIOD,OBS_VALUE";
+  const row = (c, p, v) => `IMF.STA:COFER(7.0.1),G001,AFXRA,CI_${c},SHRO_PT,Q,${p},${v}`;
+  const shares = [["USD", 56.7], ["EUR", 20.6], ["OTHC", 6.06], ["JPY", 4.96], ["GBP", 4.57], ["CAD", 2.47], ["AUD", 2.25], ["CNY", 2.11], ["CHF", 0.27]];
+  const csv = [head, ...shares.map(([c, v]) => row(c, "2026-Q2", v)), row("USD", "2026-Q1", 57.18), row("T", "2026-Q2", 100)].join("\n");
+  const out = gm.parseCofer(csv);
+  assert.equal(out.quarter, "2026 Q2");
+  assert.equal(out.shares[0].code, "USD");
+  assert.equal(out.shares.find((s) => s.code === "AUD").label, "Australian dollar");
+  assert.ok(!out.shares.some((s) => s.code === "T"), "the 100% total row is not a currency");
+  assert.equal(gm.parseCofer([head, row("USD", "2026-Q2", 56.7)].join("\n")), null, "too few currencies");
+  assert.equal(gm.parseCofer("garbage"), null);
+  assert.equal(Math.round(gm.FALLBACK_RESERVES.shares.reduce((s, x) => s + x.share, 0)), 100);
+});

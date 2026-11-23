@@ -8,7 +8,7 @@ import { ModulePlaceholder } from "../DeferredModule";
 import FeatureLoop from "../sections/FeatureLoop";
 import CommodityWatch from "../projects/CommodityWatch";
 import CommodityHero from "./CommodityHero";
-import ModuleSpine, { type SpineModule } from "./ModuleSpine";
+import ModuleStage, { type StageModule } from "./ModuleStage";
 import { canSeeRoute } from "../../../lib/access";
 import { useOwner } from "../useOwner";
 
@@ -18,7 +18,7 @@ const Earnings = dynamic(() => import("../projects/EarningsBeat"), { ssr: false,
 const Australia = dynamic(() => import("../projects/AustraliaWatch"), { ssr: false, loading: () => <ModulePlaceholder name="Australia Watch" href="/Projects/Australia-Watch" /> });
 const Dividend = dynamic(() => import("../projects/AIDividend"), { ssr: false, loading: () => <ModulePlaceholder name="AI Dividend" href="/Projects/AI-Dividend" /> });
 
-const MODULES: readonly SpineModule[] = [
+const MODULES: readonly StageModule[] = [
   { name: "Trend Finder", category: "Find the shift", description: "See which assets have turned bullish on both daily and weekly closes. Explore the market by recency and strength.", href: "/Projects/Bull-Market-Finder", Component: BullFinder },
   { name: "Regime", category: "Read the backdrop", description: "Put the market in context. Track the growth and inflation conditions shaping the current US regime.", href: "/Projects/Regime-Shift", Component: Regime },
   { name: "Earnings Beat", category: "Follow the catalysts", description: "Follow earnings surprises and the signals surrounding them, with a focused view of company results.", href: "/Projects/Earnings-Beat", Component: Earnings },
@@ -65,7 +65,7 @@ export default function LandingExperience() {
       </div>
     </section>
 
-    <section id="modules" className={"module-presentation" + (animated ? " module-handoff" : "") + (orbit ? " module-orbit" : "")} aria-labelledby="modules-title">
+    <section id="modules" className={"module-presentation" + (animated ? " module-handoff" : "") + (orbit ? " module-staged" : "")} aria-labelledby="modules-title">
       <span id="method" className="landing-static-anchor" />
       <div className="module-chapter">
         <p className="landing-kicker">02 / Intelligence platforms</p>
@@ -73,7 +73,7 @@ export default function LandingExperience() {
         <p className="module-chapter-description">Start with the bigger picture. Go deeper with tools built for the questions that matter.</p>
         <span className="module-chapter-line" aria-hidden />
       </div>
-      <ModuleSpine modules={modules} animated={animated} onModeChange={setOrbit} />
+      <ModuleStage modules={modules} animated={animated} onModeChange={setOrbit} />
     </section>
     <FeatureLoop />
   </>;
