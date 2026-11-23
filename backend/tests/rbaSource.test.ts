@@ -6,7 +6,7 @@ import { AUSTRALIA_INDICATORS, AUSTRALIA_REGISTRY, rbaSpec, rbaTables } from "..
 import { historicalContext } from "../src/australia/watch";
 import { runAustraliaWatchCycle } from "../src/ingest/australiaWatchCycle";
 
-const TABLES = ["f1.1", "f2.1", "f3", "f11.1", "i2", "d1"];
+const TABLES = ["f1.1", "f2.1", "f3", "f6", "f11.1", "i2", "d1"];
 const fixture = (t: string) => readFile(new URL(`./fixtures/rba/${t}-data.csv`, import.meta.url), "utf8");
 async function loadAll(): Promise<Map<string, RbaTable>> {
   return new Map(await Promise.all(TABLES.map(async (t) => [t, parseRbaCsv(t, await fixture(t))] as [string, RbaTable])));
@@ -40,7 +40,7 @@ describe("RBA indicators", () => {
   test("every RBA registry entry resolves against the fixture tables", async () => {
     const tables = await loadAll();
     const rba = AUSTRALIA_INDICATORS.filter((i) => AUSTRALIA_REGISTRY[i].source === "rba_csv");
-    assert.equal(rba.length, 9);
+    assert.equal(rba.length, 10);
     for (const id of rba) {
       for (const t of rbaTables(rbaSpec(id).rba)) assert.ok(tables.has(t), `${id} needs ${t}`);
       assert.ok(rbaObservations(id, tables, NOW).length > 0, id);

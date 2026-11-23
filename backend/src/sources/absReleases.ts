@@ -12,6 +12,7 @@ export const ABS_RELEASE_PAGES: Record<Exclude<AustraliaReleaseFamily, "rba" | "
   import_prices: "https://www.abs.gov.au/statistics/economy/price-indexes-and-inflation/international-trade-price-indexes-australia/latest-release",
   wpi: "https://www.abs.gov.au/statistics/economy/price-indexes-and-inflation/wage-price-index-australia/latest-release",
   lending: "https://www.abs.gov.au/statistics/economy/finance/lending-indicators/latest-release",
+  dwelling_values: "https://www.abs.gov.au/statistics/economy/price-indexes-and-inflation/total-value-dwellings/latest-release",
 };
 
 /**
@@ -19,7 +20,7 @@ export const ABS_RELEASE_PAGES: Record<Exclude<AustraliaReleaseFamily, "rba" | "
  * "September 2026" for the WPI, "September Quarter 2026" for Lending): the quarter is the one that
  * month falls in. CPI is different — a monthly publication that also carries quarterly tables.
  */
-export const QUARTERLY_PUBLICATIONS: ReadonlySet<AustraliaReleaseFamily> = new Set(["job_vacancies", "ppi", "import_prices", "wpi", "lending"]);
+export const QUARTERLY_PUBLICATIONS: ReadonlySet<AustraliaReleaseFamily> = new Set(["job_vacancies", "ppi", "import_prices", "wpi", "lending", "dwelling_values"]);
 const MONTHS = "January February March April May June July August September October November December".split(" ");
 
 function monthlyPeriod(text: string): string {

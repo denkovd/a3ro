@@ -14,9 +14,9 @@ export type AustraliaSourceKind = "abs_sdmx" | "rba_csv" | "oecd_sdmx";
 export type AustraliaTransform = "level" | "yoy_from_level";
 /** Primary series appear in the main grid; comparison series sit lower on the page and are excluded from any summary. */
 export type AustraliaSection = "primary" | "comparison";
-export type AustraliaReleaseFamily = "cpi" | "labour" | "rba" | "approvals" | "job_vacancies" | "household_spending" | "trade" | "ppi" | "import_prices" | "wpi" | "lending" | "oecd";
+export type AustraliaReleaseFamily = "cpi" | "labour" | "rba" | "approvals" | "job_vacancies" | "household_spending" | "trade" | "ppi" | "import_prices" | "wpi" | "lending" | "dwelling_values" | "oecd";
 /** How the headline value is printed. */
-export type AustraliaDisplay = "percent" | "percentage_points" | "index" | "hours_millions" | "count" | "thousands" | "aud_millions";
+export type AustraliaDisplay = "percent" | "percentage_points" | "index" | "hours_millions" | "count" | "thousands" | "aud_millions" | "aud_thousands";
 
 /** One column of an RBA statistical table, by its "Series ID". */
 export interface RbaSeriesRef { table: string; seriesId: string }
@@ -76,7 +76,7 @@ export interface OecdIndicatorDef extends AustraliaIndicatorBase { source: "oecd
 export type AustraliaIndicatorDef = AbsIndicatorDef | RbaIndicatorDef | OecdIndicatorDef;
 
 export const RBA_TABLE_URL = (table: string) => `https://www.rba.gov.au/statistics/tables/csv/${table}-data.csv`;
-const F11 = "f1.1", F21 = "f2.1", F3 = "f3", F111 = "f11.1", I2 = "i2", D1 = "d1";
+const F11 = "f1.1", F21 = "f2.1", F3 = "f3", F6 = "f6", F111 = "f11.1", I2 = "i2", D1 = "d1";
 
 export const AUSTRALIA_REGISTRY = {
   monthly_headline_cpi_yoy: {
@@ -169,6 +169,37 @@ export const AUSTRALIA_REGISTRY = {
     rollingPeriods: 44, baselineYears: 10, minimumBaseline: 20, releaseLagDays: 42, releaseFamily: "lending",
     growthPolarity: 1, inflationPolarity: 1, display: "aud_millions", decimals: 0,
     note: "The ABS moved Lending Indicators to a quarterly release in 2026.",
+  },
+  // ── Rates and housing (#28) — open data only; keys confirmed against the ABS API and RBA F6 on 23 Nov 2026 ──
+  dwelling_mean_price: {
+    title: "Mean price of residential dwellings — Australia", label: "Mean dwelling price", shortLabel: "Dwelling price",
+    subtitle: "Quarterly · A$ thousands · chart shows annual growth · ABS Total Value of Dwellings",
+    pillar: "housing", role: "coincident", section: "primary", order: 430,
+    source: "abs_sdmx", dataflow: "ABS,RES_DWELL_ST,1.0.0", key: "5.AUS.Q",
+    frequency: "quarterly", adjustment: "Original", unit: "Australian Dollars", unitMultiplier: 3, transform: "yoy_from_level",
+    rollingPeriods: 44, baselineYears: 10, minimumBaseline: 20, releaseLagDays: 70, releaseFamily: "dwelling_values",
+    growthPolarity: 0, inflationPolarity: 0, display: "aud_thousands", decimals: 0,
+    note: "Mean of all residential dwellings, so it shifts with the mix of what exists, not only with prices. Cotality's hedonic home value index is more timely but needs a licence.",
+  },
+  cpi_rents_yoy: {
+    title: "CPI rents — annual change", label: "Rents (CPI)", shortLabel: "Rents",
+    subtitle: "Monthly · % change from a year earlier · ABS Monthly CPI",
+    pillar: "housing", role: "lagging", section: "primary", order: 440,
+    source: "abs_sdmx", dataflow: "ABS,CPI,2.0.0", key: "3.115522.10.50.M",
+    frequency: "monthly", adjustment: "Original", unit: "Percent", unitMultiplier: null, transform: "level",
+    rollingPeriods: 132, baselineYears: 10, minimumBaseline: 36, releaseLagDays: 29, releaseFamily: "cpi",
+    growthPolarity: 0, inflationPolarity: 0, decimals: 1,
+    note: "Rents paid by tenants, a slow-moving part of CPI. Kept out of the Pulse inflation count so CPI isn't counted twice. Monthly history starts in 2023.",
+  },
+  mortgage_rate_new_variable: {
+    title: "Mortgage rate — new owner-occupier variable loans", label: "New mortgage rate (variable)", shortLabel: "Mortgage rate",
+    subtitle: "Monthly · % · new loans funded in the month · RBA F6",
+    pillar: "housing", role: "coincident", section: "primary", order: 450,
+    source: "rba_csv", rba: { kind: "series", ref: { table: F6, seriesId: "FLRHOFVA" } },
+    frequency: "monthly", adjustment: "Original", unit: "Percent", unitMultiplier: null, transform: "level",
+    rollingPeriods: 132, baselineYears: 10, minimumBaseline: 60, releaseLagDays: 40, releaseFamily: "rba",
+    growthPolarity: -1, inflationPolarity: 0, decimals: 2,
+    note: "The average rate actually charged on new owner-occupier variable loans across all lenders, not an advertised rate.",
   },
   job_vacancies: {
     title: "Job vacancies — total", label: "Job vacancies", shortLabel: "Job vacancies",

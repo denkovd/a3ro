@@ -51,7 +51,7 @@ export function useAustraliaWatch() {
   return state;
 }
 
-type DisplayDef = { display?: "percent" | "percentage_points" | "index" | "hours_millions" | "count" | "thousands" | "aud_millions"; decimals?: number };
+type DisplayDef = { display?: "percent" | "percentage_points" | "index" | "hours_millions" | "count" | "thousands" | "aud_millions" | "aud_thousands"; decimals?: number };
 function displayDef(indicator: string): Required<DisplayDef> {
   const def = (isAustraliaIndicator(indicator) ? AUSTRALIA_REGISTRY[indicator] : {}) as DisplayDef;
   const display = def.display ?? (indicator === "hours_worked" ? "hours_millions" : "percent");
@@ -74,6 +74,7 @@ export function displayValue(o: AustraliaObservation): string {
   if (display === "count") return grouped(o.value);
   if (display === "thousands") return `${grouped(o.value, decimals)}k`;
   if (display === "aud_millions") return audMillions(o.value);
+  if (display === "aud_thousands") return `$${grouped(o.value, decimals)}k`;
   return `${o.value.toFixed(decimals)}%`;
 }
 export function delta(o: AustraliaObservation, all: AustraliaObservation[]): string {
@@ -84,6 +85,7 @@ export function delta(o: AustraliaObservation, all: AustraliaObservation[]): str
   if (display === "hours_millions") { const d = (o.value - earlier.value) / 1000; const pct = ((o.value / earlier.value) - 1) * 100; return `${signed(d, 1)}m hours · ${signed(pct, 1)}% ${prior}`; }
   if (display === "index") { const pct = ((o.value / earlier.value) - 1) * 100; return `${signed(o.value - earlier.value, decimals)} · ${signed(pct, 1)}% ${prior}`; }
   if (display === "aud_millions") return `${audMillions(o.value - earlier.value, true)} ${prior}`;
+  if (display === "aud_thousands") { const d = o.value - earlier.value; const pct = earlier.value ? ((o.value / earlier.value) - 1) * 100 : null; return `${d >= 0 ? "+" : "-"}$${grouped(Math.abs(d), decimals)}k${pct === null ? "" : ` · ${signed(pct, 1)}%`} ${prior}`; }
   if (display === "count" || display === "thousands") {
     const d = o.value - earlier.value; const pct = earlier.value ? ((o.value / earlier.value) - 1) * 100 : null;
     const abs = display === "count" ? `${d >= 0 ? "+" : "-"}${grouped(Math.abs(d))}` : `${d >= 0 ? "+" : "-"}${grouped(Math.abs(d), decimals)}k`;
