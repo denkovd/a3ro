@@ -93,7 +93,7 @@ export { upsertAustraliaObservations, recordAustraliaFetchRun, getAustraliaObser
 export { runAustraliaWatchCycle } from "./ingest/australiaWatchCycle";
 export type { AustraliaWatchCycleReport } from "./ingest/australiaWatchCycle";
 export {
-  getLatestQuotes, getDailySeries, getLatestDailyPrice,
+  getLatestQuotes, getDailySeries, getLatestDailyPrice, getLatestDailyCloses,
   insertObservations,
 } from "./storage/priceRepo";
 export {
@@ -328,3 +328,4 @@ export {
 export type { BtcFlowMetricInput } from "./storage/btcFlowRepo";
 export type { BtcFlowMetricRow, BtcLocusId, BtcFlowMetricId } from "./btc/flowTypes";
 export { BTC_LOCI, BTC_FLOW_METRICS, isBtcLocusId } from "./btc/flowTypes";
+export { publicMacroSnapshot } from "./macro/publicView";

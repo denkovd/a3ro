@@ -38,6 +38,16 @@ export const MODULE_ACCESS: readonly ModuleAccess[] = [
   { id: "btc", label: "BTC", level: "owner", data: "market", pages: ["/Projects/BTC-Tracker"], apis: ["/api/btc"] },
 ];
 
+/**
+ * Price sources that may be shown publicly (roadmap #18 / #58): official open data only.
+ * Yahoo Finance, Alpha Vantage and other market-data feeds stay owner-only until licensed.
+ */
+export const OPEN_DATA_PRICE_SOURCES: readonly string[] = ["eia", "fred"];
+
+export function isOpenDataPriceSource(sourceId: string): boolean {
+  return OPEN_DATA_PRICE_SOURCES.includes(sourceId);
+}
+
 const matches = (pathname: string, prefix: string) => pathname === prefix || pathname.startsWith(prefix + "/");
 
 export interface PathAccess { module: ModuleAccess; kind: "page" | "api" }

@@ -62,7 +62,7 @@ const publicRoutes = [
 ];
 for (const [route, query = ""] of publicRoutes) {
   test(`${route} does not expose database exception details`, async () => {
-    const { GET } = loadModule(`app/api/${route}/route.ts`, { "@a3ro/oil-backend": failedDb, "next/cache": { unstable_cache: fn => fn } });
+    const { GET } = loadModule(`app/api/${route}/route.ts`, { "@a3ro/oil-backend": failedDb, "next/cache": { unstable_cache: fn => fn }, "../../../../lib/supabase/server": { currentUserIsOwner: async () => false } });
     const response = await GET(new Request(`https://a3ro.test/api/${route}?${query}`));
     assert.equal(response.status, 500);
     assert.deepEqual(await response.json(), { error: "Request could not be completed" });
@@ -432,4 +432,33 @@ test("error log records thrown errors and 5xx responses, never 2xx, and never br
   assert.equal((await broken.withErrorLog("api:x", async () => new Response("down", { status: 500 }))()).status, 500);
   const missing = loadModule("app/api/_lib/errorLog.ts", {});
   assert.equal((await missing.withErrorLog("api:x", async () => new Response("down", { status: 500 }))()).status, 500);
+});
+
+test("public oil quotes never expose market-data prices; the owner still gets the live quote", async () => {
+  const quotes = [
+    { benchmark: "WTI", price: 83.39, kind: "live", source: "yfinance", observedAt: "2026-11-23T06:12:51.000Z", staleness: "fresh", suspect: false, updatedAt: "2026-11-23T06:23:11.000Z" },
+    { benchmark: "BRENT", price: 89.1, kind: "settlement", source: "eia", observedAt: "2026-11-17T00:00:00.000Z", staleness: "fresh", suspect: false, updatedAt: "2026-11-18T00:00:00.000Z" },
+  ];
+  const backend = {
+    createDb: async () => ({}),
+    getLatestQuotes: async () => quotes,
+    getLatestDailyCloses: async (_db, sources) => { assert.deepEqual(sources, ["eia", "fred"]); return [{ benchmark: "WTI", periodDate: "2026-11-17", price: 81.02, source: "eia" }]; },
+    buildSources: () => [],
+    getDailySeries: async () => [{ periodDate: "2026-11-14", price: 80 }],
+    computeQuoteChanges: () => ({ prevClose: 80, prevCloseDate: "2026-11-14", d1: 1.3, w1: null }),
+    classifyStaleness: () => "fresh",
+  };
+  const load = (owner) => loadModule("app/api/oil/latest/route.ts", {
+    "@a3ro/oil-backend": backend,
+    "../../../../lib/supabase/server": { currentUserIsOwner: async () => owner },
+  });
+  const pub = await load(false).GET();
+  const body = await pub.json();
+  assert.match(pub.headers.get("cache-control"), /private, no-store/);
+  assert.ok(body.every((q) => ["eia", "fred"].includes(q.source)), JSON.stringify(body));
+  assert.equal(body.find((q) => q.benchmark === "WTI").price, 81.02);
+  assert.equal(body.find((q) => q.benchmark === "WTI").kind, "settlement");
+  assert.ok(!JSON.stringify(body).includes("83.39"));
+  const own = await (await load(true).GET()).json();
+  assert.equal(own.find((q) => q.benchmark === "WTI").price, 83.39);
 });

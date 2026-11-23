@@ -1,9 +1,12 @@
 // Read-only endpoint: returns current price per benchmark.
 // Writes (ingestion) happen via the cron job in app/api/cron/ingest.
 import {
-  createDb, getLatestQuotes, classifyStaleness, buildSources, getDailySeries, computeQuoteChanges,
+  createDb, getLatestQuotes, getLatestDailyCloses, classifyStaleness, buildSources, getDailySeries, computeQuoteChanges,
 } from "@a3ro/oil-backend";
+import type { LatestQuote } from "@a3ro/oil-backend";
 import { withErrorLog } from "../../_lib/errorLog";
+import { OPEN_DATA_PRICE_SOURCES, isOpenDataPriceSource } from "../../../../lib/access";
+import { currentUserIsOwner } from "../../../../lib/supabase/server";
 
 // REQUIRED: `pg` speaks raw TCP, which Vercel's Edge runtime cannot do.
 // Every route/cron handler that touches storage/ must pin the Node runtime.
@@ -14,7 +17,20 @@ export const dynamic = "force-dynamic";
 export const GET = withErrorLog("api:oil/latest", async function GET() {
   try {
     const db = await createDb();
-    const quotes = await getLatestQuotes(db);
+    const owner = await currentUserIsOwner();
+    const resolved = await getLatestQuotes(db);
+    // Public visitors only see open-data prices (roadmap #58): a live Yahoo/Alpha Vantage quote is
+    // replaced by the latest official EIA/FRED close. The signed-in owner gets the live quote.
+    const openCloses = owner || resolved.every((q) => isOpenDataPriceSource(q.source))
+      ? []
+      : await getLatestDailyCloses(db, OPEN_DATA_PRICE_SOURCES);
+    const quotes: (LatestQuote & { periodDate?: string })[] = owner ? resolved : resolved.flatMap((q): (LatestQuote & { periodDate?: string })[] => {
+      if (isOpenDataPriceSource(q.source)) return [q];
+      const close = openCloses.find((c) => c.benchmark === q.benchmark);
+      if (!close) return [];
+      const observedAt = `${close.periodDate}T00:00:00.000Z`;
+      return [{ ...q, price: close.price, kind: "settlement" as const, source: close.source, observedAt, periodDate: close.periodDate, suspect: false, updatedAt: observedAt }];
+    });
 
     // staleness is recomputed at read time — the stored value is a snapshot
     // from the last resolve and goes stale between crons.
@@ -44,16 +60,17 @@ export const GET = withErrorLog("api:oil/latest", async function GET() {
         }),
       ),
     );
-    const fresh = quotes.map((q) => ({
+    const fresh = quotes.map(({ periodDate, ...q }) => ({
       ...q,
       ...computeQuoteChanges(q.price, q.observedAt, closesByBenchmark.get(q.benchmark) ?? []),
       // latest_quotes has no periodDate; classifyStaleness falls back to
       // observedAt for settlement kinds — fine, observedAt IS the
       // market-close instant.
-      staleness: classifyStaleness({ kind: q.kind, observedAt: q.observedAt }, lookup(q.source), now),
+      staleness: classifyStaleness({ kind: q.kind, observedAt: q.observedAt, periodDate }, lookup(q.source), now),
     }));
 
-    return Response.json(fresh);
+    // The answer depends on who is asking, so no shared cache may keep it.
+    return Response.json(fresh, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     const message = "Request could not be completed";
     return Response.json(

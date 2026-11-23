@@ -165,6 +165,21 @@ export async function getLatestQuotes(db: Queryable): Promise<LatestQuote[]> {
   }));
 }
 
+/** Latest daily close per benchmark from the given sources only (e.g. open-data EIA/FRED for public views). */
+export async function getLatestDailyCloses(db: Queryable, sourceIds: readonly string[]): Promise<{ benchmark: Benchmark; periodDate: string; price: number; source: string }[]> {
+  const res = await db.query(
+    `select distinct on (benchmark) benchmark, period_date::text as period_date, price, source_id from daily_prices
+      where source_id = any($1::text[]) order by benchmark, period_date desc`,
+    [sourceIds],
+  );
+  return res.rows.map((r) => ({
+    benchmark: r.benchmark as Benchmark,
+    periodDate: String(r.period_date).slice(0, 10), // selected as text: no timezone shift
+    price: Number(r.price),
+    source: String(r.source_id),
+  }));
+}
+
 export async function getDailySeries(
   db: Queryable,
   benchmark: Benchmark,

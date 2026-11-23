@@ -15,8 +15,9 @@
    Same posture as its sibling: node runtime, force-dynamic, no cache.
 ──────────────────────────────────────────────────────────────── */
 
-import { computeMacroWeather, createDb, getLatestMacroSnapshot, getLatestPositioning } from "@a3ro/oil-backend";
+import { computeMacroWeather, createDb, getLatestMacroSnapshot, getLatestPositioning, publicMacroSnapshot } from "@a3ro/oil-backend";
 import { withErrorLog } from "../../_lib/errorLog";
+import { currentUserIsOwner } from "../../../../lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,23 +25,26 @@ export const dynamic = "force-dynamic";
 export const GET = withErrorLog("api:macro/latest", async function GET() {
   try {
     const db = await createDb();
-    const [macro, positioning] = await Promise.all([
+    const [snapshot, positioning, owner] = await Promise.all([
       getLatestMacroSnapshot(db),
       getLatestPositioning(db),
+      currentUserIsOwner(),
     ]);
+    // Raw Yahoo-sourced numbers are owner-only until licensed (backend/src/macro/publicView.ts).
+    const macro = snapshot && !owner ? publicMacroSnapshot(snapshot) : snapshot;
     // Newsletter "macro weather" — a fixed rule over fields already on
     // the snapshot (backend/src/macro/weather.ts), never stored, so a
     // rule change applies to the latest reading immediately.
-    const weather = macro
+    const weather = snapshot
       ? computeMacroWeather({
-          economicRegime: macro.quadrant,
-          marketRegime: macro.marketRegime,
-          riskOnShare: macro.marketRiskOn,
-          liquidityScore: macro.liquidityScore,
-          liquidityLegs: macro.liquidityLegs,
+          economicRegime: snapshot.quadrant,
+          marketRegime: snapshot.marketRegime,
+          riskOnShare: snapshot.marketRiskOn,
+          liquidityScore: snapshot.liquidityScore,
+          liquidityLegs: snapshot.liquidityLegs,
         })
       : null;
-    return Response.json({ macro, positioning, weather }, { headers: { "Cache-Control": "no-store" } });
+    return Response.json({ macro, positioning, weather }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (err) {
     return Response.json(
       { error: "Request could not be completed" },
