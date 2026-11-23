@@ -118,6 +118,10 @@ export type { AlertEvent, AlertEventView } from "./storage/alertRepo";
 export { insertLead } from "./storage/leadRepo";
 export { recordAppError, getRecentAppErrors, redactErrorMessage, errorFingerprint } from "./storage/errorLogRepo";
 export type { AppErrorInput, AppErrorRow } from "./storage/errorLogRepo";
+export { recordCronRun, getCronRuns, summarizeCronReport } from "./storage/cronRunRepo";
+export type { CronRunInput, CronRunRow, CronRunStatus, CronSeriesResult, CronRunSummary } from "./storage/cronRunRepo";
+export { getDataHealth, ageFreshness, suddenJump, groupRevisions } from "./storage/dataHealthRepo";
+export type { DataHealth, SeriesHealth, SeriesFreshness, DataIssue } from "./storage/dataHealthRepo";
 
 // Module 4 — Regime Shift Finder (Money Line engine + daily scan)
 export {

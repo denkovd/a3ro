@@ -40,16 +40,47 @@ async function describeFailedResponse(response: Response): Promise<string> {
   return `HTTP ${response.status}`;
 }
 
+/** Statuses that mean the job never ran (bad cron secret, retired route), so they aren't logged as runs. */
+const NOT_A_RUN = new Set([401, 403, 404, 405, 410]);
+
+/**
+ * Records one cron run in cron_runs (roadmap #47). Same best-effort rules as logAppError:
+ * never throws, gives up after 2s, and a missing table or broken import changes nothing.
+ */
+async function logCronRun(job: string, startedAt: Date, httpStatus: number, response: Response | null, thrown?: unknown): Promise<void> {
+  if (NOT_A_RUN.has(httpStatus)) return;
+  const durationMs = Date.now() - startedAt.getTime();
+  try {
+    const write = (async () => {
+      let body: unknown = null;
+      if (response) { try { body = await response.clone().json(); } catch { body = null; } }
+      const backend = await import("@a3ro/oil-backend");
+      if (typeof backend.recordCronRun !== "function" || typeof backend.summarizeCronReport !== "function") return;
+      const summary = backend.summarizeCronReport(body, httpStatus);
+      if (thrown !== undefined && !summary.error) summary.error = backend.redactErrorMessage(thrown instanceof Error ? thrown.message : String(thrown));
+      await backend.recordCronRun(await backend.createDb(), { job, startedAt: startedAt.toISOString(), durationMs, httpStatus, ...summary });
+    })();
+    await Promise.race([write, new Promise<void>((resolve) => setTimeout(resolve, LOG_TIMEOUT_MS))]);
+    write.catch(() => {});
+  } catch {
+    // Best-effort only.
+  }
+}
+
 export function withErrorLog<A extends unknown[]>(source: string, handler: (...args: A) => Promise<Response>): (...args: A) => Promise<Response> {
+  const cronJob = source.startsWith("cron:") ? source.slice("cron:".length) : null;
   return async (...args: A) => {
+    const startedAt = new Date();
     let response: Response;
     try {
       response = await handler(...args);
     } catch (error) {
       await logAppError(source, error instanceof Error ? error.message : String(error), 500);
+      if (cronJob) await logCronRun(cronJob, startedAt, 500, null, error);
       throw error;
     }
     if (response.status >= 500) await logAppError(source, await describeFailedResponse(response), response.status);
+    if (cronJob) await logCronRun(cronJob, startedAt, response.status, response);
     return response;
   };
 }

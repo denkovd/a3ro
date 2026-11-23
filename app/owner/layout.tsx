@@ -7,6 +7,7 @@ export const metadata: Metadata = { title: "Ops — A3RO owner", robots: { index
 
 const TABS = [
   { href: "/owner/scorecard", label: "Scorecard" },
+  { href: "/owner/health", label: "Data health" },
   { href: "/owner/usage", label: "Usage limits" },
   { href: "/owner/releases", label: "Releases" },
   { href: "/owner/jobs", label: "Manual jobs" },

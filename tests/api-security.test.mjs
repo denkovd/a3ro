@@ -434,6 +434,36 @@ test("error log records thrown errors and 5xx responses, never 2xx, and never br
   assert.equal((await missing.withErrorLog("api:x", async () => new Response("down", { status: 500 }))()).status, 500);
 });
 
+test("cron routes record each run; auth failures and API routes don't", async () => {
+  const runs = [];
+  const backend = {
+    createDb: async () => ({}), recordAppError: async () => {}, redactErrorMessage: (m) => m.replace(SECRET_ERROR, "[redacted]"),
+    summarizeCronReport: (body, status) => ({ status: status >= 500 ? "failed" : "ok", results: [], error: body?.error ?? null }),
+    recordCronRun: async (_db, run) => { runs.push(run); },
+  };
+  const { withErrorLog } = loadModule("app/api/_lib/errorLog.ts", { "@a3ro/oil-backend": backend });
+  const ok = await withErrorLog("cron:macro", async () => Response.json({ written: 1 }))();
+  assert.deepEqual(await ok.json(), { written: 1 }, "the body is still readable after recording");
+  assert.equal(runs.length, 1);
+  assert.equal(runs[0].job, "macro");
+  assert.equal(runs[0].httpStatus, 200);
+  assert.equal(runs[0].status, "ok");
+  assert.ok(Number.isFinite(runs[0].durationMs) && runs[0].durationMs >= 0);
+  assert.ok(!Number.isNaN(Date.parse(runs[0].startedAt)));
+
+  await withErrorLog("cron:macro", async () => Response.json({ error: "unauthorized" }, { status: 401 }))();
+  await withErrorLog("cron:earnings", async () => Response.json({ error: "gone" }, { status: 410 }))();
+  await withErrorLog("api:quotes", async () => Response.json({ ok: true }))();
+  assert.equal(runs.length, 1, "401, 410 and non-cron routes are not runs");
+
+  await assert.rejects(withErrorLog("cron:btc", async () => { throw new Error(SECRET_ERROR); })());
+  assert.equal(runs.at(-1).status, "failed");
+  assert.ok(!runs.at(-1).error.includes(SECRET_ERROR), "a thrown message is redacted before it is stored");
+
+  const broken = loadModule("app/api/_lib/errorLog.ts", { "@a3ro/oil-backend": { ...backend, recordCronRun: async () => { throw new Error("relation cron_runs does not exist"); } } });
+  assert.equal((await broken.withErrorLog("cron:macro", async () => Response.json({ written: 1 }))()).status, 200, "a missing table never changes the response");
+});
+
 test("public oil quotes never expose market-data prices; the owner still gets the live quote", async () => {
   const quotes = [
     { benchmark: "WTI", price: 83.39, kind: "live", source: "yfinance", observedAt: "2026-11-23T06:12:51.000Z", staleness: "fresh", suspect: false, updatedAt: "2026-11-23T06:23:11.000Z" },
