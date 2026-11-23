@@ -18,11 +18,12 @@ import {
   loadBars,
   DEFAULT_CHART_RANGE,
 } from "@a3ro/oil-backend";
+import { withErrorLog } from "../../_lib/errorLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request) {
+export const GET = withErrorLog("api:bull/chart", async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const symbol = url.searchParams.get("symbol")?.trim() ?? "";
@@ -51,4 +52,4 @@ export async function GET(req: Request) {
   } catch {
     return Response.json({ error: "Request could not be completed" }, { status: 500 });
   }
-}
+});

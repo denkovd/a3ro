@@ -19,13 +19,14 @@ import {
   DEFAULT_STRATEGY,
   STRATEGIES,
 } from "@a3ro/oil-backend";
+import { withErrorLog } from "../../_lib/errorLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const TIERS = new Set(["macro", "us_large", "ndx_extra", "crypto", "etf"]);
 
-export async function GET(req: Request) {
+export const GET = withErrorLog("api:bull/latest", async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const tierParam = url.searchParams.get("tier");
@@ -65,4 +66,4 @@ export async function GET(req: Request) {
     const message = "Request could not be completed";
     return Response.json({ error: message }, { status: 500 });
   }
-}
+});

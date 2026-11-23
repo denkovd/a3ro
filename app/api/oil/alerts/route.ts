@@ -10,11 +10,12 @@
 ──────────────────────────────────────────────────────────────── */
 
 import { createDb, getRecentAlertEvents } from "@a3ro/oil-backend";
+import { withErrorLog } from "../../_lib/errorLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
+export const GET = withErrorLog("api:oil/alerts", async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const benchmark = searchParams.get("benchmark") || undefined;
@@ -28,4 +29,4 @@ export async function GET(request: Request) {
       { status: 500 },
     );
   }
-}
+});

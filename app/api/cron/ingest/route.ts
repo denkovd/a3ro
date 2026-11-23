@@ -34,6 +34,7 @@ import type {
 } from "@a3ro/oil-backend";
 import { requireCronAuth } from "../../_lib/cronAuth";
 import { runDividendCycle, type DividendCycleReport } from "../../../../backend/src/ingest/dividendCycle";
+import { withErrorLog } from "../../_lib/errorLog";
 
 export const runtime = "nodejs";
 // Never statically pre-render at build time — this route runs a full
@@ -43,7 +44,7 @@ export const dynamic = "force-dynamic";
 // need a five-minute budget for the independent source cycles.
 export const maxDuration = 300;
 
-export async function GET(request: Request) {
+export const GET = withErrorLog("cron:ingest", async function GET(request: Request) {
   const unauthorized = requireCronAuth(request);
   if (unauthorized) return unauthorized;
 
@@ -192,4 +193,4 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
-}
+});

@@ -1,6 +1,7 @@
 import { createDb, runIngestionCycle, runCorridorCycle } from "@a3ro/oil-backend";
 import { requireCronAuth } from "../../_lib/cronAuth";
 import { summarizeRefresh } from "../../../../lib/oil/refreshReport";
+import { withErrorLog } from "../../_lib/errorLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,7 +9,7 @@ export const maxDuration = 300;
 
 /** Independent oil refresh: physical feeds start alongside prices, so unrelated
  * market cycles and price-resolution latency cannot starve refining readings. */
-export async function GET(request: Request) {
+export const GET = withErrorLog("cron:oil", async function GET(request: Request) {
   const unauthorized = requireCronAuth(request);
   if (unauthorized) return unauthorized;
   try {
@@ -32,4 +33,4 @@ export async function GET(request: Request) {
     console.error(JSON.stringify({ job: "oil", status: "failed", completedAt: new Date().toISOString() }));
     return Response.json({ error: "Oil refresh unavailable" }, { status: 503 });
   }
-}
+});

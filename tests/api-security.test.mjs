@@ -181,7 +181,20 @@ test("Australia dedicated cron authenticates before opening the database", async
   assert.equal(calls, 1);
 });
 
-test("Australia dedicated cron surfaces partial source failure", async (t) => {
+test("Australia dedicated cron reports partial source failure without failing the run", async (t) => {
+  setEnv(t, "CRON_SECRET", "regression-secret");
+  const { GET } = loadModule("app/api/cron/australia-watch/route.ts", {
+    "@a3ro/oil-backend": {
+      createDb: async () => ({}),
+      runAustraliaWatchCycle: async () => ({ results: { unemployment_rate: { written: 132 }, oecd_cli: { written: 0, error: "OECD HTTP 429" } } }),
+    },
+  });
+  const response = await GET(new Request("https://a3ro.test/api/cron/australia-watch", { headers: { authorization: "Bearer regression-secret" } }));
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).degraded, ["oecd_cli"]);
+});
+
+test("Australia dedicated cron fails when every source fails", async (t) => {
   setEnv(t, "CRON_SECRET", "regression-secret");
   const { GET } = loadModule("app/api/cron/australia-watch/route.ts", {
     "@a3ro/oil-backend": {
@@ -400,4 +413,23 @@ test("lead route hides database failures", async () => {
   const response = await POST(leadRequest());
   assert.equal(response.status, 500);
   assert.deepEqual(await response.json(), { error: "Request could not be completed" });
+});
+
+test("error log records thrown errors and 5xx responses, never 2xx, and never breaks the route", async () => {
+  const logged = [];
+  const backend = { createDb: async () => ({}), recordAppError: async (_db, input) => { logged.push(input); } };
+  const { withErrorLog } = loadModule("app/api/_lib/errorLog.ts", { "@a3ro/oil-backend": backend });
+  assert.equal((await withErrorLog("api:ok", async () => Response.json({ ok: true }))()).status, 200);
+  assert.equal(logged.length, 0);
+  const failed = await withErrorLog("cron:test", async () => Response.json({ error: "FRED unavailable" }, { status: 503 }))();
+  assert.equal(failed.status, 503);
+  assert.deepEqual(await failed.json(), { error: "FRED unavailable" }, "the body is still readable after logging");
+  assert.deepEqual(logged.at(-1), { source: "cron:test", message: "HTTP 503: FRED unavailable", status: 503 });
+  await assert.rejects(withErrorLog("api:boom", async () => { throw new Error("boom"); })(), /boom/);
+  assert.deepEqual(logged.at(-1), { source: "api:boom", message: "boom", status: 500 });
+
+  const broken = loadModule("app/api/_lib/errorLog.ts", { "@a3ro/oil-backend": { createDb: async () => { throw new Error(SECRET_ERROR); }, recordAppError: async () => {} } });
+  assert.equal((await broken.withErrorLog("api:x", async () => new Response("down", { status: 500 }))()).status, 500);
+  const missing = loadModule("app/api/_lib/errorLog.ts", {});
+  assert.equal((await missing.withErrorLog("api:x", async () => new Response("down", { status: 500 }))()).status, 500);
 });

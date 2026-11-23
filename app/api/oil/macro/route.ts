@@ -6,11 +6,12 @@
 ──────────────────────────────────────────────────────────────── */
 
 import { createDb, getLatestMacroSnapshot, getLatestPositioning } from "@a3ro/oil-backend";
+import { withErrorLog } from "../../_lib/errorLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export const GET = withErrorLog("api:oil/macro", async function GET() {
   try {
     const db = await createDb();
     const [macro, positioning] = await Promise.all([
@@ -24,4 +25,4 @@ export async function GET() {
       { status: 500 },
     );
   }
-}
+});

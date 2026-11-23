@@ -3,6 +3,7 @@
 import {
   createDb, getLatestQuotes, classifyStaleness, buildSources, getDailySeries, computeQuoteChanges,
 } from "@a3ro/oil-backend";
+import { withErrorLog } from "../../_lib/errorLog";
 
 // REQUIRED: `pg` speaks raw TCP, which Vercel's Edge runtime cannot do.
 // Every route/cron handler that touches storage/ must pin the Node runtime.
@@ -10,7 +11,7 @@ export const runtime = "nodejs";
 // Never statically pre-render at build time — hits the live DB. Runtime-only.
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export const GET = withErrorLog("api:oil/latest", async function GET() {
   try {
     const db = await createDb();
     const quotes = await getLatestQuotes(db);
@@ -60,4 +61,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
+});

@@ -7,11 +7,12 @@
 ──────────────────────────────────────────────────────────────── */
 
 import { createDb, getLatestGoldSnapshot } from "@a3ro/oil-backend";
+import { withErrorLog } from "../../_lib/errorLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export const GET = withErrorLog("api:gold/latest", async function GET() {
   try {
     const db = await createDb();
     const snapshot = await getLatestGoldSnapshot(db);
@@ -37,4 +38,4 @@ export async function GET() {
       { status: 500 },
     );
   }
-}
+});

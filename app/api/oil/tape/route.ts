@@ -6,11 +6,12 @@
 ──────────────────────────────────────────────────────────────── */
 
 import { createDb, getLatestTapeSnapshot } from "@a3ro/oil-backend";
+import { withErrorLog } from "../../_lib/errorLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export const GET = withErrorLog("api:oil/tape", async function GET() {
   try {
     const db = await createDb();
     const tape = await getLatestTapeSnapshot(db);
@@ -21,4 +22,4 @@ export async function GET() {
       { status: 500 },
     );
   }
-}
+});

@@ -2,6 +2,7 @@
 // Tracker's contact panel. No read path — leads are consumed out-of-band.
 import { createDb, insertLead } from "@a3ro/oil-backend";
 import { createLeadBurstGuard, LeadRequestError, readLeadRequest } from "../_lib/leadRequest";
+import { withErrorLog } from "../_lib/errorLog";
 
 // REQUIRED: `pg` speaks raw TCP, which Vercel's Edge runtime cannot do.
 // Every route/cron handler that touches storage/ must pin the Node runtime.
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
 const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/;
 const guardBurst = createLeadBurstGuard();
 
-export async function POST(req: Request) {
+export const POST = withErrorLog("api:leads", async function POST(req: Request) {
   const limited = guardBurst(req);
   if (limited) return limited;
   try {
@@ -55,4 +56,4 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
-}
+});

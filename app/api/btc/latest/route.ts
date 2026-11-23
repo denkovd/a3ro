@@ -6,11 +6,12 @@
 ──────────────────────────────────────────────────────────────── */
 
 import { createDb, getLatestBtcSnapshot } from "@a3ro/oil-backend";
+import { withErrorLog } from "../../_lib/errorLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export const GET = withErrorLog("api:btc/latest", async function GET() {
   try {
     const db = await createDb();
     const snapshot = await getLatestBtcSnapshot(db);
@@ -42,4 +43,4 @@ export async function GET() {
       { status: 500 },
     );
   }
-}
+});

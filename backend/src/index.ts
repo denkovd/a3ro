@@ -116,6 +116,8 @@ export {
 export type { AlertEvent, AlertEventView } from "./storage/alertRepo";
 // site domain — pro-tier lead capture (app/api/leads), unrelated to price/corridor ingestion
 export { insertLead } from "./storage/leadRepo";
+export { recordAppError, getRecentAppErrors, redactErrorMessage, errorFingerprint } from "./storage/errorLogRepo";
+export type { AppErrorInput, AppErrorRow } from "./storage/errorLogRepo";
 
 // Module 4 — Regime Shift Finder (Money Line engine + daily scan)
 export {

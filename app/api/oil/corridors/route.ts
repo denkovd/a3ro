@@ -1,6 +1,7 @@
 // Read-only endpoint: returns the newest row per (corridor, metric).
 // Writes (ingestion) happen via the cron job in app/api/cron/ingest.
 import { createDb, getLatestCorridorMetrics } from "@a3ro/oil-backend";
+import { withErrorLog } from "../../_lib/errorLog";
 
 // REQUIRED: `pg` speaks raw TCP, which Vercel's Edge runtime cannot do.
 // Every route/cron handler that touches storage/ must pin the Node runtime.
@@ -8,7 +9,7 @@ export const runtime = "nodejs";
 // Never statically pre-render at build time — hits the live DB. Runtime-only.
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export const GET = withErrorLog("api:oil/corridors", async function GET() {
   try {
     const db = await createDb();
     const metrics = await getLatestCorridorMetrics(db);
@@ -20,4 +21,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
+});

@@ -28,6 +28,7 @@ import {
   isBullSymbol,
   STRATEGIES,
 } from "@a3ro/oil-backend";
+import { withErrorLog } from "../../_lib/errorLog";
 
 type Db = Awaited<ReturnType<typeof createDb>>;
 type Profile = NonNullable<Awaited<ReturnType<typeof getAssetProfile>>>;
@@ -122,7 +123,7 @@ async function loadDetails(db: Db, symbol: string, lastClose: number | null, las
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request) {
+export const GET = withErrorLog("api:bull/asset", async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const symbol = url.searchParams.get("symbol")?.trim() ?? "";
@@ -159,4 +160,4 @@ export async function GET(req: Request) {
   } catch {
     return Response.json({ error: "Request could not be completed" }, { status: 500 });
   }
-}
+});

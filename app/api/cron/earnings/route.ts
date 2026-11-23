@@ -1,3 +1,4 @@
+import { withErrorLog } from "../../_lib/errorLog";
 /* ────────────────────────────────────────────────────────────────
    DEPRECATED — the weekly Earnings-Beat Tracker pipeline (spec §2)
    has moved to a GitHub Actions scheduled workflow, per architecture
@@ -17,7 +18,7 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export const GET = withErrorLog("cron:earnings", async function GET() {
   return Response.json(
     {
       error: {
@@ -28,4 +29,4 @@ export async function GET() {
     },
     { status: 410 },
   );
-}
+});

@@ -8,12 +8,13 @@
 
 import { createDb, runScoreCycle } from "@a3ro/oil-backend";
 import { requireCronAuth } from "../../_lib/cronAuth";
+import { withErrorLog } from "../../_lib/errorLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-export async function GET(request: Request) {
+export const GET = withErrorLog("cron:scores", async function GET(request: Request) {
   const unauthorized = requireCronAuth(request);
   if (unauthorized) return unauthorized;
 
@@ -27,4 +28,4 @@ export async function GET(request: Request) {
       { status: 500 },
     );
   }
-}
+});

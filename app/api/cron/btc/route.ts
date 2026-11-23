@@ -1,5 +1,6 @@
 import { createDb, runBtcCycle } from "@a3ro/oil-backend";
 import { requireCronAuth } from "../../_lib/cronAuth";
+import { withErrorLog } from "../../_lib/errorLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,7 +13,7 @@ export const maxDuration = 60;
  *  never got its turn inside the 300 s ingest budget. Same posture as
  *  australia-watch/macro: own route, own schedule, non-200 on failure
  *  so a silent stall shows up in Vercel's cron log. */
-export async function GET(request: Request) {
+export const GET = withErrorLog("cron:btc", async function GET(request: Request) {
   const unauthorized = requireCronAuth(request);
   if (unauthorized) return unauthorized;
   try {
@@ -26,4 +27,4 @@ export async function GET(request: Request) {
     console.error(JSON.stringify({ job: "btc", status: "failed" }));
     return Response.json({ error: "BTC refresh failed" }, { status: 503 });
   }
-}
+});

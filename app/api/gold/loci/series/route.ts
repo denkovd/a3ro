@@ -4,11 +4,12 @@
 ──────────────────────────────────────────────────────────────── */
 
 import { createDb, getGoldFlowMetricSeries } from "@a3ro/oil-backend";
+import { withErrorLog } from "../../../_lib/errorLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
+export const GET = withErrorLog("api:gold/loci/series", async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const locus = url.searchParams.get("locus")?.trim() ?? "";
@@ -30,4 +31,4 @@ export async function GET(request: Request) {
       { status: 500 },
     );
   }
-}
+});

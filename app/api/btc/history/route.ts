@@ -6,13 +6,14 @@
 ──────────────────────────────────────────────────────────────── */
 
 import { createDb, getBtcPriceHistory } from "@a3ro/oil-backend";
+import { withErrorLog } from "../../_lib/errorLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const LOOKBACK_DAYS = 3 * 365;
 
-export async function GET() {
+export const GET = withErrorLog("api:btc/history", async function GET() {
   try {
     const db = await createDb();
     const to = new Date().toISOString().slice(0, 10);
@@ -26,4 +27,4 @@ export async function GET() {
       { status: 500 },
     );
   }
-}
+});

@@ -14,11 +14,12 @@ import {
   DEFAULT_STRATEGY,
   STRATEGIES,
 } from "@a3ro/oil-backend";
+import { withErrorLog } from "../../_lib/errorLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request) {
+export const GET = withErrorLog("api:bull/transitions", async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const raw = Number(url.searchParams.get("days") ?? "14");
@@ -42,4 +43,4 @@ export async function GET(req: Request) {
     const message = "Request could not be completed";
     return Response.json({ error: message }, { status: 500 });
   }
-}
+});

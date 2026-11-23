@@ -10,11 +10,12 @@
 ──────────────────────────────────────────────────────────────── */
 
 import { createDb, getCorridorMetricSeries, isCorridorId } from "@a3ro/oil-backend";
+import { withErrorLog } from "../../../_lib/errorLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
+export const GET = withErrorLog("api:oil/corridors/series", async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const corridor = searchParams.get("corridor");
@@ -42,4 +43,4 @@ export async function GET(request: Request) {
       { status: 500 },
     );
   }
-}
+});

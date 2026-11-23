@@ -1,6 +1,7 @@
 // Read-only endpoint: returns historical daily closes for a benchmark over a date range.
 // Writes (ingestion) happen via the cron job in app/api/cron/ingest.
 import { createDb, getDailySeries, isBenchmark } from "@a3ro/oil-backend";
+import { withErrorLog } from "../../_lib/errorLog";
 
 // REQUIRED: `pg` speaks raw TCP, which Vercel's Edge runtime cannot do.
 // Every route/cron handler that touches storage/ must pin the Node runtime.
@@ -13,7 +14,7 @@ function isValidDateString(s: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(s);
 }
 
-export async function GET(request: Request) {
+export const GET = withErrorLog("api:oil/series", async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const benchmark = url.searchParams.get("benchmark");
@@ -75,4 +76,4 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
-}
+});

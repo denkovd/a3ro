@@ -1,13 +1,14 @@
 import { createDb, getAustraliaFetchStates, getAustraliaObservations } from "@a3ro/oil-backend";
 import { fetchAustraliaReleaseSchedules } from "../../../../backend/src/sources/absReleases";
 import { unstable_cache } from "next/cache";
+import { withErrorLog } from "../../_lib/errorLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const getReleaseSchedules = unstable_cache(fetchAustraliaReleaseSchedules, ["australia-abs-release-calendars"], { revalidate: 3600 });
 
-export async function GET() {
+export const GET = withErrorLog("api:australia-watch/latest", async function GET() {
   try {
     const db = await createDb();
     const [observations, fetchStates, releaseSchedules] = await Promise.all([getAustraliaObservations(db), getAustraliaFetchStates(db), getReleaseSchedules()]);
@@ -18,4 +19,4 @@ export async function GET() {
   } catch (err) {
     return Response.json({ error: "Request could not be completed" }, { status: 500 });
   }
-}
+});

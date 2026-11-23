@@ -108,8 +108,10 @@ test("the dedicated cron requires auth and exposes failed cycles as failures", a
   t.after(() => oldSecret === undefined ? delete process.env.CRON_SECRET : process.env.CRON_SECRET = oldSecret);
   let calls = 0, report = { written: 1, quadrant: "REFLATION", panel: ["internal"] };
   const auth = await load("app/api/_lib/cronAuth.ts");
+  const errorLog = await load("app/api/_lib/errorLog.ts", { "@a3ro/oil-backend": {} });
   const { GET } = await load("app/api/cron/macro/route.ts", {
     "../../_lib/cronAuth": auth,
+    "../../_lib/errorLog": errorLog,
     "@a3ro/oil-backend": { createDb: async () => ({}), runMacroCycle: async () => { calls++; return report; } },
   });
   assert.equal((await GET(new Request("http://localhost/api/cron/macro"))).status, 401);
