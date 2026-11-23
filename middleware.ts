@@ -12,7 +12,7 @@
 ──────────────────────────────────────────────────────────────── */
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { gatedModuleForPath, isOwnerEmail } from "./lib/access";
+import { gatedModuleForPath, isOwnerUser } from "./lib/access";
 
 export const config = {
   runtime: "nodejs",
@@ -31,7 +31,7 @@ export async function middleware(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  let email: string | null = null;
+  let user: { email?: string | null; email_confirmed_at?: string | null } | null = null;
   if (url && key) {
     const supabase = createServerClient(url, key, {
       cookies: {
@@ -46,16 +46,16 @@ export async function middleware(request: NextRequest) {
     try {
       // getUser() verifies the token with Supabase and refreshes an expiring session.
       const { data } = await supabase.auth.getUser();
-      email = data.user?.email ?? null;
+      user = data.user ?? null;
     } catch {
-      email = null;
+      user = null;
     }
   }
 
   const gated = gatedModuleForPath(request.nextUrl.pathname);
   if (!gated) return response;
 
-  if (!isOwnerEmail(email)) {
+  if (!isOwnerUser(user)) {
     if (gated.kind === "api") {
       return NextResponse.json({ error: "Sign in required" }, { status: 401, headers: PRIVATE_HEADERS });
     }

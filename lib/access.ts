@@ -65,6 +65,11 @@ export function isOwnerEmail(email: string | null | undefined, ownerEmails = pro
   return owners.includes(email.trim().toLowerCase());
 }
 
+/** A signed-in user is the owner only if their email is listed AND confirmed (Google emails arrive confirmed). */
+export function isOwnerUser(user: { email?: string | null; email_confirmed_at?: string | null } | null | undefined, ownerEmails = process.env.OWNER_EMAILS): boolean {
+  return Boolean(user?.email_confirmed_at) && isOwnerEmail(user?.email, ownerEmails);
+}
+
 /** Page routes a non-owner may be linked to (module switcher, homepage). */
 export function canSeeRoute(route: string, owner: boolean): boolean {
   return owner || !isGatedPath(route);

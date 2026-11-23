@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { isOwnerEmail } from "../access";
+import { isOwnerUser } from "../access";
 
 export function supabaseConfigured(): boolean {
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && supabaseKey());
@@ -33,7 +33,7 @@ export async function currentUserIsOwner(): Promise<boolean> {
   try {
     const supabase = await createSupabaseServerClient();
     const { data } = await supabase.auth.getUser();
-    return isOwnerEmail(data.user?.email);
+    return isOwnerUser(data.user);
   } catch {
     return false;
   }

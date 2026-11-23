@@ -37,6 +37,12 @@ test("owner check fails closed and ignores case and spacing", () => {
   assert.equal(access.isOwnerEmail("me@x.com.evil", "me@x.com"), false);
 });
 
+test("owner user needs a confirmed email", () => {
+  assert.equal(access.isOwnerUser({ email: "me@x.com", email_confirmed_at: "2026-11-23T00:00:00Z" }, "me@x.com"), true);
+  assert.equal(access.isOwnerUser({ email: "me@x.com", email_confirmed_at: null }, "me@x.com"), false);
+  assert.equal(access.isOwnerUser(null, "me@x.com"), false);
+});
+
 test("post-login redirects stay on this site", () => {
   for (const bad of ["https://evil.com", "//evil.com", "/\\evil.com", "javascript:alert(1)", "", null]) assert.equal(access.safeNextPath(bad), "/", String(bad));
   assert.equal(access.safeNextPath("/Projects/Gold-Tracker"), "/Projects/Gold-Tracker");
@@ -50,7 +56,7 @@ test("middleware matcher covers every gated page and API prefix, and never the c
   assert.ok(!matcher.some((p) => p.startsWith("/api/cron")));
 });
 
-function middlewareWith(email) {
+function middlewareWith(email, confirmed = true) {
   class Res {
     constructor(body, init = {}) { this.body = body; this.status = init.status ?? 200; this.headers = new Headers(init.headers); this.cookies = { getAll: () => [], set() {} }; }
     static next() { return new Res(null); }
@@ -59,7 +65,7 @@ function middlewareWith(email) {
   }
   return load("middleware.ts", {
     "next/server": { NextResponse: Res },
-    "@supabase/ssr": { createServerClient: () => ({ auth: { getUser: async () => ({ data: { user: email ? { email } : null } }) } }) },
+    "@supabase/ssr": { createServerClient: () => ({ auth: { getUser: async () => ({ data: { user: email ? { email, email_confirmed_at: confirmed ? "2026-11-23T00:00:00Z" : null } : null } }) } }) },
   }).middleware;
 }
 const req = (p) => { const nextUrl = new URL(`https://a3ro.test${p}`); return { nextUrl: Object.assign(nextUrl, { clone: () => new URL(nextUrl) }), cookies: { getAll: () => [], set() {} } }; };
@@ -83,6 +89,7 @@ test("middleware: logged-out visitors get 401 on gated APIs and the private page
   assert.equal(ok.status, 200);
   assert.match(ok.headers.get("cache-control"), /private/);
   assert.equal((await middlewareWith(null)(req("/login"))).status, 200, "non-gated matched paths pass through");
+  assert.equal((await middlewareWith("owner@a3ro.test", false)(req("/api/bull/latest"))).status, 401, "an unconfirmed account with the owner's email is not the owner");
 });
 
 test("middleware fails closed when Supabase isn't configured", async (t) => {

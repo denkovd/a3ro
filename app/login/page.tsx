@@ -11,8 +11,15 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     <section className="mx-auto flex max-w-md flex-col gap-6 px-6 pb-20 pt-40">
       <p className="landing-kicker">Owner sign-in</p>
       <h1 className="text-3xl font-semibold tracking-tight">Sign in</h1>
-      <p className="text-sm leading-relaxed text-[var(--ink-2)]">We'll email you a one-time sign-in link. Only existing accounts can sign in.</p>
-      {error === "link" ? <p role="alert" className="text-sm text-[var(--ink-2)]">That link has expired or was already used. Request a new one.</p> : null}
+      {error === "link" ? <p role="alert" className="text-sm text-[var(--ink-2)]">That link has expired or was already used. Try again.</p> : null}
+      {error === "google" ? <p role="alert" className="text-sm text-[var(--ink-2)]">Google sign-in isn't available right now. Use the email link instead.</p> : null}
+      <form method="post" action="/auth/google">
+        <input type="hidden" name="next" value={next ?? "/"} />
+        <button type="submit" className="w-full rounded-sm border border-[var(--line)] px-3 py-2 text-sm transition-colors hover:border-[var(--line-2)]">
+          Continue with Google
+        </button>
+      </form>
+      <p className="landing-kicker">Or email me a one-time link</p>
       <LoginForm next={next ?? "/"} />
     </section>
   </main>;
