@@ -333,3 +333,5 @@ export { cleanSiteEvent, insertSiteEvent, getSiteStats, SITE_EVENT_TYPES } from 
 export type { SiteEvent, SiteEventType, SiteStats } from "./storage/siteEventsRepo";
 export { getDbUsage, getGrowthSummary, getModuleSettings, saveModuleSetting, getModuleSignals, DB_FREE_LIMIT_BYTES } from "./storage/opsRepo";
 export type { DbUsage, GrowthSummary, ModuleSetting, ModuleSignals, AccessLevelSetting } from "./storage/opsRepo";
+export { getManualJobRuns, recordManualJobRun } from "./storage/opsRepo";
+export type { ManualJobRun } from "./storage/opsRepo";

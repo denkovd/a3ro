@@ -113,6 +113,26 @@ export async function saveModuleSetting(db: Queryable, moduleId: string, patch: 
   );
 }
 
+/* ── manual jobs ── */
+
+export interface ManualJobRun { jobId: string; doneAt: string; note: string | null }
+
+/** Latest run per job, plus the last few runs overall for the history list. */
+export async function getManualJobRuns(db: Queryable): Promise<{ latest: Record<string, string>; recent: ManualJobRun[] }> {
+  const [latest, recent] = await Promise.all([
+    db.query(`select distinct on (job_id) job_id, done_at from manual_job_runs order by job_id, done_at desc`),
+    db.query(`select job_id, done_at, note from manual_job_runs order by done_at desc limit 20`),
+  ]);
+  return {
+    latest: Object.fromEntries(latest.rows.map((r) => [String(r.job_id), new Date(String(r.done_at)).toISOString()])),
+    recent: recent.rows.map((r) => ({ jobId: String(r.job_id), doneAt: new Date(String(r.done_at)).toISOString(), note: r.note == null ? null : String(r.note) })),
+  };
+}
+
+export async function recordManualJobRun(db: Queryable, jobId: string, note: string | null): Promise<void> {
+  await db.query(`insert into manual_job_runs (job_id, note) values ($1, $2)`, [jobId, note]);
+}
+
 /* ── #53 scorecard inputs ── */
 
 export interface ModuleSignals {

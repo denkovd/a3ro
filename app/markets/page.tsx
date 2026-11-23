@@ -3,7 +3,7 @@ import { Nav } from "../components/Chrome";
 import SiteFooter from "../components/SiteFooter";
 import TradingViewWidget from "../components/TradingViewWidget";
 import { ASX_NAMES, SAVED_SCREENS, marketIndexUrl, tradingViewAsxUrl } from "../../lib/marketLinks";
-import { COFER_URL, WORLD_ASSETS, getReserveShares } from "../../lib/globalMarkets";
+import { COFER_URL, WORLD_ASSETS, WORLD_ASSETS_CHECKED, getReserveShares } from "../../lib/globalMarkets";
 import { CurrencySharesChart, WorldAssetsChart } from "./ShareCharts";
 
 // Reserve shares are refreshed from the IMF at most once a day.
@@ -42,8 +42,8 @@ export default async function MarketsPage() {
 
       <section aria-labelledby="world-assets">
         <h2 id="world-assets" className="text-lg font-medium">The world&rsquo;s assets</h2>
-        <p className="mt-1 mb-6 max-w-3xl text-xs leading-relaxed text-[var(--ink-3)]">Estimated total value of each asset class and its share of the whole. Figures come from the latest published estimates, which use different dates, so treat the total as a rough guide. Bitcoin is coins in circulation times a recent price.</p>
-        <WorldAssetsChart assets={WORLD_ASSETS} />
+        <p className="mt-1 mb-6 max-w-3xl text-xs leading-relaxed text-[var(--ink-3)]">A rough guide only: the estimated total value of each asset class and its share of the whole. The figures come from the latest published estimates, which cover different dates, and are updated by hand each quarter. Bitcoin is coins in circulation times a recent price.</p>
+        <WorldAssetsChart assets={WORLD_ASSETS} checked={WORLD_ASSETS_CHECKED} />
       </section>
 
       <section aria-labelledby="currencies">

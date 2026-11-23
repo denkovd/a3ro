@@ -3,12 +3,15 @@
 
    World assets: published estimates, each with its source and date.
    They come out once or twice a year, so this list is edited by hand
-   (re-check each quarter). Bitcoin is supply × a stored price, rounded.
+   each quarter (Ops → Manual jobs). Bitcoin is supply × a stored price, rounded.
 
    Currencies: share of the world's official foreign-exchange reserves,
    IMF COFER (open data), fetched live; FALLBACK_RESERVES is used if
    the IMF API doesn't answer.
 ──────────────────────────────────────────────────────────────── */
+
+/** When the world asset figures were last checked. Updated quarterly: see Ops → Manual jobs. */
+export const WORLD_ASSETS_CHECKED = "2026-11-23";
 
 export interface AssetClass { id: string; label: string; valueTn: number; asOf: string; source: string; url: string; note?: string }
 

@@ -177,3 +177,19 @@ test("IMF COFER parser reads the latest quarter and rejects anything that doesn'
   assert.equal(gm.parseCofer("garbage"), null);
   assert.equal(Math.round(gm.FALLBACK_RESERVES.shares.reduce((s, x) => s + x.share, 0)), 100);
 });
+
+test("manual jobs: due dates, month-end clamping and status", () => {
+  const mj = load("lib/manualJobs.ts");
+  assert.equal(mj.addMonths("2026-11-23", 3), "2027-02-23");
+  assert.equal(mj.addMonths("2026-11-30", 3), "2027-02-28", "clamps to the month's last day");
+  assert.equal(mj.addMonths("2027-11-30", 3), "2028-02-29", "leap year");
+  const job = { ...mj.MANUAL_JOBS.find((j) => j.id === "world-assets") };
+  assert.equal(job.everyMonths, 3);
+  const at = (d) => new Date(`${d}T03:00:00Z`);
+  assert.equal(mj.jobSchedule(job, null, at("2026-12-01")).status, "ok");
+  assert.equal(mj.jobSchedule(job, null, at("2027-02-15")).status, "due soon");
+  const late = mj.jobSchedule(job, null, at("2027-03-01"));
+  assert.equal(late.status, "overdue"); assert.equal(late.daysLeft, -6);
+  assert.equal(mj.jobSchedule(job, "2027-03-01T05:00:00Z", at("2027-03-02")).nextDue, "2027-06-01", "a recorded run restarts the clock");
+  for (const j of mj.MANUAL_JOBS) assert.ok(j.steps.length && j.where && j.everyMonths > 0, j.id);
+});

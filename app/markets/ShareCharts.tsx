@@ -8,12 +8,12 @@ const SERIES = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#0ca30c"
 const pct = (n: number) => `${n < 1 ? n.toFixed(1) : n < 10 ? n.toFixed(1) : Math.round(n)}%`;
 const tn = (n: number) => `$${n >= 10 ? Math.round(n) : n.toFixed(1)}T`;
 
-export function WorldAssetsChart({ assets }: { assets: readonly AssetClass[] }) {
+export function WorldAssetsChart({ assets, checked }: { assets: readonly AssetClass[]; checked: string }) {
   const total = assets.reduce((s, a) => s + a.valueTn, 0);
   const rows = assets.map((a, i) => ({ ...a, color: SERIES[i % SERIES.length], share: (a.valueTn / total) * 100 }));
   const max = Math.max(...rows.map((r) => r.valueTn));
   return <figure aria-label="World assets by class">
-    <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">Total, all classes shown</p>
+    <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-3)]">Rough guide · figures checked {new Date(`${checked}T00:00:00Z`).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })} · updated quarterly</p>
     <p className="mt-1 text-4xl font-semibold tracking-tight text-[var(--ink)]">≈ {tn(total)}</p>
 
     {/* The whole: one segmented bar, 2px gaps, figure printed where the segment is wide enough */}

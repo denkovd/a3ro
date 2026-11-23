@@ -9,6 +9,7 @@ const TABS = [
   { href: "/owner/scorecard", label: "Scorecard" },
   { href: "/owner/usage", label: "Usage limits" },
   { href: "/owner/releases", label: "Releases" },
+  { href: "/owner/jobs", label: "Manual jobs" },
   { href: "/owner/growth", label: "Growth" },
   { href: "/owner/stats", label: "Site stats" },
   { href: "/owner/controls", label: "Controls" },
