@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import SiteTracker from "./components/SiteTracker";
 
 export const metadata: Metadata = {
   title: "A3RO — Market Intelligence Platform",
@@ -26,7 +27,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">{children}<SiteTracker /></body>
     </html>
   );
 }

@@ -26,6 +26,8 @@ export interface ModuleAccess {
   apis: readonly string[];
   /** What the module does, shown on the private page to visitors who can't open it yet (#35). */
   preview?: string;
+  /** Owner tools: logged-out visitors get a plain 404, not the coming-soon page. */
+  hidden?: boolean;
 }
 
 export const MODULE_ACCESS: readonly ModuleAccess[] = [
@@ -41,6 +43,7 @@ export const MODULE_ACCESS: readonly ModuleAccess[] = [
     preview: "Places the US economy in one of four growth and inflation regimes from official releases, then checks whether markets are pricing the same regime." },
   { id: "gold", label: "Gold", level: "owner", data: "market", pages: ["/Projects/Gold-Tracker"], apis: ["/api/gold"],
     preview: "Follows gold across its main trading hubs, with prices, COMEX vault stocks and the macro drivers behind the moves." },
+  { id: "ops", label: "Owner tools", level: "owner", data: "open", pages: ["/owner"], apis: ["/api/owner"], hidden: true },
   { id: "btc", label: "BTC", level: "owner", data: "market", pages: ["/Projects/BTC-Tracker"], apis: ["/api/btc"],
     preview: "Follows bitcoin across major venues, with price, market structure and the macro backdrop in one view." },
 ];

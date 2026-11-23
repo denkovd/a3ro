@@ -55,6 +55,7 @@
     "migrate:gate-spread": "tsx scripts/migrate.ts migrations/022_gate_weekly_spread.sql",
     "migrate:profiles": "tsx scripts/migrate.ts migrations/023_asset_profiles.sql",
     "migrate:errors": "tsx scripts/migrate.ts migrations/024_app_errors.sql",
+    "migrate:events": "tsx scripts/migrate.ts migrations/025_site_events.sql",
     "run:profiles": "tsx scripts/run-profiles.ts",
     "backfill:btc": "tsx scripts/backfill-btc.ts",
     "run:btc": "tsx scripts/run-btc.ts",

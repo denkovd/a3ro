@@ -1,6 +1,7 @@
 "use client";
-import { useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { companyAssets, filterIsActive, searchEntities, EMPTY_FILTER, type Graph, type RefineryFilter, type SearchHit, type SearchItem } from "./graph";
+import { track } from "../../../track";
 
 const KIND: Record<SearchHit["kind"], string> = { refinery: "Refinery", company: "Company", corridor: "Corridor", route: "Route", country: "Country" };
 const STATUS: { id: RefineryFilter["status"]; label: string; title: string }[] = [
@@ -21,6 +22,13 @@ export default function AssetSearch({ graph, corpus, filter, onFilter, matchCoun
   const inputRef = useRef<HTMLInputElement>(null);
   const listId = useId();
   const hits = useMemo(() => searchEntities(corpus, query, compact ? 6 : 8), [corpus, query, compact]);
+  // Log a search once typing pauses, with its result count, so no-result searches show up (#46).
+  useEffect(() => {
+    const term = query.trim();
+    if (term.length < 2) return;
+    const t = setTimeout(() => track("search", { target: term, resultCount: hits.length }), 1200);
+    return () => clearTimeout(t);
+  }, [query, hits.length]);
   const countries = useMemo(() => [...new Set(graph.refineries.map(r => r.country))].sort(), [graph.refineries]);
   const companies = useMemo(() => graph.companies.filter(c => companyAssets(graph, c.id).some(a => !a.former)).sort((a, b) => a.name.localeCompare(b.name)), [graph]);
   const activeFilters = [filter.status !== "all", !!filter.country, !!filter.companyId, filter.developments].filter(Boolean).length;

@@ -1,5 +1,6 @@
 "use client";
 import { useState, type FormEvent } from "react";
+import { track } from "../components/track";
 
 /** Email sign-up for a module that isn't public yet (#35). Stored via /api/leads with the module as context. */
 export default function SignupForm({ moduleId }: { moduleId: string }) {
@@ -16,6 +17,7 @@ export default function SignupForm({ moduleId }: { moduleId: string }) {
         body: JSON.stringify({ email: String(form.get("email") ?? ""), company: String(form.get("company") ?? ""), context: `waitlist:${moduleId}` }),
       });
       setState(response.ok ? "ok" : "error");
+      if (response.ok) track("signup", { target: `waitlist:${moduleId}` });
     } catch {
       setState("error");
     }

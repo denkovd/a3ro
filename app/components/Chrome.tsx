@@ -5,11 +5,14 @@
 import { motion, useScroll, useSpring } from "framer-motion";
 import { useMotionPreference } from "./motion";
 
+// Section links are "/#…" so they also work from pages other than the homepage.
 const LINKS = [
-  { label: "Commodity Watch", href: "#top" },
-  { label: "Modules", href: "#modules" },
-  { label: "Index", href: "#index" },
-  { label: "Contact", href: "#contact" },
+  { label: "Commodity Watch", href: "/#top" },
+  { label: "Modules", href: "/#modules" },
+  { label: "Index", href: "/#index" },
+  { label: "Markets", href: "/markets" },
+  { label: "Calendar", href: "/calendar" },
+  { label: "Contact", href: "/#contact" },
 ];
 
 export function Nav() {
@@ -19,7 +22,7 @@ export function Nav() {
     >
       <div className="flex items-center justify-between px-6 py-5 md:px-[max(40px,5vw)]">
         <a
-          href="#top"
+          href="/#top"
           className="font-mono text-sm tracking-[0.25em] text-[var(--ink)]"
           aria-label="A3RO — back to top"
         >
@@ -37,7 +40,7 @@ export function Nav() {
           ))}
         </nav>
         <a
-          href="#contact"
+          href="/#contact"
           className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--acid)] md:hidden"
         >
           Contact

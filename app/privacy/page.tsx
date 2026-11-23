@@ -14,6 +14,7 @@ export default function PrivacyPage() {
       <li><strong>Email address and message</strong> when you send an enquiry or request access through a form on the site, along with the page you sent it from.</li>
       <li><strong>Email address</strong> when you subscribe to the newsletter.</li>
       <li><strong>Sign-in details</strong> if you have an A3RO account: your email address and, if you sign in with Google, your name and email as provided by Google. A sign-in cookie keeps you logged in.</li>
+      <li><strong>Anonymous usage events</strong>: which pages are viewed, which outside sites are clicked through to, what is typed into site search, which assets are opened and which forms are submitted. These events carry no name, email address, IP address or account, and can&rsquo;t be linked to you.</li>
       <li><strong>Technical information</strong> such as error reports from our servers. These record what failed (for example a data source timing out), not who was using the site.</li>
     </ul>
     <p>You can use the public parts of A3RO without giving us any personal information. We don&rsquo;t collect sensitive information.</p>
@@ -23,6 +24,7 @@ export default function PrivacyPage() {
       <li>To reply to your enquiry or access request.</li>
       <li>To send the newsletter you signed up for. Every issue has an unsubscribe link.</li>
       <li>To let account holders sign in and to keep the service secure and working.</li>
+      <li>To see, in aggregate, which parts of A3RO are used, so we know what to improve.</li>
     </ul>
     <p>We don&rsquo;t sell your personal information, and we don&rsquo;t use it for advertising.</p>
 

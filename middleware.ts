@@ -20,6 +20,7 @@ export const config = {
     "/Projects/Bull-Market-Finder/:path*", "/Projects/Regime-Finder/:path*", "/Projects/Earnings-Beat/:path*",
     "/Projects/Regime-Shift/:path*", "/Projects/Gold-Tracker/:path*", "/Projects/BTC-Tracker/:path*",
     "/api/bull/:path*", "/api/leaderboard/:path*", "/api/watchlist/:path*", "/api/regime/:path*", "/api/gold/:path*", "/api/btc/:path*",
+    "/owner/:path*", "/api/owner/:path*",
     "/api/auth/:path*", "/auth/:path*", "/login",
   ],
 };
@@ -60,6 +61,12 @@ export async function middleware(request: NextRequest) {
       return NextResponse.json({ error: "Sign in required" }, { status: 401, headers: PRIVATE_HEADERS });
     }
     const locked = request.nextUrl.clone();
+    if (gated.module.hidden) {
+      // Owner tools don't advertise themselves: same 404 as a page that doesn't exist.
+      locked.pathname = "/404";
+      locked.search = "";
+      return NextResponse.rewrite(locked, { status: 404, headers: PRIVATE_HEADERS });
+    }
     locked.pathname = "/private";
     locked.search = `?module=${encodeURIComponent(gated.module.id)}&next=${encodeURIComponent(request.nextUrl.pathname)}`;
     const rewrite = NextResponse.rewrite(locked, { status: 401, headers: PRIVATE_HEADERS });

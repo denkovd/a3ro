@@ -89,6 +89,11 @@ test("middleware: logged-out visitors get 401 on gated APIs and the private page
   assert.equal(ok.status, 200);
   assert.match(ok.headers.get("cache-control"), /private/);
   assert.equal((await middlewareWith(null)(req("/login"))).status, 200, "non-gated matched paths pass through");
+  const ops = await middlewareWith(null)(req("/owner/stats"));
+  assert.equal(ops.status, 404, "owner tools answer 404 to everyone else");
+  assert.match(ops.rewrittenTo, /\/404$/);
+  assert.equal((await middlewareWith(null)(req("/api/owner/anything"))).status, 401);
+  assert.equal((await middlewareWith("owner@a3ro.test")(req("/owner/stats"))).status, 200);
   assert.equal((await middlewareWith("owner@a3ro.test", false)(req("/api/bull/latest"))).status, 401, "an unconfirmed account with the owner's email is not the owner");
 });
 
@@ -101,5 +106,5 @@ test("middleware fails closed when Supabase isn't configured", async (t) => {
 });
 
 test("every owner-only module has a coming-soon preview (#35)", () => {
-  for (const m of access.MODULE_ACCESS.filter((x) => x.level !== "public")) assert.ok(m.preview && m.preview.length > 40, `${m.id} needs a preview`);
+  for (const m of access.MODULE_ACCESS.filter((x) => x.level !== "public" && !x.hidden)) assert.ok(m.preview && m.preview.length > 40, `${m.id} needs a preview`);
 });

@@ -58,6 +58,7 @@ import {
 import { useInfoTip } from "../../components/projects/intel/primitives";
 import AssetDrawer from "../../components/projects/bull/AssetDrawer";
 import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
+import { track } from "../../components/track";
 
 const ATMOSPHERE =
   "radial-gradient(90% 110% at 50% 65%, #0c1018 0%, var(--depth-1) 55%, #070808 100%)";
@@ -260,6 +261,7 @@ export default function BullMarketFinderView() {
     setQuery({ sort: null, dir: null });
   }, []);
   const openAsset = useCallback((symbol: string | null) => {
+    if (symbol) track("asset_view", { target: symbol });
     setSelected(symbol);
     setQuery({ asset: symbol });
   }, []);

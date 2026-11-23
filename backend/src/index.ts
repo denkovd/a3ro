@@ -329,3 +329,5 @@ export type { BtcFlowMetricInput } from "./storage/btcFlowRepo";
 export type { BtcFlowMetricRow, BtcLocusId, BtcFlowMetricId } from "./btc/flowTypes";
 export { BTC_LOCI, BTC_FLOW_METRICS, isBtcLocusId } from "./btc/flowTypes";
 export { publicMacroSnapshot } from "./macro/publicView";
+export { cleanSiteEvent, insertSiteEvent, getSiteStats, SITE_EVENT_TYPES } from "./storage/siteEventsRepo";
+export type { SiteEvent, SiteEventType, SiteStats } from "./storage/siteEventsRepo";
