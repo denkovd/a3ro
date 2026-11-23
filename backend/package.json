@@ -56,6 +56,7 @@
     "migrate:profiles": "tsx scripts/migrate.ts migrations/023_asset_profiles.sql",
     "migrate:errors": "tsx scripts/migrate.ts migrations/024_app_errors.sql",
     "migrate:events": "tsx scripts/migrate.ts migrations/025_site_events.sql",
+    "migrate:module-settings": "tsx scripts/migrate.ts migrations/026_module_settings.sql",
     "run:profiles": "tsx scripts/run-profiles.ts",
     "backfill:btc": "tsx scripts/backfill-btc.ts",
     "run:btc": "tsx scripts/run-btc.ts",

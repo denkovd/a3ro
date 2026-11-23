@@ -3,7 +3,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createDb, getSiteStats, type SiteStats } from "@a3ro/oil-backend";
-import { Nav } from "../../components/Chrome";
 import { currentUserIsOwner } from "../../../lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -29,12 +28,10 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
   let stats: SiteStats | null = null;
   try { stats = await getSiteStats(await createDb(), days); } catch { stats = null; }
 
-  return <main className="relative min-h-screen">
-    <Nav />
-    <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 pb-20 pt-32 md:px-10">
+  return <>
+    <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 pb-20 pt-8 md:px-10">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="landing-kicker">Owner · not public</p>
           <h1 className="mt-3 text-2xl font-semibold tracking-tight">Site stats</h1>
           <p className="mt-1 text-xs text-[var(--ink-3)]">Anonymous events: no names, emails or IP addresses. Clicks inside TradingView widgets can&rsquo;t be seen.</p>
         </div>
@@ -58,5 +55,5 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
         </div>
       </>}
     </div>
-  </main>;
+  </>;
 }

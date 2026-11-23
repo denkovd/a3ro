@@ -48,15 +48,15 @@ test("post-login redirects stay on this site", () => {
   assert.equal(access.safeNextPath("/Projects/Gold-Tracker"), "/Projects/Gold-Tracker");
 });
 
-test("middleware matcher covers every gated page and API prefix, and never the cron routes", () => {
+test("middleware matcher covers every module page and API prefix (any level can be overridden), and never the cron routes", () => {
   const source = readFileSync(path.join(root, "middleware.ts"), "utf8");
   const matcher = [...source.matchAll(/"(\/[^"]+)"/g)].map((m) => m[1]);
-  for (const m of access.MODULE_ACCESS.filter((x) => x.level !== "public"))
+  for (const m of access.MODULE_ACCESS)
     for (const prefix of [...m.pages, ...m.apis]) assert.ok(matcher.includes(`${prefix}/:path*`), `matcher is missing ${prefix}/:path*`);
   assert.ok(!matcher.some((p) => p.startsWith("/api/cron")));
 });
 
-function middlewareWith(email, confirmed = true) {
+function middlewareWith(email, confirmed = true, overrides = {}) {
   class Res {
     constructor(body, init = {}) { this.body = body; this.status = init.status ?? 200; this.headers = new Headers(init.headers); this.cookies = { getAll: () => [], set() {} }; }
     static next() { return new Res(null); }
@@ -66,6 +66,7 @@ function middlewareWith(email, confirmed = true) {
   return load("middleware.ts", {
     "next/server": { NextResponse: Res },
     "@supabase/ssr": { createServerClient: () => ({ auth: { getUser: async () => ({ data: { user: email ? { email, email_confirmed_at: confirmed ? "2026-11-23T00:00:00Z" : null } : null } }) } }) },
+    "./lib/accessOverrides": { loadLevelOverrides: async () => overrides },
   }).middleware;
 }
 const req = (p) => { const nextUrl = new URL(`https://a3ro.test${p}`); return { nextUrl: Object.assign(nextUrl, { clone: () => new URL(nextUrl) }), cookies: { getAll: () => [], set() {} } }; };
@@ -107,4 +108,56 @@ test("middleware fails closed when Supabase isn't configured", async (t) => {
 
 test("every owner-only module has a coming-soon preview (#35)", () => {
   for (const m of access.MODULE_ACCESS.filter((x) => x.level !== "public" && !x.hidden)) assert.ok(m.preview && m.preview.length > 40, `${m.id} needs a preview`);
+});
+
+test("owner overrides (#52): restrict a public module, but never open up market data or owner tools", async (t) => {
+  for (const [k, v] of [["OWNER_EMAILS", "owner@a3ro.test"], ["NEXT_PUBLIC_SUPABASE_URL", "https://x.supabase.co"], ["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "pk"]]) {
+    const prev = process.env[k]; process.env[k] = v; t.after(() => prev === undefined ? delete process.env[k] : process.env[k] = prev);
+  }
+  const au = access.MODULE_ACCESS.find((m) => m.id === "australia");
+  const gold = access.MODULE_ACCESS.find((m) => m.id === "gold");
+  const ops = access.MODULE_ACCESS.find((m) => m.id === "ops");
+  assert.equal(access.effectiveLevel(au, { australia: "owner" }), "owner");
+  assert.equal(access.effectiveLevel(gold, { gold: "public" }), "owner", "market data stays gated");
+  assert.equal(access.effectiveLevel(ops, { ops: "public" }), "owner", "owner tools stay gated");
+  assert.equal((await middlewareWith(null)(req("/api/australia-watch/latest"))).status, 200, "public by default");
+  assert.equal((await middlewareWith(null, true, { australia: "owner" })(req("/api/australia-watch/latest"))).status, 401);
+  assert.equal((await middlewareWith(null, true, { australia: "owner" })(req("/Projects/Australia-Watch"))).status, 401);
+  assert.equal((await middlewareWith("owner@a3ro.test", true, { australia: "owner" })(req("/api/australia-watch/latest"))).status, 200);
+  assert.equal((await middlewareWith(null, true, { gold: "public" })(req("/api/gold/latest"))).status, 401);
+});
+
+test("re-runnable cron jobs match vercel.json exactly", () => {
+  const crons = load("lib/crons.ts");
+  const vercel = JSON.parse(readFileSync(path.join(root, "vercel.json"), "utf8"));
+  assert.deepEqual([...crons.CRON_JOBS].sort(), vercel.crons.map((c) => c.path.replace("/api/cron/", "")).sort());
+  assert.equal(crons.isCronJob("../leads"), false);
+});
+
+test("the cron re-run only sends the secret to our own hosts", () => {
+  const guard = load("lib/ownerGuard.ts", { "next/navigation": { notFound() {} }, "./supabase/server": { currentUserIsOwner: async () => true } });
+  const r = (url, host) => new Request(url, { headers: host ? { host } : {} });
+  assert.equal(guard.trustedOrigin(r("https://a3ro.com.au/api/owner/cron")), "https://a3ro.com.au");
+  assert.equal(guard.trustedOrigin(r("https://a3ro.com.au/x", "a3ro-abc.vercel.app")), "https://a3ro-abc.vercel.app");
+  assert.equal(guard.trustedOrigin(r("http://localhost:3000/x")), "http://localhost:3000");
+  assert.equal(guard.trustedOrigin(r("https://a3ro.com.au/x", "evil.example")), null);
+  assert.equal(guard.trustedOrigin(r("https://a3ro.com.au/x", "a3ro.com.au.evil.example")), null);
+});
+
+test("scorecard: weights, verdicts, missing usage scaled, errors and staleness cost points", () => {
+  const sc = load("lib/scorecard.ts");
+  const base = { lastRefreshHours: { australia: 2, dividend: 2, commodity: 2, macro: 2, trend: 2, earnings: 24, regime: 2, gold: 2, btc: 2 }, australiaHealthyShare: 1, usageByPath: [], errorsBySource: [], fitRatings: {} };
+  const rows = sc.computeScorecard(base);
+  const au = rows.find((r) => r.id === "australia");
+  assert.equal(au.usage, null);
+  assert.equal(au.total, Math.round((30 + 15 + 15 + 6) * 100 / 70));
+  const busy = sc.computeScorecard({ ...base, australiaHealthyShare: 0.5, lastRefreshHours: { ...base.lastRefreshHours, gold: 100 },
+    usageByPath: [{ path: "/Projects/Australia-Watch", count: 50 }, { path: "/Projects/AI-Dividend", count: 5 }],
+    errorsBySource: [{ source: "cron:australia-watch", distinct: 2 }, { source: "api:gold/latest", distinct: 1 }], fitRatings: { gold: 1 } });
+  const a = busy.find((r) => r.id === "australia"), g = busy.find((r) => r.id === "gold"), d = busy.find((r) => r.id === "dividend");
+  assert.equal(a.health, 15); assert.equal(a.usage, 30); assert.equal(a.upkeep, 9);
+  assert.ok(d.usage > 0 && d.usage < 30);
+  assert.equal(g.health, 0); assert.equal(g.usage, 0); assert.equal(g.upkeep, 12); assert.equal(g.fit, 2);
+  assert.equal(g.verdict, "park");
+  for (const r of busy) assert.ok(r.total >= 0 && r.total <= 100);
 });

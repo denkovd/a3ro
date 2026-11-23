@@ -331,3 +331,5 @@ export { BTC_LOCI, BTC_FLOW_METRICS, isBtcLocusId } from "./btc/flowTypes";
 export { publicMacroSnapshot } from "./macro/publicView";
 export { cleanSiteEvent, insertSiteEvent, getSiteStats, SITE_EVENT_TYPES } from "./storage/siteEventsRepo";
 export type { SiteEvent, SiteEventType, SiteStats } from "./storage/siteEventsRepo";
+export { getDbUsage, getGrowthSummary, getModuleSettings, saveModuleSetting, getModuleSignals, DB_FREE_LIMIT_BYTES } from "./storage/opsRepo";
+export type { DbUsage, GrowthSummary, ModuleSetting, ModuleSignals, AccessLevelSetting } from "./storage/opsRepo";

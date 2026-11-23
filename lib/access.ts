@@ -62,16 +62,35 @@ const matches = (pathname: string, prefix: string) => pathname === prefix || pat
 
 export interface PathAccess { module: ModuleAccess; kind: "page" | "api" }
 
-/** The gated module a path belongs to, or null when the path is public or not a module path. */
-export function gatedModuleForPath(pathname: string): PathAccess | null {
+/** Owner overrides from the Ops controls (#52), keyed by module id. */
+export type LevelOverrides = Readonly<Record<string, AccessLevel | null | undefined>>;
+
+/**
+ * A module's level after owner overrides. Market-data modules can never become public (licensing,
+ * #18), and owner tools can never be opened up: such overrides are ignored.
+ */
+export function effectiveLevel(module: ModuleAccess, overrides: LevelOverrides = {}): AccessLevel {
+  const override = overrides[module.id];
+  if (!override) return module.level;
+  if (override === "public" && (module.data === "market" || module.hidden)) return module.level;
+  return override;
+}
+
+/** The module a path belongs to (any level), or null when it isn't a module path. */
+export function moduleForPath(pathname: string): PathAccess | null {
   // Paths are matched case-sensitively, as Next routes them; normalise trailing slashes only.
   const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
   for (const module of MODULE_ACCESS) {
-    if (module.level === "public") continue;
     if (module.pages.some((p) => matches(path, p))) return { module, kind: "page" };
     if (module.apis.some((p) => matches(path, p))) return { module, kind: "api" };
   }
   return null;
+}
+
+/** The gated module a path belongs to, or null when the path is public or not a module path. */
+export function gatedModuleForPath(pathname: string, overrides: LevelOverrides = {}): PathAccess | null {
+  const hit = moduleForPath(pathname);
+  return hit && effectiveLevel(hit.module, overrides) !== "public" ? hit : null;
 }
 
 export function isGatedPath(pathname: string): boolean {
