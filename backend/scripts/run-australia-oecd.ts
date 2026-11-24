@@ -1,10 +1,12 @@
 /* ────────────────────────────────────────────────────────────────
    Australia Watch: the three OECD series (roadmap #78).
 
-   sdmx.oecd.org answers HTTP 500 to Vercel's servers but not to other
-   networks, so these series are fetched here, by the GitHub Actions
-   workflow oecd-refresh.yml (03:00 UTC daily), instead of by the
-   Vercel australia-watch cron. Also runs by hand:
+   sdmx.oecd.org answers HTTP 500 ("Internal server error") while it
+   prepares a query it hasn't served recently, then 200 once it's
+   ready, often 20 s or more later (tested 24 Nov). The Vercel cron's
+   5-minute limit leaves no room to wait that long, so these series are
+   fetched here, by the GitHub Actions workflow oecd-refresh.yml
+   (03:00 UTC daily), with long waits between retries. Also runs by hand:
 
      cd backend && npx tsx scripts/run-australia-oecd.ts
 
@@ -23,7 +25,8 @@ import { recordCronRun, summarizeCronReport } from "../src/storage/cronRunRepo";
 async function main(): Promise<void> {
   const db = await createDb();
   const started = Date.now();
-  const report = await runAustraliaWatchCycle(db, { sources: ["oecd_sdmx"] });
+  // Waits before each retry of a 500, and room for three series with all their retries.
+  const report = await runAustraliaWatchCycle(db, { sources: ["oecd_sdmx"], oecdRetryDelaysMs: [20_000, 40_000, 60_000], budgetMs: 12 * 60_000 });
   const entries = Object.entries(report.results);
   const degraded = entries.filter(([, r]) => r.error).map(([indicator]) => indicator);
   const allFailed = entries.length === 0 || degraded.length === entries.length;

@@ -22,8 +22,9 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export async function runAustraliaWatchCycle(db: Queryable, opts: {
   now?: () => Date; fetchImpl?: typeof fetch; oecdRetryDelaysMs?: readonly number[];
   oecdSpacingMs?: number; budgetMs?: number; clock?: () => number;
-  /** Only refresh series from these sources (default: all). The Vercel cron leaves out OECD, which
-   *  refuses Vercel's servers; a GitHub Actions job fetches the OECD series instead (#78). */
+  /** Only refresh series from these sources (default: all). The Vercel cron leaves out OECD, whose
+   *  slow-to-warm queries need longer retry waits than it can afford; a GitHub Actions job fetches
+   *  the OECD series instead (#78). */
   sources?: readonly AustraliaSourceKind[];
 } = {}): Promise<AustraliaWatchCycleReport> {
   const startedAt = (opts.now ?? (() => new Date()))().toISOString();
