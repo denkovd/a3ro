@@ -1,12 +1,12 @@
 /* ────────────────────────────────────────────────────────────────
    Australia Watch: the three OECD series (roadmap #78).
 
-   sdmx.oecd.org answers HTTP 500 ("Internal server error") while it
-   prepares a query it hasn't served recently, then 200 once it's
-   ready, often 20 s or more later (tested 24 Nov). The Vercel cron's
-   5-minute limit leaves no room to wait that long, so these series are
+   sdmx.oecd.org answers a bare HTTP 500 ("Internal server error") to
+   requests that come too close together, and keeps doing so for a
+   while (tested 24 Nov). The Vercel cron's 5-minute limit leaves no
+   room to space them out, so these series are
    fetched here, by the GitHub Actions workflow oecd-refresh.yml
-   (03:00 UTC daily), with long waits between retries. Also runs by hand:
+   (03:00 and 15:00 UTC), spaced out with long waits between retries. Also runs by hand:
 
      cd backend && npx tsx scripts/run-australia-oecd.ts
 
@@ -25,8 +25,12 @@ import { recordCronRun, summarizeCronReport } from "../src/storage/cronRunRepo";
 async function main(): Promise<void> {
   const db = await createDb();
   const started = Date.now();
-  // Waits before each retry of a 500, and room for three series with all their retries.
-  const report = await runAustraliaWatchCycle(db, { sources: ["oecd_sdmx"], oecdRetryDelaysMs: [20_000, 40_000, 60_000], budgetMs: 12 * 60_000 });
+  // OECD throttles requests that come close together with a bare 500, and a quick retry extends
+  // the throttle (24 Nov: the first series worked, the next two, 3 s later, failed every retry).
+  // So: a minute between series, retries after 1 and 2 minutes, and room for all of it.
+  const report = await runAustraliaWatchCycle(db, {
+    sources: ["oecd_sdmx"], oecdSpacingMs: 60_000, oecdRetryDelaysMs: [60_000, 120_000], budgetMs: 16 * 60_000,
+  });
   const entries = Object.entries(report.results);
   const degraded = entries.filter(([, r]) => r.error).map(([indicator]) => indicator);
   const allFailed = entries.length === 0 || degraded.length === entries.length;

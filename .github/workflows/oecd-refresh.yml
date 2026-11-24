@@ -1,10 +1,9 @@
 # ──────────────────────────────────────────────────────────────
 # Australia Watch — OECD series (roadmap #78).
-# sdmx.oecd.org answers HTTP 500 until a query it hasn't served
-# recently is ready, which can take longer than the Vercel cron can
-# wait, so the OECD leading indicator and consumer/business confidence
-# are fetched here with long retry waits instead of in the Vercel
-# australia-watch cron (02:15 UTC).
+# sdmx.oecd.org answers a bare HTTP 500 to requests that come too
+# close together, so the OECD leading indicator and consumer/business
+# confidence are fetched here, a minute apart with long retry waits,
+# instead of in the Vercel australia-watch cron (02:15 UTC).
 # Monthly data: one run a day is plenty.
 #
 # Required repo secret: DATABASE_URL (pooled Supabase string).
@@ -14,6 +13,8 @@ name: oecd-refresh
 on:
   schedule:
     - cron: "0 3 * * *"
+    # A second try each day: OECD's throttling comes and goes, and the data is monthly.
+    - cron: "0 15 * * *"
   workflow_dispatch: {}
 
 permissions:
@@ -26,7 +27,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       # GHA runners often pick the unreachable Supabase AAAA first.
       NODE_OPTIONS: --dns-result-order=ipv4first

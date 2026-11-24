@@ -8,9 +8,9 @@ export const maxDuration = 300;
 
 /**
  * Independent budget: slow oil/market feeds must not prevent ABS and RBA refreshes.
- * OECD series are not fetched here: sdmx.oecd.org answers HTTP 500 until a query it hasn't served
- * recently is ready, longer than this cron can wait, so the GitHub Actions workflow
- * oecd-refresh.yml fetches them at 03:00 UTC with long retry waits (roadmap #78).
+ * OECD series are not fetched here: sdmx.oecd.org answers HTTP 500 to requests that come too close
+ * together, and spacing them out takes longer than this cron can wait, so the GitHub Actions
+ * workflow oecd-refresh.yml fetches them twice a day, a minute apart (roadmap #78).
  * Each series fails on its own (recorded as degraded), so a partial failure is still a 200 with the
  * failed series listed under `degraded`. Only a refresh where every series failed is a 502.
  */
