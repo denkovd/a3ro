@@ -40,6 +40,16 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: backend/package-lock.json
+      - name: Diagnose OECD
+        run: |
+          U='https://sdmx.oecd.org/public/rest/data/OECD.SDD.STES,DSD_STES@DF_CLI,/AUS.M.LI.IX._Z.AA.IX._Z.H?startPeriod=2012-01&format=csvfilewithlabels'
+          for ua in "node" "A3RO-Intelligence/1.0 (+https://a3ro.com.au)" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36"; do
+            code=$(curl -s -o /tmp/o.txt -w '%{http_code}' -A "$ua" "$U"); echo "UA=[$ua] -> $code $(head -c 100 /tmp/o.txt)"; sleep 5
+          done
+          code=$(curl -s -o /tmp/o.txt -w '%{http_code}' "$U"); echo "curl default UA -> $code"; sleep 5
+          node -e "fetch(process.argv[1]).then(async r=>console.log('node fetch ->',r.status,(await r.text()).slice(0,100)))" "$U"; sleep 5
+          node -e "fetch(process.argv[1],{headers:{'User-Agent':'A3RO-Intelligence/1.0 (+https://a3ro.com.au)'}}).then(async r=>console.log('node fetch + UA ->',r.status))" "$U"
+        working-directory: .
       - run: npm ci
       - name: Fetch OECD series
         env:
