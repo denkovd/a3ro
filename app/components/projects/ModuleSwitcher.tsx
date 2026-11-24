@@ -9,7 +9,7 @@
 ──────────────────────────────────────────────────────────────── */
 import { useRouter } from "next/navigation";
 import { canSeeRoute } from "../../../lib/access";
-import { useOwner } from "../useOwner";
+import { useViewer } from "../useViewer";
 
 export type ModuleId = "trend" | "regime" | "earnings" | "australia" | "dividend";
 
@@ -28,9 +28,9 @@ const switchButtonClass =
 
 export default function ModuleSwitcher({ current }: { current: ModuleId }) {
   const router = useRouter();
-  const owner = useOwner();
-  // Owner-only modules are left out of the cycle for everyone else (lib/access.ts).
-  const sequence = MODULE_SEQUENCE.filter((id) => id === current || canSeeRoute(MODULE_META[id].route, owner));
+  const viewer = useViewer();
+  // Premium modules are left out of the cycle for accounts without Premium (lib/access.ts).
+  const sequence = MODULE_SEQUENCE.filter((id) => id === current || canSeeRoute(MODULE_META[id].route, viewer));
   const idx = sequence.indexOf(current);
   const prevId = sequence[(idx - 1 + sequence.length) % sequence.length];
   const nextId = sequence[(idx + 1) % sequence.length];

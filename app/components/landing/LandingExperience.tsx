@@ -10,7 +10,7 @@ import CommodityWatch from "../projects/CommodityWatch";
 import CommodityHero from "./CommodityHero";
 import ModuleStage, { type StageModule } from "./ModuleStage";
 import { canSeeRoute } from "../../../lib/access";
-import { useOwner } from "../useOwner";
+import { useViewer } from "../useViewer";
 
 const BullFinder = dynamic(() => import("../projects/BullFinder"), { ssr: false, loading: () => <ModulePlaceholder name="Trend Finder" href="/Projects/Bull-Market-Finder" /> });
 const Regime = dynamic(() => import("../projects/RegimeShiftFinder"), { ssr: false, loading: () => <ModulePlaceholder name="Regime" href="/Projects/Regime-Shift" /> });
@@ -34,9 +34,9 @@ export default function LandingExperience() {
   const fail = useCallback(() => setFailed(true), []);
   const animated = !reduced && !failed;
   const [orbit, setOrbit] = useState(false);
-  // Owner-only modules load gated APIs, so they're only shown to the signed-in owner (lib/access.ts).
-  const owner = useOwner();
-  const modules = useMemo(() => MODULES.filter((m) => canSeeRoute(m.href, owner)), [owner]);
+  // Premium modules load gated APIs, so they are only shown to Premium accounts (lib/access.ts).
+  const viewer = useViewer();
+  const modules = useMemo(() => MODULES.filter((m) => canSeeRoute(m.href, viewer)), [viewer]);
   const { scrollYProgress } = useScroll({ target: hero, offset: ["start start", "end end"] });
 
   // Enhancement changes the hero's and the module runway's height. Resolve direct

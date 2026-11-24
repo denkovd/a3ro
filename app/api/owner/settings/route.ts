@@ -1,4 +1,4 @@
-// Owner controls (#52): change a module's access level or fit rating. Owner + same-origin only.
+// Admin controls (#52): change a module's access level or fit rating. Admin + same-origin only.
 import { createDb, saveModuleSetting } from "@a3ro/oil-backend";
 import { MODULE_ACCESS } from "../../../../lib/access";
 import { clearLevelOverrides } from "../../../../lib/accessOverrides";
@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const NO_STORE = { "Cache-Control": "no-store" };
-const LEVELS = ["public", "owner", "subscriber"] as const;
+const LEVELS = ["public", "premium"] as const;
 
 export async function POST(request: Request) {
   if (!(await ownerWriteAllowed(request))) return Response.json({ error: "Forbidden" }, { status: 403, headers: NO_STORE });

@@ -18,7 +18,7 @@ function load(relativePath, stubs = {}, cache = new Map()) {
 }
 const access = load("lib/access.ts");
 
-test("roadmap #33 split: open-data modules public, market-data modules owner-only", () => {
+test("roadmap #33 split: open-data modules public, market-data modules Premium", () => {
   for (const p of ["/Projects/Australia-Watch", "/Projects/AI-Dividend", "/Projects/Oil-Tracker", "/api/australia-watch/latest", "/api/dividend/latest", "/api/oil/corridors", "/api/macro/latest", "/", "/api/cron/bull"])
     assert.equal(access.gatedModuleForPath(p), null, p);
   for (const p of ["/Projects/Bull-Market-Finder", "/Projects/Regime-Finder", "/Projects/Earnings-Beat", "/Projects/Regime-Shift", "/Projects/Gold-Tracker", "/Projects/BTC-Tracker", "/Projects/Gold-Tracker/"])
@@ -29,18 +29,32 @@ test("roadmap #33 split: open-data modules public, market-data modules owner-onl
   for (const m of access.MODULE_ACCESS) assert.ok(m.level === "public" ? m.data === "open" : true, `${m.id}: market data must not be public`);
 });
 
-test("owner check fails closed and ignores case and spacing", () => {
-  assert.equal(access.isOwnerEmail("me@x.com", undefined), false);
-  assert.equal(access.isOwnerEmail("me@x.com", ""), false);
-  assert.equal(access.isOwnerEmail(null, "me@x.com"), false);
-  assert.equal(access.isOwnerEmail(" Me@X.com ", "other@y.com, me@x.com"), true);
-  assert.equal(access.isOwnerEmail("me@x.com.evil", "me@x.com"), false);
+test("admin check fails closed and ignores case and spacing", () => {
+  assert.equal(access.isAdminEmail("me@x.com", undefined), false);
+  assert.equal(access.isAdminEmail("me@x.com", ""), false);
+  assert.equal(access.isAdminEmail(null, "me@x.com"), false);
+  assert.equal(access.isAdminEmail(" Me@X.com ", "other@y.com, me@x.com"), true);
+  assert.equal(access.isAdminEmail("me@x.com.evil", "me@x.com"), false);
 });
 
-test("owner user needs a confirmed email", () => {
-  assert.equal(access.isOwnerUser({ email: "me@x.com", email_confirmed_at: "2026-11-23T00:00:00Z" }, "me@x.com"), true);
-  assert.equal(access.isOwnerUser({ email: "me@x.com", email_confirmed_at: null }, "me@x.com"), false);
-  assert.equal(access.isOwnerUser(null, "me@x.com"), false);
+test("admin user needs a confirmed email", () => {
+  assert.equal(access.isAdminUser({ email: "me@x.com", email_confirmed_at: "2026-11-23T00:00:00Z" }, "me@x.com"), true);
+  assert.equal(access.isAdminUser({ email: "me@x.com", email_confirmed_at: null }, "me@x.com"), false);
+  assert.equal(access.isAdminUser(null, "me@x.com"), false);
+});
+
+test("who can open what: an account alone opens nothing beyond public; Premium opens Premium; only admins open admin tools", () => {
+  const free = { signedIn: true, premium: false, admin: false }, paid = { signedIn: true, premium: true, admin: false }, admin = { signedIn: true, premium: true, admin: true };
+  for (const v of [access.ANONYMOUS, free, paid, admin]) assert.equal(access.viewerCanOpen("public", v), true);
+  assert.equal(access.viewerCanOpen("premium", access.ANONYMOUS), false);
+  assert.equal(access.viewerCanOpen("premium", free), false);
+  assert.equal(access.viewerCanOpen("premium", paid), true);
+  assert.equal(access.viewerCanOpen("admin", paid), false);
+  assert.equal(access.viewerCanOpen("admin", admin), true);
+  assert.equal(access.canSeeRoute("/Projects/Gold-Tracker", free), false);
+  assert.equal(access.canSeeRoute("/Projects/Gold-Tracker", paid), true);
+  assert.equal(access.canSeeRoute("/Projects/Australia-Watch", access.ANONYMOUS), true);
+  assert.equal(access.canSeeRoute("/owner", paid), false);
 });
 
 test("post-login redirects stay on this site", () => {
@@ -56,74 +70,87 @@ test("middleware matcher covers every module page and API prefix (any level can 
   assert.ok(!matcher.some((p) => p.startsWith("/api/cron")));
 });
 
-function middlewareWith(email, confirmed = true, overrides = {}) {
+/** `premiumIds`: account ids the stubbed user_access says have Premium. */
+function middlewareWith(email, confirmed = true, overrides = {}, premiumIds = []) {
   class Res {
     constructor(body, init = {}) { this.body = body; this.status = init.status ?? 200; this.headers = new Headers(init.headers); this.cookies = { getAll: () => [], set() {} }; }
     static next() { return new Res(null); }
     static json(body, init) { return new Res(body, init); }
     static rewrite(url, init) { const r = new Res(null, init); r.rewrittenTo = String(url); return r; }
   }
+  const user = email ? { id: `id:${email.toLowerCase()}`, email, email_confirmed_at: confirmed ? "2026-11-23T00:00:00Z" : null } : null;
   return load("middleware.ts", {
     "next/server": { NextResponse: Res },
-    "@supabase/ssr": { createServerClient: () => ({ auth: { getUser: async () => ({ data: { user: email ? { email, email_confirmed_at: confirmed ? "2026-11-23T00:00:00Z" : null } : null } }) } }) },
+    "@supabase/ssr": { createServerClient: () => ({ auth: { getUser: async () => ({ data: { user } }) } }) },
     "./lib/accessOverrides": { loadLevelOverrides: async () => overrides },
+    "./lib/premium": { accountHasPremium: async (id) => premiumIds.includes(id) },
   }).middleware;
 }
 const req = (p) => { const nextUrl = new URL(`https://a3ro.test${p}`); return { nextUrl: Object.assign(nextUrl, { clone: () => new URL(nextUrl) }), cookies: { getAll: () => [], set() {} } }; };
+function withEnv(t, pairs) {
+  for (const [k, v] of pairs) { const prev = process.env[k]; process.env[k] = v; t.after(() => prev === undefined ? delete process.env[k] : process.env[k] = prev); }
+}
+const ENV = [["OWNER_EMAILS", "admin@a3ro.test"], ["NEXT_PUBLIC_SUPABASE_URL", "https://x.supabase.co"], ["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "pk"]];
 
-test("middleware: logged-out visitors get 401 on gated APIs and the private page on gated modules", async (t) => {
-  for (const [k, v] of [["OWNER_EMAILS", "owner@a3ro.test"], ["NEXT_PUBLIC_SUPABASE_URL", "https://x.supabase.co"], ["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "pk"]]) {
-    const prev = process.env[k]; process.env[k] = v; t.after(() => prev === undefined ? delete process.env[k] : process.env[k] = prev);
-  }
-  for (const who of [null, "someone@else.test"]) {
+test("middleware: signed out → 401 and the Premium page; free account → 403 and the Premium page", async (t) => {
+  withEnv(t, ENV);
+  for (const [who, status] of [[null, 401], ["someone@else.test", 403]]) {
     const mw = middlewareWith(who);
     const api = await mw(req("/api/bull/latest"));
-    assert.equal(api.status, 401);
+    assert.equal(api.status, status);
     assert.match(api.headers.get("cache-control"), /private, no-store/);
     const page = await mw(req("/Projects/Gold-Tracker"));
-    assert.equal(page.status, 401);
+    assert.equal(page.status, status);
     assert.match(page.rewrittenTo, /\/private\?module=gold&next=%2FProjects%2FGold-Tracker$/);
     assert.equal(page.headers.get("x-robots-tag"), "noindex, nofollow");
   }
-  const owner = middlewareWith("Owner@A3RO.test");
-  const ok = await owner(req("/api/bull/latest"));
+  assert.equal((await middlewareWith(null)(req("/login"))).status, 200, "non-gated matched paths pass through");
+});
+
+test("middleware: Premium accounts and admins open Premium modules; only admins open admin tools", async (t) => {
+  withEnv(t, ENV);
+  const paid = middlewareWith("paid@x.test", true, {}, ["id:paid@x.test"]);
+  const ok = await paid(req("/api/bull/latest"));
   assert.equal(ok.status, 200);
   assert.match(ok.headers.get("cache-control"), /private/);
-  assert.equal((await middlewareWith(null)(req("/login"))).status, 200, "non-gated matched paths pass through");
-  const ops = await middlewareWith(null)(req("/owner/stats"));
-  assert.equal(ops.status, 404, "owner tools answer 404 to everyone else");
+  assert.equal((await paid(req("/Projects/Gold-Tracker"))).status, 200);
+  const ops = await paid(req("/owner/stats"));
+  assert.equal(ops.status, 404, "admin tools answer 404 to Premium accounts too");
   assert.match(ops.rewrittenTo, /\/404$/);
-  assert.equal((await middlewareWith(null)(req("/api/owner/anything"))).status, 401);
-  assert.equal((await middlewareWith("owner@a3ro.test")(req("/owner/stats"))).status, 200);
-  assert.equal((await middlewareWith("owner@a3ro.test", false)(req("/api/bull/latest"))).status, 401, "an unconfirmed account with the owner's email is not the owner");
+  assert.equal((await paid(req("/api/owner/anything"))).status, 401, "admin APIs don't reveal themselves with a 403");
+  assert.equal((await middlewareWith(null)(req("/owner/stats"))).status, 404);
+  const admin = middlewareWith("Admin@A3RO.test");
+  assert.equal((await admin(req("/owner/stats"))).status, 200);
+  assert.equal((await admin(req("/api/bull/latest"))).status, 200, "admins always have Premium");
+  assert.equal((await middlewareWith("admin@a3ro.test", false)(req("/api/bull/latest"))).status, 403, "an unconfirmed account with the admin email is not the admin");
 });
 
 test("middleware fails closed when Supabase isn't configured", async (t) => {
   for (const k of ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "NEXT_PUBLIC_SUPABASE_ANON_KEY"]) {
     const prev = process.env[k]; delete process.env[k]; t.after(() => prev === undefined ? delete process.env[k] : process.env[k] = prev);
   }
-  const prev = process.env.OWNER_EMAILS; process.env.OWNER_EMAILS = "owner@a3ro.test"; t.after(() => prev === undefined ? delete process.env.OWNER_EMAILS : process.env.OWNER_EMAILS = prev);
-  assert.equal((await middlewareWith("owner@a3ro.test")(req("/api/gold/latest"))).status, 401);
+  withEnv(t, [["OWNER_EMAILS", "admin@a3ro.test"]]);
+  assert.equal((await middlewareWith("admin@a3ro.test")(req("/api/gold/latest"))).status, 401);
 });
 
-test("every owner-only module has a coming-soon preview (#35)", () => {
+test("every Premium module has a preview for the Premium page (#35)", () => {
   for (const m of access.MODULE_ACCESS.filter((x) => x.level !== "public" && !x.hidden)) assert.ok(m.preview && m.preview.length > 40, `${m.id} needs a preview`);
 });
 
-test("owner overrides (#52): restrict a public module, but never open up market data or owner tools", async (t) => {
-  for (const [k, v] of [["OWNER_EMAILS", "owner@a3ro.test"], ["NEXT_PUBLIC_SUPABASE_URL", "https://x.supabase.co"], ["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "pk"]]) {
-    const prev = process.env[k]; process.env[k] = v; t.after(() => prev === undefined ? delete process.env[k] : process.env[k] = prev);
-  }
+test("admin overrides (#52): make a public module Premium, but never open up market data or admin tools", async (t) => {
+  withEnv(t, ENV);
   const au = access.MODULE_ACCESS.find((m) => m.id === "australia");
   const gold = access.MODULE_ACCESS.find((m) => m.id === "gold");
   const ops = access.MODULE_ACCESS.find((m) => m.id === "ops");
-  assert.equal(access.effectiveLevel(au, { australia: "owner" }), "owner");
-  assert.equal(access.effectiveLevel(gold, { gold: "public" }), "owner", "market data stays gated");
-  assert.equal(access.effectiveLevel(ops, { ops: "public" }), "owner", "owner tools stay gated");
+  assert.equal(access.effectiveLevel(au, { australia: "premium" }), "premium");
+  assert.equal(access.effectiveLevel(au, { australia: "admin" }), "public", "an override can't make a module admin-only");
+  assert.equal(access.effectiveLevel(gold, { gold: "public" }), "premium", "market data stays gated");
+  assert.equal(access.effectiveLevel(ops, { ops: "public" }), "admin", "admin tools stay gated");
+  assert.equal(access.effectiveLevel(ops, { ops: "premium" }), "admin");
   assert.equal((await middlewareWith(null)(req("/api/australia-watch/latest"))).status, 200, "public by default");
-  assert.equal((await middlewareWith(null, true, { australia: "owner" })(req("/api/australia-watch/latest"))).status, 401);
-  assert.equal((await middlewareWith(null, true, { australia: "owner" })(req("/Projects/Australia-Watch"))).status, 401);
-  assert.equal((await middlewareWith("owner@a3ro.test", true, { australia: "owner" })(req("/api/australia-watch/latest"))).status, 200);
+  assert.equal((await middlewareWith(null, true, { australia: "premium" })(req("/api/australia-watch/latest"))).status, 401);
+  assert.equal((await middlewareWith("free@x.test", true, { australia: "premium" })(req("/Projects/Australia-Watch"))).status, 403);
+  assert.equal((await middlewareWith("paid@x.test", true, { australia: "premium" }, ["id:paid@x.test"])(req("/api/australia-watch/latest"))).status, 200);
   assert.equal((await middlewareWith(null, true, { gold: "public" })(req("/api/gold/latest"))).status, 401);
 });
 
@@ -135,7 +162,7 @@ test("re-runnable cron jobs match vercel.json exactly", () => {
 });
 
 test("the cron re-run only sends the secret to our own hosts", () => {
-  const guard = load("lib/ownerGuard.ts", { "next/navigation": { notFound() {} }, "./supabase/server": { currentUserIsOwner: async () => true } });
+  const guard = load("lib/ownerGuard.ts", { "next/navigation": { notFound() {} }, "./supabase/server": { currentUserIsAdmin: async () => true } });
   const r = (url, host) => new Request(url, { headers: host ? { host } : {} });
   assert.equal(guard.trustedOrigin(r("https://a3ro.com.au/api/owner/cron")), "https://a3ro.com.au");
   assert.equal(guard.trustedOrigin(r("https://a3ro.com.au/x", "a3ro-abc.vercel.app")), "https://a3ro-abc.vercel.app");

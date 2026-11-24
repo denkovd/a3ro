@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import EarningsBeatView from "./view";
 
 export const metadata: Metadata = {
-  robots: { index: false, follow: false }, // owner-only module (lib/access.ts)
+  robots: { index: false, follow: false }, // Premium module (lib/access.ts)
   title: "A3RO — Earnings Beat Leaderboard",
   description:
     "Watchlist companies ranked by the size, consistency, and recency of their earnings beats — beat streaks walked over full cached history, surprise averages, and per-quarter beat maps on real Finnhub data.",

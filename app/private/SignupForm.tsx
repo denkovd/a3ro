@@ -2,7 +2,7 @@
 import { useState, type FormEvent } from "react";
 import { track } from "../components/track";
 
-/** Email sign-up for a module that isn't public yet (#35). Stored via /api/leads with the module as context. */
+/** Email sign-up to hear when Premium opens (#35). Stored via /api/leads with the module as context. */
 export default function SignupForm({ moduleId }: { moduleId: string }) {
   const [state, setState] = useState<"idle" | "sending" | "ok" | "error">("idle");
 
@@ -23,11 +23,11 @@ export default function SignupForm({ moduleId }: { moduleId: string }) {
     }
   }
 
-  if (state === "ok") return <p role="status" className="text-sm text-[var(--ink-2)]">Thanks. We&rsquo;ll email you when it opens, along with the weekly A3RO note.</p>;
+  if (state === "ok") return <p role="status" className="text-sm text-[var(--ink-2)]">Thanks. We&rsquo;ll email you when Premium opens, along with the weekly A3RO note.</p>;
 
   return <form onSubmit={submit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
     <label className="flex flex-1 flex-col gap-2">
-      <span className="landing-kicker">Get notified when it opens</span>
+      <span className="landing-kicker">Get notified when Premium opens</span>
       <input name="email" type="email" required autoComplete="email" maxLength={320} placeholder="you@example.com"
         className="rounded-sm border border-[var(--line)] bg-transparent px-3 py-2 text-base outline-none focus:border-[var(--line-2)]" />
     </label>

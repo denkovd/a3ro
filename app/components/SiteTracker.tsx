@@ -8,7 +8,7 @@ export default function SiteTracker() {
   const pathname = usePathname();
 
   useEffect(() => {
-    // Owner-only and internal pages aren't counted.
+    // Admin and internal pages aren't counted.
     if (pathname.startsWith("/owner") || pathname.startsWith("/internal") || pathname.startsWith("/auth")) return;
     track("page_view");
   }, [pathname]);

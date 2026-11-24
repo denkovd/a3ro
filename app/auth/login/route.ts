@@ -1,5 +1,5 @@
-// Sends a magic link to an existing account only (shouldCreateUser: false), so this can't be used
-// to sign up. The reply is the same whether or not the email has an account.
+// Sends a magic link. A new email gets an account (free, no Premium) once the link is opened.
+// The reply is the same whether or not the email already has an account.
 import { createLeadBurstGuard, LeadRequestError, readLeadRequest } from "../../api/_lib/leadRequest";
 import { safeNextPath } from "../../../lib/access";
 import { createSupabaseServerClient, supabaseConfigured } from "../../../lib/supabase/server";
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const supabase = await createSupabaseServerClient();
     await supabase.auth.signInWithOtp({
       email,
-      options: { shouldCreateUser: false, emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}` },
+      options: { shouldCreateUser: true, emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}` },
     });
     // Same answer either way: don't reveal which emails have accounts.
     return Response.json({ ok: true }, { headers: NO_STORE });

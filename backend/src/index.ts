@@ -339,3 +339,5 @@ export { getDbUsage, getGrowthSummary, getModuleSettings, saveModuleSetting, get
 export type { DbUsage, GrowthSummary, ModuleSetting, ModuleSignals, AccessLevelSetting } from "./storage/opsRepo";
 export { getManualJobRuns, recordManualJobRun } from "./storage/opsRepo";
 export type { ManualJobRun } from "./storage/opsRepo";
+export { listAccounts, hasPremium, setPremium } from "./storage/userAccessRepo";
+export type { AccountRow } from "./storage/userAccessRepo";

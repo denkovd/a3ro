@@ -1,4 +1,4 @@
-// Public pages for search engines (roadmap #12). Module pages come from lib/access.ts, so owner-only
+// Public pages for search engines (roadmap #12). Module pages come from lib/access.ts, so Premium
 // modules are never listed (they're also noindex and gated).
 import type { MetadataRoute } from "next";
 import { MODULE_ACCESS } from "../lib/access";

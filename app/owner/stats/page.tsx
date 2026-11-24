@@ -3,7 +3,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createDb, getSiteStats, type SiteStats } from "@a3ro/oil-backend";
-import { currentUserIsOwner } from "../../../lib/supabase/server";
+import { currentUserIsAdmin } from "../../../lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ function Table({ title, rows, cols, empty = "Nothing yet." }: { title: string; r
 }
 
 export default async function StatsPage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
-  if (!(await currentUserIsOwner())) notFound();
+  if (!(await currentUserIsAdmin())) notFound();
   const days = [7, 30, 90].includes(Number((await searchParams).days)) ? Number((await searchParams).days) : 30;
   let stats: SiteStats | null = null;
   try { stats = await getSiteStats(await createDb(), days); } catch { stats = null; }

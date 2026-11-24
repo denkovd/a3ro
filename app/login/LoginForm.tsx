@@ -21,7 +21,7 @@ export default function LoginForm({ next }: { next: string }) {
     }
   }
 
-  if (state === "sent") return <p role="status" className="text-sm leading-relaxed text-[var(--ink-2)]">If that email has access, a sign-in link is on its way. Open it in this browser.</p>;
+  if (state === "sent") return <p role="status" className="text-sm leading-relaxed text-[var(--ink-2)]">Check your email for a sign-in link and open it in this browser. If you don&rsquo;t have an account yet, the link creates one.</p>;
 
   return <form onSubmit={submit} className="flex flex-col gap-4">
     <label className="flex flex-col gap-2">

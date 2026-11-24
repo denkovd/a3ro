@@ -4,7 +4,7 @@
 ──────────────────────────────────────────────────────────────── */
 import { motion, useScroll, useSpring } from "framer-motion";
 import { useMotionPreference } from "./motion";
-import { useOwner } from "./useOwner";
+import { useViewer } from "./useViewer";
 
 // Section links are "/#…" so they also work from pages other than the homepage.
 const LINKS = [
@@ -17,12 +17,12 @@ const LINKS = [
 
 const authClass = "rounded-sm border border-[var(--line)] px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--ink)] transition-colors duration-[var(--dur-micro)] hover:border-[var(--line-2)]";
 
-/** Log in when signed out; Ops and Log out for the signed-in owner. */
+/** Log in when signed out; Log out when signed in, with Admin for admins. */
 function AuthLinks() {
-  const owner = useOwner();
-  if (!owner) return <a href="/login" className={authClass}>Log in</a>;
+  const viewer = useViewer();
+  if (!viewer.signedIn) return <a href="/login" className={authClass}>Log in</a>;
   return <span className="flex items-center gap-3">
-    <a href="/owner" className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--ink-2)] hover:text-[var(--ink)]">Ops</a>
+    {viewer.admin ? <a href="/owner" className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--ink-2)] hover:text-[var(--ink)]">Admin</a> : null}
     <form method="post" action="/auth/logout"><button type="submit" className={authClass}>Log out</button></form>
   </span>;
 }

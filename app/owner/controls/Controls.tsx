@@ -32,8 +32,7 @@ export function ModuleControls({ rows }: { rows: ControlRow[] }) {
           <select aria-label={`Access for ${r.label}`} className={select} value={r.level ?? "default"} onChange={(e) => save(r.id, { level: e.target.value })}>
             <option value="default">Default ({r.defaultLevel})</option>
             <option value="public" disabled={r.data === "market"}>Public{r.data === "market" ? " (needs a data licence)" : ""}</option>
-            <option value="owner">Owner only</option>
-            <option value="subscriber">Subscribers (owner only for now)</option>
+            <option value="premium">Premium</option>
           </select>
         </td>
         <td className="py-2">

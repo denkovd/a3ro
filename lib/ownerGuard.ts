@@ -1,19 +1,19 @@
 import { notFound } from "next/navigation";
-import { currentUserIsOwner } from "./supabase/server";
+import { currentUserIsAdmin } from "./supabase/server";
 
-/** Second check behind middleware for owner pages: anyone else gets a 404. */
+/** Second check behind middleware for admin pages: anyone else gets a 404. */
 export async function requireOwner(): Promise<void> {
-  if (!(await currentUserIsOwner())) notFound();
+  if (!(await currentUserIsAdmin())) notFound();
 }
 
-/** For owner write APIs: same-origin requests from the signed-in owner only. */
+/** For admin write APIs: same-origin requests from a signed-in admin only. */
 export async function ownerWriteAllowed(request: Request): Promise<boolean> {
   const origin = request.headers.get("origin");
   const target = new URL(request.url);
   const host = request.headers.get("host");
   if (host) target.host = host;
   if (!origin || origin !== target.origin || request.headers.get("sec-fetch-site") === "cross-site") return false;
-  return currentUserIsOwner();
+  return currentUserIsAdmin();
 }
 
 /** Our own origin for server-to-server calls that carry a secret; null for any host that isn't ours. */

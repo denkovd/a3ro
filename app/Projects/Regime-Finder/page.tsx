@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import RegimeFinderView from "./view";
 
 export const metadata: Metadata = {
-  robots: { index: false, follow: false }, // owner-only module (lib/access.ts)
+  robots: { index: false, follow: false }, // Premium module (lib/access.ts)
   title: "Bull Market Finder 1 — A3RO Intelligence",
   description:
     "Macro-30 bullish-state screener (variant 1) — Money Line trend flips confirmed on daily and weekly closes across a 30-asset macro watchlist, ranked by recency and strength.",

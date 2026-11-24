@@ -87,7 +87,7 @@ export async function getGrowthSummary(db: Queryable): Promise<GrowthSummary> {
 
 /* ── #52 controls: per-module owner settings ── */
 
-export type AccessLevelSetting = "public" | "owner" | "subscriber";
+export type AccessLevelSetting = "public" | "premium";
 export interface ModuleSetting { moduleId: string; level: AccessLevelSetting | null; fitRating: number | null; updatedAt: string | null }
 
 export async function getModuleSettings(db: Queryable): Promise<ModuleSetting[]> {

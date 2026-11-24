@@ -62,7 +62,7 @@ const publicRoutes = [
 ];
 for (const [route, query = ""] of publicRoutes) {
   test(`${route} does not expose database exception details`, async () => {
-    const { GET } = loadModule(`app/api/${route}/route.ts`, { "@a3ro/oil-backend": failedDb, "next/cache": { unstable_cache: fn => fn }, "../../../../lib/supabase/server": { currentUserIsOwner: async () => false } });
+    const { GET } = loadModule(`app/api/${route}/route.ts`, { "@a3ro/oil-backend": failedDb, "next/cache": { unstable_cache: fn => fn }, "../../../../lib/supabase/server": { currentUserHasPremium: async () => false } });
     const response = await GET(new Request(`https://a3ro.test/api/${route}?${query}`));
     assert.equal(response.status, 500);
     assert.deepEqual(await response.json(), { error: "Request could not be completed" });
@@ -464,7 +464,7 @@ test("cron routes record each run; auth failures and API routes don't", async ()
   assert.equal((await broken.withErrorLog("cron:macro", async () => Response.json({ written: 1 }))()).status, 200, "a missing table never changes the response");
 });
 
-test("public oil quotes never expose market-data prices; the owner still gets the live quote", async () => {
+test("public oil quotes never expose market-data prices; Premium accounts still get the live quote", async () => {
   const quotes = [
     { benchmark: "WTI", price: 83.39, kind: "live", source: "yfinance", observedAt: "2026-11-23T06:12:51.000Z", staleness: "fresh", suspect: false, updatedAt: "2026-11-23T06:23:11.000Z" },
     { benchmark: "BRENT", price: 89.1, kind: "settlement", source: "eia", observedAt: "2026-11-17T00:00:00.000Z", staleness: "fresh", suspect: false, updatedAt: "2026-11-18T00:00:00.000Z" },
@@ -480,7 +480,7 @@ test("public oil quotes never expose market-data prices; the owner still gets th
   };
   const load = (owner) => loadModule("app/api/oil/latest/route.ts", {
     "@a3ro/oil-backend": backend,
-    "../../../../lib/supabase/server": { currentUserIsOwner: async () => owner },
+    "../../../../lib/supabase/server": { currentUserHasPremium: async () => owner },
   });
   const pub = await load(false).GET();
   const body = await pub.json();

@@ -2,17 +2,21 @@
    Module access list (roadmap #33 / #34) — the one place that says
    who can see what.
 
-   public     anyone
-   owner      only an email listed in OWNER_EMAILS (fails closed when unset)
-   subscriber reserved for paid tiers (#27); treated as owner-only for now
+   public   anyone, signed in or not
+   premium  signed-in accounts with Premium (user_access.premium, set by
+            an admin from /owner/users today, by payments later). Admins
+            always have Premium.
+   admin    admin tools: only an email listed in OWNER_EMAILS (fails
+            closed when unset)
 
-   `data` records the licensing basis (#18): open-data modules can be
-   public with attribution; market-data modules stay owner-only until
-   the data is licensed. Middleware enforces this list on pages and
-   APIs; the UI uses it only to hide links.
+   Anyone can create an account; an account alone opens nothing that is
+   not public. `data` records the licensing basis (#18): open-data
+   modules can be public with attribution; market-data modules are never
+   public. Middleware enforces this list on pages and APIs; the UI uses
+   it only to hide links.
 ──────────────────────────────────────────────────────────────── */
 
-export type AccessLevel = "public" | "owner" | "subscriber";
+export type AccessLevel = "public" | "premium" | "admin";
 export type DataBasis = "open" | "market";
 
 export interface ModuleAccess {
@@ -26,7 +30,7 @@ export interface ModuleAccess {
   apis: readonly string[];
   /** What the module does, shown on the private page to visitors who can't open it yet (#35). */
   preview?: string;
-  /** Owner tools: logged-out visitors get a plain 404, not the coming-soon page. */
+  /** Admin tools: everyone else gets a plain 404, not the Premium page. */
   hidden?: boolean;
 }
 
@@ -35,22 +39,22 @@ export const MODULE_ACCESS: readonly ModuleAccess[] = [
   { id: "dividend", label: "AI Dividend", level: "public", data: "open", pages: ["/Projects/AI-Dividend"], apis: ["/api/dividend"] },
   { id: "commodity", label: "Commodity Watch (oil corridors)", level: "public", data: "open", pages: ["/Projects/Oil-Tracker"], apis: ["/api/oil"] },
   { id: "macro", label: "Macro view", level: "public", data: "open", pages: [], apis: ["/api/macro", "/api/capital"] },
-  { id: "trend", label: "Bull Market Finder", level: "owner", data: "market", pages: ["/Projects/Bull-Market-Finder", "/Projects/Regime-Finder"], apis: ["/api/bull"],
+  { id: "trend", label: "Bull Market Finder", level: "premium", data: "market", pages: ["/Projects/Bull-Market-Finder", "/Projects/Regime-Finder"], apis: ["/api/bull"],
     preview: "Finds the assets that have just turned bullish on both daily and weekly closes, ranked by how recent and how strong the turn is, with a chart and profile for each." },
-  { id: "earnings", label: "Earnings Beat Leaderboard", level: "owner", data: "market", pages: ["/Projects/Earnings-Beat"], apis: ["/api/leaderboard", "/api/watchlist"],
+  { id: "earnings", label: "Earnings Beat Leaderboard", level: "premium", data: "market", pages: ["/Projects/Earnings-Beat"], apis: ["/api/leaderboard", "/api/watchlist"],
     preview: "Ranks companies by how consistently they beat earnings expectations quarter after quarter, and by how big the surprises are." },
-  { id: "regime", label: "US regime", level: "owner", data: "market", pages: ["/Projects/Regime-Shift"], apis: ["/api/regime"],
+  { id: "regime", label: "US regime", level: "premium", data: "market", pages: ["/Projects/Regime-Shift"], apis: ["/api/regime"],
     preview: "Places the US economy in one of four growth and inflation regimes from official releases, then checks whether markets are pricing the same regime." },
-  { id: "gold", label: "Gold", level: "owner", data: "market", pages: ["/Projects/Gold-Tracker"], apis: ["/api/gold"],
+  { id: "gold", label: "Gold", level: "premium", data: "market", pages: ["/Projects/Gold-Tracker"], apis: ["/api/gold"],
     preview: "Follows gold across its main trading hubs, with prices, COMEX vault stocks and the macro drivers behind the moves." },
-  { id: "ops", label: "Owner tools", level: "owner", data: "open", pages: ["/owner"], apis: ["/api/owner"], hidden: true },
-  { id: "btc", label: "BTC", level: "owner", data: "market", pages: ["/Projects/BTC-Tracker"], apis: ["/api/btc"],
+  { id: "ops", label: "Admin tools", level: "admin", data: "open", pages: ["/owner"], apis: ["/api/owner"], hidden: true },
+  { id: "btc", label: "BTC", level: "premium", data: "market", pages: ["/Projects/BTC-Tracker"], apis: ["/api/btc"],
     preview: "Follows bitcoin across major venues, with price, market structure and the macro backdrop in one view." },
 ];
 
 /**
  * Price sources that may be shown publicly (roadmap #18 / #58): official open data only.
- * Yahoo Finance, Alpha Vantage and other market-data feeds stay owner-only until licensed.
+ * Yahoo Finance, Alpha Vantage and other market-data feeds stay Premium-only.
  */
 export const OPEN_DATA_PRICE_SOURCES: readonly string[] = ["eia", "fred"];
 
@@ -62,18 +66,29 @@ const matches = (pathname: string, prefix: string) => pathname === prefix || pat
 
 export interface PathAccess { module: ModuleAccess; kind: "page" | "api" }
 
-/** Owner overrides from the Ops controls (#52), keyed by module id. */
+/** Admin overrides from the Ops controls (#52), keyed by module id. */
 export type LevelOverrides = Readonly<Record<string, AccessLevel | null | undefined>>;
 
+/** Who is asking: signed in or not, with Premium, an admin. */
+export interface Viewer { signedIn: boolean; premium: boolean; admin: boolean }
+export const ANONYMOUS: Viewer = { signedIn: false, premium: false, admin: false };
+
 /**
- * A module's level after owner overrides. Market-data modules can never become public (licensing,
- * #18), and owner tools can never be opened up: such overrides are ignored.
+ * A module's level after admin overrides. Only public ⇄ premium can be switched: market-data
+ * modules can never become public (licensing, #18), and admin tools can never be opened up.
  */
 export function effectiveLevel(module: ModuleAccess, overrides: LevelOverrides = {}): AccessLevel {
   const override = overrides[module.id];
-  if (!override) return module.level;
-  if (override === "public" && (module.data === "market" || module.hidden)) return module.level;
+  if (!override || module.level === "admin" || override === "admin") return module.level;
+  if (override === "public" && module.data === "market") return module.level;
   return override;
+}
+
+/** Whether a viewer may open something at this level. */
+export function viewerCanOpen(level: AccessLevel, viewer: Viewer): boolean {
+  if (level === "public") return true;
+  if (level === "premium") return viewer.premium || viewer.admin;
+  return viewer.admin;
 }
 
 /** The module a path belongs to (any level), or null when it isn't a module path. */
@@ -97,21 +112,22 @@ export function isGatedPath(pathname: string): boolean {
   return gatedModuleForPath(pathname) !== null;
 }
 
-/** Owners are listed by email in OWNER_EMAILS (comma-separated). Unset or empty means nobody is an owner. */
-export function isOwnerEmail(email: string | null | undefined, ownerEmails = process.env.OWNER_EMAILS): boolean {
+/** Admins are listed by email in OWNER_EMAILS (comma-separated). Unset or empty means nobody is an admin. */
+export function isAdminEmail(email: string | null | undefined, ownerEmails = process.env.OWNER_EMAILS): boolean {
   if (!email || !ownerEmails) return false;
   const owners = ownerEmails.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
   return owners.includes(email.trim().toLowerCase());
 }
 
-/** A signed-in user is the owner only if their email is listed AND confirmed (Google emails arrive confirmed). */
-export function isOwnerUser(user: { email?: string | null; email_confirmed_at?: string | null } | null | undefined, ownerEmails = process.env.OWNER_EMAILS): boolean {
-  return Boolean(user?.email_confirmed_at) && isOwnerEmail(user?.email, ownerEmails);
+/** A signed-in user is an admin only if their email is listed AND confirmed (Google emails arrive confirmed). */
+export function isAdminUser(user: { email?: string | null; email_confirmed_at?: string | null } | null | undefined, ownerEmails = process.env.OWNER_EMAILS): boolean {
+  return Boolean(user?.email_confirmed_at) && isAdminEmail(user?.email, ownerEmails);
 }
 
-/** Page routes a non-owner may be linked to (module switcher, homepage). */
-export function canSeeRoute(route: string, owner: boolean): boolean {
-  return owner || !isGatedPath(route);
+/** Page routes a viewer may be linked to (module switcher, homepage). */
+export function canSeeRoute(route: string, viewer: Viewer): boolean {
+  const hit = moduleForPath(route);
+  return !hit || viewerCanOpen(hit.module.level, viewer);
 }
 
 /** Only same-site relative paths are allowed as post-login destinations. */
