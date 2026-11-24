@@ -7,7 +7,9 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 /**
- * Independent budget: slow oil/market feeds must not prevent ABS, RBA and OECD refreshes.
+ * Independent budget: slow oil/market feeds must not prevent ABS and RBA refreshes.
+ * OECD series are not fetched here: sdmx.oecd.org refuses Vercel's servers (HTTP 500), so the
+ * GitHub Actions workflow oecd-refresh.yml fetches them at 03:00 UTC (roadmap #78).
  * Each series fails on its own (recorded as degraded), so a partial failure is still a 200 with the
  * failed series listed under `degraded`. Only a refresh where every series failed is a 502.
  */
@@ -15,11 +17,11 @@ export const GET = withErrorLog("cron:australia-watch", async function GET(reque
   const unauthorized = requireCronAuth(request);
   if (unauthorized) return unauthorized;
   try {
-    const report = await runAustraliaWatchCycle(await createDb());
+    const report = await runAustraliaWatchCycle(await createDb(), { sources: ["abs_sdmx", "rba_csv"] });
     const entries = Object.entries(report.results);
     const degraded = entries.filter(([, result]) => result.error).map(([indicator]) => indicator);
     const allFailed = entries.length > 0 && degraded.length === entries.length;
-    if (allFailed) console.error("Australia Watch: every ABS, RBA and OECD series failed to refresh");
+    if (allFailed) console.error("Australia Watch: every ABS and RBA series failed to refresh");
     else if (degraded.length) console.warn(`Australia Watch: ${degraded.length} of ${entries.length} series failed to refresh: ${degraded.join(", ")}`);
     // A partial failure is a 200, so the wrapper won't see it: log each failed series on its own.
     if (!allFailed) await Promise.all(degraded.map((indicator) => logAppError("cron:australia-watch", `${indicator}: ${report.results[indicator].error}`)));

@@ -1,7 +1,7 @@
 // Data health (Ops, roadmap #47): cron runs, freshness per series, data issues.
 import { createDb, getCronRuns, getDataHealth, getRecentAppErrors } from "@a3ro/oil-backend";
 import type { CronRunRow, DataHealth, SeriesFreshness, SeriesHealth } from "@a3ro/oil-backend";
-import { CRON_JOBS, cronOverdue } from "../../../lib/cronJobs";
+import { SCHEDULED_JOBS, cronOverdue } from "../../../lib/cronJobs";
 import { requireOwner } from "../../../lib/ownerGuard";
 import { OpsPage, OpsSection, OpsTable } from "../ui";
 
@@ -46,7 +46,7 @@ export default async function DataHealthPage() {
   }
 
   const latestBy = new Map((runs?.latest ?? []).map((r) => [r.job, r]));
-  const jobs = CRON_JOBS.map((j) => {
+  const jobs = SCHEDULED_JOBS.map((j) => {
     const last = latestBy.get(j.job) ?? null;
     return { ...j, last, overdue: runs !== null && cronOverdue(last?.startedAt ?? null, j.everyHours, now) };
   });
@@ -67,7 +67,7 @@ export default async function DataHealthPage() {
       </> : <Tag tone={GREEN}>All jobs ran and every series is fresh or aging.</Tag>}
     </p>}
 
-    <OpsSection title="Scheduled jobs" note={<>From <code>vercel.json</code>. A job is overdue once 1.5 intervals pass without a run.</>}>
+    <OpsSection title="Scheduled jobs" note={<>From <code>vercel.json</code>, plus the GitHub job that fetches the OECD series. A job is overdue once 1.5 intervals pass without a run.</>}>
       {runs === null && !dbDown ? <p className="mb-3 text-xs text-[var(--ink-2)]">Run history isn&rsquo;t saved yet: run <code>npm --prefix backend run migrate:cron-runs</code>. Runs are recorded from the next cron onwards.</p> : null}
       <OpsTable cols={["Job", "Schedule", "Last run", "Took", "Result", "Series", "Error"]} rows={jobs.map((j) => [
         <span key="j" className="font-mono">{j.job}</span>,

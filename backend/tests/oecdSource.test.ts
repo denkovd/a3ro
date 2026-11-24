@@ -98,3 +98,22 @@ describe("OECD composite indicators", () => {
     assert.equal(AUSTRALIA_INDICATORS.filter((i) => AUSTRALIA_REGISTRY[i].source === "oecd_sdmx").length, 3);
   });
 });
+
+describe("Australia Watch sources split (#78)", () => {
+  const db = { query: async () => ({ rows: [], rowCount: 0 }) };
+  const failAll = (async () => { throw new TypeError("offline"); }) as unknown as typeof fetch;
+  const oecd = AUSTRALIA_INDICATORS.filter((i) => AUSTRALIA_REGISTRY[i].source === "oecd_sdmx");
+
+  test("the Vercel cron's sources leave out every OECD series", async () => {
+    const report = await runAustraliaWatchCycle(db as never, { now: () => NOW, oecdRetryDelaysMs: [], oecdSpacingMs: 0, fetchImpl: failAll, sources: ["abs_sdmx", "rba_csv"] });
+    const ids = Object.keys(report.results);
+    assert.ok(ids.length > 20);
+    for (const id of oecd) assert.ok(!ids.includes(id), id);
+  });
+
+  test("the GitHub job refreshes only the OECD series", async () => {
+    const report = await runAustraliaWatchCycle(db as never, { now: () => NOW, oecdRetryDelaysMs: [], oecdSpacingMs: 0, fetchImpl: failAll, sources: ["oecd_sdmx"] });
+    assert.deepEqual(Object.keys(report.results).sort(), [...oecd].sort());
+    assert.equal(oecd.length, 3);
+  });
+});

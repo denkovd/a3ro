@@ -19,6 +19,14 @@ export const CRON_JOBS: CronJob[] = (vercel.crons ?? []).map((c) => ({
   job: c.path.replace(/^\/api\/cron\//, ""), path: c.path, schedule: c.schedule, ...cronInterval(c.schedule),
 }));
 
+/** Jobs scheduled in GitHub Actions that record their runs in cron_runs too (not re-runnable from Ops). */
+export const GITHUB_JOBS: CronJob[] = [
+  { job: "australia-oecd", path: ".github/workflows/oecd-refresh.yml", schedule: "0 3 * * *", ...cronInterval("0 3 * * *") },
+].map((j) => ({ ...j, label: `${j.label} · GitHub` }));
+
+/** Everything Data health checks: the Vercel crons, then the GitHub jobs. */
+export const SCHEDULED_JOBS: CronJob[] = [...CRON_JOBS, ...GITHUB_JOBS];
+
 /** A run is overdue once 1.5 intervals have passed without one (allows for Vercel's cron jitter). */
 export function cronOverdue(lastStartedAt: string | null, everyHours: number, now = new Date()): boolean {
   if (!lastStartedAt) return true;

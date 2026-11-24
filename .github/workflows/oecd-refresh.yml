@@ -1,0 +1,47 @@
+# ──────────────────────────────────────────────────────────────
+# Australia Watch — OECD series (roadmap #78).
+# sdmx.oecd.org refuses Vercel's servers (HTTP 500), so the OECD
+# leading indicator and consumer/business confidence are fetched
+# here instead of in the Vercel australia-watch cron (02:15 UTC).
+# Monthly data: one run a day is plenty.
+#
+# Required repo secret: DATABASE_URL (pooled Supabase string).
+# ──────────────────────────────────────────────────────────────
+name: oecd-refresh
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oecd-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # GHA runners often pick the unreachable Supabase AAAA first.
+      NODE_OPTIONS: --dns-result-order=ipv4first
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Fetch OECD series
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/run-australia-oecd.ts

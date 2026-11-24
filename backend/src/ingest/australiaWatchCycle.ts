@@ -1,4 +1,4 @@
-import { AUSTRALIA_INDICATORS, AUSTRALIA_REGISTRY } from "../australia/registry";
+import { AUSTRALIA_INDICATORS, AUSTRALIA_REGISTRY, type AustraliaSourceKind } from "../australia/registry";
 import { fetchAbsSeries } from "../sources/abs";
 import { createRbaTableLoader, fetchRbaSeries } from "../sources/rba";
 import { fetchOecdSeries } from "../sources/oecd";
@@ -22,6 +22,9 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export async function runAustraliaWatchCycle(db: Queryable, opts: {
   now?: () => Date; fetchImpl?: typeof fetch; oecdRetryDelaysMs?: readonly number[];
   oecdSpacingMs?: number; budgetMs?: number; clock?: () => number;
+  /** Only refresh series from these sources (default: all). The Vercel cron leaves out OECD, which
+   *  refuses Vercel's servers; a GitHub Actions job fetches the OECD series instead (#78). */
+  sources?: readonly AustraliaSourceKind[];
 } = {}): Promise<AustraliaWatchCycleReport> {
   const startedAt = (opts.now ?? (() => new Date()))().toISOString();
   const clock = opts.clock ?? Date.now;
@@ -32,6 +35,7 @@ export async function runAustraliaWatchCycle(db: Queryable, opts: {
   const loadRbaTable = createRbaTableLoader({ fetchImpl: opts.fetchImpl });
   let oecdCalls = 0;
   for (const indicator of AUSTRALIA_INDICATORS) {
+    if (opts.sources && !opts.sources.includes(AUSTRALIA_REGISTRY[indicator].source)) continue;
     try {
       if (clock() >= deadlineMs) throw new Error(BUDGET_SKIP_ERROR);
       const source = AUSTRALIA_REGISTRY[indicator].source;
