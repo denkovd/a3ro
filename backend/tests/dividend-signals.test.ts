@@ -176,3 +176,25 @@ describe("Signal fetching and storage", () => {
     assert.deepEqual(snapshot.sources.map(item => item.health), ["unavailable", "healthy", "unavailable"]);
   });
 });
+
+describe("signal downloads retry a network error once", () => {
+  const csv = fixture("indeed-sample.csv").toString("utf8");
+  test("a dropped connection on the first try still succeeds", async () => {
+    let calls = 0;
+    const fetchImpl = (async () => {
+      calls += 1;
+      if (calls === 1) throw new TypeError("fetch failed");
+      return new Response(csv);
+    }) as typeof fetch;
+    const results = await fetchSignals({ fetchImpl, sources: ["indeed"] });
+    assert.equal(calls, 2);
+    assert.ok(results[0].dataset, "dataset after retry");
+  });
+  test("an HTTP error is not retried", async () => {
+    let calls = 0;
+    const fetchImpl = (async () => { calls += 1; return new Response("no", { status: 503 }); }) as typeof fetch;
+    const results = await fetchSignals({ fetchImpl, sources: ["indeed"] });
+    assert.equal(calls, 1);
+    assert.equal(results[0].dataset, null);
+  });
+});

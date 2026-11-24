@@ -17,8 +17,20 @@ const USER_AGENT = "Mozilla/5.0 (compatible; A3RO research; AI Dividend module)"
 
 type Fetch = typeof fetch;
 
-async function download(url: string, fetchImpl: Fetch, label: string, accept?: string): Promise<Uint8Array> {
-  const response = await fetchImpl(url, { headers: { "User-Agent": USER_AGENT, ...(accept ? { Accept: accept } : {}) }, signal: AbortSignal.timeout(90_000) });
+/** A network error ("fetch failed": reset, DNS, TLS) is often transient, so it gets one retry.
+ *  HTTP errors are not retried: they say something about the request or the source. */
+export const NETWORK_RETRY_DELAY_MS = 5_000;
+
+async function download(url: string, fetchImpl: Fetch, label: string, accept?: string, retryDelayMs = NETWORK_RETRY_DELAY_MS): Promise<Uint8Array> {
+  const request = () => fetchImpl(url, { headers: { "User-Agent": USER_AGENT, ...(accept ? { Accept: accept } : {}) }, signal: AbortSignal.timeout(90_000) });
+  let response: Response;
+  try { response = await request(); }
+  catch (error) {
+    if (!(error instanceof TypeError)) throw error;
+    await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+    try { response = await request(); }
+    catch (retryError) { throw new Error(`${label} network error after one retry: ${retryError instanceof Error ? retryError.message : String(retryError)}`); }
+  }
   if (!response.ok) throw new Error(`${label} returned HTTP ${response.status}`);
   const length = Number(response.headers.get("content-length"));
   if (Number.isFinite(length) && length > MAX_BYTES) throw new Error(`${label} download exceeds the supported size`);
