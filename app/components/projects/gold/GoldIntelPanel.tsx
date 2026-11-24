@@ -76,7 +76,7 @@ export default function GoldIntelPanel({ narrow, selectedHolder, selectedMine, s
   return (
     <aside aria-label="Gold intelligence" className={`absolute z-20 flex flex-col overflow-hidden rounded-sm border border-[var(--line)] bg-[rgba(8,9,9,0.94)] backdrop-blur-md ${narrow ? "inset-x-3 bottom-14 max-h-[44%]" : "bottom-6 right-6 top-4 w-[340px]"}`}>
       <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
-        <div><p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">P·02 / Gold intelligence</p><h3 className="mt-1 text-sm font-medium text-[var(--ink)]">{hasFocus ? "Location detail" : "Mines · holders · flows"}</h3></div>
+        <div><p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--ink-3)]">P·03 / Gold intelligence</p><h3 className="mt-1 text-sm font-medium text-[var(--ink)]">{hasFocus ? "Location detail" : "Mines · holders · flows"}</h3></div>
         {hasFocus ? <button type="button" onClick={closePanel} className="px-2 py-2 text-[11px] text-[var(--ink-2)] hover:text-[var(--ink)]" aria-label="Back to gold locations">← Back</button> : null}
         {narrow ? <button type="button" aria-expanded={mobileOpen} aria-controls="gold-intel-content" onClick={() => setCollapsedFor(mobileOpen ? selectionKey : null)} className="px-2 py-2 text-[11px] text-[var(--ink-2)]">{mobileOpen ? "Hide" : "Show"}</button> : null}
       </div>

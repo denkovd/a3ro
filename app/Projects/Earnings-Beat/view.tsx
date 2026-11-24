@@ -155,7 +155,7 @@ export default function EarningsBeatView() {
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
               <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-                P·04 — Intelligence module
+                P·06 — Intelligence module
               </p>
               <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
                 Earnings Beat Leaderboard
@@ -408,7 +408,7 @@ export default function EarningsBeatView() {
       {/* ── bottom chrome ── */}
       <footer className="absolute inset-x-0 bottom-0 z-30 flex h-12 items-center justify-between border-t border-[var(--line)] bg-[rgba(6,7,7,0.55)] px-6 backdrop-blur-md md:px-10">
         <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-          P·04 — Earnings Beat Leaderboard
+          P·06 — Earnings Beat Leaderboard
         </p>
         <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
           Surprise readouts on free data feeds · not investment advice

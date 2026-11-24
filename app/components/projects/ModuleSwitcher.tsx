@@ -13,7 +13,8 @@ import { useViewer } from "../useViewer";
 
 export type ModuleId = "trend" | "regime" | "earnings" | "australia" | "dividend";
 
-const MODULE_SEQUENCE: ModuleId[] = ["trend", "regime", "earnings", "australia", "dividend"];
+// Same order as the homepage: free modules first, then Premium.
+const MODULE_SEQUENCE: ModuleId[] = ["australia", "dividend", "trend", "regime", "earnings"];
 
 const MODULE_META: Record<ModuleId, { label: string; route: string }> = {
   trend: { label: "Bull Market Finder", route: "/Projects/Bull-Market-Finder" },

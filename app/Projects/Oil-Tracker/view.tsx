@@ -172,7 +172,7 @@ export default function OilTrackerView() {
       {/* ── bottom chrome ── */}
       <footer className="pointer-events-none absolute inset-x-0 bottom-0 z-20 hidden h-10 items-center justify-between border-t border-[var(--line)] bg-[rgba(6,7,7,0.55)] px-6 backdrop-blur-md md:flex md:px-10">
         <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
-          P·01 — Oil Tracker
+          P·03 — Oil Tracker
         </p>
         <a href="/terms" className="pointer-events-auto font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)] hover:text-[var(--ink)]">
           General information only · not financial advice

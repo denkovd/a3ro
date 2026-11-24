@@ -146,7 +146,7 @@ export default function RegimeShiftView() {
         <div className="mx-auto max-w-5xl px-6 pb-16 pt-10 md:px-10">
           {/* title */}
           <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-            P·03 — Intelligence module
+            P·05 — Intelligence module
           </p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--ink)] md:text-4xl">
             US regime
@@ -375,7 +375,7 @@ export default function RegimeShiftView() {
 
       {/* ── bottom chrome ── */}
       <footer className="absolute inset-x-0 bottom-0 z-30 flex h-12 items-center justify-between border-t border-[var(--line)] bg-[rgba(6,7,7,0.55)] px-6 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)] backdrop-blur-md md:px-10">
-        <span>P·03 — US regime</span>
+        <span>P·05 — US regime</span>
         <span>
           {live
             ? `Macro read ${formatDate(snap.runDate)}`

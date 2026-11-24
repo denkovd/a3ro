@@ -121,7 +121,7 @@ export default function EarningsBeat({ className = "" }: { className?: string })
         {/* identity — left */}
         <div className="landing-card-identity pointer-events-none absolute left-5 top-5 max-w-[58%] md:left-7 md:top-7 md:max-w-[48%]">
           <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--ink-3)]">
-            P·04 — <span style={{ color: BEAT_ACCENT }}>Module</span>
+            P·06 — <span style={{ color: BEAT_ACCENT }}>Module</span>
           </p>
           <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--ink-2)]">
             A3RO Intelligence
