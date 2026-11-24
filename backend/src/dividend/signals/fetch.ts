@@ -1,4 +1,5 @@
 import { parseBtos, parseEci, parseIndeedSectors, readEpochArchive } from "./parsers";
+import { fredBodyToCsv, fredSeriesUrl } from "../../sources/fredMacro";
 import { FRED_SERIES, STATE_FIPS, droughtUrl, eiaRetailUrl, parseDataCentres, parseDroughtState, parseEiaRetail, parseFredPrices } from "../constraints/parsers";
 import { STEP3_SOURCES, type DroughtPayload, type SignalDataset, type SignalPayload, type SignalSource } from "./types";
 
@@ -70,7 +71,7 @@ const PARSERS: { [S in SignalSource]: (fetchImpl: Fetch, now: Date) => Promise<S
   },
   fred: async (fetchImpl, now) => {
     const start = `${now.getUTCFullYear() - 11}-01-01`;
-    const get = async (id: string) => parseFredPrices(text(await download(`${SIGNAL_URLS.fred}?id=${id}&cosd=${start}`, fetchImpl, "FRED")), id);
+    const get = async (id: string) => parseFredPrices(fredBodyToCsv(text(await download(fredSeriesUrl(id, start), fetchImpl, "FRED")), id), id);
     return { series: { uranium: await get(FRED_SERIES.uranium), copper: await get(FRED_SERIES.copper) } };
   },
   datacentres: async fetchImpl => parseDataCentres(text(await download(SIGNAL_URLS.datacentres, fetchImpl, "Epoch data centres"))),

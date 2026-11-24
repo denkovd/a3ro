@@ -60,6 +60,10 @@ export function tonsToMegatons(mt: number): number {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Waits before retrying a gate that answered "Too many requests", and the most spent waiting per run. */
+const RETRY_WAITS_MS = [10_000, 25_000];
+const RETRY_BUDGET_MS = 60_000;
+
 interface ChokepointConfig {
   corridor: CorridorId;
   portid: string;
@@ -119,18 +123,33 @@ export class PortWatchSource extends CorridorBaseSource {
     // drift) must not discard records already fetched for the others.
     // Sequential + short pause stays polite to the public ArcGIS endpoint
     // (corridor pipeline has no DB-backed rate gate yet).
-    const pauseMs = process.env.NODE_ENV === "test" ? 0 : 250;
+    const testing = process.env.NODE_ENV === "test";
+    const pauseMs = testing ? 0 : 1_500;
+    // "Too many requests" from the ArcGIS endpoint is usually momentary: wait and try that gate
+    // again, up to RETRY_WAITS_MS, but never spend more than RETRY_BUDGET_MS waiting in one run.
+    const retryWaits = testing ? [0, 0] : RETRY_WAITS_MS;
+    let waited = 0;
     for (const cfg of CHOKEPOINTS) {
-      try {
-        const rows = await this.request(cfg);
-        records.push(...this.rowsToRecords(cfg, rows));
-        // A chokepoint returning zero usable rows is not an error.
-      } catch (e) {
-        const err =
-          e instanceof SourceError
-            ? e
-            : new SourceError(this.descriptor.id, "bad_payload", String(e), { cause: e });
-        failures.push({ corridor: cfg.corridor, err });
+      for (let attempt = 0; ; attempt++) {
+        try {
+          const rows = await this.request(cfg);
+          records.push(...this.rowsToRecords(cfg, rows));
+          // A chokepoint returning zero usable rows is not an error.
+          break;
+        } catch (e) {
+          const err =
+            e instanceof SourceError
+              ? e
+              : new SourceError(this.descriptor.id, "bad_payload", String(e), { cause: e });
+          const wait = retryWaits[attempt];
+          if (err.kind === "rate_limited" && wait !== undefined && waited + wait <= (testing ? Infinity : RETRY_BUDGET_MS)) {
+            waited += wait;
+            await sleep(wait);
+            continue;
+          }
+          failures.push({ corridor: cfg.corridor, err });
+          break;
+        }
       }
       if (pauseMs > 0) await sleep(pauseMs);
     }
@@ -202,7 +221,7 @@ export class PortWatchSource extends CorridorBaseSource {
 
   private textToKind(text: string): SourceErrorKind {
     const t = text.toLowerCase();
-    if (/(busy|timeout|limit)/.test(t)) return "rate_limited";
+    if (/(busy|timeout|limit|too many)/.test(t)) return "rate_limited";
     return "upstream_error";
   }
 

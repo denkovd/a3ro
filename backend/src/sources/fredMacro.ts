@@ -144,6 +144,33 @@ function startDate(now: Date, lookbackDays: number): string {
   return new Date(now.getTime() - lookbackDays * 86_400_000).toISOString().slice(0, 10);
 }
 
+/* FRED has two doors. The official API (api.stlouisfed.org) needs a free key (FRED_API_KEY) and is
+   the one FRED supports for programs; the fredgraph.csv link needs none but has been failing or
+   stalling when called from Vercel ("fetch failed"). With a key set, every FRED read here uses the
+   API; without one, the CSV link. Either way the caller gets fredgraph-style CSV text. */
+const FRED_API_URL = "https://api.stlouisfed.org/fred/series/observations";
+export const FRED_TIMEOUT_MS = 20_000;
+
+const fredApiKey = () => process.env.FRED_API_KEY?.trim() || "";
+
+/** The URL to read one series from `start` (YYYY-MM-DD): the API when a key is set, else the CSV link. */
+export function fredSeriesUrl(seriesId: string, start: string, apiKey = fredApiKey()): string {
+  if (apiKey) {
+    const p = new URLSearchParams({ series_id: seriesId, observation_start: start, file_type: "json", api_key: apiKey });
+    return `${FRED_API_URL}?${p.toString()}`;
+  }
+  return `${BASE_URL}?id=${encodeURIComponent(seriesId)}&cosd=${start}`;
+}
+
+/** Turn a response body from fredSeriesUrl into fredgraph CSV (the API's JSON is converted). */
+export function fredBodyToCsv(body: string, seriesId: string): string {
+  const trimmed = body.trimStart();
+  if (!trimmed.startsWith("{")) return body;
+  const json = JSON.parse(trimmed) as { observations?: { date: string; value: string }[]; error_message?: string };
+  if (!json.observations) throw new Error(`FRED API error for ${seriesId}: ${json.error_message ?? "no observations"}`);
+  return [`observation_date,${seriesId}`, ...json.observations.map((o) => `${o.date},${o.value}`)].join("\n");
+}
+
 /**
  * Parse FRED's fredgraph CSV. Header line is `observation_date,{SERIES}`
  * (older exports say `DATE,VALUE`); every other line is `date,value`
@@ -183,18 +210,21 @@ export async function fetchFredSeries(
     opts.lookbackDays ?? cfg.lookbackDays ?? (cfg.frequency === "monthly" ? 1400 : 420);
   const doFetch = opts.fetchImpl ?? fetch;
 
-  const url = `${BASE_URL}?id=${encodeURIComponent(cfg.seriesId)}&cosd=${startDate(now, lookbackDays)}`;
+  const url = fredSeriesUrl(cfg.seriesId, startDate(now, lookbackDays));
 
   let res: Response;
   try {
-    res = await doFetch(url);
+    // Without a timeout a stalled FRED connection held the whole ingest cron until Vercel killed it.
+    res = await doFetch(url, { signal: AbortSignal.timeout(FRED_TIMEOUT_MS) });
   } catch (e) {
-    fail("upstream_error", `FRED fetch failed for ${cfg.seriesId}: ${String(e)}`, e);
+    fail("upstream_error", `FRED fetch failed for ${cfg.seriesId}: ${String(e).replace(/api_key=[^&\s]+/g, "api_key=REDACTED")}`, e);
   }
   if (res.status === 429) fail("rate_limited", `FRED throttled ${cfg.seriesId} (429)`);
   if (!res.ok) fail("upstream_error", `FRED ${cfg.seriesId} HTTP ${res.status}`);
 
-  const text = await res.text();
+  let text = await res.text();
+  try { text = fredBodyToCsv(text, cfg.seriesId); }
+  catch (e) { fail("bad_payload", String(e instanceof Error ? e.message : e), e); }
   // An invalid id returns an HTML error page, not CSV — guard on it.
   if (/<html/i.test(text)) fail("bad_payload", `FRED returned HTML (bad series id?) for ${cfg.seriesId}`);
 

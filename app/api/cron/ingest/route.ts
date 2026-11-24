@@ -27,13 +27,9 @@ import {
   runSeasonalCycle, runMacroCycle, runPositioningCycle, runScoreCycle,
   runGoldCycle, runGoldFlowCycle, runBtcCycle, runBtcFlowCycle,
 } from "@a3ro/oil-backend";
-import type {
-  CorridorCycleReport, BaselineCycleReport, GateSpreadCycleReport, SeasonalCycleReport,
-  MacroCycleReport, PositioningCycleReport, ScoreCycleReport,
-  GoldCycleReport, GoldFlowCycleReport, BtcCycleReport, BtcFlowCycleReport,
-} from "@a3ro/oil-backend";
+import type { MacroCycleReport } from "@a3ro/oil-backend";
 import { requireCronAuth } from "../../_lib/cronAuth";
-import { runDividendCycle, type DividendCycleReport } from "../../../../backend/src/ingest/dividendCycle";
+import { runDividendCycle } from "../../../../backend/src/ingest/dividendCycle";
 import { withErrorLog } from "../../_lib/errorLog";
 
 export const runtime = "nodejs";
@@ -43,6 +39,8 @@ export const dynamic = "force-dynamic";
 // Price + corridor cycles plus baselines/seasonal/macro/positioning
 // need a five-minute budget for the independent source cycles.
 export const maxDuration = 300;
+/** No step starts after this; leaves a minute for the slowest step and the response. */
+const STEP_BUDGET_MS = 240_000;
 
 export const GET = withErrorLog("cron:ingest", async function GET(request: Request) {
   const unauthorized = requireCronAuth(request);
@@ -50,126 +48,57 @@ export const GET = withErrorLog("cron:ingest", async function GET(request: Reque
 
   try {
     const db = await createDb();
+    const began = Date.now();
+    // Each step's duration, and any step skipped for time, so Ops → Data health shows the slow one.
+    const timings: Record<string, number | "skipped"> = {};
+    const skipped: string[] = [];
+    // Vercel kills the function at 300 s, and a killed run records nothing. So no step starts after
+    // STEP_BUDGET_MS; the rest are reported as skipped and run again tomorrow (all are idempotent).
+    async function step<T>(name: string, run: () => Promise<T>): Promise<T | { error: string }> {
+      if (Date.now() - began > STEP_BUDGET_MS) {
+        timings[name] = "skipped";
+        skipped.push(name);
+        return { error: `skipped: ${Math.round((Date.now() - began) / 1000)} s used before this step started` };
+      }
+      const t = Date.now();
+      try {
+        return await run();
+      } catch (e) {
+        return { error: e instanceof Error ? e.message : String(e) };
+      } finally {
+        timings[name] ??= Math.round((Date.now() - t) / 100) / 10;
+      }
+    }
+
+    // Price first: the load-bearing feed. Its failure fails the run (caught below).
+    const t0 = Date.now();
     const report = await runIngestionCycle(db);
+    timings.price = Math.round((Date.now() - t0) / 100) / 10;
 
-    // Corridor ingestion runs in its own try/catch so it can NEVER
-    // fail price ingestion — price data is the load-bearing feed.
-    let corridors: CorridorCycleReport | { error: string };
-    try {
-      corridors = await runCorridorCycle(db);
-    } catch (e) {
-      corridors = { error: e instanceof Error ? e.message : String(e) };
-    }
-
-    // Gate baseline refresh — same isolation posture. Internally
-    // self-guards on freshness (runs ~monthly), so most days this is
-    // a cheap no-op db read rather than a live PortWatch fetch.
-    let baselines: BaselineCycleReport | { error: string };
-    try {
-      baselines = await runBaselineCycle(db);
-    } catch (e) {
-      baselines = { error: e instanceof Error ? e.message : String(e) };
-    }
-
-    // Gate weekly spreads — how much each gate's 7-day average normally
-    // moves. After the baseline refresh (it attaches to those rows), in
-    // its own try/catch: a five-year PortWatch row fetch, self-guarded
-    // to run ~monthly, that must never fail the baselines above.
-    let gateSpreads: GateSpreadCycleReport | { error: string };
-    try {
-      gateSpreads = await runGateSpreadCycle(db);
-    } catch (e) {
-      gateSpreads = { error: e instanceof Error ? e.message : String(e) };
-    }
-
-    // Week-of-year seasonal norms (WPSR stocks) — same isolation +
-    // freshness-guard posture as the gate baselines above (~monthly
-    // EIA 5y-history fetch; most days a cheap no-op read).
-    let seasonal: SeasonalCycleReport | { error: string };
-    try {
-      seasonal = await runSeasonalCycle(db);
-    } catch (e) {
-      seasonal = { error: e instanceof Error ? e.message : String(e) };
-    }
-
-    // Macro layer (FRED, keyless) — GRID regime (P·06) + Macro pressure
-    // (#5), same isolation posture. Runs after price ingestion so the
-    // oil-momentum divergence input reads fresh WTI closes.
-    let macro: MacroCycleReport | { error: string };
-    try {
-      macro = await runMacroCycle(db);
-    } catch (e) {
-      macro = { error: e instanceof Error ? e.message : String(e) };
-    }
-    // Panel is internal plumbing for goldCycle below (avoids a second
-    // 7-series FRED fetch) — stripped from the JSON response, not
-    // meant to be part of the cron's public report.
+    // Each later step is isolated: one failure can never fail price ingestion or another step.
+    // Gate baselines, weekly spreads and seasonal norms self-guard on freshness (~monthly), so
+    // most days they are cheap reads.
+    const corridors = await step("corridors", () => runCorridorCycle(db));
+    const baselines = await step("baselines", () => runBaselineCycle(db));
+    const gateSpreads = await step("gateSpreads", () => runGateSpreadCycle(db));
+    const seasonal = await step("seasonal", () => runSeasonalCycle(db));
+    // Macro (FRED) after price so the oil-momentum divergence reads fresh WTI closes.
+    const macro: MacroCycleReport | { error: string } = await step("macro", () => runMacroCycle(db));
+    // The panel feeds the gold step (saves a second FRED fetch); it isn't part of the report.
     const macroPanel = "panel" in macro ? macro.panel : undefined;
     const macroForResponse: MacroCycleReport | { error: string } =
       "panel" in macro ? { ...macro, panel: undefined } : macro;
-
-    // CFTC managed-money positioning (Macro Override's other half, P7)
-    // — before scores so tape can include crowded-long/short context.
-    let positioning: PositioningCycleReport | { error: string };
-    try {
-      positioning = await runPositioningCycle(db);
-    } catch (e) {
-      positioning = { error: e instanceof Error ? e.message : String(e) };
-    }
-
-    // Composite scores — after oil inputs (prices/corridors/seasonal/
-    // macro/positioning), BEFORE gold so a slow gold fetch can't starve
-    // the oil intel rail. Dedicated /api/cron/scores is the safety net.
-    let scores: ScoreCycleReport | { error: string };
-    try {
-      scores = await runScoreCycle(db);
-    } catch (e) {
-      scores = { error: e instanceof Error ? e.message : String(e) };
-    }
-
-    // Gold Tracker last — not on the oil score critical path.
-    let gold: GoldCycleReport | { error: string };
-    try {
-      gold = await runGoldCycle(db, { macroPanel });
-    } catch (e) {
-      gold = { error: e instanceof Error ? e.message : String(e) };
-    }
-
-    // Gold stock/flow (COMEX warehouse + WGC ETF holdings) — after price
-    // gold; isolated so a blocked CME host cannot fail the rest of cron.
-    let goldFlow: GoldFlowCycleReport | { error: string };
-    try {
-      goldFlow = await runGoldFlowCycle(db);
-    } catch (e) {
-      goldFlow = { error: e instanceof Error ? e.message : String(e) };
-    }
-
-    // BTC Tracker — keyless Coinbase price backbone, same "last, not on
-    // the oil score critical path" posture as gold.
-    let btc: BtcCycleReport | { error: string };
-    try {
-      btc = await runBtcCycle(db);
-    } catch (e) {
-      btc = { error: e instanceof Error ? e.message : String(e) };
-    }
-
-    // BTC ETF flow (SoSoValue daily flow/AUM API) — after price, isolated
-    // so an outage there cannot fail the rest of cron.
-    let btcFlow: BtcFlowCycleReport | { error: string };
-    try {
-      btcFlow = await runBtcFlowCycle(db);
-    } catch (e) {
-      btcFlow = { error: e instanceof Error ? e.message : String(e) };
-    }
-
-    // Australia Watch has its own cron and execution budget at 02:15 UTC.
-
-    let dividend: DividendCycleReport | { error: string };
-    try {
-      dividend = await runDividendCycle(db);
-    } catch {
-      dividend = { error: "AI Dividend source cycle failed" };
-    }
+    // CFTC positioning before scores so tape can include crowded-long/short context.
+    const positioning = await step("positioning", () => runPositioningCycle(db));
+    // Scores before gold so a slow gold fetch can't starve the oil intel rail
+    // (/api/cron/scores at 06:10 UTC is the safety net).
+    const scores = await step("scores", () => runScoreCycle(db));
+    const gold = await step("gold", () => runGoldCycle(db, { macroPanel }));
+    const goldFlow = await step("goldFlow", () => runGoldFlowCycle(db));
+    const btc = await step("btc", () => runBtcCycle(db));
+    const btcFlow = await step("btcFlow", () => runBtcFlowCycle(db));
+    // Australia Watch has its own cron and budget at 02:15 UTC.
+    const dividend = await step("dividend", () => runDividendCycle(db));
 
     return Response.json({
       ...report,
@@ -185,6 +114,9 @@ export const GET = withErrorLog("cron:ingest", async function GET(request: Reque
       btc,
       btcFlow,
       dividend,
+      timings,
+      // Read by cron_runs (#47): a skipped step makes the run "degraded", not silently ok.
+      ...(skipped.length ? { degraded: skipped.map((name) => `${name}: skipped for time`) } : {}),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
