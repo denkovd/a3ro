@@ -2,6 +2,7 @@
 // modules are never listed (they're also noindex and gated).
 import type { MetadataRoute } from "next";
 import { MODULE_ACCESS } from "../lib/access";
+import { ASSETS, assetPath } from "../lib/assets";
 
 const SITE = "https://a3ro.com.au";
 
@@ -12,6 +13,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...modules.map((path) => ({ path, changeFrequency: "daily" as const, priority: 0.9 })),
     { path: "/markets", changeFrequency: "daily", priority: 0.8 },
     { path: "/calendar", changeFrequency: "daily", priority: 0.8 },
+    { path: "/assets", changeFrequency: "weekly", priority: 0.8 },
+    ...ASSETS.map((a) => ({ path: assetPath(a), changeFrequency: "weekly" as const, priority: 0.6 })),
     { path: "/terms", changeFrequency: "monthly", priority: 0.2 },
     { path: "/privacy", changeFrequency: "monthly", priority: 0.2 },
   ];

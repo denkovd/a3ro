@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { Nav } from "../components/Chrome";
 import SiteFooter from "../components/SiteFooter";
 import TradingViewWidget from "../components/TradingViewWidget";
-import { ASX_NAMES, SAVED_SCREENS, marketIndexUrl, tradingViewAsxUrl } from "../../lib/marketLinks";
+import { ASX_NAMES, SAVED_SCREENS, marketIndexUrl } from "../../lib/marketLinks";
+import { searchIndex } from "../../lib/assets";
+import AssetSearch from "../assets/AssetSearch";
 import { COFER_URL, WORLD_ASSETS, WORLD_ASSETS_CHECKED, getReserveShares } from "../../lib/globalMarkets";
 import { CurrencySharesChart, WorldAssetsChart } from "./ShareCharts";
 
@@ -45,6 +47,7 @@ export default async function MarketsPage() {
         <p className="landing-kicker">Markets</p>
         <h1 className="mt-4 text-3xl font-semibold tracking-tight">Markets at a glance</h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--ink-2)]">Where the world&rsquo;s money sits, the ASX&rsquo;s largest companies, and the screens we watch. ASX prices and charts come from TradingView; company detail links go to Market Index.</p>
+        <div className="mt-6 max-w-xl"><AssetSearch items={searchIndex()} /></div>
       </header>
 
       <section aria-labelledby="global-markets">
@@ -93,7 +96,7 @@ export default async function MarketsPage() {
               <span><span className="font-mono text-xs text-[var(--ink-2)]">{n.code}</span> {n.name}</span>
               <span className="flex shrink-0 gap-4 font-mono text-[11px] text-[var(--ink-3)]">
                 <a href={marketIndexUrl(n.code)} target="_blank" rel="noopener" className="underline hover:text-[var(--ink)]">Market Index ↗</a>
-                <a href={tradingViewAsxUrl(n.code)} target="_blank" rel="noopener" className="underline hover:text-[var(--ink)]">Chart ↗</a>
+                <a href={`/assets/asx-${n.code.toLowerCase()}`} className="underline hover:text-[var(--ink)]">Chart and notes</a>
               </span>
             </li>)}
           </ul>

@@ -10,7 +10,7 @@
 ──────────────────────────────────────────────────────────────── */
 import { useEffect, useRef } from "react";
 
-export type TradingViewWidgetName = "events" | "market-overview" | "mini-symbol-overview" | "symbol-overview" | "advanced-chart" | "stock-heatmap" | "forex-heat-map";
+export type TradingViewWidgetName = "events" | "market-overview" | "mini-symbol-overview" | "symbol-overview" | "advanced-chart" | "stock-heatmap" | "forex-heat-map" | "symbol-info" | "symbol-profile";
 
 export default function TradingViewWidget({ widget, config, height, label }: {
   widget: TradingViewWidgetName;
@@ -20,7 +20,10 @@ export default function TradingViewWidget({ widget, config, height, label }: {
   label: string;
 }) {
   const host = useRef<HTMLDivElement>(null);
-  const json = JSON.stringify({ colorTheme: "dark", isTransparent: true, locale: "en", width: "100%", height, ...config });
+  // The advanced chart takes `theme` and autosizes to its box; the other widgets take `colorTheme`.
+  const json = JSON.stringify(widget === "advanced-chart"
+    ? { theme: "dark", backgroundColor: "rgba(0, 0, 0, 0)", locale: "en", autosize: true, ...config }
+    : { colorTheme: "dark", isTransparent: true, locale: "en", width: "100%", height, ...config });
 
   useEffect(() => {
     const el = host.current;
@@ -36,7 +39,7 @@ export default function TradingViewWidget({ widget, config, height, label }: {
   }, [widget, json]);
 
   return <figure className="tradingview-widget-container" aria-label={label}>
-    <div ref={host} className="tradingview-widget-container__widget" style={{ minHeight: height }} />
+    <div ref={host} className="tradingview-widget-container__widget" style={widget === "advanced-chart" ? { height } : { minHeight: height }} />
     <figcaption className="tradingview-widget-copyright mt-2 font-mono text-[10px] text-[var(--ink-3)]">
       <a href="https://www.tradingview.com/" rel="noopener nofollow" target="_blank" className="underline" data-track-outbound="tradingview">
         {label} by TradingView

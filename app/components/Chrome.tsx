@@ -11,6 +11,7 @@ const LINKS = [
   { label: "Commodity Watch", href: "/#top" },
   { label: "Modules", href: "/#modules" },
   { label: "Markets", href: "/markets" },
+  { label: "Assets", href: "/assets" },
   { label: "Calendar", href: "/calendar" },
   { label: "Contact", href: "/#contact" },
 ];
