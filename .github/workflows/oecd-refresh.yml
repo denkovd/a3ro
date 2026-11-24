@@ -42,13 +42,13 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - name: Diagnose OECD
         run: |
-          U='https://sdmx.oecd.org/public/rest/data/OECD.SDD.STES,DSD_STES@DF_CLI,/AUS.M.LI.IX._Z.AA.IX._Z.H?startPeriod=2015-11&format=csvfilewithlabels'
-          for i in 1 2 3; do
-            echo "RESULT $i plain          -> $(curl -s -o /dev/null -w '%{http_code}' "$U")"; sleep 5
-            echo "RESULT $i no-cache hdr   -> $(curl -s -o /dev/null -w '%{http_code}' -H 'Cache-Control: no-cache' -H 'Pragma: no-cache' "$U")"; sleep 5
+          B='https://sdmx.oecd.org/public/rest/data/OECD.SDD.STES,DSD_STES@DF_CLI,/'
+          for k in AUS.M.CCICP.IX._Z.AA.IX._Z.H AUS.M.BCICP.IX._Z.AA.IX._Z.H AUS.M.LI.IX._Z.AA.IX._Z.H AUS.M.CCICP.IX._Z.AA.IX._Z.H; do
+            for sp in 2015-11 2012-01; do
+              echo "RESULT $k $sp -> $(curl -s -o /tmp/o.txt -w '%{http_code}' "$B$k?startPeriod=$sp&format=csvfilewithlabels") $(head -c 60 /tmp/o.txt)"; sleep 8
+            done
           done
-          node -e "fetch(process.argv[1],{cache:'no-store'}).then(r=>console.log('RESULT node no-store ->',r.status))" "$U"; sleep 5
-          node -e "fetch(process.argv[1]).then(r=>console.log('RESULT node default ->',r.status))" "$U"
+          echo "RESULT CCICP all-countries-dim -> $(curl -s -o /tmp/o.txt -w '%{http_code}' "$B.M.CCICP.IX._Z.AA.IX._Z.H?startPeriod=2026-01&format=csvfilewithlabels") $(head -c 60 /tmp/o.txt)"
         working-directory: .
       - run: npm ci
       - name: Fetch OECD series
