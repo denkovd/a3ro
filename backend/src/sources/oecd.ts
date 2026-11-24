@@ -34,6 +34,9 @@ export async function fetchOecdSeries(indicator: AustraliaIndicator, opts: {
     await new Promise(resolve => setTimeout(resolve, delay));
     response = await (opts.fetchImpl ?? fetch)(sourceUrl, { ...requestOptions, signal: AbortSignal.timeout(OECD_REQUEST_TIMEOUT_MS) });
   }
-  if (!response.ok) throw new Error(`OECD HTTP ${response.status}`);
+  if (!response.ok) {
+    const body = (await response.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 160);
+    throw new Error(`OECD HTTP ${response.status}${body ? `: ${body}` : ""} (${sourceUrl.replace(OECD_DATA_BASE, "")})`);
+  }
   return parseSdmxCsv(indicator, await response.text(), sourceUrl, now.toISOString(), "OECD");
 }
