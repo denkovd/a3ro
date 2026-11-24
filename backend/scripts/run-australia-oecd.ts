@@ -18,9 +18,26 @@
 import { ensureDatabaseUrl } from "./loadEnv";
 ensureDatabaseUrl();
 
+import { get } from "node:https";
 import { createDb } from "../src/storage/db";
 import { runAustraliaWatchCycle } from "../src/ingest/australiaWatchCycle";
 import { recordCronRun, summarizeCronReport } from "../src/storage/cronRunRepo";
+
+/**
+ * A plain GET, like curl: only Host and the headers given. Node's built-in fetch adds its own
+ * headers (sec-fetch-mode, accept-language and more), and with those OECD answered HTTP 500 to the
+ * consumer and business confidence series every time from GitHub's runners, while curl's plain
+ * request got 200 for all three (tested 24 Nov). Only used for OECD, by this script.
+ */
+const plainFetch = ((url: string, init?: { signal?: AbortSignal }) => new Promise<Response>((resolve, reject) => {
+  const req = get(url, { headers: { Accept: "*/*", "User-Agent": "A3RO-Intelligence/1.0 (+https://a3ro.com.au)" }, signal: init?.signal }, (res) => {
+    const chunks: Buffer[] = [];
+    res.on("data", (c: Buffer) => chunks.push(c));
+    res.on("end", () => resolve(new Response(Buffer.concat(chunks), { status: res.statusCode ?? 500 })));
+    res.on("error", reject);
+  });
+  req.on("error", reject);
+})) as unknown as typeof fetch;
 
 async function main(): Promise<void> {
   const db = await createDb();
@@ -29,7 +46,7 @@ async function main(): Promise<void> {
   // the throttle (24 Nov: the first series worked, the next two, 3 s later, failed every retry).
   // So: a minute between series, retries after 1 and 2 minutes, and room for all of it.
   const report = await runAustraliaWatchCycle(db, {
-    sources: ["oecd_sdmx"], oecdSpacingMs: 60_000, oecdRetryDelaysMs: [60_000, 120_000], budgetMs: 16 * 60_000,
+    sources: ["oecd_sdmx"], fetchImpl: plainFetch, oecdSpacingMs: 60_000, oecdRetryDelaysMs: [60_000, 120_000], budgetMs: 16 * 60_000,
   });
   const entries = Object.entries(report.results);
   const degraded = entries.filter(([, r]) => r.error).map(([indicator]) => indicator);
