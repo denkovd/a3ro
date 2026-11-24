@@ -42,15 +42,13 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - name: Diagnose OECD
         run: |
-          B='https://sdmx.oecd.org/public/rest/data/OECD.SDD.STES,DSD_STES@DF_CLI,/AUS.M.LI.IX._Z.AA.IX._Z.H'
-          for sp in 2015-11 2012-01; do
-            U="$B?startPeriod=$sp&format=csvfilewithlabels"
-            echo "RESULT $sp curl http1.1 -> $(curl -s -o /dev/null -w '%{http_code}' --http1.1 "$U")"; sleep 6
-            echo "RESULT $sp curl http2   -> $(curl -s -o /dev/null -w '%{http_code} %{http_version}' --http2 "$U")"; sleep 6
-            node -e "fetch(process.argv[1]).then(r=>console.log('RESULT $sp node ->',r.status))" "$U"; sleep 6
+          U='https://sdmx.oecd.org/public/rest/data/OECD.SDD.STES,DSD_STES@DF_CLI,/AUS.M.LI.IX._Z.AA.IX._Z.H?startPeriod=2015-11&format=csvfilewithlabels'
+          for i in 1 2 3; do
+            echo "RESULT $i plain          -> $(curl -s -o /dev/null -w '%{http_code}' "$U")"; sleep 5
+            echo "RESULT $i no-cache hdr   -> $(curl -s -o /dev/null -w '%{http_code}' -H 'Cache-Control: no-cache' -H 'Pragma: no-cache' "$U")"; sleep 5
           done
-          echo "RESULT csv-format http1.1 -> $(curl -s -o /dev/null -w '%{http_code}' --http1.1 "$B?startPeriod=2015-11&format=csv")"; sleep 6
-          echo "RESULT no-format http1.1 Accept -> $(curl -s -o /dev/null -w '%{http_code}' --http1.1 -H 'Accept: application/vnd.sdmx.data+csv; charset=utf-8; labels=both' "$B?startPeriod=2015-11")"
+          node -e "fetch(process.argv[1],{cache:'no-store'}).then(r=>console.log('RESULT node no-store ->',r.status))" "$U"; sleep 5
+          node -e "fetch(process.argv[1]).then(r=>console.log('RESULT node default ->',r.status))" "$U"
         working-directory: .
       - run: npm ci
       - name: Fetch OECD series
