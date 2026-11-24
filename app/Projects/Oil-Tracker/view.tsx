@@ -16,6 +16,7 @@ import { AMBER_CSS, OT_SESSION, type OTView } from "../../components/projects/oi
 import { ORANGE_CSS, BT_ROUTE } from "../../components/projects/btcTrackerShared";
 import { GOLD_CSS, GT_ROUTE } from "../../components/projects/goldTrackerShared";
 import { useViewer } from "../../components/useViewer";
+import { LockIcon } from "../../components/LockIcon";
 
 /* the heavy globe engine — loaded only on this route, after arrival */
 const OilTrackerCore = dynamic(() => import("../../components/projects/OilTrackerCore"), {
@@ -43,7 +44,7 @@ function readArrival(): OTView | null {
 export default function OilTrackerView() {
   const router = useRouter();
   const reduced = useReducedMotion();
-  // Gold and BTC are Premium (lib/access.ts); their tabs show only for Premium accounts.
+  // Gold and BTC are Premium (lib/access.ts): everyone sees their tabs, locked without Premium.
   const viewer = useViewer();
   const [mounted, setMounted] = useState(false);
   const [arrive, setArrive] = useState<OTView | null>(null);
@@ -133,22 +134,22 @@ export default function OilTrackerView() {
             >
               Oil
             </span>
-            {viewer.premium ? <><a
+            <a
               href={GT_ROUTE}
-              className="px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em] transition-colors hover:opacity-100"
+              className="inline-flex items-center gap-1 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em] transition-colors hover:opacity-100"
               style={{ color: GOLD_CSS, opacity: 0.55 }}
-              title="Open Gold Tracker"
+              title={viewer.premium ? "Open Gold Tracker" : "Gold Tracker · Premium"}
             >
-              Gold
+              Gold{viewer.premium ? null : <LockIcon title="Premium" />}
             </a>
             <a
               href={BT_ROUTE}
-              className="px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em] transition-colors hover:opacity-100"
+              className="inline-flex items-center gap-1 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em] transition-colors hover:opacity-100"
               style={{ color: ORANGE_CSS, opacity: 0.55 }}
-              title="Open BTC Tracker"
+              title={viewer.premium ? "Open BTC Tracker" : "BTC Tracker · Premium"}
             >
-              BTC
-            </a></> : null}
+              BTC{viewer.premium ? null : <LockIcon title="Premium" />}
+            </a>
           </nav>
         </div>
         <p className="flex shrink-0 items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">

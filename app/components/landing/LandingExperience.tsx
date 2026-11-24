@@ -34,9 +34,10 @@ export default function LandingExperience() {
   const fail = useCallback(() => setFailed(true), []);
   const animated = !reduced && !failed;
   const [orbit, setOrbit] = useState(false);
-  // Premium modules load gated APIs, so they are only shown to Premium accounts (lib/access.ts).
+  // Everyone sees every module. Premium ones the viewer hasn't unlocked show a lock instead of
+  // their live preview, which would call Premium APIs (lib/access.ts).
   const viewer = useViewer();
-  const modules = useMemo(() => MODULES.filter((m) => canSeeRoute(m.href, viewer)), [viewer]);
+  const modules = useMemo(() => MODULES.map((m) => ({ ...m, locked: !canSeeRoute(m.href, viewer) })), [viewer]);
   const { scrollYProgress } = useScroll({ target: hero, offset: ["start start", "end end"] });
 
   // Enhancement changes the hero's and the module runway's height. Resolve direct

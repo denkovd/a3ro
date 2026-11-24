@@ -11,12 +11,15 @@
    Phones, short viewports and reduced motion get plain full-height
    sections in normal flow — no pinning, no dissolve.
 ──────────────────────────────────────────────────────────────── */
+import { LockIcon } from "../LockIcon";
 import { Component, useCallback, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import DeferredModule, { ModulePlaceholder } from "../DeferredModule";
 
 export type StageModule = {
   name: string; category: string; description: string; href: string;
   Component: ComponentType<{ className?: string }>;
+  /** Premium module the viewer hasn't unlocked: shown with a lock and no live preview. */
+  locked?: boolean;
 };
 
 const MIN_WIDTH = 768;
@@ -107,20 +110,33 @@ function useDissolve(canvas: React.RefObject<HTMLCanvasElement | null>, onIdle: 
   }, [canvas]);
 }
 
+/** Stand-in for a Premium module's live card: its live preview needs Premium data. */
+function LockedPreview({ module }: { module: StageModule }) {
+  return <a href={module.href} className="landing-card flex h-full w-full flex-col items-start justify-end gap-3 rounded-sm hairline bg-[var(--depth-1)] p-6">
+    <LockIcon className="text-3xl text-[var(--ink-2)]" />
+    <span className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--ink-3)]">A3RO Premium</span>
+    <span className="text-2xl font-semibold text-[var(--ink)]">{module.name}</span>
+    <span className="max-w-sm text-sm leading-relaxed text-[var(--ink-2)]">{module.description}</span>
+    <span className="mt-1 text-sm text-[var(--acid)]">Unlock with Premium →</span>
+  </a>;
+}
+
 function ModulePage({ module, index, count, live, preload }: { module: StageModule; index: number; count: number; live: boolean; preload: boolean }) {
   return <article className="stage-page" aria-labelledby={`stage-title-${index}`}>
     <div className="stage-story">
-      <p className="landing-kicker">{pad(index + 1)} / {pad(count)} · {module.category}</p>
+      <p className="landing-kicker">{pad(index + 1)} / {pad(count)} · {module.category}{module.locked ? <> · <LockIcon /> Premium</> : null}</p>
       <h3 id={`stage-title-${index}`}>{module.name}</h3>
       <p className="stage-description">{module.description}</p>
-      <a className="module-entry sweep" href={module.href}>Open {module.name}<span aria-hidden>↗</span></a>
+      {module.locked
+        ? <a className="module-entry sweep" href={module.href}><LockIcon className="mr-2" />Unlock with Premium<span aria-hidden>↗</span></a>
+        : <a className="module-entry sweep" href={module.href}>Open {module.name}<span aria-hidden>↗</span></a>}
     </div>
     <div className="stage-preview">
-      <ModuleBoundary name={module.name} href={module.href}>
+      {module.locked ? <LockedPreview module={module} /> : <ModuleBoundary name={module.name} href={module.href}>
         <DeferredModule name={module.name} href={module.href} className="stage-card-slot" observe={!live} preload={preload}>
           <module.Component className="landing-card flex h-full w-full flex-col" />
         </DeferredModule>
-      </ModuleBoundary>
+      </ModuleBoundary>}
     </div>
   </article>;
 }
@@ -188,8 +204,8 @@ export default function ModuleStage({ modules, animated, onModeChange }: {
         <canvas ref={canvas} className="stage-dissolve" aria-hidden />
       </div>
       <nav className="stage-index" aria-label="Jump to a module">
-        {modules.map((m, i) => <button key={m.href} type="button" onClick={() => go(i)} aria-current={i === shown ? "true" : undefined} aria-label={`${m.name} (${i + 1} of ${count})`}>
-          <span>{pad(i + 1)}</span>
+        {modules.map((m, i) => <button key={m.href} type="button" onClick={() => go(i)} aria-current={i === shown ? "true" : undefined} aria-label={`${m.name}${m.locked ? ", Premium" : ""} (${i + 1} of ${count})`}>
+          <span>{pad(i + 1)}{m.locked ? <LockIcon className="ml-1 text-[0.85em]" /> : null}</span>
         </button>)}
       </nav>
     </div>

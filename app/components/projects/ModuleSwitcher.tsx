@@ -29,8 +29,10 @@ const switchButtonClass =
 export default function ModuleSwitcher({ current }: { current: ModuleId }) {
   const router = useRouter();
   const viewer = useViewer();
-  // Premium modules are left out of the cycle for accounts without Premium (lib/access.ts).
-  const sequence = MODULE_SEQUENCE.filter((id) => id === current || canSeeRoute(MODULE_META[id].route, viewer));
+  // Every module stays in the cycle; Premium ones the viewer hasn't unlocked are marked with a lock
+  // and open the Premium page (lib/access.ts).
+  const sequence = MODULE_SEQUENCE;
+  const locked = (id: ModuleId) => !canSeeRoute(MODULE_META[id].route, viewer);
   const idx = sequence.indexOf(current);
   const prevId = sequence[(idx - 1 + sequence.length) % sequence.length];
   const nextId = sequence[(idx + 1) % sequence.length];
@@ -40,7 +42,8 @@ export default function ModuleSwitcher({ current }: { current: ModuleId }) {
       <button
         type="button"
         onClick={() => router.push(MODULE_META[prevId].route)}
-        aria-label={`Switch to ${MODULE_META[prevId].label}`}
+        aria-label={`Switch to ${MODULE_META[prevId].label}${locked(prevId) ? " (Premium)" : ""}`}
+        title={`${MODULE_META[prevId].label}${locked(prevId) ? " · Premium" : ""}`}
         className={switchButtonClass}
       >
         ‹
@@ -51,7 +54,8 @@ export default function ModuleSwitcher({ current }: { current: ModuleId }) {
       <button
         type="button"
         onClick={() => router.push(MODULE_META[nextId].route)}
-        aria-label={`Switch to ${MODULE_META[nextId].label}`}
+        aria-label={`Switch to ${MODULE_META[nextId].label}${locked(nextId) ? " (Premium)" : ""}`}
+        title={`${MODULE_META[nextId].label}${locked(nextId) ? " · Premium" : ""}`}
         className={switchButtonClass}
       >
         ›
