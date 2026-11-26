@@ -110,20 +110,19 @@ export default function EarningsBeatView() {
 
       {/* ── top chrome ── */}
       <header className="absolute inset-x-0 top-0 z-30 flex h-14 items-center justify-between border-b border-[var(--line)] bg-[rgba(6,7,7,0.55)] px-6 backdrop-blur-md md:px-10">
-        <div className="flex items-baseline gap-4">
+        <div className="flex min-w-0 items-center gap-3 md:gap-4">
           <button
             onClick={leave}
-            className="sweep font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-2)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]"
+            className="sweep shrink-0 font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-2)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]"
             aria-label="Close Earnings Beat Leaderboard and return to the index"
           >
             ← Index
           </button>
+          <ModuleSwitcher current="earnings" />
           <span aria-hidden className="text-[var(--ink-3)]">/</span>
-          <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
+          <p className="truncate font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
             A3RO Intelligence — Earnings Beat Leaderboard
           </p>
-          <span aria-hidden className="text-[var(--ink-3)]">/</span>
-          <ModuleSwitcher current="earnings" />
         </div>
         <p className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
           {!reduced ? (
