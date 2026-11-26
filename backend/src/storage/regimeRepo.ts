@@ -7,7 +7,7 @@
 ──────────────────────────────────────────────────────────────── */
 
 import { RegimeSnapshot } from "../regime/types";
-import { Queryable } from "./db";
+import { dateOnly, Queryable } from "./db";
 
 export async function upsertRegimeSnapshots(
   db: Queryable,
@@ -112,8 +112,7 @@ export async function getLatestRegimeSnapshots(db: Queryable): Promise<RegimeSna
 
 function toDateStr(v: unknown): string | null {
   if (v == null) return null;
-  if (v instanceof Date) return v.toISOString().slice(0, 10);
-  return String(v).slice(0, 10);
+  return dateOnly(v);
 }
 
 function toNum(v: unknown): number | null {

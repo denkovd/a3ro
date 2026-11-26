@@ -11,7 +11,7 @@
 ──────────────────────────────────────────────────────────────── */
 import { computePulse, type Pulse } from "../australia/pulse";
 import { computeMacroWeather } from "../macro/weather";
-import type { Queryable } from "../storage/db";
+import { dateOnly, type Queryable } from "../storage/db";
 import { getAustraliaObservations } from "../storage/australiaWatchRepo";
 import { getLatestMacroSnapshot, type MacroSnapshotRow } from "../storage/macroRepo";
 import { fetchAustraliaReleaseSchedules } from "../sources/absReleases";
@@ -94,7 +94,7 @@ async function latestLogged(db: Queryable, signal: string): Promise<LoggedSignal
     `select id, signal, fired_on, state, previous_state from signal_log where signal = $1 order by fired_on desc limit 1`, [signal]);
   const r = res.rows[0];
   if (!r) return null;
-  const firedOn = r.fired_on instanceof Date ? r.fired_on.toISOString().slice(0, 10) : String(r.fired_on).slice(0, 10);
+  const firedOn = dateOnly(r.fired_on);
   return { id: Number(r.id), signal: String(r.signal), firedOn, state: String(r.state), previousState: r.previous_state == null ? null : String(r.previous_state) };
 }
 

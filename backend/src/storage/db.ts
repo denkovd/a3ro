@@ -46,3 +46,16 @@ export async function createDb(connectionString = process.env.DATABASE_URL): Pro
   g.__a3roPgPools.set(connectionString, pool);
   return pool;
 }
+
+/**
+ * A Postgres `date` value as YYYY-MM-DD. node-postgres turns a `date` column into a JS Date at
+ * LOCAL midnight, so toISOString() moves it back a day on any machine east of UTC (a local run
+ * in Sydney read every stored bar one day early, roadmap #104). Local components give the stored
+ * date everywhere; on UTC machines (Vercel, GitHub Actions) the result is unchanged.
+ */
+export function dateOnly(v: unknown): string {
+  if (v instanceof Date) {
+    return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, "0")}-${String(v.getDate()).padStart(2, "0")}`;
+  }
+  return String(v).slice(0, 10);
+}

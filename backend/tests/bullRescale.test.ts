@@ -124,3 +124,10 @@ test("scan: an unsplit symbol only fetches the 1mo window", async () => {
   assert.deepEqual(report.rescaled, []);
   assert.deepEqual(calls, ["1mo"]);
 });
+
+test("dateOnly: a pg date (local midnight) keeps its calendar day in any timezone", async () => {
+  const { dateOnly } = await import("../src/storage/db");
+  // node-postgres builds `date` values as local midnight: new Date(y, m, d).
+  assert.equal(dateOnly(new Date(2024, 2, 1)), "2024-03-01");
+  assert.equal(dateOnly("2024-03-01"), "2024-03-01");
+});
