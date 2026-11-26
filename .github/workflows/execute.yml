@@ -1,0 +1,72 @@
+name: Execute — BTC Event Pivots
+
+# P·Execute engine (docs/execute-module-plan.md). Python in execute-engine/, writes via DATABASE_URL.
+#   00:15 UTC daily        → snapshot + paper step
+#   :05 every hour         → same, but exits at once unless an FOMC/CPI event is within −26h…+100h
+#   00:45 UTC on the 2nd   → monthly backtest refresh (the forward paper record is never touched)
+# api.binance.com blocks US runners, so bars come from data.binance.vision + Coinbase (checked first).
+
+on:
+  schedule:
+    - cron: "15 0 * * *"
+    - cron: "5 * * * *"
+    - cron: "45 0 2 * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Engine mode"
+        type: choice
+        options: [daily, backfill, snapshot, step, check]
+        default: daily
+
+permissions:
+  contents: read
+
+concurrency:
+  group: execute-engine
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: execute-engine
+
+jobs:
+  engine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install --quiet -r requirements.txt
+
+      - name: Pick mode
+        id: mode
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+          INPUT_MODE: ${{ inputs.mode }}
+        run: |
+          case "$SCHEDULE" in
+            "5 * * * *")  echo "args=daily --only-in-window" >> "$GITHUB_OUTPUT" ;;
+            "45 0 2 * *") echo "args=backfill" >> "$GITHUB_OUTPUT" ;;
+            "15 0 * * *") echo "args=daily" >> "$GITHUB_OUTPUT" ;;
+            *)            echo "args=${INPUT_MODE:-daily}" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: Unit tests
+        run: python -m pytest -q test_engine.py
+
+      - name: Check data sources reachable
+        run: python execute_engine.py check
+
+      - name: Run engine
+        if: steps.mode.outputs.args != 'check'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ENGINE_ARGS: ${{ steps.mode.outputs.args }}
+        # ENGINE_ARGS is one of the fixed strings above; word-splitting is intended.
+        run: python execute_engine.py $ENGINE_ARGS

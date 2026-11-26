@@ -53,6 +53,10 @@ export const MODULE_ACCESS: readonly ModuleAccess[] = [
   { id: "ops", label: "Admin tools", level: "admin", data: "open", pages: ["/owner"], apis: ["/api/owner"], hidden: true },
   { id: "btc", label: "BTC", level: "premium", data: "market", pages: ["/Projects/BTC-Tracker"], apis: ["/api/btc"],
     preview: "Follows bitcoin across major venues, with price, market structure and the macro backdrop in one view." },
+  // The page stays open so free visitors see the next pivot (from the public /api/execute-peek, calendar only);
+  // signals, the paper position and the track records come from /api/execute, which is Premium.
+  { id: "execute", label: "Execute", level: "premium", data: "market", pages: [], apis: ["/api/execute"],
+    preview: "Tracks a rules-based BTC strategy around FOMC and CPI releases: the live signal before each event, a forward paper-trade record and the hypothetical backtest." },
 ];
 
 /**

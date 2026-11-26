@@ -11,10 +11,10 @@ import { useRouter } from "next/navigation";
 import { canSeeRoute } from "../../../lib/access";
 import { useViewer } from "../useViewer";
 
-export type ModuleId = "australia" | "dividend" | "commodity" | "trend" | "regime" | "earnings";
+export type ModuleId = "australia" | "dividend" | "commodity" | "trend" | "regime" | "earnings" | "execute";
 
 // Same order as the homepage module list (components/landing/LandingExperience.tsx).
-const MODULE_SEQUENCE: ModuleId[] = ["australia", "dividend", "commodity", "trend", "regime", "earnings"];
+const MODULE_SEQUENCE: ModuleId[] = ["australia", "dividend", "commodity", "trend", "regime", "earnings", "execute"];
 
 const MODULE_META: Record<ModuleId, { label: string; route: string }> = {
   australia: { label: "Australia Watch", route: "/Projects/Australia-Watch" },
@@ -23,6 +23,7 @@ const MODULE_META: Record<ModuleId, { label: string; route: string }> = {
   trend: { label: "Trend Finder", route: "/Projects/Bull-Market-Finder" },
   regime: { label: "Regime", route: "/Projects/Regime-Shift" },
   earnings: { label: "Earnings Beat", route: "/Projects/Earnings-Beat" },
+  execute: { label: "Execute", route: "/Projects/Execute" },
 };
 
 const switchButtonClass =

@@ -1,0 +1,436 @@
+//@version=6
+// ═══════════════════════════════════════════════════════════════════════════
+//  A3RO · EXECUTE — BTC Event Pivots  (v1.1 · Nov 2026)
+//
+//  Fades the one-sided move INTO a scheduled pivot:
+//    • FOMC decisions  (2:00pm New York)  — 7-day run-in
+//    • CPI releases    (8:30am New York)  — 7-day run-in
+//  Narrative (volatility-adjusted): the 7-day move is ≥ 0.75× BTC's normal
+//    7-day swing (measured over the 30 days BEFORE the run-in). Up → short, down → long.
+//
+//  v1.1 changes (from the Binance 1H backtest, Jan 2022 – Nov 2026):
+//    • Volatility-adjusted narrative replaces the fixed 4% threshold
+//    • Checklist no longer gates or sizes trades (it filtered out winners);
+//      it is still shown on the dashboard for context — toggle back on in Sizing
+//    • Fixed 3% risk per trade · max stop 3% · monthly-open trades off (lost money)
+//    • Setup now arms on the bar whose CLOSE passes the arm time (fixes late
+//      entries on higher timeframes)
+//    Backtest result at these settings: 27 trades, +38% net, PF 2.09, max DD −8.4%.
+//    Small sample — paper-trade before going live.
+//
+//  Execution: E1 at arm (market) + E2/E3 limits further into the push.
+//    Stop beyond the 3-day swing + buffer. At +TP1% from avg entry: close 50%,
+//    stop → breakeven. Runner: trailing stop activates at +trail% from entry.
+//    Leverage capped (default 3x of strategy equity). Time stop after the event.
+//
+//  SETUP
+//    Chart: BINANCE:BTCUSDT (or BTCUSDT.P), 1H — the timeframe it was tested on.
+//    A3RO webhook: create ONE alert → Condition "A3RO Execute" →
+//      "Order fills and alert() function calls" → Message: {{strategy.order.alert_message}}
+//      → Webhook URL: your A3RO /api/execute endpoint. Daily status pings use alert().
+//
+//  MAINTENANCE (manual update schedule)
+//    Event dates live in the two text boxes under Inputs → 1 · Events.
+//    Update when the Fed / BLS publish or revise calendars. Dates are New York days.
+//    Sources: federalreserve.gov/monetarypolicy/fomccalendars.htm
+//             bls.gov/schedule/news_release/cpi.htm
+//
+//  Not financial advice. Past behaviour does not guarantee future results.
+// ═══════════════════════════════════════════════════════════════════════════
+strategy("A3RO Execute · BTC Event Pivots v1.1", shorttitle = "A3RO Execute", overlay = true, initial_capital = 100000, currency = currency.USD, pyramiding = 3, commission_type = strategy.commission.percent, commission_value = 0.05, slippage = 2, margin_long = 33, margin_short = 33, max_bars_back = 5000, max_labels_count = 500)
+
+// ── Event calendars (YYYY-MM-DD, comma separated) ─────────────────────────────
+// FOMC: policy-decision days only. Oct 27 2027 has no decision (strategy meeting).
+const string FOMC_DATES = "2023-02-01,2023-03-22,2023-05-03,2023-06-14,2023-07-26,2023-09-20,2023-11-01,2023-12-13,2024-01-31,2024-03-20,2024-05-01,2024-06-12,2024-07-31,2024-09-18,2024-11-07,2024-12-18,2025-01-29,2025-03-19,2025-05-07,2025-06-18,2025-07-30,2025-09-17,2025-10-29,2025-12-10,2026-01-28,2026-03-18,2026-04-29,2026-06-17,2026-07-29,2026-09-16,2026-10-28,2026-12-09,2027-01-27,2027-03-17,2027-04-28,2027-06-09,2027-07-28,2027-09-15,2027-11-17"
+// CPI: Oct 2025 CPI was cancelled (shutdown); Nov 2025 CPI released Dec 18 2025.
+const string CPI_DATES = "2023-01-12,2023-02-14,2023-03-14,2023-04-12,2023-05-10,2023-06-13,2023-07-12,2023-08-10,2023-09-13,2023-10-12,2023-11-14,2023-12-12,2024-01-11,2024-02-13,2024-03-12,2024-04-10,2024-05-15,2024-06-12,2024-07-11,2024-08-14,2024-09-11,2024-10-10,2024-11-13,2024-12-11,2025-01-15,2025-02-12,2025-03-12,2025-04-10,2025-05-13,2025-06-11,2025-07-15,2025-08-12,2025-09-11,2025-10-24,2025-12-18,2026-01-13,2026-02-13,2026-03-11,2026-04-10,2026-05-12,2026-06-10,2026-07-14,2026-08-12,2026-09-11,2026-10-14,2026-11-10,2026-12-10,2027-01-13,2027-02-11,2027-03-10,2027-04-13,2027-05-12,2027-06-10,2027-07-14,2027-08-11,2027-09-14,2027-10-14,2027-11-10,2027-12-10"
+
+// ── Inputs ────────────────────────────────────────────────────────────────────
+const string G_EV   = "1 · Events"
+const string G_NAR  = "2 · Narrative & checklist"
+const string G_RISK = "3 · Sizing"
+const string G_EX   = "4 · Entries & exits"
+const string G_MO   = "5 · Monthly open"
+const string G_UI   = "6 · Display"
+
+useFomc   = input.bool(true, "Trade FOMC", group = G_EV)
+useCpi    = input.bool(true, "Trade CPI", group = G_EV)
+useMon    = input.bool(false, "Trade monthly open (off: lost money in backtest)", group = G_EV)
+startT    = input.time(timestamp("01 Jan 2023 00:00 +0000"), "Backtest start", group = G_EV)
+fomcStr   = input.text_area(FOMC_DATES, "FOMC decision dates (2:00pm New York)", group = G_EV)
+cpiStr    = input.text_area(CPI_DATES, "CPI release dates (8:30am New York)", group = G_EV)
+
+lookDays  = input.int(7, "Narrative lookback (days)", minval = 1, group = G_NAR)
+useVol    = input.bool(true, "Volatility-adjusted narrative", group = G_NAR)
+zThr      = input.float(0.75, "Narrative: move ≥ z × normal swing", minval = 0.1, step = 0.05, group = G_NAR)
+volDays   = input.int(30, "Normal swing measured over (days, before run-in)", minval = 5, group = G_NAR)
+narPct    = input.float(4.0, "Fixed narrative threshold % (if vol-adjust off / monthly)", minval = 0.5, step = 0.5, group = G_NAR)
+strongPct = input.float(6.0, "Q4 · strong push %", step = 0.5, group = G_NAR)
+emaLen    = input.int(50, "Q1 · HTF trend: daily EMA", group = G_NAR)
+smaLen    = input.int(200, "Q2 · bull/bear line: daily SMA", group = G_NAR)
+priorDays = input.int(30, "Q3 · liquidity: prior range (days)", group = G_NAR)
+rsiHi     = input.float(65, "Q5 · exhaustion: 4H RSI ≥ (fading a rally)", group = G_NAR)
+rsiLo     = input.float(35, "Q5 · exhaustion: 4H RSI ≤ (fading a sell-off)", group = G_NAR)
+
+riskBase  = input.float(3.0, "Risk % per trade", minval = 0.1, step = 0.25, group = G_RISK)
+useGate   = input.bool(false, "Use checklist to size / skip (v1.0 behaviour)", group = G_RISK)
+riskHigh  = input.float(3.0, "Risk % · score 5/5", step = 0.25, group = G_RISK)
+riskMed   = input.float(1.5, "Risk % · score 3–4/5", step = 0.25, group = G_RISK)
+riskLow   = input.float(0.75, "Risk % · monthly open 3–4/5", step = 0.25, group = G_RISK)
+maxLev    = input.float(3.0, "Max leverage (x strategy equity)", minval = 0.5, step = 0.5, group = G_RISK)
+
+armHrs    = input.int(24, "Arm hours before event", group = G_EX)
+cancelHrs = input.int(12, "Cancel unfilled E2/E3 hours after event", group = G_EX)
+stepPct   = input.float(0.75, "Entry spacing % (E1→E2→E3)", step = 0.25, group = G_EX)
+swingDays = input.int(3, "Stop: swing lookback (days)", group = G_EX)
+bufPct    = input.float(0.5, "Stop: buffer beyond swing %", step = 0.1, group = G_EX)
+maxStop   = input.float(3.0, "Skip if stop > % from E1", step = 0.5, group = G_EX)
+tp1Pct    = input.float(2.0, "Take 50% + stop to breakeven at %", step = 0.25, group = G_EX)
+trailAct  = input.float(4.0, "Runner: trail activates at %", step = 0.25, group = G_EX)
+trailOff  = input.float(1.5, "Runner: trail distance %", step = 0.25, group = G_EX)
+timeHrs   = input.int(96, "Time stop hours after event", group = G_EX)
+
+monDays   = input.int(10, "Run-in lookback into the open (days)", group = G_MO)
+monCancel = input.int(72, "Cancel unfilled E2/E3 after (hours)", group = G_MO)
+monTime   = input.int(168, "Time stop after open (hours)", group = G_MO)
+monWindow = input.int(7, "Confluence window: first N days", group = G_MO)
+
+showDash  = input.bool(true, "Dashboard", group = G_UI)
+showYears = input.bool(true, "Yearly breakdown", group = G_UI)
+showLbl   = input.bool(true, "Label every event (incl. skipped)", group = G_UI)
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+int HOUR = 3600000
+int DAY  = 86400000
+float tfSec   = timeframe.in_seconds()
+int lookBars  = math.max(1, math.round(lookDays * 86400.0 / tfSec))
+int monBars   = math.max(1, math.round(monDays * 86400.0 / tfSec))
+int priorBars = math.max(1, math.round(priorDays * 86400.0 / tfSec))
+int swingBars = math.max(1, math.round(swingDays * 86400.0 / tfSec))
+int volBars   = math.max(2, math.round(volDays * 86400.0 / tfSec))
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+f_parse(string src, int hh, int mm) =>
+    array<int> out = array.new<int>()
+    string s = str.replace_all(str.replace_all(src, " ", ""), "\n", "")
+    array<string> parts = str.split(s, ",")
+    for p in parts
+        if str.length(p) >= 10
+            int y = int(str.tonumber(str.substring(p, 0, 4)))
+            int m = int(str.tonumber(str.substring(p, 5, 7)))
+            int d = int(str.tonumber(str.substring(p, 8, 10)))
+            if not na(y) and not na(m) and not na(d)
+                out.push(timestamp("America/New_York", y, m, d, hh, mm, 0))
+    out.sort(order.ascending)
+    out
+
+f_next(array<int> arr, int t) =>
+    int r = na
+    for x in arr
+        if x > t
+            r := x
+            break
+    r
+
+f_pct(float x) =>
+    na(x) ? "—" : (x >= 0 ? "+" : "") + str.tostring(x, "#.#") + "%"
+
+f_ck(bool b) =>
+    b ? "✓" : "✗"
+
+f_dur(int ms) =>
+    int dd = math.floor(ms / DAY)
+    int hh = math.floor((ms - dd * DAY) / HOUR)
+    ms <= 0 ? "now" : str.tostring(dd) + "d " + str.tostring(hh) + "h"
+
+f_json(string typ, string side, string ev, int sc, float rk, float px) =>
+    '{"module":"execute","strategy":"btc-event-pivot","type":"' + typ + '","side":"' + side + '","event":"' + ev + '","symbol":"' + syminfo.ticker + '","score":' + str.tostring(sc) + ',"risk_pct":' + str.tostring(rk) + ',"ref_price":' + str.tostring(nz(px), "#.##") + ',"fill_price":"{{strategy.order.price}}","order":"{{strategy.order.comment}}","position":"{{strategy.position_size}}","time":"{{timenow}}"}'
+
+// ── Data ──────────────────────────────────────────────────────────────────────
+var array<int> fomcT = f_parse(fomcStr, 14, 0)
+var array<int> cpiT  = f_parse(cpiStr, 8, 30)
+
+[dClose, dEma, dSma] = request.security(syminfo.tickerid, "D", [close[1], ta.ema(close, emaLen)[1], ta.sma(close, smaLen)[1]], lookahead = barmerge.lookahead_on)
+float rsi4 = request.security(syminfo.tickerid, "240", ta.rsi(close, 14)[1], lookahead = barmerge.lookahead_on)
+
+float moveE  = 100 * (close / close[lookBars] - 1.0)
+float logRet = math.log(close / close[1])
+float sigma  = ta.stdev(logRet, volBars)[lookBars]                 // per-bar vol before the run-in
+float zE     = math.log(close / close[lookBars]) / (sigma * math.sqrt(lookBars))
+float runHiE = ta.highest(high, lookBars)
+float runLoE = ta.lowest(low, lookBars)
+float priHiE = ta.highest(high, priorBars)[lookBars]
+float priLoE = ta.lowest(low, priorBars)[lookBars]
+float moveM  = 100 * (open / close[monBars] - 1.0)
+float runHiM = ta.highest(high, monBars)
+float runLoM = ta.lowest(low, monBars)
+float priHiM = ta.highest(high, priorBars)[monBars]
+float priLoM = ta.lowest(low, priorBars)[monBars]
+float swHi   = ta.highest(high, swingBars)
+float swLo   = ta.lowest(low, swingBars)
+
+// Checklist: dir -1 = fading a rally (short), +1 = fading a sell-off (long)
+f_checks(int dir, float mv, bool swS, bool swL) =>
+    bool q1 = dir == -1 ? dClose < dEma : dClose > dEma      // HTF trend agrees with the fade
+    bool q2 = dir == -1 ? dClose < dSma : dClose > dSma      // bull/bear regime agrees
+    bool q3 = dir == -1 ? swS : swL                          // run-in swept prior range liquidity
+    bool q4 = math.abs(mv) >= strongPct                      // significant push into the date
+    bool q5 = dir == -1 ? rsi4 >= rsiHi : rsi4 <= rsiLo      // structure: push is exhausted
+    [q1, q2, q3, q4, q5]
+
+// ── Monthly-open bias (standalone + confluence) ───────────────────────────────
+bool newMonth = bar_index > 0 and month(time, "UTC") != month(time[1], "UTC")
+var int monBias    = 0
+var int monBiasEnd = 0
+if newMonth
+    monBias    := moveM >= narPct ? -1 : moveM <= -narPct ? 1 : 0
+    monBiasEnd := time + monWindow * DAY
+
+// ── Event triggers (fires once, on the bar whose close passes the arm time) ──
+var int fi = 0
+var int ci = 0
+bool fTrig = false
+bool cTrig = false
+int fEv = na
+int cEv = na
+while fi < fomcT.size() and time_close > fomcT.get(fi) - armHrs * HOUR
+    int ev = fomcT.get(fi)
+    if time < ev + cancelHrs * HOUR
+        fTrig := true
+        fEv := ev
+    fi += 1
+while ci < cpiT.size() and time_close > cpiT.get(ci) - armHrs * HOUR
+    int ev = cpiT.get(ci)
+    if time < ev + cancelHrs * HOUR
+        cTrig := true
+        cEv := ev
+    ci += 1
+
+// ── Trade state ───────────────────────────────────────────────────────────────
+var bool   setupOn  = false
+var bool   wasIn    = false
+var bool   partial  = false
+var float  peakQty  = 0.0
+var int    expireT  = 0
+var int    stopT    = 0
+var float  slLvl    = na
+var float  e1L      = na
+var float  e2L      = na
+var float  e3L      = na
+var int    actDir   = 0
+var string actEv    = ""
+var int    actScore = 0
+var float  actRisk  = 0.0
+
+// ── Position management ───────────────────────────────────────────────────────
+if strategy.position_size != 0
+    wasIn := true
+    float aq = math.abs(strategy.position_size)
+    if not partial and peakQty > 0 and aq < peakQty * 0.9
+        partial := true                                       // TP1 filled → stop adding
+        strategy.cancel("E2")
+        strategy.cancel("E3")
+    peakQty := math.max(peakQty, aq)
+    if setupOn and time >= expireT
+        strategy.cancel("E2")
+        strategy.cancel("E3")
+    float avg   = strategy.position_avg_price
+    bool  sh    = strategy.position_size < 0
+    string sd   = sh ? "short" : "long"
+    float tp1   = sh ? avg * (1 - tp1Pct / 100) : avg * (1 + tp1Pct / 100)
+    float act   = sh ? avg * (1 - trailAct / 100) : avg * (1 + trailAct / 100)
+    float ticks = math.max(1.0, math.round(avg * trailOff / 100 / syminfo.mintick))
+    float stopNow = partial ? avg : slLvl
+    if not partial
+        strategy.exit("TP1", qty_percent = 50, limit = tp1, stop = slLvl, comment_profit = "TP1 50%", comment_loss = "SL", alert_message = f_json("exit", sd, actEv, actScore, actRisk, tp1))
+    strategy.exit("RUN", qty_percent = 100, stop = stopNow, trail_price = act, trail_offset = ticks, comment_loss = partial ? "BE" : "SL", comment_trailing = "Trail", alert_message = f_json("exit", sd, actEv, actScore, actRisk, stopNow))
+    if time >= stopT
+        strategy.close_all(comment = "Time stop", alert_message = f_json("exit", sd, actEv, actScore, actRisk, close))
+else if wasIn or (setupOn and time >= expireT)
+    strategy.cancel("E2")
+    strategy.cancel("E3")
+    setupOn := false
+    wasIn   := false
+    partial := false
+    peakQty := 0.0
+
+// ── New setups ────────────────────────────────────────────────────────────────
+int trig = useFomc and fTrig ? 1 : useCpi and cTrig ? 2 : useMon and newMonth ? 3 : 0
+
+if trig != 0 and time >= startT
+    string evName = trig == 1 ? "FOMC" : trig == 2 ? "CPI" : "Month open"
+    int    evT    = trig == 1 ? fEv : trig == 2 ? cEv : time
+    float  mv     = trig == 3 ? moveM : moveE
+    bool   swS    = trig == 3 ? runHiM > priHiM : runHiE > priHiE
+    bool   swL    = trig == 3 ? runLoM < priLoM : runLoE < priLoE
+    bool   volMode = useVol and trig != 3
+    int    dir    = volMode ? (zE >= zThr ? -1 : zE <= -zThr ? 1 : 0) : (mv >= narPct ? -1 : mv <= -narPct ? 1 : 0)
+    string zTxt   = volMode ? " · z " + str.tostring(zE, "#.##") : ""
+    string why    = ""
+    bool   took   = false
+    if strategy.position_size != 0 or setupOn
+        why := "skip: trade already active"
+    else if dir == 0
+        why := "no narrative " + f_pct(mv) + zTxt
+    else
+        [q1, q2, q3, q4, q5] = f_checks(dir, mv, swS, swL)
+        bool mConf = trig != 3 and monBias == dir and time <= monBiasEnd
+        int sc = math.min(5, (q1 ? 1 : 0) + (q2 ? 1 : 0) + (q3 ? 1 : 0) + (q4 ? 1 : 0) + (q5 ? 1 : 0) + (mConf ? 1 : 0))
+        float rkGate = trig == 3 ? (sc >= 5 ? riskMed : sc >= 3 ? riskLow : 0.0) : (sc >= 5 ? riskHigh : sc >= 3 ? riskMed : 0.0)
+        float rk = useGate ? rkGate : (trig == 3 ? riskBase / 2 : riskBase)
+        if rk <= 0
+            why := f_pct(mv) + " · score " + str.tostring(sc) + "/5 → sit out"
+        else
+            float e1 = close
+            float e2 = dir == -1 ? e1 * (1 + stepPct / 100) : e1 * (1 - stepPct / 100)
+            float e3 = dir == -1 ? e1 * (1 + 2 * stepPct / 100) : e1 * (1 - 2 * stepPct / 100)
+            float sl = dir == -1 ? math.max(e3, swHi) * (1 + bufPct / 100) : math.min(e3, swLo) * (1 - bufPct / 100)
+            float stopDist = math.abs(sl / e1 - 1) * 100
+            if stopDist > maxStop
+                why := f_pct(mv) + " · stop too wide (" + str.tostring(stopDist, "#.#") + "%)"
+            else
+                float avgRisk = (math.abs(sl - e1) + math.abs(sl - e2) + math.abs(sl - e3)) / 3
+                float avgE    = (e1 + e2 + e3) / 3
+                float qty     = math.min(strategy.equity * rk / 100 / avgRisk, maxLev * strategy.equity / avgE)
+                float q       = qty / 3
+                string sd     = dir == -1 ? "short" : "long"
+                strategy.entry("E1", dir == -1 ? strategy.short : strategy.long, qty = q, comment = evName + " E1", alert_message = f_json("entry", sd, evName, sc, rk, e1))
+                strategy.entry("E2", dir == -1 ? strategy.short : strategy.long, qty = q, limit = e2, comment = evName + " E2", alert_message = f_json("entry", sd, evName, sc, rk, e2))
+                strategy.entry("E3", dir == -1 ? strategy.short : strategy.long, qty = q, limit = e3, comment = evName + " E3", alert_message = f_json("entry", sd, evName, sc, rk, e3))
+                setupOn  := true
+                partial  := false
+                peakQty  := 0.0
+                slLvl    := sl
+                e1L      := e1
+                e2L      := e2
+                e3L      := e3
+                actDir   := dir
+                actEv    := evName
+                actScore := sc
+                actRisk  := rk
+                expireT  := trig == 3 ? time + monCancel * HOUR : evT + cancelHrs * HOUR
+                stopT    := trig == 3 ? time + monTime * HOUR : evT + timeHrs * HOUR
+                took     := true
+                why      := f_pct(mv) + zTxt + " → " + (dir == -1 ? "SHORT" : "LONG") + " · " + str.tostring(rk) + "% risk · checklist " + str.tostring(sc) + "/5"
+                alert(f_json("setup", sd, evName, sc, rk, e1), alert.freq_once_per_bar_close)
+    if showLbl
+        color bg = took ? (dir == -1 ? color.new(#c62828, 0) : color.new(#2e7d32, 0)) : color.new(color.gray, 30)
+        string tx = evName + " · " + str.format_time(evT, "dd MMM HH:mm", "UTC") + " UTC\n" + why
+        label.new(bar_index, dir == 1 ? low : high, tx, style = dir == 1 ? label.style_label_up : label.style_label_down, color = bg, textcolor = color.white, size = size.small)
+
+// ── Plots ─────────────────────────────────────────────────────────────────────
+bool  inPos   = strategy.position_size != 0
+float avgP    = strategy.position_avg_price
+float tp1Plot = inPos and not partial ? (strategy.position_size < 0 ? avgP * (1 - tp1Pct / 100) : avgP * (1 + tp1Pct / 100)) : na
+plot(setupOn or inPos ? (partial ? avgP : slLvl) : na, "Stop / BE", color.new(#ef5350, 0), 2, plot.style_linebr)
+plot(setupOn ? e1L : na, "E1", color.new(#90a4ae, 0), 1, plot.style_linebr)
+plot(setupOn and not partial ? e2L : na, "E2", color.new(#90a4ae, 30), 1, plot.style_linebr)
+plot(setupOn and not partial ? e3L : na, "E3", color.new(#90a4ae, 50), 1, plot.style_linebr)
+plot(tp1Plot, "TP1 (50% + BE)", color.new(#66bb6a, 0), 2, plot.style_linebr)
+
+// ── Live preview / status ─────────────────────────────────────────────────────
+f_preview() =>
+    int d  = useVol ? (zE >= zThr ? -1 : zE <= -zThr ? 1 : 0) : (moveE >= narPct ? -1 : moveE <= -narPct ? 1 : 0)
+    int dd = d != 0 ? d : (nz(moveE) >= 0 ? -1 : 1)
+    [q1, q2, q3, q4, q5] = f_checks(dd, moveE, runHiE > priHiE, runLoE < priLoE)
+    bool mc = monBias == dd and time <= monBiasEnd
+    int sc = math.min(5, (q1 ? 1 : 0) + (q2 ? 1 : 0) + (q3 ? 1 : 0) + (q4 ? 1 : 0) + (q5 ? 1 : 0) + (mc ? 1 : 0))
+    float rkGate = sc >= 5 ? riskHigh : sc >= 3 ? riskMed : 0.0
+    float rk = d == 0 ? 0.0 : useGate ? rkGate : riskBase
+    [d, q1, q2, q3, q4, q5, mc, sc, rk]
+
+f_nextEvent(int t) =>
+    int nf = useFomc ? f_next(fomcT, t) : na
+    int nc = useCpi ? f_next(cpiT, t) : na
+    int y0 = year(t, "UTC")
+    int m0 = month(t, "UTC")
+    int nm = useMon ? timestamp("UTC", m0 == 12 ? y0 + 1 : y0, m0 == 12 ? 1 : m0 + 1, 1, 0, 0) : na
+    string nmName = "—"
+    int best = na
+    if not na(nf)
+        best := nf
+        nmName := "FOMC"
+    if not na(nc) and (na(best) or nc < best)
+        best := nc
+        nmName := "CPI"
+    if not na(nm) and (na(best) or nm < best)
+        best := nm
+        nmName := "Month open"
+    int armAt = na(best) ? na : nmName == "Month open" ? best : best - armHrs * HOUR
+    [nmName, best, armAt]
+
+bool newDay = bar_index > 0 and dayofmonth(time, "UTC") != dayofmonth(time[1], "UTC")
+if newDay and barstate.isrealtime
+    [pd, p1, p2, p3, p4, p5, pmc, psc, prk] = f_preview()
+    [nxName, nxT, nxArm] = f_nextEvent(timenow)
+    string nxStr = na(nxT) ? "none" : str.format_time(nxT, "yyyy-MM-dd'T'HH:mm'Z'", "UTC")
+    alert('{"module":"execute","type":"status","symbol":"' + syminfo.ticker + '","next_event":"' + nxName + '","next_event_utc":"' + nxStr + '","move_pct":' + str.tostring(nz(moveE), "#.##") + ',"z":' + str.tostring(nz(zE), "#.##") + ',"bias":"' + (pd == -1 ? "short" : pd == 1 ? "long" : "none") + '","score":' + str.tostring(psc) + ',"risk_pct":' + str.tostring(prk) + ',"position":' + str.tostring(strategy.position_size) + ',"net_profit":' + str.tostring(strategy.netprofit, "#.##") + '}', alert.freq_once_per_bar_close)
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+var table dash = table.new(position.top_right, 2, 16, bgcolor = color.new(#0d0d0d, 5), border_width = 1, border_color = color.new(color.gray, 75))
+var table yt   = table.new(position.bottom_right, 5, 8, bgcolor = color.new(#0d0d0d, 5), border_width = 1, border_color = color.new(color.gray, 75))
+
+f_row(table t, int r, string k, string v, color vc) =>
+    table.cell(t, 0, r, k, text_color = color.new(color.white, 35), text_size = size.small, text_halign = text.align_left)
+    table.cell(t, 1, r, v, text_color = vc, text_size = size.small, text_halign = text.align_left)
+
+if barstate.islast and showDash
+    [pd, p1, p2, p3, p4, p5, pmc, psc, prk] = f_preview()
+    [nxName, nxT, nxArm] = f_nextEvent(timenow)
+    color up = #66bb6a
+    color dn = #ef5350
+    color wh = color.white
+    string narr = pd == -1 ? "Bullish → fade SHORT" : pd == 1 ? "Bearish → fade LONG" : useVol ? "None (|z| < " + str.tostring(zThr) + ")" : "None (<" + str.tostring(narPct) + "%)"
+    string pos = inPos ? (strategy.position_size < 0 ? "SHORT " : "LONG ") + str.tostring(math.abs(strategy.position_size), "#.###") + " @ " + str.tostring(avgP, "#,###") + " · " + actEv : setupOn ? "Orders working · " + actEv : "Flat"
+    float net = strategy.netprofit
+    float pf  = strategy.grossloss > 0 ? strategy.grossprofit / strategy.grossloss : na
+    float wr  = strategy.closedtrades > 0 ? 100.0 * strategy.wintrades / strategy.closedtrades : na
+    table.cell(dash, 0, 0, "A3RO · EXECUTE", text_color = wh, text_size = size.normal, text_halign = text.align_left)
+    table.cell(dash, 1, 0, "BTC event pivots v1.1", text_color = color.new(wh, 40), text_size = size.small, text_halign = text.align_left)
+    f_row(dash, 1, "Next pivot", na(nxT) ? "—" : nxName + " · " + str.format_time(nxT, "dd MMM HH:mm", "UTC") + " UTC", wh)
+    f_row(dash, 2, "Arms in", na(nxArm) ? "—" : f_dur(nxArm - timenow), wh)
+    f_row(dash, 3, str.tostring(lookDays) + "d move · z", f_pct(moveE) + " · z " + (na(zE) ? "—" : str.tostring(zE, "#.##")) + (useVol ? " (need ±" + str.tostring(zThr) + ")" : ""), nz(moveE) >= 0 ? up : dn)
+    f_row(dash, 4, "Narrative", narr, pd == 0 ? color.new(wh, 40) : wh)
+    f_row(dash, 5, "Q1 HTF trend agrees", f_ck(p1), p1 ? up : dn)
+    f_row(dash, 6, "Q2 Bull/bear agrees", f_ck(p2), p2 ? up : dn)
+    f_row(dash, 7, "Q3 Liquidity swept", f_ck(p3), p3 ? up : dn)
+    f_row(dash, 8, "Q4 Strong push ≥" + str.tostring(strongPct) + "%", f_ck(p4), p4 ? up : dn)
+    f_row(dash, 9, "Q5 Exhausted (4H RSI " + str.tostring(nz(rsi4), "#") + ")", f_ck(p5), p5 ? up : dn)
+    f_row(dash, 10, "+ Month-open confluence", f_ck(pmc), pmc ? up : color.new(wh, 50))
+    string riskTxt = useGate ? str.tostring(psc) + "/5 → " + (prk > 0 ? str.tostring(prk) + "%" : "sit out") : (prk > 0 ? str.tostring(prk) + "% risk" : "no trade") + " · checklist " + str.tostring(psc) + "/5 (info)"
+    f_row(dash, 11, "If armed now", riskTxt, prk > 0 ? up : color.new(wh, 40))
+    f_row(dash, 12, "Position", pos, inPos ? (strategy.position_size < 0 ? dn : up) : wh)
+    f_row(dash, 13, "Net P&L", (net >= 0 ? "+$" : "-$") + str.tostring(math.abs(net), "#,###") + " (" + f_pct(100 * net / strategy.initial_capital) + ")", net >= 0 ? up : dn)
+    f_row(dash, 14, "Win rate · PF", (na(wr) ? "—" : str.tostring(wr, "#") + "%") + " · " + (na(pf) ? "—" : str.tostring(pf, "#.##")), wh)
+    f_row(dash, 15, "Max drawdown", "-$" + str.tostring(strategy.max_drawdown, "#,###"), dn)
+
+if barstate.islast and showYears
+    int y0 = year(startT, "UTC")
+    int n  = math.max(1, math.min(7, year(timenow, "UTC") - y0 + 1))
+    array<float> pnl = array.new<float>(n, 0.0)
+    array<int>   cnt = array.new<int>(n, 0)
+    array<int>   win = array.new<int>(n, 0)
+    if strategy.closedtrades > 0
+        for i = 0 to strategy.closedtrades - 1
+            int k = year(strategy.closedtrades.exit_time(i), "UTC") - y0
+            if k >= 0 and k < n
+                float pr = strategy.closedtrades.profit(i)
+                pnl.set(k, pnl.get(k) + pr)
+                cnt.set(k, cnt.get(k) + 1)
+                if pr > 0
+                    win.set(k, win.get(k) + 1)
+    color hc = color.new(color.white, 35)
+    table.cell(yt, 0, 0, "Year", text_color = hc, text_size = size.small)
+    table.cell(yt, 1, 0, "P&L", text_color = hc, text_size = size.small)
+    table.cell(yt, 2, 0, "% start", text_color = hc, text_size = size.small)
+    table.cell(yt, 3, 0, "Closes", text_color = hc, text_size = size.small)
+    table.cell(yt, 4, 0, "Win %", text_color = hc, text_size = size.small)
+    for k = 0 to n - 1
+        float p = pnl.get(k)
+        int c = cnt.get(k)
+        color vc = c == 0 ? color.new(color.white, 50) : p >= 0 ? #66bb6a : #ef5350
+        table.cell(yt, 0, k + 1, str.tostring(y0 + k), text_color = color.white, text_size = size.small)
+        table.cell(yt, 1, k + 1, c == 0 ? "—" : (p >= 0 ? "+$" : "-$") + str.tostring(math.abs(p), "#,###"), text_color = vc, text_size = size.small)
+        table.cell(yt, 2, k + 1, c == 0 ? "—" : f_pct(100 * p / strategy.initial_capital), text_color = vc, text_size = size.small)
+        table.cell(yt, 3, k + 1, str.tostring(c), text_color = color.white, text_size = size.small)
+        table.cell(yt, 4, k + 1, c == 0 ? "—" : str.tostring(100.0 * win.get(k) / c, "#") + "%", text_color = color.white, text_size = size.small)
