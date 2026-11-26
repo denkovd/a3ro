@@ -29,6 +29,17 @@ test("roadmap #33 split: open-data modules public, market-data modules Premium",
   for (const m of access.MODULE_ACCESS) assert.ok(m.level === "public" ? m.data === "open" : true, `${m.id}: market data must not be public`);
 });
 
+test("Execute: page and calendar peek are open, signals and records are Premium", () => {
+  for (const p of ["/Projects/Execute", "/api/execute-peek"]) assert.equal(access.gatedModuleForPath(p), null, p);
+  for (const p of ["/api/execute", "/api/execute/"]) {
+    const gated = access.gatedModuleForPath(p);
+    assert.equal(gated?.kind, "api", p);
+    assert.equal(gated?.module.level, "premium", p);
+  }
+  const matcher = readFileSync(path.resolve(root, "middleware.ts"), "utf8");
+  assert.ok(matcher.includes('"/api/execute/:path*"'), "middleware must run on /api/execute");
+});
+
 test("admin check fails closed and ignores case and spacing", () => {
   assert.equal(access.isAdminEmail("me@x.com", undefined), false);
   assert.equal(access.isAdminEmail("me@x.com", ""), false);
