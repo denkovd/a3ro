@@ -35,10 +35,14 @@ test("totals hold together", () => {
   assert.ok(au.mt < cap, "exports below capacity");
 });
 
-test("ABS query asks for SITC 343 by destination and WA, Qld, NT", () => {
-  const url = ex.exportsUrl(ref.LNG_EXPORTS, "2021-11");
-  assert.match(url, /\/343\.TOT\+JAP\+CHIN\+/);
-  assert.match(url, /\.TOT\+5\+3\+7\.M\?/);
+test("ABS query asks only for the SITC 343 total (country and state splits are confidential)", () => {
+  assert.match(ex.exportsUrl(ref.LNG_EXPORTS, "2021-11"), /\/343\.TOT\.TOT\.M\?startPeriod=2021-11/);
+});
+
+test("ship-tracking destinations add up to no more than the period total", () => {
+  const sum = ref.DESTINATIONS.reduce((a, d) => a + d.mt, 0);
+  assert.ok(sum <= ref.DESTINATION_TOTAL_MT && sum > 0.9 * ref.DESTINATION_TOTAL_MT, `sum ${sum}`);
+  assert.ok(ref.SOURCES.shipping);
 });
 
 test("Hormuz note is dated and has a weekly check", () => {

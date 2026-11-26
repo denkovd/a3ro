@@ -8,9 +8,9 @@
    Units: Mt = million tonnes of LNG; Mtpa = million tonnes a year of
    liquefaction capacity. Positions of plants are approximate.
 ──────────────────────────────────────────────────────────────── */
-import type { AbsExportSpec, Destination } from "../commodity/absExports";
+import type { AbsExportSpec } from "../commodity/absExports";
 
-export type SourceId = "igu" | "abs" | "req" | "accr" | "nws" | "pluto" | "barossa" | "eia" | "iea" | "hormuz" | "pilbaraPorts";
+export type SourceId = "igu" | "abs" | "req" | "accr" | "nws" | "pluto" | "barossa" | "eia" | "iea" | "hormuz" | "pilbaraPorts" | "shipping";
 
 export interface Source { label: string; url: string; reviewed: string; note?: string }
 
@@ -65,6 +65,12 @@ export const SOURCES: Record<SourceId, Source> = {
     label: "Bloomberg via BusinessMirror: Qatar boosting LNG exports as winter demand nears peak (26 Nov 2026)",
     url: "https://businessmirror.com.ph/2026/11/26/qatar-boosting-lng-exports-as-winter-demand-nears-peak/",
     reviewed: "2026-11-27",
+  },
+  shipping: {
+    label: "Hellenic Shipping News: LNG shipping, Australia losing market share (Banchero Costa ship-tracking data)",
+    url: "https://www.hellenicshippingnews.com/lng-shipping-australia-losing-market-share/",
+    reviewed: "2026-11-27",
+    note: "Australian LNG exports by destination, January to October 2025",
   },
   pilbaraPorts: {
     label: "Pilbara Ports: 2025-26 throughput (reported by Daily Cargo News)",
@@ -157,29 +163,33 @@ export const PLANTS: readonly Plant[] = [
   { id: "glng", name: "Gladstone LNG", lon: 151.1, lat: -23.82, state: "Qld", operator: "Santos", mtpa: 7.8, startYear: 2016, feed: "Coal seam gas, plus gas bought from the east coast market", source: "accr" },
 ];
 
-/* ── ABS exports: SITC 343 ── */
+/* ── where Australian LNG goes: ship tracking, Jan–Oct 2025 ── */
+
+/**
+ * The ABS publishes Australia's total natural gas exports but keeps the split by country and
+ * by state confidential, so destinations come from ship-tracking data instead.
+ */
+export const DESTINATION_PERIOD = "January–October 2025";
+export const DESTINATION_TOTAL_MT = 65.8;
+export interface LngDestination { code: string; name: string; lon: number; lat: number; mt: number }
+export const DESTINATIONS: readonly LngDestination[] = [
+  { code: "JAP", name: "Japan", lon: 137, lat: 35, mt: 22.2 },
+  { code: "CHIN", name: "China", lon: 121.5, lat: 31, mt: 17.2 },
+  { code: "RKOR", name: "South Korea", lon: 127, lat: 35.5, mt: 12.5 },
+  { code: "TAIW", name: "Taiwan", lon: 120.3, lat: 22.6, mt: 6.6 },
+  { code: "SEA", name: "South East Asia", lon: 103.8, lat: 1.3, mt: 6.1 },
+];
 
 /** Flows are drawn from Karratha; LNG also ships from Onslow, Barrow Island, Darwin, Prelude and Gladstone. */
 export const FLOW_ORIGIN: [number, number] = [116.78, -20.59];
-export const DESTINATIONS: readonly Destination[] = [
-  { code: "JAP", name: "Japan", lon: 137, lat: 35 },
-  { code: "CHIN", name: "China", lon: 121.5, lat: 31 },
-  { code: "RKOR", name: "South Korea", lon: 127, lat: 35.5 },
-  { code: "TAIW", name: "Taiwan", lon: 120.3, lat: 22.6 },
-  { code: "SING", name: "Singapore", lon: 103.8, lat: 1.3 },
-  { code: "MLAY", name: "Malaysia", lon: 101.4, lat: 3 },
-  { code: "THAI", name: "Thailand", lon: 100.9, lat: 12.7 },
-  { code: "INIA", name: "India", lon: 72.8, lat: 21 },
-];
+
+/* ── ABS exports: SITC 343, Australian total only ── */
+
 export const LNG_EXPORTS: AbsExportSpec = {
   id: "lng",
   sitc: [{ code: "343", label: "Natural gas (almost all LNG)" }],
-  destinations: DESTINATIONS,
-  states: [
-    { code: "5", name: "Western Australia" },
-    { code: "3", name: "Queensland" },
-    { code: "7", name: "Northern Territory" },
-  ],
+  destinations: [],
+  states: [],
 };
 
 /* ── companies ── */

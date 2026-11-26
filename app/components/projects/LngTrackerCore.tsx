@@ -9,9 +9,9 @@
 import { useMemo } from "react";
 import CommodityGlobe, { type GlobeLayer, type GlobePalette, type GlobePreset } from "./commodity/CommodityGlobe";
 import LngIntelPanel from "./lng/LngIntelPanel";
-import { audBn, useJson } from "./commodity/ExportsBlock";
+import { useJson } from "./commodity/ExportsBlock";
 import { BUYER, BUYER_CSS, HOME, LG, LG_HI, LNG_CSS } from "./lngTrackerShared";
-import { DESTINATIONS, EXPORTERS, FLOW_ORIGIN, HORMUZ, IMPORTERS, PLANTS, TRADE_YEAR } from "../../../lib/lng/reference";
+import { DESTINATIONS, DESTINATION_PERIOD, DESTINATION_TOTAL_MT, EXPORTERS, FLOW_ORIGIN, HORMUZ, IMPORTERS, PLANTS, TRADE_YEAR } from "../../../lib/lng/reference";
 import type { CommodityExports } from "../../../lib/commodity/absExports";
 
 const PALETTE: GlobePalette = { supply: LG, supplyHi: LG_HI, supplyCss: LNG_CSS, demand: BUYER, demandCss: BUYER_CSS, supplyRgb: "111,168,255" };
@@ -30,31 +30,24 @@ const PLANT_LABEL: Record<string, string | undefined> = {
   ichthys: "DARWIN · ICHTHYS + DLNG", qclng: "CURTIS ISLAND · 3 PLANTS",
 };
 
-/** Until the ABS answers (or if it can't be reached) the arcs are drawn evenly, implying no shares. */
-const FALLBACK_SHARES: Record<string, number> = Object.fromEntries(DESTINATIONS.map((d) => [d.code, 1]));
-
 export default function LngTrackerCore({ onExit, onReady, className = "" }: { onExit?: () => void; onReady?: () => void; className?: string }) {
   const exportsState = useJson<CommodityExports>("/api/lng/exports", "lng exports");
 
-  const shares = useMemo<Record<string, number>>(() => (exportsState.status === "ok"
-    ? Object.fromEntries(exportsState.data.destinations.map((d) => [d.code, d.share]))
-    : FALLBACK_SHARES), [exportsState]);
-
   const layers = useMemo<GlobeLayer[]>(() => {
-    const maxShare = Math.max(...Object.values(shares), 1e-9);
+    const maxMt = Math.max(...DESTINATIONS.map((d) => d.mt));
     return [
       { id: "exporters", label: "Exporters", kind: "bubble", tone: "supply", labelTop: 3,
         items: EXPORTERS.map((e) => ({ id: `x:${e.id}`, lon: e.lon, lat: e.lat, value: e.mt, label: `${e.name.toUpperCase()} · ${Math.round(e.mt)} Mt OUT` })) },
       { id: "importers", label: "Importers", kind: "bubble", tone: "demand", labelTop: 3,
         items: IMPORTERS.map((i) => ({ id: i.id, lon: i.lon, lat: i.lat, value: i.mt, label: `${i.name.toUpperCase()} · ${Math.round(i.mt)} Mt IN` })) },
       { id: "flows", label: "Australian exports", kind: "flow", tone: "supply",
-        items: DESTINATIONS.filter((d) => (shares[d.code] ?? 0) > 0).map((d) => ({ id: `flow:${d.code}`, lon: FLOW_ORIGIN[0], lat: FLOW_ORIGIN[1], to: [d.lon, d.lat] as [number, number], value: (shares[d.code] ?? 0) / maxShare, label: d.name })) },
+        items: DESTINATIONS.map((d) => ({ id: `flow:${d.code}`, lon: FLOW_ORIGIN[0], lat: FLOW_ORIGIN[1], to: [d.lon, d.lat] as [number, number], value: d.mt / maxMt, label: d.name })) },
       { id: "plants", label: "Australian LNG plants", kind: "pin", tone: "supply", glyph: "diamond", labelZoom: 2.4,
         items: PLANTS.map((p) => ({ id: `plant:${p.id}`, lon: p.lon, lat: p.lat, value: p.mtpa, label: PLANT_LABEL[p.id] })) },
       { id: "hormuz", label: "Strait of Hormuz", kind: "pin", tone: "demand", glyph: "triangle", labelZoom: 0,
         items: [{ id: "hormuz", lon: HORMUZ.lon, lat: HORMUZ.lat, value: 1, label: "STRAIT OF HORMUZ · RESTRICTED", labelAbove: true }] },
     ];
-  }, [shares]);
+  }, []);
 
   const hover = (id: string) => {
     if (id === "hormuz") return { title: "Strait of Hormuz", lines: [`Restricted since ${HORMUZ.closedSince}`, `About ${Math.round(HORMUZ.supplyShare * 100)}% of world LNG supply cut off`], tone: "demand" as const };
@@ -64,8 +57,7 @@ export default function LngTrackerCore({ onExit, onReady, className = "" }: { on
     if (kind === "plant") { const p = PLANTS.find((x) => x.id === key)!; return { title: p.name, lines: [`${p.operator} · ${p.mtpa} Mtpa`, p.feed], tone: "supply" as const }; }
     if (kind === "flow") {
       const d = DESTINATIONS.find((x) => x.code === key)!;
-      const live = exportsState.status === "ok" ? exportsState.data.destinations.find((x) => x.code === key) : null;
-      return { title: `Australia → ${d.name}`, lines: [live ? `${audBn(live.last12AudM)} in the last 12 months · ${Math.round(live.share * 100)}%` : "LNG exports · ABS", "LNG exports · ABS"], tone: "supply" as const };
+      return { title: `Australia → ${d.name}`, lines: [`${d.mt} Mt, ${DESTINATION_PERIOD} · ${Math.round((d.mt / DESTINATION_TOTAL_MT) * 100)}%`, "Ship-tracking data"], tone: "supply" as const };
     }
     const imp = IMPORTERS.find((x) => x.id === id);
     if (imp) return { title: imp.name, lines: [`${imp.mt.toFixed(1)} Mt imported in ${TRADE_YEAR}`, "Importer · IGU"], tone: "demand" as const };

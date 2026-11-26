@@ -6,13 +6,13 @@ import { useState } from "react";
 import {
   CompanyList, Explorer, Headline, Kicker, PriceBlock, RailSection, RailShell, SourceLink as RailSourceLink, SourceList, Stat, pct, rowBtn,
 } from "../commodity/RailKit";
-import ExportsBlock, { audBn, type Loadable } from "../commodity/ExportsBlock";
+import ExportsBlock, { type Loadable } from "../commodity/ExportsBlock";
 import type { RailApi } from "../commodity/CommodityGlobe";
 import { BUYER_CSS, LNG_CSS } from "../lngTrackerShared";
 import {
-  COMPANIES, DESTINATIONS, EXPORTERS, HORMUZ, IMPORTERS, OUTLOOK, PILBARA_LNG_MT, PLANTS, SOURCES, TOP3_SHARE, TRADE_YEAR, WORLD_TRADE_MT, type SourceId,
+  COMPANIES, DESTINATIONS, DESTINATION_PERIOD, DESTINATION_TOTAL_MT, EXPORTERS, HORMUZ, IMPORTERS, OUTLOOK, PILBARA_LNG_MT, PLANTS, SOURCES, TOP3_SHARE, TRADE_YEAR, WORLD_TRADE_MT, type SourceId,
 } from "../../../../lib/lng/reference";
-import { periodLabel, type CommodityExports } from "../../../../lib/commodity/absExports";
+import type { CommodityExports } from "../../../../lib/commodity/absExports";
 
 const LG = LNG_CSS;
 const BUY = BUYER_CSS;
@@ -86,21 +86,16 @@ export default function LngIntelPanel({ narrow, selected, focus, close, exportsS
     if (kind === "flow") {
       const dest = DESTINATIONS.find((x) => x.code === key);
       if (!dest) return null;
-      const d = live?.destinations.find((x) => x.code === key);
       const imp = IMPORTERS.find((i) => i.name === dest.name);
       return <>
         <Kicker>Australian exports · LNG</Kicker>
         <h4 className="mt-1 text-lg font-medium text-[var(--ink)]">Australia → {dest.name}</h4>
-        {d ? <>
-          <Headline value={audBn(d.last12AudM)} sub={`Last 12 months to ${periodLabel(live!.latestPeriod)} · ${pct(d.share)} of Australia's LNG exports`} color={LG} />
-          <dl className="mt-4 grid grid-cols-2 gap-3 border-y border-[var(--line)] py-3">
-            <Stat label={periodLabel(live!.latestPeriod)} value={d.latestAudM !== null ? audBn(d.latestAudM) : "—"} />
-            <Stat label="Share of total" value={pct(d.share)} />
-          </dl>
-        </> : <p className="mt-3 border-l-2 border-[var(--line)] pl-3 text-[11px] text-[var(--ink-3)]">{exportsState.status === "loading" ? "Loading ABS figures…" : "ABS figures unavailable just now."}</p>}
+        <Headline value={`${dest.mt} Mt`} sub={`${DESTINATION_PERIOD} · ${pct(dest.mt / DESTINATION_TOTAL_MT)} of Australia's LNG exports`} color={LG} />
+        {dest.code === "JAP" ? <p className="mt-3 text-[11px] leading-relaxed text-[var(--ink-2)]">Japan is the biggest buyer under long-term contracts, and Japanese companies also resell some Australian LNG to other Asian markets.</p> : null}
+        {dest.code === "CHIN" ? <p className="mt-3 text-[11px] leading-relaxed text-[var(--ink-2)]">Shipments to China fell by about a quarter in the first ten months of 2025 as China bought less LNG overall.</p> : null}
         {imp ? <button type="button" onClick={() => focus(imp.id)} className="mt-3 block w-full rounded-sm border border-[var(--line)] px-3 py-2 text-left text-[11px] text-[var(--ink-2)] hover:bg-[var(--depth-2)]">{imp.name} imported {imp.mt.toFixed(1)} Mt from all suppliers in {TRADE_YEAR} ↗</button> : null}
-        <p className="mt-3 text-[10px] text-[var(--ink-3)]">Arcs start at Karratha for clarity; LNG also ships from Onslow, Barrow Island, Prelude, Darwin and Gladstone.</p>
-        <a href={SOURCES.abs.url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-[10px] underline" style={{ color: LG }}>{SOURCES.abs.label} ↗</a>
+        <p className="mt-3 text-[10px] text-[var(--ink-3)]">The ABS keeps LNG exports by country confidential, so these shares come from ship tracking. Arcs start at Karratha for clarity; LNG also ships from Onslow, Barrow Island, Prelude, Darwin and Gladstone.</p>
+        <SourceLink id="shipping" />
       </>;
     }
     const imp = IMPORTERS.find((x) => x.id === selected);
@@ -132,7 +127,18 @@ export default function LngIntelPanel({ narrow, selected, focus, close, exportsS
         <RailSection label="Australian exports" kicker="Australia's LNG exports · ABS">
           <ExportsBlock state={exportsState} accent={LG} colors={[LG]} focus={focus} sourceUrl={SOURCES.abs.url} sourceLabel={SOURCES.abs.label}
             fallback={<p className="mt-2 text-[11px] text-[var(--ink-3)]">The Department of Industry puts Australia&apos;s LNG export earnings at A${OUTLOOK.points[0].audBn}bn in {OUTLOOK.points[0].year}.</p>}
-            footnote="SITC 343 is natural gas in any form; Australia's exports of it are almost all LNG." />
+            footnote="SITC 343 is natural gas in any form; Australia's exports of it are almost all LNG. The ABS keeps the split by country and by state confidential." />
+        </RailSection>
+
+        <RailSection label="Where it goes" kicker={`Where it goes · ${DESTINATION_PERIOD} · ship tracking`}>
+          <ul className="mt-1 divide-y divide-[var(--line)]">
+            {DESTINATIONS.map((d) => <li key={d.code}><button type="button" onClick={() => focus(`flow:${d.code}`)} className={rowBtn}>
+              <span className="font-mono text-[10px] text-[var(--ink)]">{d.name}</span>
+              <span className="font-mono text-[10px] tabular-nums" style={{ color: LG }}>{pct(d.mt / DESTINATION_TOTAL_MT)} · {d.mt} Mt</span>
+            </button></li>)}
+          </ul>
+          <p className="mt-2 text-[10px] text-[var(--ink-3)]">{DESTINATION_TOTAL_MT} Mt shipped in all over the period. Japan&apos;s share rose and China&apos;s fell compared with 2024.</p>
+          <SourceLink id="shipping" />
         </RailSection>
 
         <RailSection label="World trade" kicker={`World trade · ${TRADE_YEAR}`}>
@@ -180,7 +186,7 @@ function AustraliaBox({ live }: { live: CommodityExports | null }) {
     </dl>
     <p className="mt-2 text-[11px] leading-relaxed text-[var(--ink-2)]">
       Western Australia&apos;s plants run on offshore gas from the North West Shelf; Queensland&apos;s three run on coal seam gas; Darwin takes gas from the Timor Sea and Browse Basin. Pilbara Ports handled {PILBARA_LNG_MT} Mt of LNG in 2025-26.
-      {live && live.states.length ? ` By export value over the last 12 months: ${live.states.filter((s) => s.share > 0).map((s) => `${s.name} ${pct(s.share)}`).join(", ")}.` : ""} New supply: Barossa restarted Darwin LNG in January 2026, and Pluto Train 2 is due to ship its first cargo in late 2026.
+      {live ? ` Export value over the last 12 months: A$${(live.last12AudM / 1000).toFixed(1)}bn.` : ""} New supply: Barossa restarted Darwin LNG in January 2026, and Pluto Train 2 is due to ship its first cargo in late 2026.
     </p>
     <SourceLink id="accr" />
     <SourceLink id="pilbaraPorts" />
