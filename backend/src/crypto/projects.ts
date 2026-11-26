@@ -50,8 +50,8 @@ export const CRYPTO_PROJECTS: CryptoProject[] = [
   { id: "xrp", name: "XRP Ledger", symbol: "XRP", group: "platform", chain: "XRPL", fees: ["XRP Ledger", "XRPL", "Ripple"], role: "Payments ledger; usage measured like the others.", tv: "BINANCE:XRPUSDT" },
 
   { id: "helium", name: "Helium", symbol: "HNT", group: "infrastructure", chain: null, fees: ["Helium Network", "Helium"], role: "Wireless coverage that carriers and devices pay to use (data credits).", tv: "BINANCE:HNTUSDT" },
-  { id: "chainlink", name: "Chainlink", symbol: "LINK", group: "tokenization", chain: null, fees: ["Chainlink", "Chainlink VRF", "Chainlink Requests"], role: "Price feeds and cross-chain messaging that apps pay for.", tv: "BINANCE:LINKUSDT" },
-  { id: "ondo", name: "Ondo", symbol: "ONDO", group: "tokenization", chain: null, fees: ["Ondo Finance", "Ondo"], role: "Tokenized Treasuries and funds; holders pay management fees.", tv: "BYBIT:ONDOUSDT" },
+  { id: "chainlink", name: "Chainlink", symbol: "LINK", group: "tokenization", chain: null, fees: ["Chainlink", "Chainlink VRF", "Chainlink Requests"], role: "Price feeds and cross-chain messaging. DefiLlama only tracks its on-chain request fees, not what data users pay off-chain, so it reads low.", tv: "BINANCE:LINKUSDT" },
+  { id: "ondo", name: "Ondo", symbol: "ONDO", group: "tokenization", chain: null, fees: ["Ondo Yield Assets", "Ondo Finance", "Ondo"], role: "Tokenized Treasuries and funds; holders pay management fees.", tv: "BYBIT:ONDOUSDT" },
 
   { id: "zcash", name: "Zcash", symbol: "ZEC", group: "privacy", chain: null, fees: ["Zcash"], role: "Optional shielded payments; fees paid to miners.", tv: "BINANCE:ZECUSDT" },
   { id: "monero", name: "Monero", symbol: "XMR", group: "privacy", chain: null, fees: ["Monero"], role: "Private-by-default payments; fees paid to miners.", tv: "KRAKEN:XMRUSD" },

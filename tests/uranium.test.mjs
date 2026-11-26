@@ -51,3 +51,9 @@ test("uranium module is free and listed", () => {
   assert.deepEqual(m.pages, ["/Projects/Uranium-Tracker"]);
   assert.equal(access.canSeeRoute("/Projects/Uranium-Tracker", access.ANONYMOUS), true);
 });
+
+test("crypto fundamentals module is free and listed", () => {
+  const m = access.MODULE_ACCESS.find((x) => x.id === "crypto");
+  assert.equal(m.level, "public");
+  assert.equal(access.canSeeRoute("/Projects/Crypto-Fundamentals", access.ANONYMOUS), true);
+});

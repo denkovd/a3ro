@@ -187,7 +187,9 @@ export async function fetchInputs(get: Fetcher, projects = CRYPTO_PROJECTS, spac
   for (const p of projects) {
     if (p.chain) {
       chainTvlHistory[p.chain] = await safe(`${p.name} TVL history`, `${LLAMA}/v2/historicalChainTvl/${encodeURIComponent(p.chain)}`);
-      stableHistory[p.chain] = await safe(`${p.name} stablecoin history`, `${STABLES}/stablecoincharts/${encodeURIComponent(p.chain)}`);
+      // Only chains that hold stablecoins have a history (Bitcoin answers 404).
+      const holds = Array.isArray(stableChains) && (stableChains as Record<string, unknown>[]).some((c) => typeof c.name === "string" && norm(c.name) === norm(p.chain!));
+      if (holds) stableHistory[p.chain] = await safe(`${p.name} stablecoin history`, `${STABLES}/stablecoincharts/${encodeURIComponent(p.chain)}`);
     }
     const match = matchFeesEntry(p, entries);
     if (match) {
