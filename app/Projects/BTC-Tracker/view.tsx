@@ -17,6 +17,7 @@ import {
 import { AMBER_CSS, OT_ROUTE } from "../../components/projects/oilTrackerShared";
 import { URANIUM_CSS, UT_ROUTE } from "../../components/projects/uraniumTrackerShared";
 import { GOLD_CSS, GT_ROUTE } from "../../components/projects/goldTrackerShared";
+import { DataAsOf } from "../../components/DataAsOf";
 
 const BtcTrackerCore = dynamic(
   () => import("../../components/projects/BtcTrackerCore"),
@@ -176,6 +177,7 @@ export default function BtcTrackerView() {
       <footer className="pointer-events-none absolute inset-x-0 bottom-0 z-20 hidden h-10 items-center justify-between border-t border-[var(--line)] bg-[rgba(6,7,7,0.55)] px-6 backdrop-blur-md md:flex md:px-10">
         <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
           P·03 — BTC Tracker
+          <DataAsOf module="btc" />
         </p>
         <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
           Illustrative routes · live data where shown · not investment advice
