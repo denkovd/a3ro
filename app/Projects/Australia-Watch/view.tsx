@@ -7,7 +7,7 @@ import { AUSTRALIA_REGISTRY, indicatorsInSection, isAustraliaIndicator, primaryB
 import { AU_ACCENT, delta, displayValue, estimatedFreshness, fetchOverdue, releaseDateLabel, useAustraliaWatch, type AustraliaObservation, type AustraliaReleaseSchedule, type FetchState } from "../../components/projects/australia/australiaWatchData";
 import ReleaseSchedule from "../../components/projects/australia/ReleaseSchedule";
 import PulseBand from "../../components/projects/australia/PulseBand";
-import { computePulse, type MeasuredLead } from "../../../backend/src/australia/pulse";
+import { computePulse, pulseHistory, type MeasuredLead } from "../../../backend/src/australia/pulse";
 import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
 import SiteFooter from "../../components/SiteFooter";
 import NewsletterSignup from "../../components/NewsletterSignup";
@@ -76,6 +76,7 @@ function IndicatorSlot({indicator,data,lead}:{indicator:AustraliaIndicator;data:
 export default function AustraliaWatchView() {
   const router=useRouter(); const data=useAustraliaWatch();
   // Recomputed only when observations or release schedules change; pure and deterministic (backend/src/australia/pulse.ts).
+  const trail=useMemo(()=>data.status==="ready"?pulseHistory(data.observations,5):[],[data.status,data.observations]);
   const pulse=useMemo(()=>data.status==="ready"?computePulse(data.observations,{schedules:data.releaseSchedules}):null,[data.status,data.observations,data.releaseSchedules]);
   const leave=useCallback(()=>router.push("/#modules"),[router]);
   useEffect(()=>{const onKey=(e:KeyboardEvent)=>e.key==="Escape"&&leave();addEventListener("keydown",onKey);return()=>removeEventListener("keydown",onKey)},[leave]);
@@ -85,7 +86,7 @@ export default function AustraliaWatchView() {
     <div className="mx-auto max-w-6xl px-6 py-10 md:px-10"><p className="font-mono text-[10px] uppercase tracking-[.3em] text-[var(--ink-3)]">Australian economic conditions</p><h1 className="mt-3 text-4xl font-semibold text-[var(--ink)]">Australia Watch</h1><p className="mt-3 max-w-3xl text-sm leading-relaxed text-[var(--ink-2)]">Inflation, labour, financial, housing, demand and external conditions from the ABS, RBA and OECD, each measured against its own history. Inflation uses the complete Monthly CPI, Australia’s primary measure since November 2025. Each card is tagged leading, coincident or lagging. Direction describes the latest comparable change; distance from average puts it in context.</p>
     {data.refreshError && data.status === "ready" && <p role="status" className="mt-5 text-xs text-amber-300">Refresh failed — showing the last loaded observations. Retrying automatically.</p>}
     {data.status!=="ready"?<p className="mt-16 text-[var(--ink-3)]">{data.status==="error"?"Data unavailable":"Loading official observations…"}</p>:<>
-      {pulse && <PulseBand pulse={pulse}/>}
+      {pulse && <PulseBand pulse={pulse} trail={trail}/>}
       {PILLARS.map(group=><section key={group.pillar} aria-label={group.label} className="mt-10 first:mt-8"><p className="font-mono text-[10px] uppercase tracking-[.3em]" style={{color:AU_ACCENT}}>{group.label}</p><div className="mt-4 grid gap-5 lg:grid-cols-2">{group.indicators.map(indicator=><IndicatorSlot key={indicator} indicator={indicator} data={data} lead={pulse?.leads[indicator]}/>)}</div></section>)}
       {COMPARISON.length>0 && <section aria-label="Quarterly CPI comparison" className="mt-14 border-t border-[var(--line)] pt-8"><p className="font-mono text-[10px] uppercase tracking-[.3em] text-[var(--ink-3)]">Comparison series</p><h2 className="mt-2 text-xl font-medium text-[var(--ink)]">Quarterly CPI</h2><p className="mt-2 max-w-3xl text-xs leading-relaxed text-[var(--ink-3)]">Kept for continuity with the long quarterly history. The Monthly CPI above is Australia’s primary inflation measure and the RBA’s target measure.</p><div className="mt-6 grid gap-5 lg:grid-cols-2">{COMPARISON.map(indicator=><IndicatorSlot key={indicator} indicator={indicator} data={data}/>)}</div></section>}
     </>}

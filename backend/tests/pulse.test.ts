@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { computePulse, indicatorSignal, measuredLead, quadrantLabel, shiftPeriod, LEAD_SEARCH } from "../src/australia/pulse";
+import { computePulse, pulseHistory, indicatorSignal, measuredLead, quadrantLabel, shiftPeriod, LEAD_SEARCH } from "../src/australia/pulse";
 import { AUSTRALIA_REGISTRY, indicatorsInSection } from "../src/australia/registry";
 import type { AustraliaIndicator } from "../src/australia/types";
 
@@ -117,5 +117,20 @@ describe("measured leads", () => {
     assert.equal(measuredLead("job_vacancies", []), null);
     assert.equal(measuredLead("hours_worked", []), null);
     assert.equal(measuredLead("unemployment_rate", []), null);
+  });
+});
+
+describe("pulse trail", () => {
+  const leading = indicatorsInSection("primary").filter((id) => AUSTRALIA_REGISTRY[id].role === "leading" && AUSTRALIA_REGISTRY[id].growthPolarity !== 0);
+  const improving = (id: AustraliaIndicator) => (i: number) => AUSTRALIA_REGISTRY[id].transform === "yoy_from_level"
+    ? 100 * Math.exp(0.0002 * i * i) : AUSTRALIA_REGISTRY[id].growthPolarity > 0 ? 1 + i * 0.2 : 50 - i * 0.2;
+  test("five previous month-ends, oldest first, each using only readings up to that month", () => {
+    const rows = leading.flatMap((id) => series(id, improving(id)));
+    const trail = pulseHistory(rows, 5);
+    assert.deepEqual(trail.map((t) => t.month), ["2026-05", "2026-06", "2026-07", "2026-08", "2026-09"]);
+    for (const t of trail) { assert.equal(t.growth, 1); assert.equal(t.inflation, null); }
+  });
+  test("no monthly data → empty trail", () => {
+    assert.deepEqual(pulseHistory([]), []);
   });
 });

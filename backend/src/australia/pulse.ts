@@ -165,7 +165,7 @@ export function measuredLead(indicator: AustraliaIndicator, rows: Row[]): Measur
   return best && best.r >= LEAD_SEARCH.minCorrelation ? best : null;
 }
 
-export function computePulse(observations: Row[], opts: { now?: Date; schedules?: Schedules } = {}): Pulse {
+export function computePulse(observations: Row[], opts: { now?: Date; schedules?: Schedules; leads?: boolean } = {}): Pulse {
   const now = opts.now ?? new Date();
   const rows = observations.filter((o) => isAustraliaIndicator(o.indicator));
   const groups = primaryByPillar();
@@ -185,11 +185,41 @@ export function computePulse(observations: Row[], opts: { now?: Date; schedules?
     .sort((a, b) => Math.abs(b.zChange!) - Math.abs(a.zChange!) || a.indicator.localeCompare(b.indicator))
     .slice(0, 5).map((s) => ({ indicator: s.indicator, zChange: s.zChange!, z: s.z!, period: s.period }));
   const leads: Pulse["leads"] = {};
-  for (const id of growthMembers) leads[id] = measuredLead(id, rows);
+  if (opts.leads !== false) for (const id of growthMembers) leads[id] = measuredLead(id, rows);
   const withData = new Set(signals.map((s) => s.indicator));
   return {
     engineVersion: PULSE_ENGINE_VERSION, asOf: now.toISOString(), signals, growth, inflation,
     quadrant: { growth: g, inflation: i, label: quadrantLabel(g, i) }, pillars, moved, leads,
     coverage: { primary: primary.length, withData: withData.size, stale: signals.filter((s) => s.stale).map((s) => s.indicator), missing: primary.filter((id) => !withData.has(id)) },
   };
+}
+
+/** One point of the quadrant trail: where the pulse sat using readings up to the end of a month. */
+export interface PulsePoint { month: string; growth: number | null; inflation: number | null }
+
+const monthIndex = (period: string) => {
+  const y = Number(period.slice(0, 4));
+  return period.includes("Q") ? y * 12 + Number(period.slice(-1)) * 3 - 1 : y * 12 + Number(period.slice(5)) - 1;
+};
+const monthOf = (idx: number) => `${Math.floor(idx / 12)}-${String((idx % 12) + 1).padStart(2, "0")}`;
+
+/**
+ * The quadrant's last `months` monthly positions before the latest one, oldest first (roadmap: trajectory trail).
+ * Each point recomputes the pulse from readings whose reference period ends on or before that month, with
+ * staleness judged a month and a half after it. Uses today's (revised) data, not what was published at the time.
+ */
+export function pulseHistory(observations: Row[], months = 5): PulsePoint[] {
+  const rows = observations.filter((o) => isAustraliaIndicator(o.indicator));
+  const monthly = rows.filter((r) => !r.referencePeriod.includes("Q"));
+  if (!monthly.length) return [];
+  const latest = Math.max(...monthly.map((r) => monthIndex(r.referencePeriod)));
+  const out: PulsePoint[] = [];
+  for (let k = months; k >= 1; k--) {
+    const cut = latest - k;
+    const upTo = rows.filter((r) => monthIndex(r.referencePeriod) <= cut);
+    const now = new Date(Date.UTC(Math.floor(cut / 12), (cut % 12) + 2, 15));
+    const p = computePulse(upTo, { now, leads: false });
+    out.push({ month: monthOf(cut), growth: p.quadrant.growth === null ? null : p.growth.share, inflation: p.quadrant.inflation === null ? null : p.inflation.share });
+  }
+  return out;
 }

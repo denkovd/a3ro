@@ -1,6 +1,7 @@
 "use client";
 import { AUSTRALIA_REGISTRY, isAustraliaIndicator } from "../../../../backend/src/australia/registry";
-import { DIRECTION_WINDOW, LEAD_SEARCH, STEADY_BAND, type Diffusion, type Pulse } from "../../../../backend/src/australia/pulse";
+import { useState } from "react";
+import { DIRECTION_WINDOW, LEAD_SEARCH, STEADY_BAND, type Diffusion, type Pulse, type PulsePoint } from "../../../../backend/src/australia/pulse";
 import { AU_ACCENT } from "./australiaWatchData";
 
 const label = (id: string) => (isAustraliaIndicator(id) ? AUSTRALIA_REGISTRY[id].label : id);
@@ -11,8 +12,10 @@ function count(d: Diffusion, up: string, down: string) {
   return `${d.up} of ${counted} ${up}${d.down ? `, ${d.down} ${down}` : ""}${d.steady ? `, ${d.steady} steady` : ""}`;
 }
 
+const fmtMonth = (m: string) => new Date(`${m}-01T00:00:00Z`).toLocaleDateString("en-AU", { month: "short", year: "numeric", timeZone: "UTC" });
+
 /** 2×2: x = share of leading indicators improving, y = share of inflation series rising. */
-function Quadrant({ pulse }: { pulse: Pulse }) {
+function Quadrant({ pulse, trail }: { pulse: Pulse; trail: PulsePoint[] }) {
   const gx = pulse.growth.share, iy = pulse.inflation.share;
   const placed = pulse.quadrant.growth !== null && pulse.quadrant.inflation !== null && gx !== null && iy !== null;
   const X = (v: number) => 30 + v * 200, Y = (v: number) => 210 - v * 200;
@@ -25,11 +28,23 @@ function Quadrant({ pulse }: { pulse: Pulse }) {
       <text key={`${a}${b}`} x={x as number} y={y as number} textAnchor={(x as number) > 130 ? "end" : "start"} fontSize="8" fill="var(--ink-3)"><tspan x={x as number}>{a}</tspan><tspan x={x as number} dy="10">{b}</tspan></text>)}
     <text x="130" y="230" textAnchor="middle" fontSize="8" fill="var(--ink-3)">leading indicators improving →</text>
     <text x="12" y="110" textAnchor="middle" fontSize="8" fill="var(--ink-3)" transform="rotate(-90 12 110)">inflation rising →</text>
-    {placed && <circle cx={X(gx!)} cy={Y(iy!)} r="6" fill={AU_ACCENT} />}
+    {trail.length > 0 && (() => {
+      const pts = trail.filter((t) => t.growth !== null && t.inflation !== null);
+      const path = [...pts.map((t) => [X(t.growth!), Y(t.inflation!)]), ...(placed ? [[X(gx!), Y(iy!)]] : [])];
+      return <g>
+        {path.length > 1 && <polyline points={path.map((q) => q.join(",")).join(" ")} fill="none" stroke={AU_ACCENT} strokeOpacity="0.35" strokeWidth="1" />}
+        {pts.map((t) => { const age = trail.length - trail.indexOf(t); // 1 = last month … 5 = oldest
+          return <circle key={t.month} cx={X(t.growth!)} cy={Y(t.inflation!)} r={5 - age * 0.6} fill={AU_ACCENT} fillOpacity={0.75 - age * 0.12}>
+            <title>{`${fmtMonth(t.month)}: ${pct(t.growth)} improving, ${pct(t.inflation)} rising`}</title></circle>; })}
+      </g>;
+    })()}
+    {placed && <circle cx={X(gx!)} cy={Y(iy!)} r="6" fill={AU_ACCENT}><title>{`Now: ${pct(gx)} improving, ${pct(iy)} rising`}</title></circle>}
   </svg>;
 }
 
-export default function PulseBand({ pulse }: { pulse: Pulse }) {
+export default function PulseBand({ pulse, trail = [] }: { pulse: Pulse; trail?: PulsePoint[] }) {
+  const [showTrail, setShowTrail] = useState(true);
+  const shown = trail.filter((t) => t.growth !== null && t.inflation !== null);
   const { growth, inflation, coverage } = pulse;
   const leadsShown = Object.entries(pulse.leads).filter(([, l]) => l);
   return <section aria-label="Australia Pulse" className="mt-8 rounded-md border border-[var(--line)] bg-[var(--depth-1)] p-5 md:p-6">
@@ -39,7 +54,13 @@ export default function PulseBand({ pulse }: { pulse: Pulse }) {
       <p className="text-[11px] text-[var(--ink-3)]">Descriptive summary of the cards below · not a forecast</p>
     </div>
     <div className="mt-5 grid gap-6 md:grid-cols-[280px_1fr]">
-      <Quadrant pulse={pulse} />
+      <div>
+        <Quadrant pulse={pulse} trail={showTrail ? trail : []} />
+        {shown.length > 0 && <div className="mt-2 flex max-w-[280px] items-start justify-between gap-3 text-[11px] text-[var(--ink-3)]">
+          <p>{showTrail ? `Fading dots: the previous ${shown.length} months, oldest faintest (${fmtMonth(shown[0].month)} → now).` : "Show where it has been over the last 5 months."}</p>
+          <button type="button" aria-pressed={showTrail} onClick={() => setShowTrail((v) => !v)} className="shrink-0 underline decoration-[var(--line)] underline-offset-4 hover:text-[var(--ink)]">{showTrail ? "Hide trail" : "Show trail"}</button>
+        </div>}
+      </div>
       <div className="space-y-4 text-sm">
         <div><p className="text-[var(--ink)]">Leading indicators: {count(growth, "improving", "weakening")}</p>
           <p className="text-xs text-[var(--ink-3)]">Change over the last {DIRECTION_WINDOW.monthly} months (monthly series) or quarter (quarterly series), signed so that “improving” means better for activity.</p></div>
@@ -62,6 +83,7 @@ export default function PulseBand({ pulse }: { pulse: Pulse }) {
         <li>The point sits at the share of improving leading indicators (across) and the share of rising inflation series (up), ignoring steady ones. An axis needs at least three counted series. There are no weights.</li>
         <li>“What moved” ranks the change in each series’ distance from its own 10-year average (standard deviations) between its last two observations. Series without enough history are left out.</li>
         <li>Stale series (behind their release schedule) are shown but not counted.</li>
+        <li>The trail recomputes the point using only readings up to the end of each of the previous 5 months. It uses today&rsquo;s data, including later revisions, so it can differ slightly from what was published at the time.</li>
         <li>Measured lead times: for monthly leading series, the lag between 0 and {LEAD_SEARCH.maxLagMonths} months at which the series best correlates with the later 12-month fall in unemployment, excluding Mar 2020–Dec 2021. Shown only where r ≥ {LEAD_SEARCH.minCorrelation} on at least {LEAD_SEARCH.minPairs} months. {leadsShown.length ? `Currently shown for ${leadsShown.length} series.` : "None currently meet that bar."} These describe the last decade and are not predictions.</li>
       </ul></details>
   </section>;
