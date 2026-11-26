@@ -44,7 +44,9 @@ export const MODULE_ACCESS: readonly ModuleAccess[] = [
     preview: "Finds the assets that have just turned bullish on both daily and weekly closes, ranked by how recent and how strong the turn is, with a chart and profile for each." },
   { id: "earnings", label: "Earnings Beat Leaderboard", level: "premium", data: "market", pages: ["/Projects/Earnings-Beat"], apis: ["/api/leaderboard", "/api/watchlist"],
     preview: "Ranks companies by how consistently they beat earnings expectations quarter after quarter, and by how big the surprises are." },
-  { id: "regime", label: "US regime", level: "premium", data: "market", pages: ["/Projects/Regime-Shift"], apis: ["/api/regime"],
+  { id: "regime", label: "US regime", level: "premium", data: "market", pages: ["/Projects/Regime-Shift"],
+    // The backtest file is served from public/ (9 MB, too big for a function response), so the gate covers it here (#92).
+    apis: ["/api/regime", "/data/regime-backtest.json"],
     preview: "Places the US economy in one of four growth and inflation regimes from official releases, then checks whether markets are pricing the same regime." },
   { id: "gold", label: "Gold", level: "premium", data: "market", pages: ["/Projects/Gold-Tracker"], apis: ["/api/gold"],
     preview: "Follows gold across its main trading hubs, with prices, COMEX vault stocks and the macro drivers behind the moves." },

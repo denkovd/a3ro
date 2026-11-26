@@ -70,6 +70,15 @@ test("middleware matcher covers every module page and API prefix (any level can 
   assert.ok(!matcher.some((p) => p.startsWith("/api/cron")));
 });
 
+test("static data files with market data or Premium signals are gated, not public (#92)", () => {
+  const hit = access.moduleForPath("/data/regime-backtest.json");
+  assert.equal(hit?.module.id, "regime");
+  assert.equal(hit?.kind, "api");
+  assert.ok(access.gatedModuleForPath("/data/regime-backtest.json"));
+  // Open-data snapshots for the public macro view stay public.
+  assert.equal(access.gatedModuleForPath("/data/cost-of-capital.json"), null);
+});
+
 /** `premiumIds`: account ids the stubbed user_access says have Premium. */
 function middlewareWith(email, confirmed = true, overrides = {}, premiumIds = []) {
   class Res {

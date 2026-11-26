@@ -27,6 +27,7 @@ export const config = {
     "/Projects/Bull-Market-Finder/:path*", "/Projects/Regime-Finder/:path*", "/Projects/Earnings-Beat/:path*",
     "/Projects/Regime-Shift/:path*", "/Projects/Gold-Tracker/:path*", "/Projects/BTC-Tracker/:path*",
     "/api/bull/:path*", "/api/leaderboard/:path*", "/api/watchlist/:path*", "/api/regime/:path*", "/api/gold/:path*", "/api/btc/:path*",
+    "/data/regime-backtest.json/:path*",
     "/owner/:path*", "/api/owner/:path*",
     // Public by default, but an admin can make them Premium from Ops controls
     "/Projects/Australia-Watch/:path*", "/Projects/AI-Dividend/:path*", "/Projects/Oil-Tracker/:path*", "/Projects/Uranium-Tracker/:path*",
