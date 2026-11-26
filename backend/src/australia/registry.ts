@@ -7,14 +7,14 @@
  */
 
 export type AustraliaFrequency = "monthly" | "quarterly";
-export type AustraliaPillar = "financial" | "housing" | "labour" | "demand" | "external" | "inflation" | "composite";
+export type AustraliaPillar = "stress" | "financial" | "housing" | "labour" | "demand" | "external" | "inflation" | "composite";
 export type AustraliaRole = "leading" | "coincident" | "lagging";
 export type AustraliaSourceKind = "abs_sdmx" | "rba_csv" | "oecd_sdmx";
 /** What the chart, z-score and direction are computed on. */
 export type AustraliaTransform = "level" | "yoy_from_level";
 /** Primary series appear in the main grid; comparison series sit lower on the page and are excluded from any summary. */
 export type AustraliaSection = "primary" | "comparison";
-export type AustraliaReleaseFamily = "cpi" | "labour" | "rba" | "approvals" | "job_vacancies" | "household_spending" | "trade" | "ppi" | "import_prices" | "wpi" | "lending" | "dwelling_values" | "oecd";
+export type AustraliaReleaseFamily = "cpi" | "labour" | "rba" | "approvals" | "job_vacancies" | "household_spending" | "trade" | "ppi" | "import_prices" | "wpi" | "lending" | "dwelling_values" | "national_accounts" | "oecd";
 /** How the headline value is printed. */
 export type AustraliaDisplay = "percent" | "percentage_points" | "index" | "hours_millions" | "count" | "thousands" | "aud_millions" | "aud_thousands";
 
@@ -270,6 +270,20 @@ export const AUSTRALIA_REGISTRY = {
     growthPolarity: 0, inflationPolarity: 1,
   },
 
+  // ── Stress watch (roadmap #88–#91) ─────────────────────────────────────────
+  // Key from the ANA_AGG structure on data.api.abs.gov.au, 26 Nov 2026: MEASURE M1 (chain volume),
+  // DATA_ITEM GPM_PCA (GDP per capita), TSEST 20 (seasonally adjusted), AUS, quarterly.
+  gdp_per_capita: {
+    title: "Real GDP per capita — annual growth", label: "GDP per capita", shortLabel: "GDP per capita",
+    subtitle: "Quarterly · seasonally adjusted · chain volume · ABS National Accounts",
+    pillar: "stress", role: "coincident", section: "primary", order: 1500,
+    source: "abs_sdmx", dataflow: "ABS,ANA_AGG,1.0.0", key: "M1.GPM_PCA.20.AUS.Q",
+    frequency: "quarterly", adjustment: "Seasonally Adjusted", unit: "AUD per person", unitMultiplier: 0, transform: "yoy_from_level",
+    rollingPeriods: 48, baselineYears: 10, minimumBaseline: 20, releaseLagDays: 65, releaseFamily: "national_accounts",
+    growthPolarity: 1, inflationPolarity: 0, display: "count", decimals: 0,
+    note: "Output per person after inflation. Total GDP can grow while GDP per capita falls when population grows faster than the economy, so this shows whether the average Australian's share of output is rising or shrinking. Quarterly figures are dollars of output per person in that quarter (chain volume).",
+  },
+
   // ── Financial conditions (RBA statistical tables) ──────────────────────────
   cash_rate_target: {
     title: "Cash rate target (monthly average)", label: "Cash rate target", shortLabel: "Cash rate",
@@ -413,10 +427,11 @@ export function indicatorsInSection(section: AustraliaSection): AustraliaIndicat
 }
 
 export const PILLAR_LABEL: Record<AustraliaPillar, string> = {
+  stress: "Stress watch",
   inflation: "Inflation", labour: "Labour", financial: "Financial conditions", housing: "Housing & construction",
   demand: "Business & household demand", external: "External", composite: "Composite leading indicators",
 };
-export const PILLAR_ORDER: AustraliaPillar[] = ["inflation", "labour", "financial", "housing", "demand", "external", "composite"];
+export const PILLAR_ORDER: AustraliaPillar[] = ["stress", "inflation", "labour", "financial", "housing", "demand", "external", "composite"];
 
 /** Primary indicators grouped by pillar, pillars in PILLAR_ORDER, empty pillars dropped. */
 export function primaryByPillar(): { pillar: AustraliaPillar; label: string; indicators: AustraliaIndicator[] }[] {

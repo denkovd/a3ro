@@ -37,7 +37,7 @@ describe("Phase 2 ABS series", () => {
     }
   });
   test("the page has its pillars in a fixed order", () => {
-    assert.deepEqual(primaryByPillar().map((g) => g.pillar), ["inflation", "labour", "financial", "housing", "demand", "external", "composite"]);
+    assert.deepEqual(primaryByPillar().map((g) => g.pillar), ["stress", "inflation", "labour", "financial", "housing", "demand", "external", "composite"]);
   });
   test("PPI has no adjustment-type column: parsed with the registry adjustment; blank early values skipped", async () => {
     const rows = parseAbsCsv("ppi_final_demand_yoy", await fixture("abs-ppi-fd.csv"), "https://source", AT);

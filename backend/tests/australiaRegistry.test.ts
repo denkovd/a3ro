@@ -30,7 +30,7 @@ describe("Australia Watch registry", () => {
   });
   test("primary series group into pillars in a fixed order; comparison series are excluded", () => {
     const groups = primaryByPillar();
-    assert.deepEqual(groups.map((g) => g.pillar), ["inflation", "labour", "financial", "housing", "demand", "external", "composite"]);
+    assert.deepEqual(groups.map((g) => g.pillar), ["stress", "inflation", "labour", "financial", "housing", "demand", "external", "composite"]);
     assert.equal(groups.flatMap((g) => g.indicators).length, indicatorsInSection("primary").length);
     assert.ok(!groups.flatMap((g) => g.indicators).includes("headline_cpi_yoy"));
   });
@@ -91,5 +91,16 @@ describe("Monthly CPI", () => {
     assert.equal(schedules.monthly_headline_cpi_yoy.latestReferencePeriod, "2026-09");
     assert.deepEqual(schedules.monthly_headline_cpi_yoy.next, { referencePeriod: "2026-10", releaseAt: "2026-11-25T00:30:00.000Z" });
     assert.equal(schedules.headline_cpi_yoy.latestReferencePeriod, "2026-Q3");
+  });
+});
+
+describe("stress watch", () => {
+  test("GDP per capita: ANA_AGG chain volume, seasonally adjusted, Australia, quarterly; charted as annual growth", () => {
+    const def = AUSTRALIA_REGISTRY.gdp_per_capita;
+    assert.equal(def.dataflow, "ABS,ANA_AGG,1.0.0");
+    assert.deepEqual(def.key.split("."), ["M1", "GPM_PCA", "20", "AUS", "Q"]);
+    assert.equal(def.transform, "yoy_from_level");
+    assert.equal(primaryByPillar()[0].pillar, "stress");
+    assert.ok(primaryByPillar()[0].indicators.includes("gdp_per_capita"));
   });
 });
