@@ -31,6 +31,8 @@ export interface GlobeItem {
   label?: string;
   /** Flow end point. */
   to?: [number, number];
+  /** Pins: draw the label centred above the pin instead of to its right, to clear a neighbour's label. */
+  labelAbove?: boolean;
 }
 
 export interface GlobeLayer {
@@ -453,8 +455,9 @@ export default function CommodityGlobe({
             }
             if (on) brackets(p.x, p.y, 10, it.id === sel, col);
             if (it.label && (s.zoom > (layer.labelZoom ?? 1.6) || it.id === sel) && it.id !== hov) {
-              ctx.fillStyle = INK(0.7 * fade * labA);
-              haloText(it.label, p.x + 8, p.y + 3);
+              ctx.fillStyle = layer.tone === "demand" ? col(0.9 * fade * labA) : INK(0.7 * fade * labA);
+              if (it.labelAbove) haloText(it.label, p.x - ctx.measureText(it.label).width / 2, p.y - 12);
+              else haloText(it.label, p.x + 8, p.y + 3);
             }
           }
         }

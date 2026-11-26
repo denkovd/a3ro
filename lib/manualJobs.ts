@@ -93,6 +93,31 @@ export const MANUAL_JOBS: readonly ManualJob[] = [
     everyMonths: 3,
     lastCheckedInCode: "2026-11-27",
   },
+  {
+    id: "lng-hormuz",
+    title: "LNG Tracker: Strait of Hormuz note",
+    steps: [
+      "Check the latest on LNG shipping through the Strait of Hormuz and Qatar's Ras Laffan (IEA, EIA, Reuters or Bloomberg).",
+      "Update HORMUZ.latest and HORMUZ.asOf, and the summary if the strait has reopened. Add the source if it is new.",
+    ],
+    where: "lib/lng/reference.ts",
+    everyMonths: 0,
+    everyDays: 7,
+    lastCheckedInCode: "2026-11-27",
+  },
+  {
+    id: "lng-reference",
+    title: "LNG reference figures (LNG Tracker)",
+    steps: [
+      "Check plant status: Pluto Train 2 first cargo (then add its 5 Mtpa), North West Shelf trains, Darwin LNG, Prelude.",
+      "After each Resources and Energy Quarterly, update the LNG export earnings outlook.",
+      "Each July, update exporters and importers from the new IGU World LNG Report.",
+      "Change each source's reviewed date. Export values (ABS) update by themselves.",
+    ],
+    where: "lib/lng/reference.ts",
+    everyMonths: 3,
+    lastCheckedInCode: "2026-11-27",
+  },
 ];
 
 export type JobStatus = "ok" | "due soon" | "overdue";

@@ -6,7 +6,7 @@ export interface Interest { id: string; label: string; group: "Modules" | "Topic
 export const INTERESTS: readonly Interest[] = [
   { id: "australia", label: "Australia Watch", group: "Modules" },
   { id: "dividend", label: "AI Dividend", group: "Modules" },
-  { id: "commodity", label: "Commodity Watch (oil, iron ore, copper, gold, uranium)", group: "Modules" },
+  { id: "commodity", label: "Commodity Watch (oil, iron ore, copper, LNG, gold, uranium)", group: "Modules" },
   { id: "trend", label: "Bull Market Finder", group: "Modules" },
   { id: "earnings", label: "Earnings Beat Leaderboard", group: "Modules" },
   { id: "regime", label: "US regime", group: "Modules" },
