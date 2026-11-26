@@ -11,10 +11,10 @@ import { useRouter } from "next/navigation";
 import { canSeeRoute } from "../../../lib/access";
 import { useViewer } from "../useViewer";
 
-export type ModuleId = "trend" | "regime" | "earnings" | "australia" | "dividend";
+export type ModuleId = "trend" | "regime" | "earnings" | "australia" | "dividend" | "execute";
 
 // Same order as the homepage: free modules first, then Premium.
-const MODULE_SEQUENCE: ModuleId[] = ["australia", "dividend", "trend", "regime", "earnings"];
+const MODULE_SEQUENCE: ModuleId[] = ["australia", "dividend", "trend", "regime", "earnings", "execute"];
 
 const MODULE_META: Record<ModuleId, { label: string; route: string }> = {
   trend: { label: "Bull Market Finder", route: "/Projects/Bull-Market-Finder" },
@@ -22,6 +22,7 @@ const MODULE_META: Record<ModuleId, { label: string; route: string }> = {
   earnings: { label: "Earnings Beat Leaderboard", route: "/Projects/Earnings-Beat" },
   australia: { label: "Australia Watch", route: "/Projects/Australia-Watch" },
   dividend: { label: "AI Dividend", route: "/Projects/AI-Dividend" },
+  execute: { label: "Execute", route: "/Projects/Execute" },
 };
 
 const switchButtonClass =
