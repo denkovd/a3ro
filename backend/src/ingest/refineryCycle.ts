@@ -34,7 +34,11 @@ async function fetchPage(url: string) {
 export async function runRefineryCycle(db: Queryable, opts: { fetchPage?: (url: string) => Promise<string>; now?: () => Date } = {}) {
   const get = opts.fetchPage ?? fetchPage;
   const now = (opts.now ?? (() => new Date()))().toISOString();
-  const report: { startedAt: string; polled: { sourceId: string; ok: boolean; records: number; error?: string }[] } = { startedAt: now, polled: [] };
+  const report: { startedAt: string; polled: { sourceId: string; ok: boolean; records: number; error?: string; skipped?: string }[] } = { startedAt: now, polled: [] };
+  // Bapco's site answers our checks with a redirect to a bot-verification page. That isn't a failure:
+  // the reviewed evidence is kept as it is and the page shows its age. Reported as skipped so the
+  // daily run isn't marked degraded for it; the check itself is still recorded as not renewed.
+  const isVerificationWall = (message: string) => /verification page/.test(message);
   for (const rule of CHECKS) {
     try {
       const event = extractOfficialEvent(rule, await get(rule.url), now);
@@ -44,7 +48,9 @@ export async function runRefineryCycle(db: Queryable, opts: { fetchPage?: (url: 
     } catch (error) {
       const message = error instanceof Error ? error.message.slice(0,180) : "Official source unavailable";
       await recordRefineryCheck(db, rule.id, false, message, now);
-      report.polled.push({ sourceId: rule.id, ok: false, records: 0, error: message });
+      report.polled.push(isVerificationWall(message)
+        ? { sourceId: rule.id, ok: false, records: 0, skipped: message }
+        : { sourceId: rule.id, ok: false, records: 0, error: message });
     }
   }
   // Discover official updates without converting headlines into operating-status claims.
@@ -71,7 +77,9 @@ export async function runRefineryCycle(db: Queryable, opts: { fetchPage?: (url: 
   } catch (e) {
     const message = e instanceof Error ? e.message.slice(0,180) : "Official update discovery unavailable";
     await recordRefineryCheck(db, "bapco-updates", false, message, now);
-    report.polled.push({ sourceId: "bapco-updates", ok: false, records: 0, error: message });
+    report.polled.push(isVerificationWall(message)
+      ? { sourceId: "bapco-updates", ok: false, records: 0, skipped: message }
+      : { sourceId: "bapco-updates", ok: false, records: 0, error: message });
   }
   return report;
 }

@@ -39,8 +39,13 @@ export const dynamic = "force-dynamic";
 // Price + corridor cycles plus baselines/seasonal/macro/positioning
 // need a five-minute budget for the independent source cycles.
 export const maxDuration = 300;
-/** No step starts after this; leaves a minute for the slowest step and the response. */
+/** No step starts after this. */
 const STEP_BUDGET_MS = 240_000;
+/** Longest any one later step is waited on, and the price step. */
+const STEP_MAX_MS = 90_000;
+const PRICE_MAX_MS = 120_000;
+/** Nothing is waited on past this, leaving time to answer (and record the run) before 300 s. */
+const HARD_DEADLINE_MS = 270_000;
 
 export const GET = withErrorLog("cron:ingest", async function GET(request: Request) {
   const unauthorized = requireCronAuth(request);
@@ -49,31 +54,52 @@ export const GET = withErrorLog("cron:ingest", async function GET(request: Reque
   try {
     const db = await createDb();
     const began = Date.now();
-    // Each step's duration, and any step skipped for time, so Ops → Data health shows the slow one.
-    const timings: Record<string, number | "skipped"> = {};
+    // Each step's duration, and any step skipped or cut short for time, so Ops → Data health
+    // shows the slow one.
+    const timings: Record<string, number | "skipped" | "cut off"> = {};
     const skipped: string[] = [];
-    // Vercel kills the function at 300 s, and a killed run records nothing. So no step starts after
-    // STEP_BUDGET_MS; the rest are reported as skipped and run again tomorrow (all are idempotent).
+    // Vercel kills the function at 300 s, and a killed run records nothing. Several sources have no
+    // request timeout of their own, so a hung request used to hold a step until the kill (25 Nov).
+    // Now: no step starts after STEP_BUDGET_MS, none is waited on longer than STEP_MAX_MS, and
+    // nothing is waited on past HARD_DEADLINE_MS. A step cut short keeps running in the background
+    // until the function stops; all steps are idempotent and run again tomorrow.
+    const secs = (ms: number) => Math.round(ms / 100) / 10;
+    function capped<T>(name: string, run: () => Promise<T>, capMs: number): Promise<T | { error: string }> {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const cut = new Promise<{ error: string }>((resolve) => {
+        timer = setTimeout(() => {
+          timings[name] = "cut off";
+          skipped.push(name);
+          resolve({ error: `cut off: still running after ${secs(capMs)} s` });
+        }, Math.max(0, capMs));
+      });
+      return Promise.race([run(), cut]).finally(() => clearTimeout(timer));
+    }
     async function step<T>(name: string, run: () => Promise<T>): Promise<T | { error: string }> {
-      if (Date.now() - began > STEP_BUDGET_MS) {
+      const used = Date.now() - began;
+      if (used > STEP_BUDGET_MS) {
         timings[name] = "skipped";
         skipped.push(name);
-        return { error: `skipped: ${Math.round((Date.now() - began) / 1000)} s used before this step started` };
+        return { error: `skipped: ${Math.round(used / 1000)} s used before this step started` };
       }
       const t = Date.now();
       try {
-        return await run();
+        return await capped(name, run, Math.min(STEP_MAX_MS, HARD_DEADLINE_MS - used));
       } catch (e) {
         return { error: e instanceof Error ? e.message : String(e) };
       } finally {
-        timings[name] ??= Math.round((Date.now() - t) / 100) / 10;
+        timings[name] ??= secs(Date.now() - t);
+        console.log(`ingest step ${name}: ${timings[name]}`);
       }
     }
 
     // Price first: the load-bearing feed. Its failure fails the run (caught below).
     const t0 = Date.now();
-    const report = await runIngestionCycle(db);
-    timings.price = Math.round((Date.now() - t0) / 100) / 10;
+    const priced = await capped("price", () => runIngestionCycle(db), PRICE_MAX_MS);
+    timings.price ??= secs(Date.now() - t0);
+    console.log(`ingest step price: ${timings.price}`);
+    if ("error" in priced) throw new Error(`price ${priced.error}`);
+    const report = priced;
 
     // Each later step is isolated: one failure can never fail price ingestion or another step.
     // Gate baselines, weekly spreads and seasonal norms self-guard on freshness (~monthly), so
@@ -116,7 +142,7 @@ export const GET = withErrorLog("cron:ingest", async function GET(request: Reque
       dividend,
       timings,
       // Read by cron_runs (#47): a skipped step makes the run "degraded", not silently ok.
-      ...(skipped.length ? { degraded: skipped.map((name) => `${name}: skipped for time`) } : {}),
+      ...(skipped.length ? { degraded: skipped.map((name) => `${name}: ${timings[name] === "cut off" ? "cut off after a long wait" : "skipped for time"}`) } : {}),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

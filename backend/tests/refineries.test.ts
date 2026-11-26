@@ -79,3 +79,25 @@ test("public EIA serial dates are timezone-independent and wrong series are reje
   assert.deepEqual(parsePublicEiaWorkbook(bytes, "WPULEUS3"), [{ period: "2026-10-02", value: 92.7, series: "WPULEUS3" }]);
   assert.throws(() => parsePublicEiaWorkbook(bytes, "OTHER_SERIES"), /does not match/);
 });
+
+test("a bot-verification redirect is reported as skipped, not failed, and the check is still recorded", async () => {
+  const { runRefineryCycle } = await import("../src/ingest/refineryCycle");
+  const { summarizeCronReport } = await import("../src/storage/cronRunRepo");
+  const writes: string[] = [];
+  const db = { query: async (sql: string) => { writes.push(sql); return { rows: [], rowCount: 0 }; } };
+  const report = await runRefineryCycle(db as never, {
+    now: () => new Date("2026-11-26T00:00:00Z"),
+    fetchPage: async () => { throw new Error("Official source redirected to a verification page; evidence retained without renewal"); },
+  });
+  assert.ok(report.polled.length > 0);
+  for (const p of report.polled) { assert.ok(p.skipped, p.sourceId); assert.equal(p.error, undefined); }
+  assert.notEqual(summarizeCronReport({ ...report }, 200).status, "degraded");
+  assert.ok(writes.length > 0, "checks still recorded");
+});
+
+test("any other refinery error is still a failure", async () => {
+  const { runRefineryCycle } = await import("../src/ingest/refineryCycle");
+  const db = { query: async () => ({ rows: [], rowCount: 0 }) };
+  const report = await runRefineryCycle(db as never, { now: () => new Date("2026-11-26T00:00:00Z"), fetchPage: async () => { throw new Error("Official source HTTP 404"); } });
+  assert.ok(report.polled.every((p) => p.error && !p.skipped));
+});
