@@ -10,10 +10,10 @@ import {
 import type { RailApi } from "../commodity/CommodityGlobe";
 import { DEMAND_CSS, IRON_CSS } from "../ironOreTrackerShared";
 import {
-  COMPANIES, IMPORTERS, MINES, PILBARA_IRON_ORE_MT, PORTS, PRODUCERS, PRODUCTION_YEAR, REQ_OUTLOOK, SIMANDOU, SOURCES,
+  COMPANIES, DESTINATIONS, IMPORTERS, MINES, PILBARA_IRON_ORE_MT, PORTS, PRODUCERS, PRODUCTION_YEAR, REQ_OUTLOOK, SIMANDOU, SOURCES,
   TRADE_YEAR, WA, WORLD_PRODUCTION_MT, WORLD_PRODUCTION_WA_MT, WORLD_TRADE_MT, type SourceId,
 } from "../../../../lib/ironore/reference";
-import { DESTINATIONS, periodLabel, type IronOreExports } from "../../../../lib/ironore/exports";
+import { periodLabel, type CommodityExports } from "../../../../lib/commodity/absExports";
 import type { ExportsState } from "../IronOreTrackerCore";
 
 const IRN = IRON_CSS;
@@ -26,7 +26,7 @@ function SourceLink({ id }: { id: SourceId }) {
 }
 
 /** Monthly export value as bars, last 36 months. */
-function ExportBars({ data }: { data: IronOreExports }) {
+function ExportBars({ data }: { data: CommodityExports }) {
   const months = data.months.slice(-36);
   const max = Math.max(...months.map((m) => m.totalAudM));
   const W = 300, H = 56, gap = 1, bw = (W - gap * (months.length - 1)) / months.length;
@@ -66,7 +66,7 @@ function ExportsBlock({ state, focus }: { state: ExportsState; focus: (id: strin
       {d.otherLast12AudM > 0 ? <li className="flex items-center justify-between px-1 py-2"><span className="font-mono text-[10px] text-[var(--ink-3)]">Other</span><span className="font-mono text-[10px] tabular-nums text-[var(--ink-3)]">{pct(d.otherLast12AudM / d.last12AudM)}</span></li> : null}
     </ul>
     <p className="mt-2 text-[10px] leading-relaxed text-[var(--ink-3)]">
-      {d.waShare !== null ? `Western Australia ships ${pct(d.waShare)} of it. ` : ""}A$ value, original terms (not seasonally adjusted). The ABS publishes about five weeks after each month ends.
+      {d.states[0] ? `${d.states[0].name} ships ${pct(d.states[0].share)} of it. ` : ""}A$ value, original terms (not seasonally adjusted). The ABS publishes about five weeks after each month ends.
       The goods trade balance is on <Link href="/Projects/Australia-Watch" className="underline" style={{ color: IRN }}>Australia Watch</Link>.
     </p>
     <a href={SOURCES.abs.url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-[10px] underline" style={{ color: IRN }}>{SOURCES.abs.label} ↗</a>

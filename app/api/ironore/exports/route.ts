@@ -2,13 +2,14 @@
 // Read straight from the ABS Data API and cached, so there is no table or cron to run.
 // The ABS publishes about five weeks after each month ends; a 6-hour cache is plenty.
 import { unstable_cache } from "next/cache";
-import { fetchIronOreExports } from "../../../../lib/ironore/exports";
+import { fetchCommodityExports } from "../../../../lib/commodity/absExports";
+import { IRON_ORE_EXPORTS } from "../../../../lib/ironore/reference";
 import { withErrorLog } from "../../_lib/errorLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const getExports = unstable_cache(() => fetchIronOreExports(), ["ironore-abs-exports"], { revalidate: 6 * 3600 });
+const getExports = unstable_cache(() => fetchCommodityExports(IRON_ORE_EXPORTS), ["ironore-abs-exports"], { revalidate: 6 * 3600 });
 
 export const GET = withErrorLog("api:ironore/exports", async function GET() {
   try {

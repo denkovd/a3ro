@@ -10,10 +10,10 @@ import { useEffect, useMemo, useState } from "react";
 import CommodityGlobe, { type GlobeLayer, type GlobePalette, type GlobePreset } from "./commodity/CommodityGlobe";
 import IronOreIntelPanel from "./ironore/IronOreIntelPanel";
 import { DEMAND, DEMAND_CSS, HOME, IRN, IRN_HI, IRON_CSS } from "./ironOreTrackerShared";
-import { IMPORTERS, MINES, PORTS, PRODUCERS, PRODUCTION_YEAR, WA } from "../../../lib/ironore/reference";
-import { DESTINATIONS, FLOW_ORIGIN, type IronOreExports } from "../../../lib/ironore/exports";
+import { DESTINATIONS, FLOW_ORIGIN, IMPORTERS, MINES, PORTS, PRODUCERS, PRODUCTION_YEAR, WA } from "../../../lib/ironore/reference";
+import type { CommodityExports } from "../../../lib/commodity/absExports";
 
-export type ExportsState = { status: "loading" } | { status: "ok"; data: IronOreExports } | { status: "error" };
+export type ExportsState = { status: "loading" } | { status: "ok"; data: CommodityExports } | { status: "error" };
 
 const PALETTE: GlobePalette = { supply: IRN, supplyHi: IRN_HI, supplyCss: IRON_CSS, demand: DEMAND, demandCss: DEMAND_CSS, supplyRgb: "207,106,88" };
 
@@ -37,7 +37,7 @@ export default function IronOreTrackerCore({ onExit, onReady, className = "" }: 
     const ctrl = new AbortController();
     fetch("/api/ironore/exports", { signal: ctrl.signal })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((data: IronOreExports) => setExportsState({ status: "ok", data }))
+      .then((data: CommodityExports) => setExportsState({ status: "ok", data }))
       .catch((e) => { if (!ctrl.signal.aborted) { console.warn("[ironore] exports unavailable", e); setExportsState({ status: "error" }); } });
     return () => ctrl.abort();
   }, []);
