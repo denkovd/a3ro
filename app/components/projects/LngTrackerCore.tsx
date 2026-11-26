@@ -20,9 +20,15 @@ const PRESETS: GlobePreset[] = [
   { name: "Overview", layers: ["exporters", "importers", "flows"], view: { lon: HOME.lon, lat: HOME.lat, zoom: 0.95 } },
   { name: "World trade", layers: ["exporters", "importers", "hormuz"], view: { lon: 60, lat: 25, zoom: 0.9 } },
   { name: "Australia", layers: ["plants", "flows"], view: { lon: 132, lat: -20, zoom: 2.6 } },
-  { name: "Hormuz", layers: ["hormuz", "exporters", "importers"], view: { lon: 56, lat: 24, zoom: 2.2 } },
+  { name: "Hormuz", layers: ["hormuz", "exporters"], view: { lon: 54.5, lat: 25.5, zoom: 5.5 } },
   { name: "Exports", layers: ["flows", "importers", "plants"], view: { lon: 125, lat: 10, zoom: 1.15 } },
 ];
+
+/** Plants that sit together share one label, so the names don't pile up. */
+const PLANT_LABEL: Record<string, string | undefined> = {
+  nws: "KARRATHA · NWS + PLUTO", gorgon: "GORGON", wheatstone: "WHEATSTONE", prelude: "PRELUDE FLNG",
+  ichthys: "DARWIN · ICHTHYS + DLNG", qclng: "CURTIS ISLAND · 3 PLANTS",
+};
 
 /** Until the ABS answers (or if it can't be reached) the arcs are drawn evenly, implying no shares. */
 const FALLBACK_SHARES: Record<string, number> = Object.fromEntries(DESTINATIONS.map((d) => [d.code, 1]));
@@ -44,9 +50,9 @@ export default function LngTrackerCore({ onExit, onReady, className = "" }: { on
       { id: "flows", label: "Australian exports", kind: "flow", tone: "supply",
         items: DESTINATIONS.filter((d) => (shares[d.code] ?? 0) > 0).map((d) => ({ id: `flow:${d.code}`, lon: FLOW_ORIGIN[0], lat: FLOW_ORIGIN[1], to: [d.lon, d.lat] as [number, number], value: (shares[d.code] ?? 0) / maxShare, label: d.name })) },
       { id: "plants", label: "Australian LNG plants", kind: "pin", tone: "supply", glyph: "diamond", labelZoom: 2.4,
-        items: PLANTS.map((p) => ({ id: `plant:${p.id}`, lon: p.lon, lat: p.lat, value: p.mtpa, label: `${p.name.toUpperCase()} · ${p.mtpa} MTPA` })) },
+        items: PLANTS.map((p) => ({ id: `plant:${p.id}`, lon: p.lon, lat: p.lat, value: p.mtpa, label: PLANT_LABEL[p.id] })) },
       { id: "hormuz", label: "Strait of Hormuz", kind: "pin", tone: "demand", glyph: "triangle", labelZoom: 0,
-        items: [{ id: "hormuz", lon: HORMUZ.lon, lat: HORMUZ.lat, value: 1, label: "STRAIT OF HORMUZ · RESTRICTED" }] },
+        items: [{ id: "hormuz", lon: HORMUZ.lon, lat: HORMUZ.lat, value: 1, label: "STRAIT OF HORMUZ · RESTRICTED", labelAbove: true }] },
     ];
   }, [shares]);
 
