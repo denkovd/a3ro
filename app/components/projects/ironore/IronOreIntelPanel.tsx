@@ -1,0 +1,238 @@
+"use client";
+/* Right rail for the Iron Ore Tracker: overview by default, detail when something is selected.
+   Built from the shared Commodity Watch rail kit. Australia's export value is live from the ABS
+   (/api/ironore/exports); everything else is reference data from lib/ironore/reference.ts. */
+import { useState } from "react";
+import Link from "next/link";
+import {
+  CompanyList, Explorer, Headline, Kicker, PriceBlock, RailSection, RailShell, SourceLink as RailSourceLink, SourceList, Stat, n, pct, rowBtn,
+} from "../commodity/RailKit";
+import type { RailApi } from "../commodity/CommodityGlobe";
+import { DEMAND_CSS, IRON_CSS } from "../ironOreTrackerShared";
+import {
+  COMPANIES, IMPORTERS, MINES, PILBARA_IRON_ORE_MT, PORTS, PRODUCERS, PRODUCTION_YEAR, REQ_OUTLOOK, SIMANDOU, SOURCES,
+  TRADE_YEAR, WA, WORLD_PRODUCTION_MT, WORLD_PRODUCTION_WA_MT, WORLD_TRADE_MT, type SourceId,
+} from "../../../../lib/ironore/reference";
+import { DESTINATIONS, periodLabel, type IronOreExports } from "../../../../lib/ironore/exports";
+import type { ExportsState } from "../IronOreTrackerCore";
+
+const IRN = IRON_CSS;
+const DEM = DEMAND_CSS;
+const audBn = (audM: number) => `A$${(audM / 1000).toFixed(1)}bn`;
+const signed = (v: number) => `${v >= 0 ? "+" : ""}${(v * 100).toFixed(1)}%`;
+
+function SourceLink({ id }: { id: SourceId }) {
+  return <RailSourceLink source={SOURCES[id]} accent={IRN} />;
+}
+
+/** Monthly export value as bars, last 36 months. */
+function ExportBars({ data }: { data: IronOreExports }) {
+  const months = data.months.slice(-36);
+  const max = Math.max(...months.map((m) => m.totalAudM));
+  const W = 300, H = 56, gap = 1, bw = (W - gap * (months.length - 1)) / months.length;
+  return <figure className="mt-2">
+    <svg viewBox={`0 0 ${W} ${H}`} className="h-14 w-full" role="img" aria-label={`Monthly iron ore export value, ${periodLabel(months[0].period)} to ${periodLabel(months[months.length - 1].period)}; latest ${audBn(months[months.length - 1].totalAudM)}`}>
+      {months.map((m, i) => {
+        const h = Math.max(1, (m.totalAudM / max) * (H - 2));
+        return <rect key={m.period} x={i * (bw + gap)} y={H - h} width={bw} height={h} fill={IRN} opacity={i === months.length - 1 ? 0.95 : 0.4}><title>{`${periodLabel(m.period)}: ${audBn(m.totalAudM)}`}</title></rect>;
+      })}
+    </svg>
+    <figcaption className="mt-1 flex justify-between font-mono text-[9px] text-[var(--ink-3)]"><span>{periodLabel(months[0].period)}</span><span>{periodLabel(months[months.length - 1].period)}</span></figcaption>
+  </figure>;
+}
+
+function ExportsBlock({ state, focus }: { state: ExportsState; focus: (id: string) => void }) {
+  if (state.status === "loading") return <p className="mt-2 text-[11px] text-[var(--ink-3)]">Loading ABS export figures…</p>;
+  if (state.status === "error") return <>
+    <p className="mt-2 border-l-2 border-[var(--line)] pl-3 text-[11px] text-[var(--ink-3)]">The ABS figures could not be loaded just now. Western Australia&apos;s {WA.period} totals instead:</p>
+    <dl className="mt-2 grid grid-cols-2 gap-3"><Stat label={`Value, ${WA.period}`} value={`A$${WA.exportsValueAudBn}bn`} /><Stat label={`Volume, ${WA.period}`} value={`${n(WA.exportsMt)} Mt`} /></dl>
+    <SourceLink id="waProfile" />
+  </>;
+  const d = state.data;
+  const latest = d.months[d.months.length - 1];
+  const yearAgo = d.months.find((m) => m.period === `${Number(d.latestPeriod.slice(0, 4)) - 1}${d.latestPeriod.slice(4)}`);
+  return <>
+    <dl className="mt-2 grid grid-cols-2 gap-3">
+      <Stat label={periodLabel(d.latestPeriod)} value={audBn(latest.totalAudM)} sub={yearAgo ? `${signed(latest.totalAudM / yearAgo.totalAudM - 1)} on a year earlier` : undefined} />
+      <Stat label="Last 12 months" value={audBn(d.last12AudM)} sub={d.prior12AudM ? `${signed(d.last12AudM / d.prior12AudM - 1)} on the 12 before` : undefined} />
+    </dl>
+    <ExportBars data={d} />
+    <p className="mt-3 font-mono text-[9px] uppercase tracking-[0.16em] text-[var(--ink-3)]">Where it goes · last 12 months</p>
+    <ul className="mt-1 divide-y divide-[var(--line)]">
+      {d.destinations.filter((x) => x.last12AudM > 0).map((x) => <li key={x.code}><button type="button" onClick={() => focus(`flow:${x.code}`)} className={rowBtn}>
+        <span className="font-mono text-[10px] text-[var(--ink)]">{x.name}</span>
+        <span className="font-mono text-[10px] tabular-nums" style={{ color: IRN }}>{pct(x.share)} · {audBn(x.last12AudM)}</span>
+      </button></li>)}
+      {d.otherLast12AudM > 0 ? <li className="flex items-center justify-between px-1 py-2"><span className="font-mono text-[10px] text-[var(--ink-3)]">Other</span><span className="font-mono text-[10px] tabular-nums text-[var(--ink-3)]">{pct(d.otherLast12AudM / d.last12AudM)}</span></li> : null}
+    </ul>
+    <p className="mt-2 text-[10px] leading-relaxed text-[var(--ink-3)]">
+      {d.waShare !== null ? `Western Australia ships ${pct(d.waShare)} of it. ` : ""}A$ value, original terms (not seasonally adjusted). The ABS publishes about five weeks after each month ends.
+      The goods trade balance is on <Link href="/Projects/Australia-Watch" className="underline" style={{ color: IRN }}>Australia Watch</Link>.
+    </p>
+    <a href={SOURCES.abs.url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-[10px] underline" style={{ color: IRN }}>{SOURCES.abs.label} ↗</a>
+  </>;
+}
+
+type Tab = "producers" | "importers" | "ports" | "mines";
+
+export default function IronOreIntelPanel({ narrow, selected, focus, close, exportsState }: RailApi & { exportsState: ExportsState }) {
+  const [tab, setTab] = useState<Tab>("producers");
+  const colon = selected ? selected.indexOf(":") : -1;
+  const kind = selected && colon > 0 ? selected.slice(0, colon) : selected;
+  const key = selected && colon > 0 ? selected.slice(colon + 1) : selected;
+  const live = exportsState.status === "ok" ? exportsState.data : null;
+
+  const detail = (() => {
+    if (!selected) return null;
+    if (kind === "p") {
+      const p = PRODUCERS.find((x) => x.id === key);
+      if (!p) return null;
+      const mines = MINES.filter((m) => m.country === p.id);
+      return <>
+        <Kicker>Producer · {PRODUCTION_YEAR}</Kicker>
+        <h4 className="mt-1 text-lg font-medium text-[var(--ink)]">{p.name}</h4>
+        <Headline value={`${n(p.mt2025)} Mt`} sub={`Usable ore ${PRODUCTION_YEAR} (USGS estimate) · ${pct(p.mt2025 / WORLD_PRODUCTION_MT)} of world output`} color={IRN} />
+        <dl className="mt-4 grid grid-cols-2 gap-3 border-y border-[var(--line)] py-3">
+          <Stat label={`${PRODUCTION_YEAR - 1}${p.estimate2024 ? " (est.)" : ""}`} value={`${n(p.mt2024)} Mt`} />
+          <Stat label="Change" value={`${p.mt2025 >= p.mt2024 ? "+" : ""}${n(Math.round((p.mt2025 - p.mt2024) * 10) / 10)} Mt`} />
+        </dl>
+        {p.mostlyDomestic ? <p className="mt-3 text-[11px] leading-relaxed text-[var(--ink-2)]">Most of this ore feeds local steelmaking rather than the seaborne market.</p> : null}
+        {p.id === "australia" ? <AustraliaBox /> : null}
+        {mines.length ? <div className="mt-3"><Kicker>Mines on the globe</Kicker><ul className="mt-1 divide-y divide-[var(--line)]">{mines.map((m) => <li key={m.id}><button type="button" onClick={() => focus(`mine:${m.id}`)} className={rowBtn}><span className="text-[11px] text-[var(--ink)]">{m.name}</span><span className="text-[9px] text-[var(--ink-3)]">{m.owner}</span></button></li>)}</ul></div> : null}
+        <SourceLink id="usgs" />
+      </>;
+    }
+    if (kind === "port") {
+      const p = PORTS.find((x) => x.id === key);
+      if (!p) return null;
+      return <>
+        <Kicker>Export port · Western Australia</Kicker>
+        <h4 className="mt-1 text-lg font-medium text-[var(--ink)]">{p.name}</h4>
+        <p className="mt-1 text-[11px] text-[var(--ink-2)]">{p.operators}</p>
+        {p.throughputMt !== null ? <Headline value={`${n(p.throughputMt)} Mt`} sub={`Total throughput, 2025-26${p.ironOreMt ? ` · iron ore ${p.ironOreMt} Mt` : ""}`} color={IRN} />
+          : <p className="mt-3 border-l-2 border-[var(--line)] pl-3 text-[11px] text-[var(--ink-3)]">Tonnage is not published in our sources.</p>}
+        {p.note ? <p className="mt-3 text-[11px] leading-relaxed text-[var(--ink-2)]">{p.note}</p> : null}
+        <p className="mt-2 text-[10px] text-[var(--ink-3)]">Pilbara Ports (Port Hedland, Dampier, Ashburton) exported {PILBARA_IRON_ORE_MT} Mt of iron ore in 2025-26.</p>
+        <SourceLink id={p.source} />
+      </>;
+    }
+    if (kind === "mine") {
+      const m = MINES.find((x) => x.id === key);
+      if (!m) return null;
+      const country = PRODUCERS.find((p) => p.id === m.country);
+      return <>
+        <Kicker>Mine</Kicker>
+        <h4 className="mt-1 text-lg font-medium text-[var(--ink)]">{m.name}</h4>
+        <p className="mt-1 text-[11px] text-[var(--ink-2)]">{m.owner}</p>
+        {m.note ? <p className="mt-3 text-[11px] leading-relaxed text-[var(--ink-2)]">{m.note}</p> : null}
+        {m.id === "simandou" ? <SimandouBox /> : null}
+        {country ? <button type="button" onClick={() => focus(`p:${country.id}`)} className="mt-3 block w-full rounded-sm border border-[var(--line)] px-3 py-2 text-left text-[11px] text-[var(--ink-2)] hover:bg-[var(--depth-2)]">{country.name}: {n(country.mt2025)} Mt in {PRODUCTION_YEAR} ↗</button> : null}
+        <p className="mt-3 text-[10px] text-[var(--ink-3)]">Mine-level output is not published consistently, so it is counted in the country and company totals. Position is approximate.</p>
+      </>;
+    }
+    if (kind === "flow") {
+      const dest = DESTINATIONS.find((x) => x.code === key);
+      if (!dest) return null;
+      const d = live?.destinations.find((x) => x.code === key);
+      return <>
+        <Kicker>Australian exports · iron ore</Kicker>
+        <h4 className="mt-1 text-lg font-medium text-[var(--ink)]">Australia → {dest.name}</h4>
+        {d ? <>
+          <Headline value={audBn(d.last12AudM)} sub={`Last 12 months to ${periodLabel(live!.latestPeriod)} · ${pct(d.share)} of Australia's iron ore exports`} color={IRN} />
+          <dl className="mt-4 grid grid-cols-2 gap-3 border-y border-[var(--line)] py-3">
+            <Stat label={periodLabel(live!.latestPeriod)} value={d.latestAudM !== null ? audBn(d.latestAudM) : "—"} />
+            <Stat label="Share of total" value={pct(d.share)} />
+          </dl>
+        </> : <p className="mt-3 border-l-2 border-[var(--line)] pl-3 text-[11px] text-[var(--ink-3)]">{exportsState.status === "loading" ? "Loading ABS figures…" : `ABS figures unavailable. In ${WA.period}, ${dest.name} took about ${pct(WA.valueShares.find((v) => v.name === dest.name)?.share ?? 0)} of WA's iron ore export value.`}</p>}
+        {(() => { const imp = IMPORTERS.find((i) => i.name === dest.name); return imp ? <button type="button" onClick={() => focus(imp.id)} className="mt-3 block w-full rounded-sm border border-[var(--line)] px-3 py-2 text-left text-[11px] text-[var(--ink-2)] hover:bg-[var(--depth-2)]">{imp.name} imported {n(imp.mt)} Mt from all suppliers in {TRADE_YEAR} ↗</button> : null; })()}
+        <p className="mt-3 text-[10px] text-[var(--ink-3)]">Arcs start at Port Hedland for clarity; ships also leave Dampier, Cape Lambert and Ashburton.</p>
+        <a href={SOURCES.abs.url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-[10px] underline" style={{ color: IRN }}>{SOURCES.abs.label} ↗</a>
+      </>;
+    }
+    const imp = IMPORTERS.find((x) => x.id === selected);
+    if (!imp) return null;
+    const flow = DESTINATIONS.find((dd) => dd.name === imp.name);
+    return <>
+      <Kicker>Importer · {TRADE_YEAR}</Kicker>
+      <h4 className="mt-1 text-lg font-medium text-[var(--ink)]">{imp.name}</h4>
+      <Headline value={`${n(imp.mt)} Mt`} sub={`Iron ore imports ${TRADE_YEAR} · ${(imp.share * 100).toFixed(1)}% of world imports`} color={DEM} />
+      {imp.id === "imp-china" ? <p className="mt-3 text-[11px] leading-relaxed text-[var(--ink-2)]">China makes about half the world&apos;s steel and buys most seaborne iron ore, so its property and construction cycle sets the price. Simandou adds a large new non-Australian supplier from 2026.</p> : null}
+      {flow ? <button type="button" onClick={() => focus(`flow:${flow.code}`)} className="mt-3 block w-full rounded-sm border border-[var(--line)] px-3 py-2 text-left text-[11px] text-[var(--ink-2)] hover:bg-[var(--depth-2)]">Australian exports to {imp.name} ↗</button> : null}
+      <SourceLink id="waProfile" />
+    </>;
+  })();
+
+  const producersRanked = [...PRODUCERS].sort((a, b) => b.mt2025 - a.mt2025);
+
+  return (
+    <RailShell id="ironore-intel-content" label="Iron ore intelligence" kicker="P·03 / Iron ore intelligence" title="Pit → port → steel mill"
+      narrow={narrow} selectedKey={selected} onBack={close} backLabel="Back to iron ore overview">
+      {detail ? <section>{detail}</section> : <>
+        <PriceBlock symbol="COMEX:TIO1!" kicker="Price · 62% Fe CFR China futures" label="Iron ore 62% Fe CFR China futures (COMEX:TIO1!), delayed" accent={IRN} rgb="207,106,88"
+          note={`The benchmark for seaborne fines delivered to China. Delayed quote. The WA Government's monthly average for ${WA.priceMonth} was US$${WA.priceUsd} a tonne.`} />
+
+        <RailSection label="Australian exports" kicker="Australia's iron ore exports · ABS">
+          <ExportsBlock state={exportsState} focus={focus} />
+        </RailSection>
+
+        <RailSection label="Supply and demand" kicker={`Supply vs demand · ${TRADE_YEAR}`}>
+          <dl className="mt-2 grid grid-cols-2 gap-3">
+            <Stat label="Mined worldwide" value={`${n(WORLD_PRODUCTION_WA_MT)} Mt`} sub={`${n(WORLD_TRADE_MT)} Mt of it traded between countries (${pct(WORLD_TRADE_MT / WORLD_PRODUCTION_WA_MT)})`} />
+            <Stat label="China imported" value={`${n(IMPORTERS[0].mt)} Mt`} sub={`${(IMPORTERS[0].share * 100).toFixed(1)}% of world imports`} />
+          </dl>
+          <p className="mt-2 text-[11px] leading-relaxed text-[var(--ink-2)]">Australia and Brazil supply most of the seaborne market; China, India and Russia mine a lot but use it at home. One buyer, China, takes nearly three quarters of all imports.</p>
+          <SimandouBox />
+          <SourceLink id="waProfile" />
+        </RailSection>
+
+        <RailSection label="Outlook" kicker="Outlook · Department of Industry">
+          <dl className="mt-2 grid grid-cols-3 gap-2">{REQ_OUTLOOK.points.map((p) => <Stat key={p.year} label={p.year} value={`A$${p.audBn}bn`} />)}</dl>
+          <p className="mt-2 text-[11px] leading-relaxed text-[var(--ink-2)]">Forecast export earnings in real terms. {REQ_OUTLOOK.note} {WA.priceForecast}</p>
+          <SourceLink id="req" />
+        </RailSection>
+
+        <RailSection label="Australia"><AustraliaBox /></RailSection>
+
+        <Explorer<Tab>
+          tabs={[{ id: "producers", label: "producers" }, { id: "importers", label: "importers" }, { id: "ports", label: "ports" }, { id: "mines", label: "mines" }]}
+          current={tab} onTab={setTab} accentFor={(t) => (t === "importers" ? DEM : IRN)}
+          footnote={tab === "producers" ? `Usable ore, ${PRODUCTION_YEAR}, USGS estimates` : tab === "importers" ? `${TRADE_YEAR} imports, WA Government profile` : tab === "ports" ? "Total throughput, 2025-26" : "Positions approximate"}>
+          {tab === "producers" ? producersRanked.map((p, i) => <li key={p.id}><button type="button" onClick={() => focus(`p:${p.id}`)} className={rowBtn}><span className="font-mono text-[10px] text-[var(--ink)]">{String(i + 1).padStart(2, "0")} · {p.name}</span><span className="font-mono text-[10px]" style={{ color: IRN }}>{n(p.mt2025)} Mt</span></button></li>)
+            : tab === "importers" ? IMPORTERS.map((x) => <li key={x.id}><button type="button" onClick={() => focus(x.id)} className={rowBtn}><span className="font-mono text-[10px] text-[var(--ink)]">{x.name}</span><span className="font-mono text-[10px]" style={{ color: DEM }}>{n(x.mt)} Mt</span></button></li>)
+            : tab === "ports" ? PORTS.map((p) => <li key={p.id}><button type="button" onClick={() => focus(`port:${p.id}`)} className={rowBtn}><span><span className="block font-mono text-[10px] text-[var(--ink)]">{p.name}</span><span className="text-[9px] text-[var(--ink-3)]">{p.operators}</span></span><span className="font-mono text-[10px]" style={{ color: IRN }}>{p.throughputMt !== null ? `${n(p.throughputMt)} Mt` : "—"}</span></button></li>)
+            : MINES.map((m) => <li key={m.id}><button type="button" onClick={() => focus(`mine:${m.id}`)} className={rowBtn}><span className="font-mono text-[10px] text-[var(--ink)]">{m.name}</span><span className="text-[9px] text-[var(--ink-3)]">{m.owner}</span></button></li>)}
+        </Explorer>
+
+        <CompanyList companies={COMPANIES} accent={IRN} note="Companies with iron ore exposure, not a recommendation. Shipments are each company's Western Australian figures for 2025-26 (WA Government profile)." />
+
+        <SourceList sources={Object.values(SOURCES)} note="Reference figures are updated by hand from the sources above each quarter; Australia's export value comes live from the ABS. Mine and port positions are approximate." />
+      </>}
+    </RailShell>
+  );
+}
+
+function AustraliaBox() {
+  const au = PRODUCERS.find((p) => p.id === "australia")!;
+  return <div className="mt-3 rounded-sm border border-[var(--line)] p-3">
+    <Kicker>Australia</Kicker>
+    <dl className="mt-2 grid grid-cols-3 gap-2">
+      <Stat label="World output" value={pct(au.mt2025 / WORLD_PRODUCTION_MT)} sub={`${PRODUCTION_YEAR}, #1`} />
+      <Stat label={`WA exports`} value={`${n(WA.exportsMt)} Mt`} sub={WA.period} />
+      <Stat label="Export value" value={`A$${WA.exportsValueAudBn}bn`} sub={WA.period} />
+    </dl>
+    <p className="mt-2 text-[11px] leading-relaxed text-[var(--ink-2)]">Australia&apos;s largest export. Almost all of it is mined in the Pilbara and shipped from four ports, and {pct(WA.valueShares[0].share)} of the value goes to China. Swings in the price move the Australian dollar, company tax receipts and the federal budget.</p>
+    <SourceLink id="waProfile" />
+  </div>;
+}
+
+function SimandouBox() {
+  return <div className="mt-3 rounded-sm border border-[var(--line)] p-3">
+    <Kicker>New supply · Simandou, Guinea</Kicker>
+    <dl className="mt-2 grid grid-cols-2 gap-2">
+      <Stat label="Capacity" value={`${SIMANDOU.capacityMt} Mt/yr`} sub="after ramp-up" />
+      <Stat label="Started" value={SIMANDOU.started} />
+    </dl>
+    <p className="mt-2 text-[11px] leading-relaxed text-[var(--ink-2)]">{SIMANDOU.note}</p>
+    <SourceLink id={SIMANDOU.source} />
+  </div>;
+}

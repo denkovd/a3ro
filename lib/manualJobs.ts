@@ -66,6 +66,20 @@ export const MANUAL_JOBS: readonly ManualJob[] = [
     everyMonths: 3,
     lastCheckedInCode: "2026-11-23",
   },
+  {
+    id: "iron-ore-reference",
+    title: "Iron ore reference figures (Iron Ore Tracker)",
+    steps: [
+      "Open the latest WA Iron Ore Profile (WA Government): update WA export volume and value, destination shares, imports by market, company shipments and the price line.",
+      "Check Pilbara Ports' latest annual or monthly figures for Port Hedland, Dampier and Ashburton.",
+      "Each January, update country production from the new USGS Mineral Commodity Summaries (iron ore chapter).",
+      "After each Resources and Energy Quarterly, update the export earnings outlook.",
+      "Change each source's reviewed date. Monthly export value comes from the ABS by itself.",
+    ],
+    where: "lib/ironore/reference.ts",
+    everyMonths: 3,
+    lastCheckedInCode: "2026-11-27",
+  },
 ];
 
 export type JobStatus = "ok" | "due soon" | "overdue";

@@ -39,6 +39,8 @@ export const MODULE_ACCESS: readonly ModuleAccess[] = [
   { id: "dividend", label: "AI Dividend", level: "public", data: "open", pages: ["/Projects/AI-Dividend"], apis: ["/api/dividend"] },
   { id: "commodity", label: "Commodity Watch (oil corridors)", level: "public", data: "open", pages: ["/Projects/Oil-Tracker"], apis: ["/api/oil"] },
   { id: "uranium", label: "Commodity Watch (uranium fuel chain)", level: "public", data: "open", pages: ["/Projects/Uranium-Tracker"], apis: [] },
+  // ABS exports (CC BY), USGS and WA Government reference figures; the price is a TradingView widget (#55).
+  { id: "ironore", label: "Commodity Watch (iron ore)", level: "public", data: "open", pages: ["/Projects/Iron-Ore-Tracker"], apis: ["/api/ironore"] },
   { id: "macro", label: "Macro view", level: "public", data: "open", pages: [], apis: ["/api/macro", "/api/capital"] },
   { id: "trend", label: "Bull Market Finder", level: "premium", data: "market", pages: ["/Projects/Bull-Market-Finder", "/Projects/Regime-Finder"], apis: ["/api/bull"],
     preview: "Finds the assets that have just turned bullish on both daily and weekly closes, ranked by how recent and how strong the turn is, with a chart and profile for each." },
