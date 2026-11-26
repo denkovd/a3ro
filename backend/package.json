@@ -60,6 +60,7 @@
     "migrate:manual-jobs": "tsx scripts/migrate.ts migrations/027_manual_job_runs.sql",
     "migrate:cron-runs": "tsx scripts/migrate.ts migrations/028_cron_runs.sql",
     "migrate:user-access": "tsx scripts/migrate.ts migrations/029_user_access.sql",
+    "migrate:user-profiles": "tsx scripts/migrate.ts migrations/031_user_profiles.sql",
     "run:profiles": "tsx scripts/run-profiles.ts",
     "backfill:btc": "tsx scripts/backfill-btc.ts",
     "run:btc": "tsx scripts/run-btc.ts",

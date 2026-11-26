@@ -21,7 +21,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           Continue with Google
         </button>
       </form>
-      <p className="landing-kicker">Or email me a one-time link</p>
+      <p className="landing-kicker">Or use your email</p>
       <LoginForm next={next ?? "/"} />
     </section>
     <SiteFooter />

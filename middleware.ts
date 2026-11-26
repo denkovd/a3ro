@@ -32,12 +32,12 @@ export const config = {
     "/Projects/Australia-Watch/:path*", "/Projects/AI-Dividend/:path*", "/Projects/Oil-Tracker/:path*", "/Projects/Uranium-Tracker/:path*",
     "/api/australia-watch/:path*", "/api/dividend/:path*", "/api/oil/:path*", "/api/macro/:path*", "/api/capital/:path*",
     // Session refresh for sign-in
-    "/api/auth/:path*", "/auth/:path*", "/login",
+    "/api/auth/:path*", "/auth/:path*", "/login", "/account", "/api/account/:path*",
   ],
 };
 
 const PRIVATE_HEADERS = { "Cache-Control": "private, no-store", "X-Robots-Tag": "noindex, nofollow" };
-const AUTH_PATHS = ["/login", "/auth/", "/api/auth/"];
+const AUTH_PATHS = ["/login", "/auth/", "/api/auth/", "/account", "/api/account"];
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;

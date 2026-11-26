@@ -1,8 +1,9 @@
 // Newsletter box for signed-in members (roadmap #80).
-// GET: is the signed-in account's email already on the newsletter list?
+// GET: does the signed-in account get the newsletter? Its own choice from /account (#105) wins;
+// before it has chosen, the leads list decides.
 // POST: one tap subscribes the account's own (verified) email. The email
 // always comes from the session, never from the request body.
-import { createDb, hasNewsletterLead, insertLead } from "@a3ro/oil-backend";
+import { createDb, newsletterSubscribed, setNewsletter } from "@a3ro/oil-backend";
 import { currentViewer } from "../../../../lib/supabase/server";
 import { withErrorLog } from "../../_lib/errorLog";
 
@@ -14,9 +15,9 @@ const CONTEXT_RE = /^[\w:.-]{1,80}$/;
 
 export const GET = withErrorLog("api:newsletter-me", async function GET() {
   const viewer = await currentViewer();
-  if (!viewer.signedIn || !viewer.email) return Response.json({ signedIn: false }, { headers: NO_STORE });
+  if (!viewer.signedIn || !viewer.email || !viewer.userId) return Response.json({ signedIn: false }, { headers: NO_STORE });
   try {
-    const subscribed = await hasNewsletterLead(await createDb(), viewer.email);
+    const subscribed = await newsletterSubscribed(await createDb(), viewer.userId, viewer.email);
     return Response.json({ signedIn: true, email: viewer.email, subscribed }, { headers: NO_STORE });
   } catch {
     return Response.json({ error: "Request could not be completed" }, { status: 500, headers: NO_STORE });
@@ -33,7 +34,7 @@ export const POST = withErrorLog("api:newsletter-me", async function POST(req: R
     return Response.json({ error: "Forbidden" }, { status: 403, headers: NO_STORE });
   }
   const viewer = await currentViewer();
-  if (!viewer.signedIn || !viewer.email) return Response.json({ error: "Sign in first" }, { status: 401, headers: NO_STORE });
+  if (!viewer.signedIn || !viewer.email || !viewer.userId) return Response.json({ error: "Sign in first" }, { status: 401, headers: NO_STORE });
 
   let context = "account";
   try {
@@ -43,10 +44,7 @@ export const POST = withErrorLog("api:newsletter-me", async function POST(req: R
     // No or bad body: keep the default context.
   }
   try {
-    const db = await createDb();
-    if (!(await hasNewsletterLead(db, viewer.email))) {
-      await insertLead(db, { email: viewer.email, context: `newsletter:${context}` });
-    }
+    await setNewsletter(await createDb(), viewer.userId, viewer.email, true, context);
     return Response.json({ ok: true, subscribed: true }, { headers: NO_STORE });
   } catch {
     return Response.json({ error: "Request could not be completed" }, { status: 500, headers: NO_STORE });

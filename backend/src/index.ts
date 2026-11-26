@@ -341,3 +341,7 @@ export { getManualJobRuns, recordManualJobRun } from "./storage/opsRepo";
 export type { ManualJobRun } from "./storage/opsRepo";
 export { listAccounts, hasPremium, setPremium } from "./storage/userAccessRepo";
 export type { AccountRow } from "./storage/userAccessRepo";
+export {
+  getAccountSettings, saveProfile, setNewsletter, newsletterSubscribed, insertFeedback, listFeedback, setFeedbackHandled, listProfiles, deleteAccount,
+} from "./storage/userProfileRepo";
+export type { AccountSettings, FeedbackKind, FeedbackRow } from "./storage/userProfileRepo";

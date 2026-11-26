@@ -19,12 +19,15 @@ const LINKS = [
 
 const authClass = "whitespace-nowrap rounded-sm border border-[var(--line)] px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--ink)] transition-colors duration-[var(--dur-micro)] hover:border-[var(--line-2)]";
 
-/** Log in when signed out; Log out when signed in, with Admin for admins. */
+const sideLink = "whitespace-nowrap font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--ink-2)] hover:text-[var(--ink)]";
+
+/** Log in when signed out; Account and Log out when signed in, with Admin for admins. */
 function AuthLinks() {
   const viewer = useViewer();
   if (!viewer.signedIn) return <a href="/login" className={authClass}>Log in</a>;
   return <span className="flex items-center gap-3">
-    {viewer.admin ? <a href="/owner" className="whitespace-nowrap font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--ink-2)] hover:text-[var(--ink)]">Admin</a> : null}
+    {viewer.admin ? <a href="/owner" className={sideLink}>Admin</a> : null}
+    <a href="/account" className={sideLink}>Account</a>
     <form method="post" action="/auth/logout"><button type="submit" className={authClass}>Log out</button></form>
   </span>;
 }

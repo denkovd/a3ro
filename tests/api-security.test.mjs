@@ -513,27 +513,135 @@ test("newsletter/me reports signed-out visitors without touching the database", 
   assert.match(response.headers.get("cache-control"), /no-store/);
 });
 
-test("newsletter/me says whether the member's own email is subscribed", async () => {
+test("newsletter/me says whether the member's own account gets the newsletter", async () => {
   const asked = [];
-  const { GET } = newsletterMe(member, { hasNewsletterLead: async (_db, email) => { asked.push(email); return true; } });
+  const { GET } = newsletterMe(member, { newsletterSubscribed: async (_db, userId, email) => { asked.push([userId, email]); return true; } });
   assert.deepEqual(await (await GET()).json(), { signedIn: true, email: "member@example.com", subscribed: true });
-  assert.deepEqual(asked, ["member@example.com"]);
+  assert.deepEqual(asked, [["u1", "member@example.com"]]);
 });
 
-test("newsletter/me subscribes the session email once, same-origin only", async () => {
-  const inserted = [];
-  let onList = false;
-  const backend = {
-    hasNewsletterLead: async () => onList,
-    insertLead: async (_db, lead) => { inserted.push(lead); onList = true; },
-  };
+test("newsletter/me subscribes the session email, same-origin only", async () => {
+  const subscribed = [];
+  const backend = { setNewsletter: async (_db, userId, email, on, context) => { subscribed.push({ userId, email, on, context }); } };
   const { POST } = newsletterMe(member, backend);
   assert.equal((await POST(sameOrigin(undefined, "https://evil.test"))).status, 403);
-  assert.equal(inserted.length, 0);
+  assert.equal(subscribed.length, 0);
   assert.equal((await POST(sameOrigin(JSON.stringify({ context: "x", email: "someone@else.test" })))).status, 200);
-  assert.deepEqual(inserted, [{ email: "member@example.com", context: "newsletter:x" }]);
-  assert.equal((await POST(sameOrigin())).status, 200);
-  assert.equal(inserted.length, 1);
+  assert.deepEqual(subscribed, [{ userId: "u1", email: "member@example.com", on: true, context: "x" }]);
   const { POST: outPost } = newsletterMe(signedOut, backend);
   assert.equal((await outPost(sameOrigin())).status, 401);
+});
+
+/* ── Account settings (#105) ─────────────────────────────────── */
+
+function accountRoute(route, viewer, backend = {}, auth = {}) {
+  const server = {
+    currentViewer: async () => viewer,
+    createSupabaseServerClient: async () => ({ auth: { updateUser: async () => ({ error: null }), signOut: async () => ({ error: null }), ...auth } }),
+  };
+  return loadModule(`app/api/${route}/route.ts`, {
+    "@a3ro/oil-backend": { createDb: async () => ({}), recordAppError: async () => {}, ...backend },
+    "../../../lib/supabase/server": server,
+    "../../../../lib/supabase/server": server,
+  });
+}
+const accountReq = (route, method, body, origin = "https://a3ro.test") =>
+  new Request(`https://a3ro.test/api/${route}`, { method, headers: { "Content-Type": "application/json", origin, host: "a3ro.test" }, body: body === undefined ? undefined : JSON.stringify(body) });
+
+test("account settings need a signed-in account; writes need our own origin", async () => {
+  const { GET, PATCH } = accountRoute("account", signedOut);
+  assert.equal((await GET(accountReq("account", "GET"))).status, 401);
+  assert.equal((await PATCH(accountReq("account", "PATCH", { displayName: "x" }))).status, 401);
+  const { PATCH: memberPatch } = accountRoute("account", member, { saveProfile: async () => { throw new Error("must not save"); } });
+  assert.equal((await memberPatch(accountReq("account", "PATCH", { displayName: "x" }, "https://evil.test"))).status, 403);
+});
+
+test("account PATCH cleans the name and keeps only known interests", async () => {
+  const saved = [];
+  const newsletter = [];
+  const { PATCH } = accountRoute("account", member, {
+    saveProfile: async (_db, userId, patch) => saved.push({ userId, patch }),
+    setNewsletter: async (_db, userId, email, on) => newsletter.push({ userId, email, on }),
+  });
+  const ok = await PATCH(accountReq("account", "PATCH", { displayName: "  Ada   Lovelace ", interests: ["crypto", "nope", "australia", "crypto"], newsletter: false }));
+  assert.equal(ok.status, 200);
+  assert.deepEqual(saved, [{ userId: "u1", patch: { displayName: "Ada Lovelace", interests: ["australia", "crypto"] } }]);
+  assert.deepEqual(newsletter, [{ userId: "u1", email: "member@example.com", on: false }]);
+  assert.equal((await PATCH(accountReq("account", "PATCH", { displayName: "x".repeat(81) }))).status, 400);
+  assert.equal((await PATCH(accountReq("account", "PATCH", { interests: "crypto" }))).status, 400);
+  assert.equal((await PATCH(accountReq("account", "PATCH", { newsletter: "yes" }))).status, 400);
+});
+
+test("account GET returns the member's own settings, with Premium for admins", async () => {
+  const asked = [];
+  const settings = { userId: "u1", email: "member@example.com", premium: false, interests: [] };
+  const { GET } = accountRoute("account", { ...member, admin: true }, { getAccountSettings: async (_db, id) => { asked.push(id); return settings; } });
+  const body = await (await GET(accountReq("account", "GET"))).json();
+  assert.deepEqual(asked, ["u1"]);
+  assert.equal(body.premium, true);
+  assert.equal(body.admin, true);
+});
+
+test("password: length rules, same-origin, and Supabase errors come back readable", async () => {
+  const set = [];
+  const { POST } = accountRoute("account/password", member, {}, { updateUser: async (u) => { set.push(u.password); return { error: null }; } });
+  assert.equal((await POST(accountReq("account/password", "POST", { password: "short" }))).status, 400);
+  assert.equal((await POST(accountReq("account/password", "POST", { password: "long enough pw" }, "https://evil.test"))).status, 403);
+  assert.equal((await POST(accountReq("account/password", "POST", { password: "long enough pw" }))).status, 200);
+  assert.deepEqual(set, ["long enough pw"]);
+  const { POST: weak } = accountRoute("account/password", member, {}, { updateUser: async () => ({ error: { status: 422, code: "weak_password", message: "weak" } }) });
+  const res = await weak(accountReq("account/password", "POST", { password: "password123" }));
+  assert.equal(res.status, 400);
+  assert.match((await res.json()).error, /too weak/);
+});
+
+test("feedback: validated kinds, rating only on reviews, stored against the session", async () => {
+  const stored = [];
+  const { POST } = accountRoute("account/feedback", member, { insertFeedback: async (_db, fb) => stored.push(fb) });
+  assert.equal((await POST(accountReq("account/feedback", "POST", { kind: "spam", message: "hi" }))).status, 400);
+  assert.equal((await POST(accountReq("account/feedback", "POST", { kind: "request", message: "   " }))).status, 400);
+  assert.equal((await POST(accountReq("account/feedback", "POST", { kind: "request", message: "Add copper", rating: 5, page: "/account" }))).status, 200);
+  assert.equal((await POST(accountReq("account/feedback", "POST", { kind: "review", message: "Great", rating: 4, page: "javascript:x" }))).status, 200);
+  assert.deepEqual(stored, [
+    { userId: "u1", email: "member@example.com", kind: "request", rating: null, message: "Add copper", page: "/account" },
+    { userId: "u1", email: "member@example.com", kind: "review", rating: 4, message: "Great", page: null },
+  ]);
+});
+
+test("delete account needs the typed email, refuses admins, and signs out after deleting", async () => {
+  const calls = [];
+  const backend = { deleteAccount: async (_db, id, email) => { calls.push(`delete:${id}:${email}`); return true; } };
+  const auth = { signOut: async (o) => { calls.push(`signout:${o?.scope}`); return { error: null }; } };
+  const { POST } = accountRoute("account/delete", member, backend, auth);
+  assert.equal((await POST(accountReq("account/delete", "POST", { confirm: "someone@else.test" }))).status, 400);
+  assert.equal((await POST(accountReq("account/delete", "POST", { confirm: "member@example.com" }, "https://evil.test"))).status, 403);
+  assert.deepEqual(calls, []);
+  assert.equal((await POST(accountReq("account/delete", "POST", { confirm: " Member@Example.com " }))).status, 200);
+  assert.deepEqual(calls, ["delete:u1:member@example.com", "signout:local"]);
+  const { POST: adminPost } = accountRoute("account/delete", { ...member, admin: true }, backend, auth);
+  assert.equal((await adminPost(accountReq("account/delete", "POST", { confirm: "member@example.com" }))).status, 400);
+});
+
+test("sign out everywhere ends every session for the account", async () => {
+  const scopes = [];
+  const { DELETE } = accountRoute("account/sessions", member, {}, { signOut: async (o) => { scopes.push(o.scope); return { error: null }; } });
+  assert.equal((await DELETE(accountReq("account/sessions", "DELETE", undefined, "https://evil.test"))).status, 403);
+  assert.equal((await DELETE(accountReq("account/sessions", "DELETE"))).status, 200);
+  assert.deepEqual(scopes, ["global"]);
+});
+
+test("Admin → Messages: only admins mark messages done, with a valid id", async () => {
+  const marked = [];
+  const load = (allowed) => loadModule("app/api/owner/messages/route.ts", {
+    "@a3ro/oil-backend": { createDb: async () => ({}), setFeedbackHandled: async (_db, id, handled) => { marked.push([id, handled]); return id === 7; } },
+    "../../../../lib/ownerGuard": { ownerWriteAllowed: async () => allowed },
+  });
+  const req = (body) => new Request("https://a3ro.test/api/owner/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  assert.equal((await load(false).POST(req({ id: 7, handled: true }))).status, 403);
+  const { POST } = load(true);
+  assert.equal((await POST(req({ id: "7", handled: true }))).status, 400);
+  assert.equal((await POST(req({ id: 7, handled: "yes" }))).status, 400);
+  assert.equal((await POST(req({ id: 99, handled: true }))).status, 404);
+  assert.equal((await POST(req({ id: 7, handled: true }))).status, 200);
+  assert.deepEqual(marked, [[99, true], [7, true]]);
 });
