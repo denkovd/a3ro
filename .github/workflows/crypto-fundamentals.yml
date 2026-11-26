@@ -1,0 +1,45 @@
+# ──────────────────────────────────────────────────────────────
+# Crypto fundamentals (roadmap #82). Daily DefiLlama snapshot:
+# fees, revenue, TVL and stablecoins per project. DefiLlama's free
+# API, no key. Runs here rather than in Vercel cron (Hobby's cron
+# slots and 300 s limit are already busy).
+#
+# Required repo secret: DATABASE_URL (pooled Supabase string).
+# ──────────────────────────────────────────────────────────────
+name: crypto-fundamentals
+
+on:
+  schedule:
+    - cron: "40 1 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-fundamentals
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_OPTIONS: --dns-result-order=ipv4first
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Fetch DefiLlama and save the snapshot
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/run-crypto-fundamentals.ts

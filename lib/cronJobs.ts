@@ -22,6 +22,7 @@ export const CRON_JOBS: CronJob[] = (vercel.crons ?? []).map((c) => ({
 /** Jobs scheduled in GitHub Actions that record their runs in cron_runs too (not re-runnable from Ops). */
 export const GITHUB_JOBS: CronJob[] = [
   { job: "australia-oecd", path: ".github/workflows/oecd-refresh.yml", schedule: "0 3,15 * * *", everyHours: 12, label: "Twice daily, 03:00 and 15:00 UTC" },
+  { job: "crypto-fundamentals", path: ".github/workflows/crypto-fundamentals.yml", schedule: "40 1 * * *", everyHours: 24, label: "Daily, 01:40 UTC" },
 ].map((j) => ({ ...j, label: `${j.label} · GitHub` }));
 
 /** Everything Data health checks: the Vercel crons, then the GitHub jobs. */

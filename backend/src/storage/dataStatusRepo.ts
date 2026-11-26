@@ -17,6 +17,7 @@ export const MODULE_DATA_JOBS: Readonly<Record<string, readonly string[]>> = {
   regime: ["macro"],
   gold: ["ingest"],
   btc: ["btc", "ingest"],
+  crypto: ["crypto-fundamentals"],
 };
 
 export interface ModuleDataStatus { updatedAt: string }

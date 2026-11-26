@@ -356,3 +356,8 @@ export {
   getAccountSettings, saveProfile, setNewsletter, newsletterSubscribed, insertFeedback, listFeedback, setFeedbackHandled, listProfiles, deleteAccount,
 } from "./storage/userProfileRepo";
 export type { AccountSettings, FeedbackKind, FeedbackRow } from "./storage/userProfileRepo";
+
+export { CRYPTO_PROJECTS, CRYPTO_GROUP_LABEL, CRYPTO_GROUP_ORDER, QUANT_NOTE } from "./crypto/projects";
+export type { CryptoProject, CryptoGroup } from "./crypto/projects";
+export type { CryptoSnapshot, ProjectSnapshot, MonthPoint } from "./crypto/defillama";
+export { latestCryptoSnapshot } from "./storage/cryptoRepo";
