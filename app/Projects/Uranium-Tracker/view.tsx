@@ -12,6 +12,7 @@ import { AMBER_CSS, OT_ROUTE } from "../../components/projects/oilTrackerShared"
 import { GOLD_CSS, GT_ROUTE } from "../../components/projects/goldTrackerShared";
 import { ORANGE_CSS, BT_ROUTE } from "../../components/projects/btcTrackerShared";
 import { LockIcon } from "../../components/LockIcon";
+import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
 import { useViewer } from "../../components/useViewer";
 
 const UraniumTrackerCore = dynamic(() => import("../../components/projects/UraniumTrackerCore"), { ssr: false, loading: () => null });
@@ -50,8 +51,8 @@ export default function UraniumTrackerView() {
         <UraniumTrackerCore className="h-full w-full" onExit={leave} onReady={() => setCoreReady(true)} />
       </motion.div>
 
-      <header className="absolute inset-x-0 top-0 z-30 flex h-12 items-center justify-between border-b border-[var(--line)] bg-[rgba(6,7,7,0.72)] px-4 backdrop-blur-md md:h-14 md:px-6">
-        <div className="flex min-w-0 items-baseline gap-3 md:gap-4">
+      <header className="absolute inset-x-0 top-0 z-30 flex h-12 items-center justify-between border-b border-[var(--line)] bg-[rgba(6,7,7,0.72)] px-6 backdrop-blur-md md:h-14 md:px-10">
+        <div className="flex min-w-0 items-center gap-3 md:gap-4">
           <button
             onClick={leave}
             className="sweep shrink-0 font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-2)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]"
@@ -59,9 +60,10 @@ export default function UraniumTrackerView() {
           >
             ← Index
           </button>
+          <ModuleSwitcher current="commodity" />
           <span aria-hidden className="text-[var(--ink-3)]">/</span>
-          <p className="hidden truncate font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)] sm:block">A3RO Intelligence</p>
-          <nav aria-label="Market surface" className="ml-1 flex items-center gap-0.5 border-l border-[var(--line)] pl-2 sm:pl-3">
+          <p className="hidden truncate font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)] lg:block">A3RO Intelligence — Commodity Watch</p>
+          <nav aria-label="Market surface" className="flex min-w-0 items-center gap-0.5 overflow-x-auto border-l border-[var(--line)] pl-2 sm:pl-3">
             <a href={OT_ROUTE} className={tab} style={{ color: AMBER_CSS, opacity: 0.55 }} title="Open Oil Tracker">Oil</a>
             <a href={GT_ROUTE} className={tab} style={{ color: GOLD_CSS, opacity: 0.55 }} title={viewer.premium ? "Open Gold Tracker" : "Gold Tracker · Premium"}>
               Gold{viewer.premium ? null : <LockIcon title="Premium" />}
