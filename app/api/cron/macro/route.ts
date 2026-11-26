@@ -1,5 +1,4 @@
 import { createDb, logOpenDataSignals, runMacroCycle } from "@a3ro/oil-backend";
-import { fetchAustraliaReleaseSchedules } from "../../../../backend/src/sources/absReleases";
 import { requireCronAuth } from "../../_lib/cronAuth";
 import { withErrorLog } from "../../_lib/errorLog";
 
@@ -30,8 +29,7 @@ export const GET = withErrorLog("cron:macro", async function GET(request: Reques
     status = 503;
   }
   if (db) try {
-    const schedules = await fetchAustraliaReleaseSchedules().catch(() => undefined);
-    body.signals = await logOpenDataSignals(db, { schedules });
+    body.signals = await logOpenDataSignals(db);
   } catch (error) {
     body.signals = [{ signal: "track-record", ok: false, error: error instanceof Error ? error.message : String(error) }];
   }

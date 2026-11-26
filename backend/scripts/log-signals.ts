@@ -9,16 +9,11 @@ import { ensureDatabaseUrl } from "./loadEnv";
 ensureDatabaseUrl();
 
 import { createDb } from "../src/storage/db";
-import { fetchAustraliaReleaseSchedules } from "../src/sources/absReleases";
 import { logOpenDataSignals } from "../src/trackRecord/signalLog";
 
 async function main(): Promise<void> {
   const db = await createDb();
-  const schedules = await fetchAustraliaReleaseSchedules().catch((e) => {
-    console.warn(`ABS release calendars unavailable (${e instanceof Error ? e.message : e}); using estimated release lags`);
-    return undefined;
-  });
-  const results = await logOpenDataSignals(db, { schedules });
+  const results = await logOpenDataSignals(db);
   for (const r of results) {
     const what = r.error ? `✗ ${r.error}` : r.skipped ? `skipped: ${r.skipped}` : `${r.state} (${r.action === "none" ? "unchanged" : r.action})`;
     console.log(`${r.signal.padEnd(18)} ${what}`);

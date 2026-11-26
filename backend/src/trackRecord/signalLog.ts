@@ -14,6 +14,7 @@ import { computeMacroWeather } from "../macro/weather";
 import type { Queryable } from "../storage/db";
 import { getAustraliaObservations } from "../storage/australiaWatchRepo";
 import { getLatestMacroSnapshot, type MacroSnapshotRow } from "../storage/macroRepo";
+import { fetchAustraliaReleaseSchedules } from "../sources/absReleases";
 
 type PulseSchedules = NonNullable<NonNullable<Parameters<typeof computePulse>[1]>["schedules"]>;
 
@@ -119,8 +120,8 @@ export interface SignalLogResult { signal: string; ok: boolean; action?: LogActi
 /**
  * Reads the current open-data signals and logs any change. Each signal is
  * isolated: one failing never stops the others. Never throws.
- * `schedules` are the ABS release calendars (as the Australia Watch page uses);
- * without them the Pulse falls back to estimated release lags.
+ * `schedules` are the ABS release calendars (as the Australia Watch page uses). They are
+ * fetched when not given; if that fails the Pulse falls back to estimated release lags.
  */
 export async function logOpenDataSignals(
   db: Queryable,
@@ -129,6 +130,7 @@ export async function logOpenDataSignals(
   const now = opts.now ?? new Date();
   const today = now.toISOString().slice(0, 10);
   const results: SignalLogResult[] = [];
+  const schedules = opts.schedules ?? await fetchAustraliaReleaseSchedules({ now }).catch(() => undefined);
   const apply = async (reading: SignalReading) => {
     try {
       results.push({ signal: reading.signal, ok: true, state: reading.state, action: await logSignal(db, reading, today) });
@@ -138,7 +140,7 @@ export async function logOpenDataSignals(
   };
 
   try {
-    const pulse = computePulse(await getAustraliaObservations(db), { now, schedules: opts.schedules, leads: false });
+    const pulse = computePulse(await getAustraliaObservations(db), { now, schedules, leads: false });
     const reading = pulseReading(pulse);
     if (reading) await apply(reading);
     else results.push({ signal: "au-pulse", ok: true, skipped: "not enough current readings" });
