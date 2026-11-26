@@ -6,14 +6,15 @@
    Layers: producers (USGS), importers (WA Government), Pilbara ports
    and mines, and Australia's export flows by destination (ABS, live).
 ──────────────────────────────────────────────────────────────── */
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import CommodityGlobe, { type GlobeLayer, type GlobePalette, type GlobePreset } from "./commodity/CommodityGlobe";
 import IronOreIntelPanel from "./ironore/IronOreIntelPanel";
+import { audBn, useJson, type Loadable } from "./commodity/ExportsBlock";
 import { DEMAND, DEMAND_CSS, HOME, IRN, IRN_HI, IRON_CSS } from "./ironOreTrackerShared";
 import { DESTINATIONS, FLOW_ORIGIN, IMPORTERS, MINES, PORTS, PRODUCERS, PRODUCTION_YEAR, WA } from "../../../lib/ironore/reference";
 import type { CommodityExports } from "../../../lib/commodity/absExports";
 
-export type ExportsState = { status: "loading" } | { status: "ok"; data: CommodityExports } | { status: "error" };
+export type ExportsState = Loadable<CommodityExports>;
 
 const PALETTE: GlobePalette = { supply: IRN, supplyHi: IRN_HI, supplyCss: IRON_CSS, demand: DEMAND, demandCss: DEMAND_CSS, supplyRgb: "207,106,88" };
 
@@ -25,22 +26,12 @@ const PRESETS: GlobePreset[] = [
 ];
 
 const fmtMt = (mt: number) => `${mt >= 100 ? Math.round(mt) : mt} Mt`;
-const audBn = (audM: number) => `A$${(audM / 1000).toFixed(1)}bn`;
 
 /** Shares to draw flows with before the ABS answers, or if it doesn't (WA profile, 2025-26 values). */
 const FALLBACK_SHARES: Record<string, number> = { CHIN: 0.857, RKOR: 0.054, JAP: 0.054 };
 
 export default function IronOreTrackerCore({ onExit, onReady, className = "" }: { onExit?: () => void; onReady?: () => void; className?: string }) {
-  const [exportsState, setExportsState] = useState<ExportsState>({ status: "loading" });
-
-  useEffect(() => {
-    const ctrl = new AbortController();
-    fetch("/api/ironore/exports", { signal: ctrl.signal })
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((data: CommodityExports) => setExportsState({ status: "ok", data }))
-      .catch((e) => { if (!ctrl.signal.aborted) { console.warn("[ironore] exports unavailable", e); setExportsState({ status: "error" }); } });
-    return () => ctrl.abort();
-  }, []);
+  const exportsState = useJson<CommodityExports>("/api/ironore/exports", "ironore exports");
 
   const shares = useMemo<Record<string, number>>(() => {
     if (exportsState.status !== "ok") return FALLBACK_SHARES;
