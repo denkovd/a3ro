@@ -122,6 +122,8 @@ async function loadVamsReads(db: Queryable): Promise<VamsRead[]> {
       // measured against the real traded price (see vams.ts levelOf),
       // and spotReturn63 is the change readers actually saw.
       levels = await loadBars(db, entry.symbol, "raw");
+      // Only futures store 'raw' (roadmap #93); for the rest adj is the traded level.
+      if (levels.length === 0) levels = bars;
     } catch {
       // one unreadable symbol must not take the matrix down
     }

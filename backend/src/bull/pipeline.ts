@@ -117,7 +117,10 @@ export async function runBullScan(
   // try/catch provides the isolation.
   for (const entry of universe) {
     try {
-      const have = await latestBarDate(db, entry.symbol, "raw");
+      // Only futures keep a 'raw' series (roll detection, the roll probe and
+      // VAMS levels need the as-traded price). Everything else stores 'adj'
+      // alone, since without rolls the two are the same bars (roadmap #93).
+      const have = await latestBarDate(db, entry.symbol, entry.futures ? "raw" : "adj");
       const range: BarRange = have === null ? "5y" : "1mo";
       const { bars, health: h } = await fetchBarsWithFallback(entry, range, runDate, registry);
       health.push(h);
@@ -126,14 +129,20 @@ export async function runBullScan(
         log(`✗ ${entry.symbol}: all adapters failed — ${h.error}`);
         continue;
       }
-      await upsertBars(db, entry.symbol, "raw", bars);
-      // 'adj' is APPEND-ONLY from the fetch side: incremental windows
-      // overlap ~1mo, and re-upserting overlapped dates would overwrite
-      // roll-shifted history with raw values. New bars enter at raw
-      // values; only shiftAdjBarsBefore ever mutates existing adj bars.
-      const haveAdj = await latestBarDate(db, entry.symbol, "adj");
-      const newForAdj = haveAdj === null ? bars : bars.filter((b) => b.date > haveAdj);
-      if (newForAdj.length > 0) await upsertBars(db, entry.symbol, "adj", newForAdj);
+      if (entry.futures) {
+        await upsertBars(db, entry.symbol, "raw", bars);
+        // Futures 'adj' is APPEND-ONLY from the fetch side: incremental
+        // windows overlap ~1mo, and re-upserting overlapped dates would
+        // overwrite roll-shifted history with raw values. New bars enter at
+        // raw values; only shiftAdjBarsBefore ever mutates existing adj bars.
+        const haveAdj = await latestBarDate(db, entry.symbol, "adj");
+        const newForAdj = haveAdj === null ? bars : bars.filter((b) => b.date > haveAdj);
+        if (newForAdj.length > 0) await upsertBars(db, entry.symbol, "adj", newForAdj);
+      } else {
+        // No rolls to protect: overwrite the ~1mo overlap so a bar first
+        // stored mid-session is replaced by its final close next run.
+        await upsertBars(db, entry.symbol, "adj", bars);
+      }
 
       if (entry.futures) {
         await maybeRoll(db, entry, runDate, fetchContract, report, log);

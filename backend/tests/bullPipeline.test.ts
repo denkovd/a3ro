@@ -218,3 +218,25 @@ test("re-running the same day is idempotent — no double shift, no duplicate ro
   const adj = db.bars.get("CL=F|adj")!;
   assert.equal(adj.get("2026-06-10")!.close, OLD_C + 1, "shift applied exactly once");
 });
+
+test("non-futures store adj only, and the overlap is rewritten with final closes (#93)", async () => {
+  const db = new FakeDb();
+  // First run stores ^GSPC with a mid-session last bar.
+  const partial = GSPC_BARS.map((b, i) => (i === GSPC_BARS.length - 1 ? { ...b, close: b.close - 25 } : b));
+  const partialRegistry: AdapterRegistry = {
+    get: (id) => ({ id, async fetchDailyBars(symbol) {
+      return symbol === "^GSPC" ? partial : registry.get(id)!.fetchDailyBars(symbol, "1mo");
+    } }) as ReturnType<AdapterRegistry["get"]>,
+  };
+  const now = () => new Date(`${RUN_DATE}T06:20:00Z`);
+  await runBullScan(db, { universe: UNIVERSE, registry: partialRegistry, fetchContract, now });
+  assert.equal(db.bars.has("^GSPC|raw"), false, "no raw series for a non-futures symbol");
+  assert.ok(db.bars.has("CL=F|raw"), "futures keep raw for roll detection");
+  const last = GSPC_BARS[GSPC_BARS.length - 1];
+  assert.equal(db.bars.get("^GSPC|adj")!.get(last.date)!.close, last.close - 25);
+
+  // Next run fetches the final close; adj must take it.
+  await runBullScan(db, { universe: UNIVERSE, registry, fetchContract, now });
+  assert.equal(db.bars.get("^GSPC|adj")!.get(last.date)!.close, last.close);
+  assert.equal(db.bars.has("^GSPC|raw"), false);
+});
