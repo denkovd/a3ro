@@ -80,6 +80,19 @@ export const MANUAL_JOBS: readonly ManualJob[] = [
     everyMonths: 3,
     lastCheckedInCode: "2026-11-27",
   },
+  {
+    id: "copper-reference",
+    title: "Copper reference figures (Copper Tracker)",
+    steps: [
+      "Check the status of the disruptions on the page: Grasberg ramp-up, Cobre Panamá restart, Mount Isa smelter and Townsville refinery support (ends 2028). Update the notes in SITES.",
+      "After each Resources and Energy Quarterly, update the copper export earnings outlook.",
+      "Each January, update mine and refined output from the new USGS Mineral Commodity Summaries (copper chapter), and China's share of use from the ICSG Factbook.",
+      "Change each source's reviewed date. Export values (ABS) and COMEX stocks (CME) update by themselves.",
+    ],
+    where: "lib/copper/reference.ts",
+    everyMonths: 3,
+    lastCheckedInCode: "2026-11-27",
+  },
 ];
 
 export type JobStatus = "ok" | "due soon" | "overdue";

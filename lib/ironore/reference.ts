@@ -9,6 +9,7 @@
    (the ore as shipped, not its iron content).
    Positions of mines and ports are approximate.
 ──────────────────────────────────────────────────────────────── */
+import type { AbsExportSpec, Destination } from "../commodity/absExports";
 
 export type SourceId = "usgs" | "waProfile" | "pilbaraPorts" | "req" | "simandou" | "abs";
 
@@ -189,6 +190,26 @@ export const MINES: readonly Mine[] = [
   { id: "kiruna", name: "Kiruna", lon: 20.22, lat: 67.85, owner: "LKAB", country: "sweden", note: "Underground magnetite mine." },
   { id: "labrador", name: "Labrador Trough", lon: -66.9, lat: 52.95, owner: "Rio Tinto (IOC), Champion Iron (Bloom Lake)", country: "canada", note: "High-grade concentrate and pellets." },
 ];
+
+/* ── ABS exports: SITC 281, destinations and WA ── */
+
+/** Flows are drawn from Port Hedland; ships also sail from Dampier, Cape Lambert and Ashburton. */
+export const FLOW_ORIGIN: [number, number] = [118.58, -20.31];
+export const DESTINATIONS: readonly Destination[] = [
+  { code: "CHIN", name: "China", lon: 121.5, lat: 33 },
+  { code: "JAP", name: "Japan", lon: 135, lat: 34.6 },
+  { code: "RKOR", name: "South Korea", lon: 129.3, lat: 35.8 },
+  { code: "TAIW", name: "Taiwan", lon: 120.3, lat: 22.6 },
+  { code: "INIA", name: "India", lon: 86.7, lat: 20.3 },
+  { code: "VIET", name: "Vietnam", lon: 106.4, lat: 18.1 },
+  { code: "INDO", name: "Indonesia", lon: 106.5, lat: -6 },
+];
+export const IRON_ORE_EXPORTS: AbsExportSpec = {
+  id: "iron-ore",
+  sitc: [{ code: "281", label: "Iron ore and concentrates" }],
+  destinations: DESTINATIONS,
+  states: [{ code: "5", name: "Western Australia" }],
+};
 
 /* ── companies ── */
 
