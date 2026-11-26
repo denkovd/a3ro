@@ -23,7 +23,7 @@ type Status = { state: "idle" | "saving" | "saved" | "error"; message?: string }
 const DAY = new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "long", year: "numeric" });
 const input = "w-full rounded-sm border border-[var(--line)] bg-transparent px-3 py-2 text-base text-[var(--ink)] outline-none focus:border-[var(--line-2)]";
 const button = "w-fit rounded-sm border border-[var(--line)] px-4 py-2 font-mono text-xs uppercase tracking-[0.2em] text-[var(--ink)] transition-colors hover:border-[var(--line-2)] disabled:opacity-50";
-const PROVIDER_LABEL: Record<string, string> = { google: "Google", email: "Email link" };
+const PROVIDER_LABEL: Record<string, string> = { google: "Google", email: "Email" };
 
 async function send(path: string, method: string, body?: unknown): Promise<{ ok: boolean; error?: string }> {
   try {
@@ -51,7 +51,7 @@ function StatusLine({ status, saved = "Saved" }: { status: Status; saved?: strin
   return null;
 }
 
-export default function AccountSettings() {
+export default function AccountSettings({ landing = null }: { landing?: LinkLanding }) {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loadError, setLoadError] = useState(false);
 
@@ -69,10 +69,12 @@ export default function AccountSettings() {
   if (!settings) return <p className="text-sm text-[var(--ink-3)]">Loading your settings…</p>;
 
   return <>
+    {/* Arrived from a sign-up or reset link: choosing a password comes first. */}
+    {landing ? <PasswordSection settings={settings} onChange={setSettings} landing={landing} /> : null}
     <ProfileSection settings={settings} onChange={setSettings} />
     <InterestsSection settings={settings} onChange={setSettings} />
     <NewsletterSection settings={settings} onChange={setSettings} />
-    <PasswordSection settings={settings} onChange={setSettings} />
+    {landing ? null : <PasswordSection settings={settings} onChange={setSettings} />}
     <FeedbackSection />
     <SessionsSection />
     {settings.admin ? null : <DeleteSection email={settings.email ?? ""} />}
@@ -175,8 +177,16 @@ function NewsletterSection({ settings, onChange }: SectionProps) {
   </Section>;
 }
 
-function PasswordSection({ settings, onChange }: SectionProps) {
+type LinkLanding = "setup" | "reset" | null;
+
+/**
+ * Passwords are only set from an emailed link (the server checks too). Arriving from one
+ * (?setup=1 after sign-up, ?reset=1 after a reset) shows the form; otherwise this is one
+ * button that emails a reset link to the account's address.
+ */
+function PasswordSection({ settings, onChange, landing = null }: SectionProps & { landing?: LinkLanding }) {
   const [status, setStatus] = useState<Status>({ state: "idle" });
+  const [showForm, setShowForm] = useState(landing !== null);
 
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -186,26 +196,51 @@ function PasswordSection({ settings, onChange }: SectionProps) {
     if (password !== String(data.get("confirm") ?? "")) { setStatus({ state: "error", message: "The two passwords don't match" }); return; }
     setStatus({ state: "saving" });
     const res = await send("/api/account/password", "POST", { password });
-    if (res.ok) { form.reset(); onChange({ ...settings, hasPassword: true }); setStatus({ state: "saved" }); }
-    else setStatus({ state: "error", message: res.error });
+    if (res.ok) {
+      form.reset();
+      onChange({ ...settings, hasPassword: true });
+      setShowForm(false);
+      setStatus({ state: "saved", message: "Password saved. From now on, sign in with your email and this password." });
+      // Drop ?setup=1 / ?reset=1 so a refresh doesn't show the form again.
+      window.history.replaceState(null, "", "/account");
+    } else setStatus({ state: "error", message: res.error });
   }
 
-  return <Section title={settings.hasPassword ? "Change password" : "Set a password"}
-    intro={settings.hasPassword ? "Use at least 10 characters." : "Optional. You can keep using Google or email links; a password lets you sign in without waiting for an email. At least 10 characters."}>
+  async function emailLink() {
+    setStatus({ state: "saving" });
+    const res = await send("/auth/reset", "POST", { email: settings.email });
+    setStatus(res.ok ? { state: "saved", message: `We've emailed a link to ${settings.email}. Open it in this browser to choose your new password.` } : { state: "error", message: res.error });
+  }
+
+  if (!showForm) return <Section title="Password"
+    intro={settings.hasPassword ? "To change your password, we'll email you a link. Opening it lets you choose a new one."
+      : "You don't have a password yet. We'll email you a link to set one, so you can sign in with your email and password."}>
+    <div className="flex flex-wrap items-center gap-4">
+      <button type="button" onClick={emailLink} disabled={status.state === "saving" || !settings.email} className={button}>
+        {settings.hasPassword ? "Email me a reset link" : "Email me a link to set one"}
+      </button>
+      <StatusLine status={status} saved={status.message} />
+    </div>
+  </Section>;
+
+  return <Section title={landing === "setup" && !settings.hasPassword ? "Choose your password" : "Choose a new password"}
+    intro={landing === "setup" && !settings.hasPassword
+      ? "Welcome. Your email is confirmed. Choose a password to sign in with from now on. At least 10 characters."
+      : "You're signed in from your email link. Choose a password to sign in with from now on. At least 10 characters."}>
     <form onSubmit={save} className="flex flex-col gap-3">
       {/* Lets password managers save the new password against the right account. */}
       <input type="email" name="username" value={settings.email ?? ""} autoComplete="username" readOnly hidden />
       <label className="flex flex-col gap-2">
         <span className="landing-kicker">New password</span>
-        <input name="password" type="password" required minLength={10} maxLength={128} autoComplete="new-password" className={input} />
+        <input name="password" type="password" required autoFocus minLength={10} maxLength={128} autoComplete="new-password" className={input} />
       </label>
       <label className="flex flex-col gap-2">
         <span className="landing-kicker">Type it again</span>
         <input name="confirm" type="password" required minLength={10} maxLength={128} autoComplete="new-password" className={input} />
       </label>
       <div className="flex items-center gap-4">
-        <button type="submit" disabled={status.state === "saving"} className={button}>{settings.hasPassword ? "Change password" : "Set password"}</button>
-        <StatusLine status={status} saved="Password saved. You can now sign in with it." />
+        <button type="submit" disabled={status.state === "saving"} className={button}>Save password</button>
+        <StatusLine status={status} />
       </div>
     </form>
   </Section>;

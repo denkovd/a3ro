@@ -537,7 +537,12 @@ test("newsletter/me subscribes the session email, same-origin only", async () =>
 function accountRoute(route, viewer, backend = {}, auth = {}) {
   const server = {
     currentViewer: async () => viewer,
-    createSupabaseServerClient: async () => ({ auth: { updateUser: async () => ({ error: null }), signOut: async () => ({ error: null }), ...auth } }),
+    createSupabaseServerClient: async () => ({ auth: {
+      updateUser: async () => ({ error: null }), signOut: async () => ({ error: null }),
+      // Default: a session that just came in through an emailed link.
+      getClaims: async () => ({ data: { claims: { amr: [{ method: "otp", timestamp: Math.floor(Date.now() / 1000) - 60 }] } }, error: null }),
+      ...auth,
+    } }),
   };
   return loadModule(`app/api/${route}/route.ts`, {
     "@a3ro/oil-backend": { createDb: async () => ({}), recordAppError: async () => {}, ...backend },
@@ -593,6 +598,21 @@ test("password: length rules, same-origin, and Supabase errors come back readabl
   const res = await weak(accountReq("account/password", "POST", { password: "password123" }));
   assert.equal(res.status, 400);
   assert.match((await res.json()).error, /too weak/);
+});
+
+test("password: refused unless the session came from an emailed link in the last 15 minutes (#105)", async () => {
+  const set = [];
+  const updateUser = async (u) => { set.push(u.password); return { error: null }; };
+  const claims = (amr) => async () => ({ data: { claims: { amr } }, error: null });
+  const now = Math.floor(Date.now() / 1000);
+  for (const amr of [[{ method: "password", timestamp: now - 10 }], [{ method: "oauth", timestamp: now - 10 }], [{ method: "recovery", timestamp: now - 3600 }], undefined]) {
+    const { POST } = accountRoute("account/password", member, {}, { updateUser, getClaims: claims(amr) });
+    assert.equal((await POST(accountReq("account/password", "POST", { password: "long enough pw" }))).status, 403, JSON.stringify(amr));
+  }
+  assert.deepEqual(set, []);
+  const { POST } = accountRoute("account/password", member, {}, { updateUser, getClaims: claims([{ method: "recovery", timestamp: now - 120 }]) });
+  assert.equal((await POST(accountReq("account/password", "POST", { password: "long enough pw" }))).status, 200);
+  assert.deepEqual(set, ["long enough pw"]);
 });
 
 test("feedback: validated kinds, rating only on reviews, stored against the session", async () => {

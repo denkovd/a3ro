@@ -39,7 +39,7 @@ export default async function UsersPage() {
             return [
               <span key="e">{a.email ?? "(no email)"}{admin ? <span className="ml-2 text-[var(--ink-3)]">admin</span> : null}{!a.emailConfirmed ? <span className="ml-2 text-[var(--ink-3)]">unconfirmed</span> : null}</span>,
               profile?.displayName ?? "—",
-              a.provider === "google" ? "Google" : a.provider === "email" ? "Email link" : a.provider ?? "—",
+              a.provider === "google" ? "Google" : a.provider === "email" ? "Email" : a.provider ?? "—",
               fmt(a.createdAt),
               fmt(a.lastSignInAt),
               profile?.newsletter === true ? "Yes" : profile?.newsletter === false ? "Unsubscribed" : "—",

@@ -37,7 +37,7 @@ export default async function PremiumPage({ searchParams }: { searchParams: Prom
         <SignupForm moduleId={module?.id ?? "unknown"} />
       </> : <>
         <p className="text-sm leading-relaxed text-[var(--ink-2)]">
-          Sign in to an account with Premium to open it. New here? Create a free account first: it takes one click with Google or an email link.
+          Sign in to an account with Premium to open it. New here? Create a free account first, with Google or your email and a password.
         </p>
         <a href={`/login?next=${encodeURIComponent(next)}`} className="sweep w-fit font-mono text-xs uppercase tracking-[0.2em]">Sign in or create an account ↗</a>
         <SignupForm moduleId={module?.id ?? "unknown"} />

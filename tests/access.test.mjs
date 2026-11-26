@@ -242,3 +242,16 @@ test("sitemap lists public pages only", () => {
   assert.ok(urls.includes("https://a3ro.com.au/markets"));
   for (const gated of ["Bull-Market-Finder", "Gold-Tracker", "BTC-Tracker", "Earnings-Beat", "Regime-Shift", "/owner"]) assert.ok(!urls.some((u) => u.includes(gated)), gated);
 });
+
+test("passwords can only be saved from a recent emailed link (#105)", () => {
+  const { signedInByRecentEmailLink: ok } = load("lib/emailLinkSession.ts");
+  const now = 1_800_000_000;
+  for (const method of ["otp", "magiclink", "recovery", "email/signup"]) assert.ok(ok([{ method, timestamp: now - 60 }], now), method);
+  assert.ok(!ok([{ method: "recovery", timestamp: now - 16 * 60 }], now), "link older than 15 minutes");
+  assert.ok(!ok([{ method: "password", timestamp: now - 10 }], now), "password sign-in");
+  assert.ok(!ok([{ method: "oauth", timestamp: now - 10 }], now), "Google sign-in");
+  assert.ok(!ok([{ method: "recovery", timestamp: now + 3600 }], now), "timestamp in the future");
+  for (const bad of [undefined, null, "otp", {}, [{}], [{ method: "otp" }]]) assert.ok(!ok(bad, now), JSON.stringify(bad));
+  // A later password sign-in doesn't matter as long as the link entry is recent.
+  assert.ok(ok([{ method: "password", timestamp: now - 5 }, { method: "otp", timestamp: now - 120 }], now));
+});

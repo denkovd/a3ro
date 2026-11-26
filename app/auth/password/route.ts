@@ -1,5 +1,5 @@
-// Sign in with email and password (roadmap #105). Only works once the member has set a password
-// on /account; new accounts still start with Google or an email link.
+// Sign in with email and password (roadmap #105). Accounts get a password when created on the
+// login page, or later from /account or a reset link.
 import { createLeadBurstGuard, LeadRequestError, readLeadRequest } from "../../api/_lib/leadRequest";
 import { sameOrigin } from "../../api/_lib/accountRequest";
 import { safeNextPath } from "../../../lib/access";
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     // One answer for every failure: don't reveal which emails exist or have a password.
-    if (error) return Response.json({ error: "Email or password is wrong. No password yet? Use Google or the email link, then set one under Account." }, { status: 401, headers: NO_STORE });
+    if (error) return Response.json({ error: "Email or password is wrong. No password yet? Use “Forgot your password” to set one." }, { status: 401, headers: NO_STORE });
     return Response.json({ ok: true, next }, { headers: NO_STORE });
   } catch (error) {
     if (error instanceof LeadRequestError) return Response.json({ error: error.message }, { status: error.status, headers: NO_STORE });

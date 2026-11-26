@@ -1,6 +1,8 @@
-// Set or change the account's password (roadmap #105). Accounts start without one (Google or an
-// email link); once set, the login page's "Sign in with password" works for that email.
+// Set or change the account's password (roadmap #105). Only from an emailed link: the sign-up link
+// (first password) or a reset link from the login page or Account. The session must have signed in
+// through that link within the last 15 minutes (verified `amr` claim, lib/emailLinkSession.ts).
 import { createSupabaseServerClient } from "../../../../lib/supabase/server";
+import { signedInByRecentEmailLink } from "../../../../lib/emailLinkSession";
 import { NO_STORE, readJson, requireAccount } from "../../_lib/accountRequest";
 import { withErrorLog } from "../../_lib/errorLog";
 
@@ -19,13 +21,18 @@ export const POST = withErrorLog("api:account-password", async function POST(req
   }
   try {
     const supabase = await createSupabaseServerClient();
+    // getClaims verifies the access token's signature before its claims are trusted.
+    const { data: claims } = await supabase.auth.getClaims();
+    if (!signedInByRecentEmailLink(claims?.claims?.amr)) {
+      return Response.json({ error: "This link has run out. Use “Email me a reset link” to get a new one." }, { status: 403, headers: NO_STORE });
+    }
     const { error } = await supabase.auth.updateUser({ password });
     if (error) {
-      // Supabase's own rules (weak or leaked password, same as before, re-sign-in needed) come back as a 4xx.
+      // Supabase's own rules (weak or leaked password, same as before) come back as a 4xx.
       const status = typeof error.status === "number" && error.status >= 400 && error.status < 500 ? 400 : 500;
       const message = error.code === "same_password" ? "That's already your password"
         : error.code === "weak_password" ? "That password is too weak or has appeared in a data breach. Try a longer one."
-        : error.code === "reauthentication_needed" ? "Sign out and back in, then try again"
+        : error.code === "reauthentication_needed" ? "This link has run out. Use “Email me a reset link” to get a new one."
         : status === 400 ? error.message : "Password could not be saved";
       return Response.json({ error: message }, { status, headers: NO_STORE });
     }
