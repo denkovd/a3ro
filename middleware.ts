@@ -29,7 +29,7 @@ export const config = {
     "/api/bull/:path*", "/api/leaderboard/:path*", "/api/watchlist/:path*", "/api/regime/:path*", "/api/gold/:path*", "/api/btc/:path*",
     "/owner/:path*", "/api/owner/:path*",
     // Public by default, but an admin can make them Premium from Ops controls
-    "/Projects/Australia-Watch/:path*", "/Projects/AI-Dividend/:path*", "/Projects/Oil-Tracker/:path*",
+    "/Projects/Australia-Watch/:path*", "/Projects/AI-Dividend/:path*", "/Projects/Oil-Tracker/:path*", "/Projects/Uranium-Tracker/:path*",
     "/api/australia-watch/:path*", "/api/dividend/:path*", "/api/oil/:path*", "/api/macro/:path*", "/api/capital/:path*",
     // Session refresh for sign-in
     "/api/auth/:path*", "/auth/:path*", "/login",

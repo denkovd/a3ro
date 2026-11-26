@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import OilTrackerPreview from "../../components/projects/OilTrackerPreview";
 import { AMBER_CSS, OT_SESSION, type OTView } from "../../components/projects/oilTrackerShared";
+import { URANIUM_CSS, UT_ROUTE } from "../../components/projects/uraniumTrackerShared";
 import { ORANGE_CSS, BT_ROUTE } from "../../components/projects/btcTrackerShared";
 import { GOLD_CSS, GT_ROUTE } from "../../components/projects/goldTrackerShared";
 import { useViewer } from "../../components/useViewer";
@@ -150,6 +151,14 @@ export default function OilTrackerView() {
             >
               BTC{viewer.premium ? null : <LockIcon title="Premium" />}
             </a>
+            <a
+              href={UT_ROUTE}
+              className="px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em] transition-colors hover:opacity-100"
+              style={{ color: URANIUM_CSS, opacity: 0.55 }}
+              title="Open Uranium Tracker"
+            >
+              Uranium
+            </a>
           </nav>
         </div>
         <p className="flex shrink-0 items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
@@ -165,7 +174,6 @@ export default function OilTrackerView() {
             <span aria-hidden className="inline-block h-[5px] w-[5px] rounded-full" style={{ background: AMBER_CSS }} />
           )}
           <span className="hidden sm:inline">Terminal · sourced data</span>
-          <span className="sm:hidden">Sourced</span>
         </p>
       </header>
 

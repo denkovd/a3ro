@@ -15,6 +15,7 @@ import {
   type GTView,
 } from "../../components/projects/goldTrackerShared";
 import { AMBER_CSS, OT_ROUTE } from "../../components/projects/oilTrackerShared";
+import { URANIUM_CSS, UT_ROUTE } from "../../components/projects/uraniumTrackerShared";
 import { ORANGE_CSS, BT_ROUTE } from "../../components/projects/btcTrackerShared";
 
 const GoldTrackerCore = dynamic(
@@ -142,6 +143,14 @@ export default function GoldTrackerView() {
             >
               BTC
             </a>
+            <a
+              href={UT_ROUTE}
+              className="px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em] transition-colors hover:opacity-100"
+              style={{ color: URANIUM_CSS, opacity: 0.55 }}
+              title="Open Uranium Tracker"
+            >
+              Uranium
+            </a>
           </nav>
         </div>
         <p className="flex shrink-0 items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
@@ -161,7 +170,6 @@ export default function GoldTrackerView() {
             />
           )}
           <span className="hidden sm:inline">Terminal · mines · holders · flows</span>
-          <span className="sm:hidden">Gold</span>
         </p>
       </header>
 

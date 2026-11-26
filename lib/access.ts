@@ -38,6 +38,7 @@ export const MODULE_ACCESS: readonly ModuleAccess[] = [
   { id: "australia", label: "Australia Watch", level: "public", data: "open", pages: ["/Projects/Australia-Watch"], apis: ["/api/australia-watch"] },
   { id: "dividend", label: "AI Dividend", level: "public", data: "open", pages: ["/Projects/AI-Dividend"], apis: ["/api/dividend"] },
   { id: "commodity", label: "Commodity Watch (oil corridors)", level: "public", data: "open", pages: ["/Projects/Oil-Tracker"], apis: ["/api/oil"] },
+  { id: "uranium", label: "Commodity Watch (uranium fuel chain)", level: "public", data: "open", pages: ["/Projects/Uranium-Tracker"], apis: [] },
   { id: "macro", label: "Macro view", level: "public", data: "open", pages: [], apis: ["/api/macro", "/api/capital"] },
   { id: "trend", label: "Bull Market Finder", level: "premium", data: "market", pages: ["/Projects/Bull-Market-Finder", "/Projects/Regime-Finder"], apis: ["/api/bull"],
     preview: "Finds the assets that have just turned bullish on both daily and weekly closes, ranked by how recent and how strong the turn is, with a chart and profile for each." },
