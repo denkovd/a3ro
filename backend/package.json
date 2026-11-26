@@ -64,6 +64,7 @@
     "migrate:user-access": "tsx scripts/migrate.ts migrations/029_user_access.sql",
     "migrate:user-profiles": "tsx scripts/migrate.ts migrations/031_user_profiles.sql",
     "migrate:signal-log": "tsx scripts/migrate.ts migrations/032_signal_log.sql",
+    "migrate:newsletter": "tsx scripts/migrate.ts migrations/033_newsletter.sql",
     "run:profiles": "tsx scripts/run-profiles.ts",
     "backfill:btc": "tsx scripts/backfill-btc.ts",
     "run:btc": "tsx scripts/run-btc.ts",

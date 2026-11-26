@@ -4,10 +4,12 @@ import assert from "node:assert/strict";
 import { newsletterSubscribed, setNewsletter } from "../src/storage/userProfileRepo";
 import type { Queryable, QueryResultLike } from "../src/storage/db";
 
-function fakeDb(state: { choice?: boolean | null; leads: { email: string; context: string }[] }): Queryable {
+function fakeDb(state: { choice?: boolean | null; changedAt?: string; unsubscribedAt?: string; leads: { email: string; context: string }[] }): Queryable {
   return {
     async query(text: string, params: unknown[] = []): Promise<QueryResultLike> {
-      if (text.includes("select newsletter from user_profiles")) return { rows: state.choice === undefined ? [] : [{ newsletter: state.choice }] };
+      if (text.includes("select newsletter") && text.includes("from user_profiles")) return { rows: state.choice === undefined ? [] : [{ newsletter: state.choice, newsletter_changed_at: state.changedAt ?? null }] };
+      if (text.startsWith("delete from newsletter_unsubscribes")) { delete state.unsubscribedAt; return { rows: [], rowCount: 1 }; }
+      if (text.includes("from newsletter_unsubscribes")) return { rows: state.unsubscribedAt ? [{ unsubscribed_at: state.unsubscribedAt }] : [] };
       if (text.includes("from leads")) {
         const email = String(params[0]).toLowerCase();
         return { rows: state.leads.filter((l) => l.email.toLowerCase() === email && l.context.startsWith("newsletter:")).map(() => ({ "?column?": 1 })) };
@@ -39,4 +41,14 @@ test("subscribing adds one lead; unsubscribing adds none", async () => {
   assert.equal(state.choice, false);
   assert.equal(state.leads.length, 1);
   assert.equal(await newsletterSubscribed(db, "u1", "a@b.com"), false);
+});
+
+test("an unsubscribe link clicked after the account's choice wins; subscribing again lifts it", async () => {
+  const state: { choice?: boolean | null; changedAt?: string; unsubscribedAt?: string; leads: { email: string; context: string }[] } =
+    { choice: true, changedAt: "2026-11-01T00:00:00Z", unsubscribedAt: "2026-11-20T00:00:00Z", leads: [{ email: "a@b.com", context: "newsletter:account" }] };
+  const db = fakeDb(state);
+  assert.equal(await newsletterSubscribed(db, "u1", "a@b.com"), false);
+  await setNewsletter(db, "u1", "a@b.com", true);
+  assert.equal(state.unsubscribedAt, undefined);
+  assert.equal(await newsletterSubscribed(db, "u1", "a@b.com"), true);
 });
