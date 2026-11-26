@@ -8,7 +8,9 @@
    the module swaps under full cover, then the blocks clear in a new
    random order to reveal the next one.
 
-   Phones, short viewports and reduced motion get plain full-height
+   Phones get the same pinned dissolve with a stacked layout (story on
+   top, preview below, index along the bottom). Short viewports (e.g.
+   phones in landscape) and reduced motion get plain full-height
    sections in normal flow — no pinning, no dissolve.
 ──────────────────────────────────────────────────────────────── */
 import { LockIcon } from "../LockIcon";
@@ -22,9 +24,10 @@ export type StageModule = {
   locked?: boolean;
 };
 
-const MIN_WIDTH = 768;
-const MIN_HEIGHT = 620;
-const BLOCK = 28;            // dissolve block size, CSS px
+const MIN_HEIGHT = 620;       // desktop / tablet
+const MIN_HEIGHT_PHONE = 560; // under 768px wide: stacked layout needs less height
+const PHONE = 768;
+const BLOCK = 28;            // dissolve block size, CSS px (20 on phones)
 const COVER_MS = 320;        // blocks appear
 const REVEAL_MS = 380;       // blocks clear
 const DEPTH = "#060707";     // --depth-0
@@ -49,7 +52,7 @@ function useStaged(enabled: boolean) {
   const [staged, setStaged] = useState(false);
   useEffect(() => {
     if (!enabled) { setStaged(false); return; }
-    const check = () => setStaged(window.innerWidth >= MIN_WIDTH && window.innerHeight >= MIN_HEIGHT);
+    const check = () => setStaged(window.innerHeight >= (window.innerWidth < PHONE ? MIN_HEIGHT_PHONE : MIN_HEIGHT));
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
@@ -84,7 +87,8 @@ function useDissolve(canvas: React.RefObject<HTMLCanvasElement | null>, onIdle: 
     const w = el.clientWidth, h = el.clientHeight;
     el.width = Math.round(w * dpr); el.height = Math.round(h * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const cols = Math.ceil(w / BLOCK), rows = Math.ceil(h / BLOCK), n = cols * rows;
+    const B = w < PHONE ? 20 : BLOCK;
+    const cols = Math.ceil(w / B), rows = Math.ceil(h / B), n = cols * rows;
     const coverOrder = shuffled(n), revealOrder = shuffled(n);
     const filled = new Uint8Array(n);
     ctx.clearRect(0, 0, w, h);
@@ -92,15 +96,15 @@ function useDissolve(canvas: React.RefObject<HTMLCanvasElement | null>, onIdle: 
     let phase: "cover" | "reveal" = "cover";
     let start = performance.now();
     let done = 0;
-    const block = (i: number) => [(i % cols) * BLOCK, Math.floor(i / cols) * BLOCK] as const;
+    const block = (i: number) => [(i % cols) * B, Math.floor(i / cols) * B] as const;
     const frame = (now: number) => {
       if (phase === "cover") {
         const target = Math.min(n, Math.floor(((now - start) / COVER_MS) * n));
-        for (; done < target; done++) { const i = coverOrder[done]; filled[i] = 1; const [x, y] = block(i); ctx.fillRect(x, y, BLOCK, BLOCK); }
+        for (; done < target; done++) { const i = coverOrder[done]; filled[i] = 1; const [x, y] = block(i); ctx.fillRect(x, y, B, B); }
         if (done >= n) { ctx.fillRect(0, 0, w, h); doSwap(); phase = "reveal"; start = now; done = 0; }
       } else {
         const target = Math.min(n, Math.floor(((now - start) / REVEAL_MS) * n));
-        for (; done < target; done++) { const i = revealOrder[done]; const [x, y] = block(i); ctx.clearRect(x, y, BLOCK, BLOCK); }
+        for (; done < target; done++) { const i = revealOrder[done]; const [x, y] = block(i); ctx.clearRect(x, y, B, B); }
         if (done >= n) { ctx.clearRect(0, 0, w, h); window.clearTimeout(fallback); if (running.current === job) { running.current = null; idle.current(); } return; }
       }
       if (running.current !== job) return; // the fallback already finished this one

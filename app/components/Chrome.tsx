@@ -7,9 +7,9 @@ import { motion, useScroll, useSpring } from "framer-motion";
 import { useMotionPreference } from "./motion";
 import { useViewer } from "./useViewer";
 
-// Section links are "/#…" so they also work from pages other than the homepage.
+// Section links are "/#…" so they also work from pages other than the homepage. Commodity Watch opens the globe.
 const LINKS = [
-  { label: "Commodity Watch", href: "/#top" },
+  { label: "Commodity Watch", href: "/Projects/Oil-Tracker" },
   { label: "Modules", href: "/#modules" },
   { label: "Markets", href: "/markets" },
   { label: "Assets", href: "/assets" },

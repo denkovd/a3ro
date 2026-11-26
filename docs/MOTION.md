@@ -45,3 +45,7 @@ The 300vh sticky wall retains the original 2,200px scroll contribution plus 26px
 MotionValues update transforms without React renders per scroll frame. React state changes only for phase-based preloading, layout, visibility and user interaction. Preload the current and following module; keep mounted previews and data state. The globe caps DPR at 1.5 and stops scheduling frames outside the viewport or while the tab is hidden. Dispose of observers, subscriptions, listeners and frames on unmount. Existing snapshot caching and data hooks remain intact.
 
 Shared reveal, easing and focus tokens remain in `app/components/motion.tsx` and `app/globals.css`. Obsolete landing sections, entrance veil and Lenis initialization have been removed.
+
+## Module stage (#65, replaces the spine)
+
+`ModuleStage.tsx` pins a full-viewport stage and steps through the modules with native scroll; each step plays a pixel dissolve (blocks cover in random order, the module swaps under full cover, blocks clear in a new order). Desktop and tablet: story beside preview, index down the right, 28px blocks, needs ≥620px height. Phones (<768px wide): the same pinned dissolve with story on top (description clamped to 3 lines), preview filling the rest, index along the bottom, 20px blocks, needs ≥560px height. Shorter viewports (phones in landscape) and reduced motion get the normal-flow `.stage-list`.
