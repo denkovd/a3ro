@@ -15,6 +15,7 @@ const TABS = [
   { href: "/owner/stats", label: "Site stats" },
   { href: "/owner/users", label: "Users" },
   { href: "/owner/messages", label: "Messages" },
+  { href: "/owner/newsletter", label: "Newsletter" },
   { href: "/owner/controls", label: "Controls" },
 ];
 

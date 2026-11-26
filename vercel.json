@@ -9,6 +9,8 @@
     { "path": "/api/cron/btc", "schedule": "45 21 * * *" },
     { "path": "/api/cron/value-chain", "schedule": "40 7 * * 2" },
     { "path": "/api/cron/dividend-signals", "schedule": "25 8 * * *" },
-    { "path": "/api/cron/dividend-constraints", "schedule": "50 8 * * *" }
+    { "path": "/api/cron/dividend-constraints", "schedule": "50 8 * * *" },
+    { "path": "/api/cron/newsletter", "schedule": "5 7 * * 1" },
+    { "path": "/api/cron/newsletter-late", "schedule": "5 8 * * 1" }
   ]
 }

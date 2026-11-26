@@ -6,6 +6,7 @@
 ──────────────────────────────────────────────────────────────── */
 
 import { Queryable } from "./db";
+import { clearUnsubscribe } from "./newsletterRepo";
 
 /** Insert one pro-tier access request. message/context are optional
  *  and stored as null (not undefined) when absent. */
@@ -18,6 +19,7 @@ export async function insertLead(
      values ($1,$2,$3)`,
     [lead.email, lead.message ?? null, lead.context ?? null],
   );
+  if (lead.context?.startsWith("newsletter:")) await clearUnsubscribe(db, lead.email);
 }
 
 /** True when this email already signed up for the weekly newsletter
