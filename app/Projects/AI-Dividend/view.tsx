@@ -13,6 +13,7 @@ import { DIVIDEND_BUILD_STEPS, DIVIDEND_CURRENT_STEP, DIVIDEND_OUTLOOK_END_YEAR,
 import type { DividendRead } from "../../../backend/src/dividend/types";
 import SiteFooter from "../../components/SiteFooter";
 import NewsletterSignup from "../../components/NewsletterSignup";
+import { DataAsOf } from "../../components/DataAsOf";
 
 const SOURCE_LABELS = { bls: "Bureau of Labor Statistics", bea: "Bureau of Economic Analysis", dfa: "Federal Reserve" };
 const COLORS = ["#8b9dff", "#d4a157", "#5fc9a4"];
@@ -113,7 +114,7 @@ export default function AIDividendView() {
       <div className="mx-auto flex min-h-14 max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-3 md:px-10"><div className="flex items-center gap-4"><Link href="/#modules" className="font-mono text-[10px] uppercase tracking-[.15em] text-[var(--ink-2)]">← Index</Link><span className="text-[var(--ink-3)]">/</span><span className="font-mono text-[10px] uppercase tracking-[.15em]">AI Dividend</span></div><ModuleSwitcher current="dividend" /></div>
     </header>
     <div className="mx-auto max-w-7xl px-5 py-9 md:px-10 md:py-14">
-      <div className="flex flex-wrap items-center justify-between gap-4"><p className="font-mono text-[10px] uppercase tracking-[.26em] text-[var(--ink-2)]">Experiment · 2026–{DIVIDEND_OUTLOOK_END_YEAR}</p><span className="border border-[var(--line-2)] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.15em]" style={{ color: DIVIDEND_ACCENT }}>Build {DIVIDEND_CURRENT_STEP} of 5 · Constraint gauges live</span></div>
+      <div className="flex flex-wrap items-center justify-between gap-4"><p className="font-mono text-[10px] uppercase tracking-[.26em] text-[var(--ink-2)]">Experiment · 2026–{DIVIDEND_OUTLOOK_END_YEAR}<DataAsOf module="dividend" /></p><span className="border border-[var(--line-2)] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.15em]" style={{ color: DIVIDEND_ACCENT }}>Build {DIVIDEND_CURRENT_STEP} of 5 · Constraint gauges live</span></div>
       <h1 className="mt-5 text-4xl font-medium tracking-tight md:text-6xl">Where is the AI dividend going?</h1>
       <p className="mt-5 max-w-3xl text-base leading-8 text-[var(--ink-2)]">AI capability is rising fast. This module tracks how much of it turns into real output, who captures the value, and what physical limits could stop it. Every figure comes from published data. Stages without data yet say so.</p>
 

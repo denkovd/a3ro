@@ -26,6 +26,7 @@ import {
   type RegimeRow,
   type RegimeGroupKey,
 } from "../../components/projects/regime/regimeData";
+import { DataAsOf } from "../../components/DataAsOf";
 
 const ATMOSPHERE =
   "radial-gradient(90% 110% at 50% 65%, #0d1512 0%, var(--depth-1) 55%, #070808 100%)";
@@ -356,6 +357,7 @@ export default function RegimeFinderView() {
       <footer className="absolute inset-x-0 bottom-0 z-30 flex h-12 items-center justify-between border-t border-[var(--line)] bg-[rgba(6,7,7,0.55)] px-6 backdrop-blur-md md:px-10">
         <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
           P·04 — Bull Market Finder 1
+          <DataAsOf module="trend" />
         </p>
         <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
           Trend-state readouts on free data feeds · not investment advice

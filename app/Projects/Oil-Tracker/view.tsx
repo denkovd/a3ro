@@ -18,6 +18,7 @@ import { ORANGE_CSS, BT_ROUTE } from "../../components/projects/btcTrackerShared
 import { GOLD_CSS, GT_ROUTE } from "../../components/projects/goldTrackerShared";
 import { useViewer } from "../../components/useViewer";
 import { LockIcon } from "../../components/LockIcon";
+import { DataAsOf } from "../../components/DataAsOf";
 
 /* the heavy globe engine — loaded only on this route, after arrival */
 const OilTrackerCore = dynamic(() => import("../../components/projects/OilTrackerCore"), {
@@ -181,6 +182,7 @@ export default function OilTrackerView() {
       <footer className="pointer-events-none absolute inset-x-0 bottom-0 z-20 hidden h-10 items-center justify-between border-t border-[var(--line)] bg-[rgba(6,7,7,0.55)] px-6 backdrop-blur-md md:flex md:px-10">
         <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
           P·03 — Oil Tracker
+          <DataAsOf module="commodity" />
         </p>
         <a href="/terms" className="pointer-events-auto font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)] hover:text-[var(--ink)]">
           General information only · not financial advice

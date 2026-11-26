@@ -66,6 +66,40 @@ export async function loadBars(
   }));
 }
 
+/** Stored bars on or after `fromDate`, oldest first (the overlap with a fresh fetch). */
+export async function loadBarsSince(
+  db: Queryable,
+  symbol: string,
+  series: BarSeries,
+  fromDate: string,
+): Promise<RegimeBar[]> {
+  const res = await db.query(
+    `select date, open, high, low, close from market_bars
+      where symbol = $1 and series = $2 and date >= $3 order by date asc`,
+    [symbol, series, fromDate],
+  );
+  return res.rows.map((r) => ({
+    date: r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date).slice(0, 10),
+    open: Number(r.open), high: Number(r.high),
+    low: Number(r.low), close: Number(r.close),
+  }));
+}
+
+/** Deletes a symbol's bars older than `beforeDate`: after a split re-fetch,
+ *  anything older than the fresh 5y window is still on the old scale. */
+export async function deleteBarsBefore(
+  db: Queryable,
+  symbol: string,
+  series: BarSeries,
+  beforeDate: string,
+): Promise<number> {
+  const res = await db.query(
+    `delete from market_bars where symbol = $1 and series = $2 and date < $3`,
+    [symbol, series, beforeDate],
+  );
+  return res.rowCount ?? 0;
+}
+
 export async function latestBarDate(
   db: Queryable,
   symbol: string,
