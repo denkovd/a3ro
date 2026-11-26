@@ -158,12 +158,16 @@ export default function ExecuteView() {
   const viewer = useViewer();
   const now = useNow();
   const [peek, setPeek] = useState<ExecutePeekPayload | null>(null);
+  const [peekFailed, setPeekFailed] = useState(false);
   const [data, setData] = useState<ExecutePayload | null>(null);
   const [gate, setGate] = useState<Gate>("loading");
   const [tab, setTab] = useState<"paper" | "backtest">("paper");
 
   const load = useCallback(() => {
-    fetch("/api/execute-peek", { cache: "no-store" }).then(r => (r.ok ? r.json() : null)).then(setPeek).catch(() => setPeek(null));
+    fetch("/api/execute-peek", { cache: "no-store" })
+      .then(r => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((body: ExecutePeekPayload) => { setPeek(body); setPeekFailed(false); })
+      .catch(() => setPeekFailed(true));
     fetch("/api/execute", { cache: "no-store" }).then(async r => {
       if (r.status === 401) return setGate("signin");
       if (r.status === 403) return setGate("premium");
@@ -188,7 +192,10 @@ export default function ExecuteView() {
       <p className="mt-4 max-w-3xl border-l-2 border-amber-300/50 pl-4 text-xs leading-6 text-[var(--ink-2)]">Educational research and general information only, not financial advice. It doesn't consider your objectives, finances or needs. Backtests are hypothetical, and paper trades are simulated. Past results don't predict future ones, and leveraged crypto trading can lose more than you expect.</p>
 
       <section className="mt-12" aria-label="Upcoming pivots"><h2 className="mb-5 text-2xl">Upcoming pivots</h2>
-        {events.length === 0 && gate === "loading" ? <p className="text-sm text-[var(--ink-2)]">Loading calendar…</p> : <><NextPivot events={events} now={now} /><Timeline events={events} now={now} /></>}
+        {events.length === 0 && peekFailed && !data
+          ? <div className="flex flex-wrap items-center justify-between gap-4 border border-amber-300/30 p-4 text-sm text-amber-200" role="alert"><p>The event calendar couldn&apos;t be loaded.</p><button type="button" onClick={load} className="min-h-10 underline">Try again</button></div>
+          : events.length === 0 && !peek && !data ? <p className="text-sm text-[var(--ink-2)]">Loading calendar…</p>
+          : <><NextPivot events={events} now={now} /><Timeline events={events} now={now} /></>}
         <p className="mt-3 text-xs text-[var(--ink-3)]">Times in Sydney. FOMC decisions are at 2:00pm and CPI releases at 8:30am New York time.</p>
       </section>
 
