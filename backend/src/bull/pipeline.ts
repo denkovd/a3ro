@@ -32,8 +32,10 @@ import {
   insertHealthEntries,
   insertRoll,
   insertTransitions,
+  deleteBarsBefore,
   latestBarDate,
   loadBars,
+  loadBarsSince,
   shiftAdjBarsBefore,
   upsertBars,
   upsertBullSnapshots,
@@ -46,6 +48,7 @@ import {
 import { computeBullSnapshot, computeTransitions, rankBullSnapshots } from "./engine";
 import { deriveStrategySnapshots, BullStrategySnapshot, STRATEGIES } from "./strategies";
 import { contractSymbols, detectRoll, verifyAdjustment } from "./rolls";
+import { detectRescale } from "./rescale";
 import {
   AdapterHealthEntry,
   BarRange,
@@ -66,6 +69,8 @@ export interface BullScanReport {
   failed: string[];
   rolls: RollEvent[];
   rollProbeFailures: string[];
+  /** Symbols whose stored history was re-fetched after a split (roadmap #104). */
+  rescaled: string[];
   /** Transition rows across ALL strategies. */
   transitions: number;
   /** From the default ml-dw lens (report back-compat). */
@@ -103,7 +108,7 @@ export async function runBullScan(
 
   const report: BullScanReport = {
     startedAt, runDate, universe: universe.length,
-    scanned: 0, failed: [], rolls: [], rollProbeFailures: [],
+    scanned: 0, failed: [], rolls: [], rollProbeFailures: [], rescaled: [],
     transitions: 0, newlyBullish: [], written: 0, writtenByStrategy: {},
   };
 
@@ -138,9 +143,22 @@ export async function runBullScan(
         const haveAdj = await latestBarDate(db, entry.symbol, "adj");
         const newForAdj = haveAdj === null ? bars : bars.filter((b) => b.date > haveAdj);
         if (newForAdj.length > 0) await upsertBars(db, entry.symbol, "adj", newForAdj);
+      } else if (have !== null && range === "1mo" && bars.length > 0) {
+        // A split rescales the whole history at the source, but a 1mo window
+        // would only fix the last month (roadmap #104). If stored closes
+        // disagree with fresh ones on shared dates, re-fetch 5y and replace.
+        const stored = await loadBarsSince(db, entry.symbol, "adj", bars[0].date);
+        const check = detectRescale(stored, bars);
+        if (check.rescaled) {
+          if (await replaceHistory(db, entry, runDate, registry, health, log, check.ratio, bars)) {
+            report.rescaled.push(entry.symbol);
+          }
+        } else {
+          // No rolls to protect: overwrite the ~1mo overlap so a bar first
+          // stored mid-session is replaced by its final close next run.
+          await upsertBars(db, entry.symbol, "adj", bars);
+        }
       } else {
-        // No rolls to protect: overwrite the ~1mo overlap so a bar first
-        // stored mid-session is replaced by its final close next run.
         await upsertBars(db, entry.symbol, "adj", bars);
       }
 
@@ -204,6 +222,37 @@ export async function runBullScan(
 
   await insertHealthEntries(db, health);
   return report;
+}
+
+/**
+ * Re-fetches 5y of bars for a non-futures symbol and replaces its stored
+ * 'adj' history: upsert the fresh bars, then delete anything older than
+ * them (still on the old scale). If the 5y fetch fails, stores the
+ * `fallback` window as before so the scan carries on.
+ * Exported for the one-off repair script (repair-split-bars.ts).
+ */
+export async function replaceHistory(
+  db: Queryable,
+  entry: BullUniverseEntry,
+  runDate: string,
+  registry: AdapterRegistry,
+  health: AdapterHealthEntry[],
+  log: (msg: string) => void,
+  ratio: number | null,
+  fallback: RegimeBar[] = [],
+): Promise<boolean> {
+  const { bars, health: h } = await fetchBarsWithFallback(entry, "5y", runDate, registry);
+  health.push(h);
+  if (!bars || bars.length === 0) {
+    log(`⚠ ${entry.symbol}: looks split (ratio ${ratio?.toFixed(3) ?? "?"}) but the 5y re-fetch failed — ${h.error}`);
+    if (fallback.length > 0) await upsertBars(db, entry.symbol, "adj", fallback);
+    return false;
+  }
+  await upsertBars(db, entry.symbol, "adj", bars);
+  const removed = await deleteBarsBefore(db, entry.symbol, "adj", bars[0].date);
+  log(`↻ ${entry.symbol}: stored history was on another scale (ratio ${ratio?.toFixed(3) ?? "?"}); ` +
+    `replaced with ${bars.length} fresh bars, removed ${removed} older ones`);
+  return true;
 }
 
 /** Roll detection + adjustment for one futures symbol. Failures are

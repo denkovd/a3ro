@@ -59,6 +59,7 @@ import { useInfoTip } from "../../components/projects/intel/primitives";
 import AssetDrawer from "../../components/projects/bull/AssetDrawer";
 import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
 import { track } from "../../components/track";
+import { DataAsOf } from "../../components/DataAsOf";
 
 const ATMOSPHERE =
   "radial-gradient(90% 110% at 50% 65%, #0c1018 0%, var(--depth-1) 55%, #070808 100%)";
@@ -351,20 +352,19 @@ export default function BullMarketFinderView() {
 
       {/* ── top chrome ── */}
       <header className="absolute inset-x-0 top-0 z-30 flex h-14 items-center justify-between border-b border-[var(--line)] bg-[rgba(6,7,7,0.55)] px-6 backdrop-blur-md md:px-10">
-        <div className="flex items-baseline gap-4">
+        <div className="flex min-w-0 items-center gap-3 md:gap-4">
           <button
             onClick={leave}
-            className="sweep font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-2)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]"
+            className="sweep shrink-0 font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-2)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]"
             aria-label="Close Bull Market Finder and return to the index"
           >
             ← Index
           </button>
+          <ModuleSwitcher current="trend" />
           <span aria-hidden className="text-[var(--ink-3)]">/</span>
-          <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
+          <p className="truncate font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
             A3RO Intelligence — Bull Market Finder
           </p>
-          <span aria-hidden className="text-[var(--ink-3)]">/</span>
-          <ModuleSwitcher current="trend" />
         </div>
         <p className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
           {!reduced ? (
@@ -755,6 +755,7 @@ export default function BullMarketFinderView() {
       <footer className="absolute inset-x-0 bottom-0 z-30 flex h-12 items-center justify-between border-t border-[var(--line)] bg-[rgba(6,7,7,0.55)] px-6 backdrop-blur-md md:px-10">
         <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
           P·04 — Bull Market Finder
+          <DataAsOf module="trend" />
         </p>
         <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
           Trend-state readouts on free data feeds · not investment advice

@@ -12,12 +12,14 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import OilTrackerPreview from "../../components/projects/OilTrackerPreview";
+import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
 import { AMBER_CSS, OT_SESSION, type OTView } from "../../components/projects/oilTrackerShared";
 import { URANIUM_CSS, UT_ROUTE } from "../../components/projects/uraniumTrackerShared";
 import { ORANGE_CSS, BT_ROUTE } from "../../components/projects/btcTrackerShared";
 import { GOLD_CSS, GT_ROUTE } from "../../components/projects/goldTrackerShared";
 import { useViewer } from "../../components/useViewer";
 import { LockIcon } from "../../components/LockIcon";
+import { DataAsOf } from "../../components/DataAsOf";
 
 /* the heavy globe engine — loaded only on this route, after arrival */
 const OilTrackerCore = dynamic(() => import("../../components/projects/OilTrackerCore"), {
@@ -110,8 +112,8 @@ export default function OilTrackerView() {
       )}
 
       {/* ── top chrome — terminal frame ── */}
-      <header className="absolute inset-x-0 top-0 z-30 flex h-12 items-center justify-between border-b border-[var(--line)] bg-[rgba(6,7,7,0.72)] px-4 backdrop-blur-md md:h-14 md:px-6">
-        <div className="flex min-w-0 items-baseline gap-3 md:gap-4">
+      <header className="absolute inset-x-0 top-0 z-30 flex h-12 items-center justify-between border-b border-[var(--line)] bg-[rgba(6,7,7,0.72)] px-6 backdrop-blur-md md:h-14 md:px-10">
+        <div className="flex min-w-0 items-center gap-3 md:gap-4">
           <button
             onClick={leave}
             className="sweep shrink-0 font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-2)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]"
@@ -119,14 +121,15 @@ export default function OilTrackerView() {
           >
             ← Index
           </button>
+          <ModuleSwitcher current="commodity" />
           <span aria-hidden className="text-[var(--ink-3)]">/</span>
-          <p className="hidden truncate font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)] sm:block">
-            A3RO Intelligence
+          <p className="hidden truncate font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)] lg:block">
+            A3RO Intelligence — Commodity Watch
           </p>
           {/* Asset surface switcher — available on every screen size */}
           <nav
             aria-label="Market surface"
-            className="ml-1 flex items-center gap-0.5 border-l border-[var(--line)] pl-2 sm:pl-3"
+            className="flex min-w-0 items-center gap-0.5 overflow-x-auto border-l border-[var(--line)] pl-2 sm:pl-3"
           >
             <span
               className="px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em]"
@@ -181,6 +184,7 @@ export default function OilTrackerView() {
       <footer className="pointer-events-none absolute inset-x-0 bottom-0 z-20 hidden h-10 items-center justify-between border-t border-[var(--line)] bg-[rgba(6,7,7,0.55)] px-6 backdrop-blur-md md:flex md:px-10">
         <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
           P·03 — Oil Tracker
+          <DataAsOf module="commodity" />
         </p>
         <a href="/terms" className="pointer-events-auto font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-3)] hover:text-[var(--ink)]">
           General information only · not financial advice

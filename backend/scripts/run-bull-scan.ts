@@ -55,6 +55,9 @@ async function main(): Promise<void> {
   if (report.rollProbeFailures.length > 0) {
     console.log(`probe failures  ${report.rollProbeFailures.join(", ")}`);
   }
+  if (report.rescaled.length > 0) {
+    console.log(`split re-fetch  ${report.rescaled.join(", ")}`);
+  }
   console.log(`transitions     ${report.transitions}`);
   console.log(`newly bullish   ${report.newlyBullish.join(", ") || "none"}`);
   console.log(`rows written    ${report.written}`);

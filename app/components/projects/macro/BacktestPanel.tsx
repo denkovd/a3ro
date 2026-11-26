@@ -5,7 +5,10 @@ import { defaultResearchConfig, REGIMES, RESEARCH_VERSION, runResearch, type Res
   type ResearchDataset, type ResearchResult } from "../../../../backend/src/macro/backtestResearch";
 import type { BacktestMetrics } from "../../../../backend/src/macro/allocationBacktest";
 import BacktestChart from "./BacktestChart";
-import { SP_BENCHMARK, BUY_HOLD_SELECTION_NOTE } from "../../../../backend/src/macro/researchBenchmarks";
+import { SP_BENCHMARK, BTC_HOLD_NAME, GOLD_HOLD_NAME, BUY_HOLD_SELECTION_NOTE } from "../../../../backend/src/macro/researchBenchmarks";
+
+/** Benchmark columns in the per-regime table: the chosen comparison, then gold and Bitcoin (never twice). */
+const regimeColumns = (comparison: string) => [comparison, ...[GOLD_HOLD_NAME, BTC_HOLD_NAME].filter(name => name !== comparison)];
 
 const STORAGE_KEY = "a3ro.regime-backtests.v1";
 const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
@@ -156,10 +159,10 @@ export default function BacktestPanel() {
               <p className="mt-1 text-xs text-[var(--ink-3)]">Your test drawdown {pct(section.candidate.strategy.maxDrawdown)} · Benchmark drawdown {pct(section.candidate.benchmarks[comparison].maxDrawdown)}</p></div>;
           })}
         </div>
-        <div className="mt-6 overflow-x-auto"><table className="w-full text-left text-xs text-[var(--ink-2)]"><caption className="mb-3 text-left text-sm text-[var(--ink)]">Performance by regime</caption>
-          <thead><tr className="border-b border-[var(--line)]">{["Regime", "Signal months", "Days", "Your test", "Current regime", comparison, "Win rate"].map(h => <th key={h} scope="col" className="p-2">{h}</th>)}</tr></thead>
-          <tbody>{result.regimes.map(r => <tr key={r.regime} className="border-b border-[var(--line)]"><th scope="row" className="p-2 font-normal">{label(r.regime)}{r.months > 0 && r.months < 12 ? <span className="block text-[10px] text-[#e0b969]">Small sample</span> : null}</th><td className="p-2">{r.months}</td><td className="p-2">{r.days}</td><td className="p-2">{r.days ? pct(r.candidate.totalReturn) : "—"}</td><td className="p-2">{r.days ? pct(r.baseline.totalReturn) : "—"}</td><td className="p-2">{r.days ? pct(r.benchmarks[comparison].totalReturn) : "—"}</td><td className="p-2">{r.days ? pct(r.candidate.hitRate) : "—"}</td></tr>)}</tbody>
-        </table><p className="mt-2 text-xs text-[var(--ink-3)]">Returns compound only the days assigned to each observed regime. These disconnected periods are diagnostic, not separate investable strategies.</p></div>
+        <div className="mt-6 overflow-x-auto"><RegimeTable caption="Performance by regime · market-implied" rows={result.regimes} comparison={comparison} /><p className="mt-2 text-xs text-[var(--ink-3)]">Total returns compound only the days assigned to each regime, so regimes with more days show larger totals. Gold and Bitcoin are buy-and-hold over the same days; Bitcoin shows “—” in the stocks-and-gold window. These disconnected periods are diagnostic, not separate investable strategies.</p>
+        <p className="mt-2 text-xs text-[var(--ink-3)]">Each day carries the market-implied regime, the leading vote of about 30 markets’ 63-day trends, observed at month end and applied to the following month. It describes the quarter that just ended rather than the economy, so a Deflation reading often arrives after a selloff and is followed by the rebound. Goldilocks rarely wins the vote, so its sample is small.</p></div>
+        <div className="mt-6 overflow-x-auto"><RegimeTable caption="Performance by regime · economic quadrant" rows={result.economicRegimes} comparison={comparison} />
+          <p className="mt-2 text-xs text-[var(--ink-3)]">The same days grouped by the economic quadrant in force: growth and inflation data from FRED, using only releases published by each date. The portfolios are unchanged; only the grouping differs.</p></div>
         <details className="mt-6"><summary className="cursor-pointer text-sm text-[var(--ink)]">Yearly returns</summary><div className="mt-3 overflow-x-auto"><table className="w-full text-left text-xs text-[var(--ink-2)]">
           <thead><tr>{["Year", "Your test", "Current regime", comparison].map(h => <th scope="col" key={h} className="p-2">{h}</th>)}</tr></thead>
           <tbody>{result.years.map(r => <tr key={r.year} className="border-t border-[var(--line)]"><th scope="row" className="p-2 font-normal">{r.year}</th><td className="p-2">{pct(r.candidate.totalReturn)}</td><td className="p-2">{pct(r.baseline.totalReturn)}</td><td className="p-2">{pct(r.benchmarks[comparison].totalReturn)}</td></tr>)}</tbody>
@@ -183,6 +186,12 @@ export default function BacktestPanel() {
 
 function PercentField({ label: name, value, onChange, max = 100 }: { label: string; value: number; onChange: (value: number) => void; max?: number }) {
   return <label className="text-xs text-[var(--ink-3)]">{name} (%)<input className={fieldClass} type="number" min="0" max={max} step="0.1" value={Number((value * 100).toFixed(4))} onChange={e => onChange(Number(e.target.value) / 100)} /></label>;
+}
+function RegimeTable({ caption, rows, comparison }: { caption: string; rows: ResearchResult["regimes"]; comparison: string }) {
+  return <table className="w-full text-left text-xs text-[var(--ink-2)]"><caption className="mb-3 text-left text-sm text-[var(--ink)]">{caption}</caption>
+    <thead><tr className="border-b border-[var(--line)]">{["Regime", "Signal months", "Days", "Your test", "Current regime", ...regimeColumns(comparison), "Win rate"].map(h => <th key={h} scope="col" className="p-2">{h}</th>)}</tr></thead>
+    <tbody>{rows.map(r => <tr key={r.regime} className="border-b border-[var(--line)]"><th scope="row" className="p-2 font-normal">{label(r.regime)}{r.months > 0 && r.months < 12 ? <span className="block text-[10px] text-[#e0b969]">Small sample</span> : null}</th><td className="p-2">{r.months}</td><td className="p-2">{r.days}</td><td className="p-2">{r.days ? pct(r.candidate.totalReturn) : "—"}</td><td className="p-2">{r.days ? pct(r.baseline.totalReturn) : "—"}</td>{regimeColumns(comparison).map(name => <td key={name} className="p-2">{r.days && r.benchmarks[name] ? pct(r.benchmarks[name].totalReturn) : "—"}</td>)}<td className="p-2">{r.days ? pct(r.candidate.hitRate) : "—"}</td></tr>)}</tbody>
+  </table>;
 }
 function MetricsTable({ result }: { result: ResearchResult }) {
   const rows = [{ name: "Your test strategy", metrics: result.candidate.metrics, reason: null },

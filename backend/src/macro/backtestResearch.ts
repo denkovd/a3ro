@@ -159,6 +159,14 @@ export function runResearch(dataset: ResearchDataset, config: ResearchConfig) {
     return { regime, days: steps.length, months: new Set(steps.map(s => s.date.slice(0, 7))).size, candidate: summarizeBacktest(steps),
       baseline: summarizeBacktest(baseline.steps.filter(s => s.regime === regime)), benchmark: summarizeBacktest(steps, SP_BENCHMARK), benchmarks: summarizeBenchmarks(steps) };
   });
+  // Same days grouped by the economic quadrant in force (growth × inflation data), not the market vote.
+  const economicByDate = new Map(inputs.map(input => [input.date, input.economicQuadrant ?? null]));
+  const economicRegimes = REGIMES.map(regime => {
+    const inRegime = (s: { date: string }) => economicByDate.get(s.date) === regime;
+    const steps = candidate.steps.filter(inRegime);
+    return { regime, days: steps.length, months: new Set(steps.map(s => s.date.slice(0, 7))).size, candidate: summarizeBacktest(steps),
+      baseline: summarizeBacktest(baseline.steps.filter(inRegime)), benchmark: summarizeBacktest(steps, SP_BENCHMARK), benchmarks: summarizeBenchmarks(steps) };
+  });
   const coverageNote = candidate.metrics.to < config.to
     ? `Comparisons end on ${candidate.metrics.to}, the last shared equity-session mark inside your requested window. Selected portfolio assets have complete overlapping history through ${latestCommonPrice}.`
     : null;
@@ -167,7 +175,7 @@ export function runResearch(dataset: ResearchDataset, config: ResearchConfig) {
     note: billsCover
       ? `Sharpe and Sortino are excess-return ratios against Treasury bills (BIL). Idle cash earns ${cashSource === "bills" ? "the same bill return" : `a fixed ${(config.cashRate * 100).toFixed(2)}% a year`}.`
       : `Treasury-bill history does not cover this window, so Sharpe and Sortino are measured against the fixed ${(config.cashRate * 100).toFixed(2)}% cash assumption.` };
-  return { baseline, candidate, years, regimes, benchmarkAvailability, coverageNote, accounting,
+  return { baseline, candidate, years, regimes, economicRegimes, benchmarkAvailability, coverageNote, accounting,
     development: { baseline: summary(baseline, config.from, split), candidate: summary(candidate, config.from, split) },
     validation: { baseline: summary(baseline, split, config.to), candidate: summary(candidate, split, config.to) } };
 }

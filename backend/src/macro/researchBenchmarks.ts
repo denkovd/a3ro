@@ -3,6 +3,7 @@ import { backtestPrice, type BenchmarkAssetKey, type BenchmarkPriceSeries, type 
 
 export const SP_BENCHMARK = "S&P 500 (SPY total return)";
 export const BTC_HOLD_NAME = "Bitcoin buy-and-hold";
+export const GOLD_HOLD_NAME = "Gold (GLD) buy-and-hold";
 export const NVIDIA_HOLD_NAME = "NVIDIA (NVDA) buy-and-hold";
 export const BUY_HOLD_ASSETS = [
   { key: "nvidia", symbol: "NVDA", label: "NVIDIA" },
@@ -44,7 +45,7 @@ export function researchBenchmarks(universe: "stocks-gold" | "all"): ResearchBen
   return [
     { name: SP_BENCHMARK, description: "Buy and hold 100% SPY; dividends reinvested.", weights: { stocks: 1 } },
     { name: BTC_HOLD_NAME, description: "Buy and hold 100% Bitcoin using BTC-USD daily closes; no leverage or yield. Same equity-session marks and initial purchase cost as the other portfolios.", weights: { bitcoin: 1 } },
-    { name: "Gold (GLD) buy-and-hold", description: "Buy and hold 100% GLD, using adjusted ETF closes including embedded fund fees; no yield or leverage.", weights: { gold: 1 }, sourceUrl: "https://www.spdrgoldshares.com/usa/" },
+    { name: GOLD_HOLD_NAME, description: "Buy and hold 100% GLD, using adjusted ETF closes including embedded fund fees; no yield or leverage.", weights: { gold: 1 }, sourceUrl: "https://www.spdrgoldshares.com/usa/" },
     ...BUY_HOLD_ASSETS.map(asset => ({ name: `${asset.label} (${asset.symbol}) buy-and-hold`,
       description: `Buy and hold 100% ${asset.symbol}. Split- and dividend-adjusted daily closes; distributions reinvested. One initial purchase, no rebalancing or leverage. Selected historical comparison; full-window history required.`,
       weights: { [asset.key]: 1 }, sourceUrl: `https://finance.yahoo.com/quote/${asset.symbol}/history/` })),

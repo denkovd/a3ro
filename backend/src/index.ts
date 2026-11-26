@@ -122,6 +122,17 @@ export { recordCronRun, getCronRuns, summarizeCronReport } from "./storage/cronR
 export type { CronRunInput, CronRunRow, CronRunStatus, CronSeriesResult, CronRunSummary } from "./storage/cronRunRepo";
 export { getDataHealth, ageFreshness, suddenJump, groupRevisions } from "./storage/dataHealthRepo";
 export type { DataHealth, SeriesHealth, SeriesFreshness, DataIssue } from "./storage/dataHealthRepo";
+export { getDataStatus, moduleStatusFromJobs, MODULE_DATA_JOBS } from "./storage/dataStatusRepo";
+export type { DataStatus, ModuleDataStatus } from "./storage/dataStatusRepo";
+export { logOpenDataSignals, decideLog, pulseReading, macroReadings } from "./trackRecord/signalLog";
+export type { SignalReading, SignalLogResult } from "./trackRecord/signalLog";
+export { generateIssue, sendTestIssue, sendDueIssue, personalise } from "./newsletter/send";
+export type { SendEnv, SendReport } from "./newsletter/send";
+export { listIssues, getIssue, setApproved, pendingRecipients, unsubscribeEmail } from "./storage/newsletterRepo";
+export type { NewsletterIssue, IssueStatus } from "./storage/newsletterRepo";
+export { resendConfig } from "./newsletter/resend";
+export { unsubscribeSecret, verifyUnsubscribeToken } from "./newsletter/unsubscribe";
+export { upcomingIssueDate } from "./newsletter/schedule";
 
 // Module 4 — Regime Shift Finder (Money Line engine + daily scan)
 export {

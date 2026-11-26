@@ -5,6 +5,7 @@
 ──────────────────────────────────────────────────────────────── */
 import type { Queryable } from "./db";
 import { hasNewsletterLead, insertLead } from "./leadRepo";
+import { clearUnsubscribe } from "./newsletterRepo";
 
 export interface AccountSettings {
   userId: string;
@@ -39,12 +40,21 @@ const iso = (v: unknown) => (v == null ? null : new Date(String(v)).toISOString(
 
 /**
  * Whether this account gets the newsletter: its own choice when it has made one,
- * otherwise whether its email signed up through a newsletter box.
+ * otherwise whether its email signed up through a newsletter box. An unsubscribe
+ * link clicked after the account's last choice wins (it's the newer decision).
  */
 export async function newsletterSubscribed(db: Queryable, userId: string, email: string | null): Promise<boolean> {
-  const res = await db.query(`select newsletter from user_profiles where user_id = $1`, [userId]);
+  const res = await db.query(`select newsletter, newsletter_changed_at from user_profiles where user_id = $1`, [userId]);
   const choice = res.rows[0]?.newsletter;
-  if (choice === true || choice === false) return choice;
+  if (choice === false) return false;
+  if (email) {
+    const unsub = await db.query(`select unsubscribed_at from newsletter_unsubscribes where email = lower(trim($1))`, [email])
+      .catch(() => ({ rows: [] as Record<string, unknown>[] }));
+    const at = unsub.rows[0]?.unsubscribed_at;
+    const changed = res.rows[0]?.newsletter_changed_at;
+    if (at && (choice !== true || !changed || new Date(String(at)) > new Date(String(changed)))) return false;
+  }
+  if (choice === true) return true;
   return email ? hasNewsletterLead(db, email) : false;
 }
 
@@ -107,6 +117,7 @@ export async function setNewsletter(db: Queryable, userId: string, email: string
     [userId, on],
   );
   if (on && !(await hasNewsletterLead(db, email))) await insertLead(db, { email, context: `newsletter:${context}` });
+  else if (on) await clearUnsubscribe(db, email);
 }
 
 export async function insertFeedback(

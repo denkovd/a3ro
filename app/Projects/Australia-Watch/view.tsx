@@ -11,6 +11,7 @@ import { computePulse, pulseHistory, type MeasuredLead } from "../../../backend/
 import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
 import SiteFooter from "../../components/SiteFooter";
 import NewsletterSignup from "../../components/NewsletterSignup";
+import { DataAsOf } from "../../components/DataAsOf";
 
 const label = (indicator: string) => isAustraliaIndicator(indicator) ? AUSTRALIA_REGISTRY[indicator].label : indicator;
 const PILLARS = primaryByPillar();
@@ -82,7 +83,7 @@ export default function AustraliaWatchView() {
   useEffect(()=>{const onKey=(e:KeyboardEvent)=>e.key==="Escape"&&leave();addEventListener("keydown",onKey);return()=>removeEventListener("keydown",onKey)},[leave]);
   return <main className="grain fixed inset-0 overflow-y-auto bg-[var(--depth-0)]">
     {data.testMode && <div className="bg-amber-200 px-6 py-2 text-center text-sm text-black">LOCAL TEST DATABASE — official ABS, RBA and OECD history fetched for this preview. Production is unchanged.</div>}
-    <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-[var(--line)] bg-[rgba(6,7,7,.9)] px-6 backdrop-blur"><div className="flex items-center gap-4"><button onClick={leave} className="font-mono text-[10px] uppercase tracking-[.2em] text-[var(--ink-2)]">← Index</button><span className="text-[var(--ink-3)]">/</span><span className="font-mono text-[10px] uppercase text-[var(--ink-3)]">Australia Watch</span><ModuleSwitcher current="australia"/></div></header>
+    <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-[var(--line)] bg-[rgba(6,7,7,.9)] px-6 backdrop-blur md:px-10"><div className="flex min-w-0 items-center gap-3 md:gap-4"><button onClick={leave} className="sweep shrink-0 font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-2)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]" aria-label="Close Australia Watch and return to the index">← Index</button><ModuleSwitcher current="australia"/><span aria-hidden className="text-[var(--ink-3)]">/</span><p className="truncate font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">A3RO Intelligence — Australia Watch<DataAsOf module="australia" className="hidden sm:inline" /></p></div></header>
     <div className="mx-auto max-w-6xl px-6 py-10 md:px-10"><p className="font-mono text-[10px] uppercase tracking-[.3em] text-[var(--ink-3)]">Australian economic conditions</p><h1 className="mt-3 text-4xl font-semibold text-[var(--ink)]">Australia Watch</h1><p className="mt-3 max-w-3xl text-sm leading-relaxed text-[var(--ink-2)]">Inflation, labour, financial, housing, demand and external conditions from the ABS, RBA and OECD, each measured against its own history. Inflation uses the complete Monthly CPI, Australia’s primary measure since November 2025. Each card is tagged leading, coincident or lagging. Direction describes the latest comparable change; distance from average puts it in context.</p>
     {data.refreshError && data.status === "ready" && <p role="status" className="mt-5 text-xs text-amber-300">Refresh failed — showing the last loaded observations. Retrying automatically.</p>}
     {data.status!=="ready"?<p className="mt-16 text-[var(--ink-3)]">{data.status==="error"?"Data unavailable":"Loading official observations…"}</p>:<>

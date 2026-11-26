@@ -183,7 +183,7 @@ export default function ExecuteView() {
 
   return <main className="grain min-h-screen bg-[var(--depth-0)] text-[var(--ink)]">
     <header className="sticky top-0 z-30 border-b border-[var(--line)] bg-[rgba(6,7,7,.94)] backdrop-blur">
-      <div className="mx-auto flex min-h-14 max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-3 md:px-10"><div className="flex items-center gap-4"><Link href="/#modules" className="font-mono text-[10px] uppercase tracking-[.15em] text-[var(--ink-2)]">← Index</Link><span className="text-[var(--ink-3)]">/</span><span className="font-mono text-[10px] uppercase tracking-[.15em]">Execute</span></div><ModuleSwitcher current="execute" /></div>
+      <div className="flex h-14 items-center px-6 md:px-10"><div className="flex min-w-0 items-center gap-3 md:gap-4"><Link href="/#modules" className="sweep shrink-0 font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-2)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]">← Index</Link><ModuleSwitcher current="execute" /><span aria-hidden className="text-[var(--ink-3)]">/</span><p className="truncate font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">A3RO Intelligence — Execute</p></div></div>
     </header>
     <div className="mx-auto max-w-7xl px-5 py-9 md:px-10 md:py-14">
       <div className="flex flex-wrap items-center justify-between gap-4"><Label>Research tracker · BTC event pivots · {data?.version ?? peek?.version ?? "v1.1"}</Label>{data?.engine.lastRunAt && <span className="font-mono text-[10px] text-[var(--ink-2)]">Engine {data.engine.ok ? "updated" : "failed"} {ago(data.engine.lastRunAt, now)}</span>}</div>

@@ -6,7 +6,7 @@ import { LegalPage } from "../components/LegalPage";
 export const metadata: Metadata = { title: "Privacy — A3RO Intelligence", description: "What personal information A3RO collects and how it is used." };
 
 export default function PrivacyPage() {
-  return <LegalPage kicker="Legal" title="Privacy policy" updated="24 November 2026">
+  return <LegalPage kicker="Legal" title="Privacy policy" updated="26 November 2026">
     <p>This policy explains what personal information A3RO collects through a3ro.com.au and the A3RO newsletter, and how we handle it. We aim to follow the Australian Privacy Principles in the Privacy Act 1988 (Cth).</p>
 
     <h2>What we collect</h2>
@@ -29,7 +29,7 @@ export default function PrivacyPage() {
     <p>We don&rsquo;t sell your personal information, and we don&rsquo;t use it for advertising.</p>
 
     <h2>Who we share it with</h2>
-    <p>We use service providers to run A3RO: Vercel (website hosting), Supabase (database and sign-in) and Loops (newsletter email). They store and process information on our behalf, and some of them do so outside Australia, including in the United States. We may also disclose information where the law requires it.</p>
+    <p>We use service providers to run A3RO: Vercel (website hosting), Supabase (database and sign-in) and Resend (newsletter and account email). They store and process information on our behalf, and some of them do so outside Australia, including in the United States. We may also disclose information where the law requires it.</p>
 
     <h2>Cookies</h2>
     <p>A3RO uses a cookie only to keep account holders signed in. If you don&rsquo;t sign in, no sign-in cookie is set.</p>
