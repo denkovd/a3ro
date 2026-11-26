@@ -492,3 +492,48 @@ test("public oil quotes never expose market-data prices; Premium accounts still 
   const own = await (await load(true).GET()).json();
   assert.equal(own.find((q) => q.benchmark === "WTI").price, 83.39);
 });
+
+function newsletterMe(viewer, backend) {
+  return loadModule("app/api/newsletter/me/route.ts", {
+    "@a3ro/oil-backend": { createDb: async () => ({}), recordAppError: async () => {}, ...backend },
+    "../../../../lib/supabase/server": { currentViewer: async () => viewer },
+  });
+}
+const member = { signedIn: true, admin: false, premium: false, email: "member@example.com", userId: "u1" };
+const signedOut = { signedIn: false, admin: false, premium: false, email: null, userId: null };
+const sameOrigin = (body = JSON.stringify({ context: "australia-watch" }), origin = "https://a3ro.test") =>
+  new Request("https://a3ro.test/api/newsletter/me", { method: "POST", headers: { "Content-Type": "application/json", origin, host: "a3ro.test" }, body });
+
+test("newsletter/me reports signed-out visitors without touching the database", async () => {
+  let opened = false;
+  const { GET } = newsletterMe(signedOut, { createDb: async () => { opened = true; return {}; } });
+  const response = await GET();
+  assert.deepEqual(await response.json(), { signedIn: false });
+  assert.equal(opened, false);
+  assert.match(response.headers.get("cache-control"), /no-store/);
+});
+
+test("newsletter/me says whether the member's own email is subscribed", async () => {
+  const asked = [];
+  const { GET } = newsletterMe(member, { hasNewsletterLead: async (_db, email) => { asked.push(email); return true; } });
+  assert.deepEqual(await (await GET()).json(), { signedIn: true, email: "member@example.com", subscribed: true });
+  assert.deepEqual(asked, ["member@example.com"]);
+});
+
+test("newsletter/me subscribes the session email once, same-origin only", async () => {
+  const inserted = [];
+  let onList = false;
+  const backend = {
+    hasNewsletterLead: async () => onList,
+    insertLead: async (_db, lead) => { inserted.push(lead); onList = true; },
+  };
+  const { POST } = newsletterMe(member, backend);
+  assert.equal((await POST(sameOrigin(undefined, "https://evil.test"))).status, 403);
+  assert.equal(inserted.length, 0);
+  assert.equal((await POST(sameOrigin(JSON.stringify({ context: "x", email: "someone@else.test" })))).status, 200);
+  assert.deepEqual(inserted, [{ email: "member@example.com", context: "newsletter:x" }]);
+  assert.equal((await POST(sameOrigin())).status, 200);
+  assert.equal(inserted.length, 1);
+  const { POST: outPost } = newsletterMe(signedOut, backend);
+  assert.equal((await outPost(sameOrigin())).status, 401);
+});

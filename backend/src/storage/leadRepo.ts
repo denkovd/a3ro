@@ -19,3 +19,15 @@ export async function insertLead(
     [lead.email, lead.message ?? null, lead.context ?? null],
   );
 }
+
+/** True when this email already signed up for the weekly newsletter
+ *  (any page's newsletter box). Case-insensitive on the email. */
+export async function hasNewsletterLead(db: Queryable, email: string): Promise<boolean> {
+  const { rows } = await db.query(
+    `select 1 from leads
+      where lower(email) = lower($1) and context like 'newsletter:%'
+      limit 1`,
+    [email],
+  );
+  return rows.length > 0;
+}
