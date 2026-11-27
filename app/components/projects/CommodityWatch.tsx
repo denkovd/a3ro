@@ -9,7 +9,7 @@ export default function CommodityWatch({ className = "" }: { className?: string 
     <div className="flex flex-1 flex-col justify-center p-7 md:p-10">
       <p className="landing-kicker" style={{ color: AMBER_CSS }}>P·03 / Commodity Watch</p>
       <h3 className="mt-6 text-3xl font-semibold tracking-tight md:text-4xl">Commodity Watch</h3>
-      <p className="mt-4 max-w-md text-sm leading-relaxed text-[var(--ink-2)]">Live corridor intelligence for crude and products, plus gold, bitcoin, the uranium fuel chain from mine to reactor and a crypto usage scorecard.</p>
+      <p className="mt-4 max-w-md text-sm leading-relaxed text-[var(--ink-2)]">Live corridor intelligence for crude and products, plus gold, bitcoin and the uranium fuel chain from mine to reactor.</p>
       <span aria-hidden className="commodity-card-line my-8" />
       <span className="font-mono text-[11px] uppercase tracking-[0.2em]" style={{ color: AMBER_CSS }}>Enter live platform ↗</span>
     </div>

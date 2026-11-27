@@ -17,6 +17,7 @@ const Regime = dynamic(() => import("../projects/RegimeShiftFinder"), { ssr: fal
 const Earnings = dynamic(() => import("../projects/EarningsBeat"), { ssr: false, loading: () => <ModulePlaceholder name="Earnings Beat" href="/Projects/Earnings-Beat" /> });
 const Australia = dynamic(() => import("../projects/AustraliaWatch"), { ssr: false, loading: () => <ModulePlaceholder name="Australia Watch" href="/Projects/Australia-Watch" /> });
 const Dividend = dynamic(() => import("../projects/AIDividend"), { ssr: false, loading: () => <ModulePlaceholder name="AI Dividend" href="/Projects/AI-Dividend" /> });
+const Crypto = dynamic(() => import("../projects/CryptoModule"), { ssr: false, loading: () => <ModulePlaceholder name="Crypto" href="/Projects/Crypto-Fundamentals" /> });
 const Execute = dynamic(() => import("../projects/Execute"), { ssr: false, loading: () => <ModulePlaceholder name="Execute" href="/Projects/Execute" /> });
 
 const MODULES: readonly StageModule[] = [
@@ -24,6 +25,7 @@ const MODULES: readonly StageModule[] = [
   { name: "Australia Watch", category: "Keep a local perspective", description: "Bring Australia's economic conditions into focus, alongside the global forces that influence them.", href: "/Projects/Australia-Watch", Component: Australia },
   { name: "AI Dividend", category: "Follow the AI money", description: "Track how much of AI’s capability turns into real output, who captures the value, and what could stop it.", href: "/Projects/AI-Dividend", Component: Dividend },
   { name: "Commodity Watch", category: "Trace the physical market", description: "Explore the producers, shipping corridors and refining networks connecting physical oil flows to market prices.", href: "/Projects/Oil-Tracker", Component: CommodityWatch },
+  { name: "Crypto", category: "Follow real usage", description: "See who actually pays to use each crypto network: fees, revenue, value locked and stablecoins, measured the same way for every project.", href: "/Projects/Crypto-Fundamentals", Component: Crypto },
   { name: "Trend Finder", category: "Find the shift", description: "See which assets have turned bullish on both daily and weekly closes. Explore the market by recency and strength.", href: "/Projects/Bull-Market-Finder", Component: BullFinder },
   { name: "Regime", category: "Read the backdrop", description: "Put the market in context. Track the growth and inflation conditions shaping the current US regime.", href: "/Projects/Regime-Shift", Component: Regime },
   { name: "Earnings Beat", category: "Follow the catalysts", description: "Follow earnings surprises and the signals surrounding them, with a focused view of company results.", href: "/Projects/Earnings-Beat", Component: Earnings },

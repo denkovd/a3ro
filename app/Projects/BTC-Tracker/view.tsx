@@ -154,14 +154,6 @@ export default function BtcTrackerView() {
             >
               Uranium
             </a>
-            <a
-              href="/Projects/Crypto-Fundamentals"
-              className="px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em] transition-colors hover:opacity-100"
-              style={{ color: "#9ab8ff", opacity: 0.55 }}
-              title="Open Crypto fundamentals"
-            >
-              Crypto
-            </a>
           </nav>
         </div>
         <p className="flex shrink-0 items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">

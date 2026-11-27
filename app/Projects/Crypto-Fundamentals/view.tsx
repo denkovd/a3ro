@@ -75,7 +75,7 @@ export default function CryptoFundamentalsView({ snap }: { snap: CryptoSnapshot 
 
   return <section className="mx-auto flex max-w-6xl flex-col gap-10 px-6 pb-20 pt-36 md:px-10">
     <header className="flex flex-col gap-3">
-      <p className="landing-kicker">Crypto fundamentals</p>
+      <p className="landing-kicker">P·04 / Crypto</p>
       <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">Who pays to use it?</h1>
       <p className="max-w-3xl text-sm leading-relaxed text-[var(--ink-2)]">
         One yardstick for every project: what users actually pay to use it, what the project keeps, how much value sits in it and how many

@@ -11,15 +11,16 @@ import { useRouter } from "next/navigation";
 import { canSeeRoute } from "../../../lib/access";
 import { useViewer } from "../useViewer";
 
-export type ModuleId = "australia" | "dividend" | "commodity" | "trend" | "regime" | "earnings" | "execute";
+export type ModuleId = "australia" | "dividend" | "commodity" | "crypto" | "trend" | "regime" | "earnings" | "execute";
 
 // Same order as the homepage module list (components/landing/LandingExperience.tsx).
-const MODULE_SEQUENCE: ModuleId[] = ["australia", "dividend", "commodity", "trend", "regime", "earnings", "execute"];
+const MODULE_SEQUENCE: ModuleId[] = ["australia", "dividend", "commodity", "crypto", "trend", "regime", "earnings", "execute"];
 
 const MODULE_META: Record<ModuleId, { label: string; route: string }> = {
   australia: { label: "Australia Watch", route: "/Projects/Australia-Watch" },
   dividend: { label: "AI Dividend", route: "/Projects/AI-Dividend" },
   commodity: { label: "Commodity Watch", route: "/Projects/Oil-Tracker" },
+  crypto: { label: "Crypto", route: "/Projects/Crypto-Fundamentals" },
   trend: { label: "Trend Finder", route: "/Projects/Bull-Market-Finder" },
   regime: { label: "Regime", route: "/Projects/Regime-Shift" },
   earnings: { label: "Earnings Beat", route: "/Projects/Earnings-Beat" },

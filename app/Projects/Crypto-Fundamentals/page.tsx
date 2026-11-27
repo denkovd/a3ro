@@ -11,7 +11,7 @@ import SiteFooter from "../../components/SiteFooter";
 import CryptoFundamentalsView from "./view";
 
 export const metadata: Metadata = {
-  title: "Crypto fundamentals — who pays to use it · A3RO Intelligence",
+  title: "Crypto — who pays to use it · A3RO Intelligence",
   description: "A usage scorecard for Bitcoin, Ethereum, Solana, Hyperliquid and more: fees users pay, revenue, share of DeFi and stablecoins held on each chain, from DefiLlama.",
   alternates: { canonical: "/Projects/Crypto-Fundamentals" },
 };
