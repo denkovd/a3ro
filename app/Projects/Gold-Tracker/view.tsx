@@ -9,15 +9,13 @@ import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import GoldTrackerPreview from "../../components/projects/GoldTrackerPreview";
 import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
+import CommodityNav from "../../components/projects/commodity/CommodityNav";
 import {
   GOLD_CSS,
   GT_SESSION,
   GT_ATMOSPHERE,
   type GTView,
 } from "../../components/projects/goldTrackerShared";
-import { AMBER_CSS, OT_ROUTE } from "../../components/projects/oilTrackerShared";
-import { URANIUM_CSS, UT_ROUTE } from "../../components/projects/uraniumTrackerShared";
-import { ORANGE_CSS, BT_ROUTE } from "../../components/projects/btcTrackerShared";
 import { DataAsOf } from "../../components/DataAsOf";
 
 const GoldTrackerCore = dynamic(
@@ -119,42 +117,7 @@ export default function GoldTrackerView() {
           <p className="hidden truncate font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)] lg:block">
             A3RO Intelligence — Commodity Watch
           </p>
-          <nav
-            aria-label="Market surface"
-            className="flex min-w-0 items-center gap-0.5 overflow-x-auto border-l border-[var(--line)] pl-2 sm:pl-3"
-          >
-            <a
-              href={OT_ROUTE}
-              className="px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em] transition-colors hover:opacity-100"
-              style={{ color: AMBER_CSS, opacity: 0.55 }}
-              title="Open Oil Tracker"
-            >
-              Oil
-            </a>
-            <span
-              className="px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em]"
-              style={{ color: GOLD_CSS }}
-              aria-current="page"
-            >
-              Gold
-            </span>
-            <a
-              href={BT_ROUTE}
-              className="px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em] transition-colors hover:opacity-100"
-              style={{ color: ORANGE_CSS, opacity: 0.55 }}
-              title="Open BTC Tracker"
-            >
-              BTC
-            </a>
-            <a
-              href={UT_ROUTE}
-              className="px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em] transition-colors hover:opacity-100"
-              style={{ color: URANIUM_CSS, opacity: 0.55 }}
-              title="Open Uranium Tracker"
-            >
-              Uranium
-            </a>
-          </nav>
+          <CommodityNav current="gold" />
         </div>
         <p className="flex shrink-0 items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
           {!reduced ? (

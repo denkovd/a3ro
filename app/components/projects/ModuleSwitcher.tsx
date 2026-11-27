@@ -3,8 +3,8 @@
    A3RO Intelligence — module switcher
    Sits in the top chrome of every full-page module, directly after
    "← Index", so it stays in the same spot while a visitor steps
-   through the modules without returning to the homepage. The four
-   commodity trackers (Oil, Gold, BTC, Uranium) count as one module,
+   through the modules without returning to the homepage. The
+   commodity trackers (Oil, Iron ore, Uranium, Gold, BTC) count as one module,
    Commodity Watch, and switch assets via their own tab row.
 ──────────────────────────────────────────────────────────────── */
 import { useRouter } from "next/navigation";

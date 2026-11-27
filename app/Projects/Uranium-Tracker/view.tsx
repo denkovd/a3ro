@@ -8,19 +8,14 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import { URANIUM_CSS, UT_ATMOSPHERE } from "../../components/projects/uraniumTrackerShared";
-import { AMBER_CSS, OT_ROUTE } from "../../components/projects/oilTrackerShared";
-import { GOLD_CSS, GT_ROUTE } from "../../components/projects/goldTrackerShared";
-import { ORANGE_CSS, BT_ROUTE } from "../../components/projects/btcTrackerShared";
-import { LockIcon } from "../../components/LockIcon";
 import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
-import { useViewer } from "../../components/useViewer";
+import CommodityNav from "../../components/projects/commodity/CommodityNav";
 
 const UraniumTrackerCore = dynamic(() => import("../../components/projects/UraniumTrackerCore"), { ssr: false, loading: () => null });
 
 export default function UraniumTrackerView() {
   const router = useRouter();
   const reduced = useReducedMotion();
-  const viewer = useViewer();
   const [coreReady, setCoreReady] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
@@ -30,7 +25,6 @@ export default function UraniumTrackerView() {
     setLeaving(true);
   }, [leaving, reduced, router]);
 
-  const tab = "px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em] transition-colors hover:opacity-100 inline-flex items-center gap-1";
   return (
     <motion.main
       className="grain fixed inset-0 overflow-hidden bg-[var(--depth-0)]"
@@ -63,16 +57,7 @@ export default function UraniumTrackerView() {
           <ModuleSwitcher current="commodity" />
           <span aria-hidden className="text-[var(--ink-3)]">/</span>
           <p className="hidden truncate font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)] lg:block">A3RO Intelligence — Commodity Watch</p>
-          <nav aria-label="Market surface" className="flex min-w-0 items-center gap-0.5 overflow-x-auto border-l border-[var(--line)] pl-2 sm:pl-3">
-            <a href={OT_ROUTE} className={tab} style={{ color: AMBER_CSS, opacity: 0.55 }} title="Open Oil Tracker">Oil</a>
-            <a href={GT_ROUTE} className={tab} style={{ color: GOLD_CSS, opacity: 0.55 }} title={viewer.premium ? "Open Gold Tracker" : "Gold Tracker · Premium"}>
-              Gold{viewer.premium ? null : <LockIcon title="Premium" />}
-            </a>
-            <a href={BT_ROUTE} className={tab} style={{ color: ORANGE_CSS, opacity: 0.55 }} title={viewer.premium ? "Open BTC Tracker" : "BTC Tracker · Premium"}>
-              BTC{viewer.premium ? null : <LockIcon title="Premium" />}
-            </a>
-            <span className="px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em]" style={{ color: URANIUM_CSS }} aria-current="page">Uranium</span>
-          </nav>
+          <CommodityNav current="uranium" />
         </div>
         <p className="flex shrink-0 items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--ink-3)]">
           <span aria-hidden className="inline-block h-[5px] w-[5px] rounded-full" style={{ background: URANIUM_CSS }} />

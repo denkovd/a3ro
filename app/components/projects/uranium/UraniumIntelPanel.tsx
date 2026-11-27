@@ -1,9 +1,8 @@
 "use client";
 /* Right rail for the Uranium Tracker globe: overview by default, detail when something is selected.
    Every figure comes from lib/uranium/fuelChain.ts and names its source. Prices via TradingView (delayed). */
-import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import TradingViewWidget from "../../TradingViewWidget";
+import { useState } from "react";
+import { CompanyList, Kicker, PriceBlock, RailShell, SourceLink as RailSourceLink, SourceList, Stat, n, pct, rowBtn } from "../commodity/RailKit";
 import {
   AUSTRALIA,
   COMPANIES,
@@ -29,18 +28,10 @@ import type { ReactorMode, Selection } from "../UraniumTrackerCore";
 
 const URN = "#b8e278";
 const DEM = "#96c8e6";
-const n = (v: number) => v.toLocaleString("en-AU");
-const pct = (v: number) => `${Math.round(v * 100)}%`;
 
 function SourceLink({ id }: { id: SourceId }) {
-  const s = SOURCES[id];
-  return <a href={s.url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-[10px] underline" style={{ color: URN }}>{s.label} ↗ <span className="text-[var(--ink-3)] no-underline">· checked {s.reviewed}</span></a>;
+  return <RailSourceLink source={SOURCES[id]} accent={URN} />;
 }
-function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return <div><dt className="text-[10px] text-[var(--ink-3)]">{label}</dt><dd className="mt-1 font-mono text-[13px] tabular-nums text-[var(--ink)]">{value}</dd>{sub ? <dd className="text-[9px] text-[var(--ink-3)]">{sub}</dd> : null}</div>;
-}
-const Kicker = ({ children }: { children: React.ReactNode }) => <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-[var(--ink-3)]">{children}</p>;
-const rowBtn = "flex w-full items-center justify-between gap-2 rounded-sm px-1 py-2 text-left hover:bg-[var(--depth-2)]";
 
 export default function UraniumIntelPanel({ narrow, selected, reactorMode, focus, closePanel }: {
   narrow: boolean;
@@ -50,11 +41,7 @@ export default function UraniumIntelPanel({ narrow, selected, reactorMode, focus
   closePanel: () => void;
 }) {
   const [directory, setDirectory] = useState<"mining" | Stage | "reactors">("mining");
-  const [collapsedFor, setCollapsedFor] = useState<string | null>(null);
-  const key = selected ? `${selected.type}:${selected.type === "country" ? selected.c.id : selected.type === "mine" ? selected.m.id : selected.type === "site" ? selected.s.id : selected.r.id}` : "overview";
-  const mobileOpen = collapsedFor !== key;
-  const contentRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { contentRef.current?.scrollTo({ top: 0 }); }, [key]);
+  const key = selected ? `${selected.type}:${selected.type === "country" ? selected.c.id : selected.type === "mine" ? selected.m.id : selected.type === "site" ? selected.s.id : selected.r.id}` : null;
 
   const worldMined = WORLD_MINE_OUTPUT_T[MINING_YEAR];
   const miningRanked = [...MINING_COUNTRIES].sort((a, b) => b.t2024 - a.t2024);
@@ -133,19 +120,11 @@ export default function UraniumIntelPanel({ narrow, selected, reactorMode, focus
   })();
 
   return (
-    <aside aria-label="Uranium intelligence" className={`absolute z-20 flex flex-col overflow-hidden rounded-sm border border-[var(--line)] bg-[rgba(8,9,9,0.94)] backdrop-blur-md ${narrow ? "inset-x-3 bottom-14 max-h-[44%]" : "bottom-6 right-6 top-4 w-[340px]"}`}>
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
-        <div><Kicker>P·03 / Uranium intelligence</Kicker><h3 className="mt-1 text-sm font-medium text-[var(--ink)]">{selected ? "Detail" : "Mine → plant → reactor"}</h3></div>
-        {selected ? <button type="button" onClick={closePanel} className="px-2 py-2 text-[11px] text-[var(--ink-2)] hover:text-[var(--ink)]" aria-label="Back to uranium overview">← Back</button> : null}
-        {narrow ? <button type="button" aria-expanded={mobileOpen} aria-controls="uranium-intel-content" onClick={() => setCollapsedFor(mobileOpen ? key : null)} className="px-2 py-2 text-[11px] text-[var(--ink-2)]">{mobileOpen ? "Hide" : "Show"}</button> : null}
-      </div>
-      <div id="uranium-intel-content" ref={contentRef} hidden={narrow && !mobileOpen} className="min-h-0 overflow-y-auto overscroll-contain px-4 py-3">
+    <RailShell id="uranium-intel-content" label="Uranium intelligence" kicker="P·03 / Uranium intelligence" title="Mine → plant → reactor"
+      narrow={narrow} selectedKey={key} onBack={closePanel} backLabel="Back to uranium overview">
         {detail ? <section>{detail}</section> : <>
-          <section aria-label="Uranium price" className="border-b border-[var(--line)] pb-3">
-            <Kicker>Price · Sprott Physical Uranium Trust</Kicker>
-            <TradingViewWidget widget="mini-symbol-overview" height={170} label="Sprott Physical Uranium Trust (TSX:U.UN) price, delayed" config={{ symbol: "TSX:U.UN", dateRange: "12M", trendLineColor: URN, underLineColor: "rgba(184,226,120,0.12)", underLineBottomColor: "rgba(184,226,120,0)" }} />
-            <p className="mt-1 text-[10px] text-[var(--ink-3)]">The trust holds physical uranium, so its unit price tracks spot. Delayed quote.</p>
-          </section>
+          <PriceBlock symbol="TSX:U.UN" kicker="Price · Sprott Physical Uranium Trust" label="Sprott Physical Uranium Trust (TSX:U.UN) price, delayed" accent={URN} rgb="184,226,120"
+            note="The trust holds physical uranium, so its unit price tracks spot. Delayed quote." />
 
           <section aria-label="Supply and demand" className="mt-3 border-b border-[var(--line)] pb-3">
             <Kicker>Supply vs demand</Kicker>
@@ -182,25 +161,11 @@ export default function UraniumIntelPanel({ narrow, selected, reactorMode, focus
             {directory === "reactors" ? <p className="mt-1 text-[9px] text-[var(--ink-3)]">Top 20 of {REACTOR_COUNTRIES.length} countries · as at {REACTORS_AS_AT}</p> : null}
           </section>
 
-          <section aria-label="Listed uranium companies" className="mt-3 border-b border-[var(--line)] pb-3">
-            <Kicker>Listed companies & funds</Kicker>
-            <ul className="mt-1 divide-y divide-[var(--line)]">{COMPANIES.map((c) => <li key={c.tv} className="py-2">
-              <div className="flex items-center justify-between gap-2"><span className="text-[11px] text-[var(--ink)]">{c.name}{c.australian ? <span className="ml-1 text-[9px] text-[var(--ink-3)]">AU</span> : null}</span>
-                {c.assetSlug ? <Link href={`/assets/${c.assetSlug}`} className="font-mono text-[10px] underline" style={{ color: URN }}>{c.tv}</Link>
-                  : <a href={`https://www.tradingview.com/symbols/${c.tv.replace(":", "-")}/`} target="_blank" rel="noreferrer" className="font-mono text-[10px] underline" style={{ color: URN }}>{c.tv} ↗</a>}</div>
-              <p className="mt-0.5 text-[10px] leading-relaxed text-[var(--ink-3)]">{c.role}</p>
-            </li>)}</ul>
-            <p className="mt-1 text-[9px] text-[var(--ink-3)]">A list of companies with uranium exposure, not a recommendation.</p>
-          </section>
+          <CompanyList companies={COMPANIES} accent={URN} note="A list of companies with uranium exposure, not a recommendation." />
 
-          <section aria-label="Sources" className="mt-3">
-            <Kicker>Sources</Kicker>
-            <ul className="mt-1 space-y-1">{(Object.keys(SOURCES) as SourceId[]).map((id) => <li key={id}><a href={SOURCES[id].url} target="_blank" rel="noreferrer" className="text-[10px] text-[var(--ink-2)] underline">{SOURCES[id].label} ↗</a></li>)}</ul>
-            <p className="mt-2 text-[10px] leading-relaxed text-[var(--ink-3)]">Reference data, updated by hand from the sources above, not live. Site positions are approximate.</p>
-          </section>
+          <SourceList sources={Object.values(SOURCES)} note="Reference data, updated by hand from the sources above, not live. Site positions are approximate." />
         </>}
-      </div>
-    </aside>
+    </RailShell>
   );
 }
 
