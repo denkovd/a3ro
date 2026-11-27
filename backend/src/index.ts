@@ -361,3 +361,5 @@ export { CRYPTO_PROJECTS, CRYPTO_GROUP_LABEL, CRYPTO_GROUP_ORDER, QUANT_NOTE } f
 export type { CryptoProject, CryptoGroup } from "./crypto/projects";
 export type { CryptoSnapshot, ProjectSnapshot, MonthPoint } from "./crypto/defillama";
 export { latestCryptoSnapshot } from "./storage/cryptoRepo";
+export { PRIVACY_PROJECTS, PRIVACY_REVIEWED } from "./crypto/privacy";
+export type { PrivacyProject, PrivacyDev, PrivacySource } from "./crypto/privacy";

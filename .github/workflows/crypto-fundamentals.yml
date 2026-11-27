@@ -42,4 +42,5 @@ jobs:
       - name: Fetch DefiLlama and save the snapshot
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx tsx scripts/run-crypto-fundamentals.ts

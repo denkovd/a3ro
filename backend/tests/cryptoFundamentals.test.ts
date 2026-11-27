@@ -132,3 +132,29 @@ describe("crypto baskets (#85, #86)", () => {
     assert.equal(maxDrawdown([100, 120, 90, 130]), 90 / 120 - 1);
   });
 });
+
+import { PRIVACY_PROJECTS, PRIVACY_REVIEWED, fetchPrivacyDev, summariseParticipation } from "../src/crypto/privacy";
+
+test("privacy top 10: ten unique, sourced, reviewed entries", () => {
+  assert.equal(PRIVACY_PROJECTS.length, 10);
+  assert.equal(new Set(PRIVACY_PROJECTS.map((p) => p.id)).size, 10);
+  assert.match(PRIVACY_REVIEWED, /^\d{4}-\d{2}-\d{2}$/);
+  for (const p of PRIVACY_PROJECTS) {
+    assert.ok(p.sources.length >= 2, `${p.id} needs sources`);
+    for (const s of p.sources) assert.match(s.url, /^https:\/\//);
+    for (const k of ["method", "byDefault", "trustedSetup", "audits", "incidents", "access", "australia", "summary"] as const) assert.ok(p[k].trim(), `${p.id}.${k}`);
+    if (p.repo) assert.match(p.repo, /^[\w.-]+\/[\w.-]+$/);
+  }
+});
+
+test("privacy dev activity: sums weeks and retries GitHub's 202", async () => {
+  assert.deepEqual(summariseParticipation([1, 2, 3]), { commits52w: 6, commits13w: 6, weekly: [1, 2, 3] });
+  assert.equal(summariseParticipation([]), null);
+  let calls = 0;
+  const { dev, problems } = await fetchPrivacyDev(async () => (++calls === 1 ? { status: 202, body: {} } : { status: 200, body: { all: Array(52).fill(2) } }), PRIVACY_PROJECTS.slice(0, 2), async () => {});
+  assert.equal(dev[PRIVACY_PROJECTS[0].id].commits52w, 104);
+  assert.equal(dev[PRIVACY_PROJECTS[1].id].commits13w, 26);
+  assert.equal(problems.length, 0);
+  const miss = await fetchPrivacyDev(async () => ({ status: 404, body: null }), PRIVACY_PROJECTS.slice(0, 1), async () => {});
+  assert.equal(miss.problems.length, 1);
+});

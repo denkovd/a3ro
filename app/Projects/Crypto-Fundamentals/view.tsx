@@ -2,6 +2,7 @@
 import { CRYPTO_GROUP_LABEL, CRYPTO_GROUP_ORDER, CRYPTO_PROJECTS, QUANT_NOTE, type CryptoSnapshot, type MonthPoint, type ProjectSnapshot } from "@a3ro/oil-backend";
 import { assetBySlug } from "../../../lib/assets";
 import CryptoValuation from "./CryptoValuation";
+import PrivacySection from "./PrivacySection";
 
 const ACCENT = "#9ab8ff";
 const LINE_COLOURS = ["#9ab8ff", "#b8e278", "#f0b35a", "#e58ad0", "#7fd6c2", "#d9d9d9"];
@@ -181,11 +182,13 @@ export default function CryptoFundamentalsView({ snap }: { snap: CryptoSnapshot 
       <CryptoValuation meta={CRYPTO_GROUP_ORDER.flatMap((g) => CRYPTO_PROJECTS.filter((p) => p.group === g && p.gecko).map((p) => ({ id: p.id, name: p.name, symbol: p.symbol, groupLabel: CRYPTO_GROUP_LABEL[g] })))} />
     </>}
 
+    <PrivacySection dev={snap?.privacyDev} />
+
     <section aria-label="How to read this" className="flex max-w-3xl flex-col gap-2 text-xs leading-relaxed text-[var(--ink-3)]">
       <h2 className="landing-kicker">How to read this</h2>
       <p><b className="text-[var(--ink-2)]">Fees</b>: everything users paid to use the network or app in the last 30 days (for a chain, its transaction fees). <b className="text-[var(--ink-2)]">Revenue</b>: the part the project or its token holders keep, for example fees burned or used for buybacks; fees paid out to miners or validators are not revenue. Both come from DefiLlama&rsquo;s daily figures.</p>
       <p><b className="text-[var(--ink-2)]">Value locked</b>: money deposited in DeFi apps on the chain. <b className="text-[var(--ink-2)]">Stablecoins held</b>: dollar stablecoins issued on the chain, a good guide to where real payments and trading happen.</p>
-      <p>Not yet included: active users and developer activity, which aren&rsquo;t in DefiLlama&rsquo;s free data. {QUANT_NOTE} Valuation ratios use market caps, which are market data, so they are part of Premium.</p>
+      <p>Not yet included: active users, which aren&rsquo;t in DefiLlama&rsquo;s free data. {QUANT_NOTE} Valuation ratios use market caps, which are market data, so they are part of Premium.</p>
       {snap?.problems.length ? <p>Missing this update: {snap.problems.join("; ")}.</p> : null}
     </section>
   </section>;

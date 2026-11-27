@@ -33,6 +33,18 @@ export const MANUAL_JOBS: readonly ManualJob[] = [
     lastCheckedInCode: "2026-11-27",
   },
   {
+    id: "crypto-privacy-review",
+    title: "Review the privacy top 10",
+    steps: [
+      "Check each project's exchange access (delistings, Australian exchanges), new audits and incidents since the last review; open the listed sources first.",
+      "Fill in any \"Not checked\" fields you can confirm, update facts and sources, and set PRIVACY_REVIEWED to today.",
+      "Swap a project out if it has died or a bigger one has appeared; keep the list at ten.",
+    ],
+    where: "backend/src/crypto/privacy.ts",
+    everyMonths: 3,
+    lastCheckedInCode: "2026-11-27",
+  },
+  {
     id: "newsletter-signups",
     title: "Copy newsletter sign-ups into Loops",
     steps: [

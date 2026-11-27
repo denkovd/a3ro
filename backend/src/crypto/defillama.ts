@@ -59,6 +59,8 @@ export interface CryptoSnapshot {
   problems: string[];
   /** Premium (market data): Solana top 10 and memecoin top 10 baskets (#85, #86). */
   baskets?: import("./baskets").BasketSnapshot[];
+  /** Privacy top 10 (#87): GitHub commit activity per project id. Open data. */
+  privacyDev?: Record<string, import("./privacy").PrivacyDev>;
 }
 
 type Json = unknown;
