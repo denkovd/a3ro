@@ -31,9 +31,9 @@ export const config = {
     "/data/regime-backtest.json/:path*",
     "/owner/:path*", "/api/owner/:path*",
     // Public by default, but an admin can make them Premium from Ops controls
-    "/Projects/Australia-Watch/:path*", "/Projects/AI-Dividend/:path*", "/Projects/Oil-Tracker/:path*", "/Projects/Uranium-Tracker/:path*", "/Projects/Iron-Ore-Tracker/:path*", "/Projects/Copper-Tracker/:path*",
+    "/Projects/Australia-Watch/:path*", "/Projects/AI-Dividend/:path*", "/Projects/Oil-Tracker/:path*", "/Projects/Uranium-Tracker/:path*", "/Projects/Iron-Ore-Tracker/:path*", "/Projects/Copper-Tracker/:path*", "/Projects/LNG-Tracker/:path*",
     "/Projects/Crypto-Fundamentals/:path*", "/api/crypto/:path*",
-    "/api/australia-watch/:path*", "/api/dividend/:path*", "/api/oil/:path*", "/api/ironore/:path*", "/api/copper/:path*", "/api/macro/:path*", "/api/capital/:path*",
+    "/api/australia-watch/:path*", "/api/dividend/:path*", "/api/oil/:path*", "/api/ironore/:path*", "/api/copper/:path*", "/api/lng/:path*", "/api/macro/:path*", "/api/capital/:path*",
     // Session refresh for sign-in
     "/api/auth/:path*", "/auth/:path*", "/login", "/account", "/api/account/:path*",
   ],

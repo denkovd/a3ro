@@ -74,21 +74,25 @@ export default function ExportsBlock({ state, accent, colors, focus, fallback, s
   const d = state.data;
   const latest = d.months[d.months.length - 1];
   const yearAgo = d.months.find((m) => m.period === `${Number(d.latestPeriod.slice(0, 4)) - 1}${d.latestPeriod.slice(4)}`);
-  const states = d.states.filter((s) => s.last12AudM > 0);
+  // Values the ABS keeps confidential come back as nil; leave those breakdowns out rather than show zeros.
+  const states = d.states.filter((s) => s.share > 0.001);
+  const dests = d.destinations.filter((x) => x.share > 0.001);
   return <>
     <dl className="mt-2 grid grid-cols-2 gap-3">
       <Stat label={periodLabel(d.latestPeriod)} value={audBn(latest.totalAudM)} sub={yearAgo && yearAgo.totalAudM > 0 ? `${signed(latest.totalAudM / yearAgo.totalAudM - 1)} on a year earlier` : undefined} />
       <Stat label="Last 12 months" value={audBn(d.last12AudM)} sub={d.prior12AudM ? `${signed(d.last12AudM / d.prior12AudM - 1)} on the 12 before` : undefined} />
     </dl>
     <ExportBars data={d} colors={colors} />
+    {dests.length ? <>
     <p className="mt-3 font-mono text-[9px] uppercase tracking-[0.16em] text-[var(--ink-3)]">Where it goes · last 12 months</p>
     <ul className="mt-1 divide-y divide-[var(--line)]">
-      {d.destinations.filter((x) => x.last12AudM > 0).map((x) => <li key={x.code}><button type="button" onClick={() => focus(`flow:${x.code}`)} className={rowBtn}>
+      {dests.map((x) => <li key={x.code}><button type="button" onClick={() => focus(`flow:${x.code}`)} className={rowBtn}>
         <span className="font-mono text-[10px] text-[var(--ink)]">{x.name}</span>
         <span className="font-mono text-[10px] tabular-nums" style={{ color: accent }}>{pct(x.share)} · {audBn(x.last12AudM)}</span>
       </button></li>)}
       {d.otherLast12AudM > 0 ? <li className="flex items-center justify-between px-1 py-2"><span className="font-mono text-[10px] text-[var(--ink-3)]">Other</span><span className="font-mono text-[10px] tabular-nums text-[var(--ink-3)]">{pct(d.otherLast12AudM / d.last12AudM)}</span></li> : null}
     </ul>
+    </> : null}
     {states.length > 1 ? <>
       <p className="mt-3 font-mono text-[9px] uppercase tracking-[0.16em] text-[var(--ink-3)]">Shipped from · last 12 months</p>
       <dl className="mt-1 grid grid-cols-2 gap-2">{states.map((s) => <Stat key={s.code} label={s.name} value={pct(s.share)} sub={audBn(s.last12AudM)} />)}</dl>
