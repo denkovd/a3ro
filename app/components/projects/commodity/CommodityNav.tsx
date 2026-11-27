@@ -4,6 +4,7 @@
    One list of commodity trackers, used in every tracker's header, so a
    new commodity is added here once instead of in each view.
 ──────────────────────────────────────────────────────────────── */
+import { useEffect, useRef } from "react";
 import { LockIcon } from "../../LockIcon";
 import { useViewer } from "../../useViewer";
 import { AMBER_CSS, OT_ROUTE } from "../oilTrackerShared";
@@ -30,8 +31,14 @@ const tab = "inline-flex items-center gap-1 whitespace-nowrap px-2 py-1 font-mon
 
 export default function CommodityNav({ current }: { current: CommodityId }) {
   const viewer = useViewer();
+  const navRef = useRef<HTMLElement>(null);
+  // On narrow screens the row scrolls sideways: bring the current tab into view.
+  useEffect(() => {
+    const nav = navRef.current, el = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (nav && el && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = el.offsetLeft - nav.offsetLeft - nav.clientWidth / 2 + el.clientWidth / 2;
+  }, [current]);
   return (
-    <nav aria-label="Market surface" className="flex min-w-0 items-center gap-0.5 overflow-x-auto border-l border-[var(--line)] pl-2 sm:pl-3">
+    <nav ref={navRef} aria-label="Market surface" className="flex min-w-0 items-center gap-0.5 overflow-x-auto border-l border-[var(--line)] pl-2 sm:pl-3">
       {COMMODITY_TABS.map((t) => {
         if (t.id === current) return <span key={t.id} className={tab} style={{ color: t.color }} aria-current="page">{t.label}</span>;
         const locked = t.premium && !viewer.premium;
