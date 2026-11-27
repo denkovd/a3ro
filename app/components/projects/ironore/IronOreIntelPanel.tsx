@@ -4,7 +4,7 @@
    (/api/ironore/exports); everything else is reference data from lib/ironore/reference.ts. */
 import { useState } from "react";
 import {
-  CompanyList, Explorer, Headline, Kicker, PriceBlock, RailSection, RailShell, SourceLink as RailSourceLink, SourceList, Stat, n, pct, rowBtn,
+  CompanyList, Explorer, Headline, Kicker, MonthlyPriceBlock, RailSection, useMonthlyPrice, RailShell, SourceLink as RailSourceLink, SourceList, Stat, n, pct, rowBtn,
 } from "../commodity/RailKit";
 import type { RailApi } from "../commodity/CommodityGlobe";
 import { DEMAND_CSS, IRON_CSS } from "../ironOreTrackerShared";
@@ -14,6 +14,7 @@ import {
 } from "../../../../lib/ironore/reference";
 import { periodLabel } from "../../../../lib/commodity/absExports";
 import ExportsBlock, { audBn } from "../commodity/ExportsBlock";
+import { COST_SOURCES, IMPACT_REVIEWED, IRON_ORE_BANDS, TREASURY_SENSITIVITY, WA_ASSUMPTION, bandFor } from "../../../../lib/ironore/impact";
 import type { ExportsState } from "../IronOreTrackerCore";
 
 const IRN = IRON_CSS;
@@ -24,6 +25,29 @@ function SourceLink({ id }: { id: SourceId }) {
 }
 
 type Tab = "producers" | "importers" | "ports" | "mines";
+
+/** What the price means for Australia (#126): where it sits against miners' costs, and Treasury's official sensitivity. */
+function ImpactBlock({ price }: { price: number | null }) {
+  const max = 160, band = price === null ? null : bandFor(price);
+  const tone = ["#c9573f", "#e0a44a", "#8fbf6a", "#5fc9a4"];
+  const t = TREASURY_SENSITIVITY;
+  return <RailSection label="What it means for Australia" kicker="What the price means for Australia">
+    <div className="relative mt-3 h-3 w-full overflow-hidden rounded-sm" role="img" aria-label={price === null ? "Price bands" : `US$${price.toFixed(0)} a tonne sits in the ${band!.label} band`}>
+      {IRON_ORE_BANDS.map((b, i) => <div key={b.label} className="absolute top-0 h-full" style={{ left: `${(b.from / max) * 100}%`, width: `${((Math.min(b.to, max) - b.from) / max) * 100}%`, background: tone[i], opacity: band?.label === b.label ? 0.9 : 0.35 }} />)}
+      {price !== null ? <div className="absolute top-[-2px] h-[calc(100%+4px)] w-[3px] rounded-sm bg-white" style={{ left: `calc(${(Math.min(price, max) / max) * 100}% - 1px)` }} /> : null}
+    </div>
+    <div className="mt-1 flex justify-between font-mono text-[8px] text-[var(--ink-3)]">{[0, 40, 80, 120, 160].map((v) => <span key={v}>${v}</span>)}</div>
+    {band ? <p className="mt-2 text-[11px] leading-relaxed text-[var(--ink-2)]"><span className="font-medium text-[var(--ink)]">{band.label}.</span> {band.detail}</p> : null}
+    {price !== null ? <p className="mt-1 text-[10px] text-[var(--ink-3)]">WA&rsquo;s budget assumes US${WA_ASSUMPTION.fy2027} this financial year (US${WA_ASSUMPTION.longRun} in the long run); last month&rsquo;s average was {price >= WA_ASSUMPTION.fy2027 ? "above" : "below"} that.</p> : null}
+    <p className="mt-3 text-[10px] text-[var(--ink-3)]">Treasury: each US$10 a tonne, if it lasts</p>
+    <table className="mt-1 w-full text-right font-mono text-[10px]"><thead><tr className="text-[9px] text-[var(--ink-3)]"><th className="text-left font-normal" />{t.years.map((y) => <th key={y} className="font-normal">{y}</th>)}</tr></thead>
+      <tbody>
+        <tr><td className="text-left font-sans text-[var(--ink-2)]">Nominal GDP</td>{t.nominalGdpBn.map((v, i) => <td key={i}>±A${v}bn</td>)}</tr>
+        <tr><td className="text-left font-sans text-[var(--ink-2)]">Tax receipts</td>{t.taxReceiptsBn.map((v, i) => <td key={i}>±A${v}bn</td>)}</tr>
+      </tbody></table>
+    <p className="mt-2 text-[9px] leading-relaxed text-[var(--ink-3)]">Bands are our reading of published mining costs (majors spend about US$18–25 a tonne to get ore to port, before freight, royalties and upkeep), not a forecast; company profits also depend on volumes, costs and the Australian dollar. Treasury&rsquo;s figures are for the price before freight (FOB). Checked {IMPACT_REVIEWED}. Sources: <a className="underline" href={t.source.url} target="_blank" rel="noreferrer">{t.source.label}</a>; <a className="underline" href={WA_ASSUMPTION.source.url} target="_blank" rel="noreferrer">{WA_ASSUMPTION.source.label}</a>; {COST_SOURCES.map((c, i) => <span key={c.url}>{i ? "; " : ""}<a className="underline" href={c.url} target="_blank" rel="noreferrer">{c.label}</a></span>)}.</p>
+  </RailSection>;
+}
 
 export default function IronOreIntelPanel({ narrow, selected, focus, close, exportsState }: RailApi & { exportsState: ExportsState }) {
   const [tab, setTab] = useState<Tab>("producers");
@@ -113,13 +137,15 @@ export default function IronOreIntelPanel({ narrow, selected, focus, close, expo
   })();
 
   const producersRanked = [...PRODUCERS].sort((a, b) => b.mt2025 - a.mt2025);
+  const price = useMonthlyPrice("iron_ore");
 
   return (
     <RailShell id="ironore-intel-content" label="Iron ore intelligence" kicker="P·03 / Iron ore intelligence" title="Pit → port → steel mill"
       narrow={narrow} selectedKey={selected} onBack={close} backLabel="Back to iron ore overview">
       {detail ? <section>{detail}</section> : <>
-        <PriceBlock symbol="COMEX:TIO1!" kicker="Price · 62% Fe CFR China futures" label="Iron ore 62% Fe CFR China futures (COMEX:TIO1!), delayed" accent={IRN} rgb="207,106,88"
-          note={`The benchmark for seaborne fines delivered to China. Delayed quote. The WA Government's monthly average for ${WA.priceMonth} was US$${WA.priceUsd} a tonne.`} />
+        <MonthlyPriceBlock data={price} kicker="Price · 62% Fe fines, CFR China" accent={IRN} per="a dry tonne"
+          note="The benchmark for seaborne fines delivered to China." />
+        <ImpactBlock price={price && price !== "error" ? price.summary?.latest.value ?? null : null} />
 
         <RailSection label="Australian exports" kicker="Australia's iron ore exports · ABS">
           <ExportsBlock state={exportsState} accent={IRN} colors={[IRN]} focus={focus} sourceUrl={SOURCES.abs.url} sourceLabel={SOURCES.abs.label}

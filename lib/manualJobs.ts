@@ -33,6 +33,28 @@ export const MANUAL_JOBS: readonly ManualJob[] = [
     lastCheckedInCode: "2026-11-27",
   },
   {
+    id: "ironore-impact-review",
+    title: "Update the iron ore impact figures after each Budget and MYEFO",
+    steps: [
+      "Copy Treasury's US$10/t iron ore sensitivity (nominal GDP and tax receipts by year) from the latest Budget Paper 1 or MYEFO into TREASURY_SENSITIVITY.",
+      "Update WA's budget price assumptions from the latest WA iron ore profile, and the miners' cost figures if new results are out; set IMPACT_REVIEWED to today.",
+    ],
+    where: "lib/ironore/impact.ts",
+    everyMonths: 6,
+    lastCheckedInCode: "2026-11-27",
+  },
+  {
+    id: "pink-sheet-url",
+    title: "Check the World Bank Pink Sheet download link for the new year",
+    steps: [
+      "Each January the World Bank moves the monthly prices workbook to a new address. If Ops > Data health shows the pink-sheet job failing, find the new 'CMO-Historical-Data-Monthly.xlsx' link on worldbank.org/en/research/commodity-markets.",
+      "Add it to the top of PINK_SHEET_URLS (or set the PINK_SHEET_URL repository variable) and re-run the pink-sheet workflow.",
+    ],
+    where: "backend/src/commodities/pinkSheet.ts",
+    everyMonths: 12,
+    lastCheckedInCode: "2026-11-27",
+  },
+  {
     id: "uranium-sput-holdings",
     title: "Add Sprott uranium trust holdings from its latest report",
     steps: [

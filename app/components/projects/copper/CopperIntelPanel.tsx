@@ -5,7 +5,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  CompanyList, Explorer, Headline, Kicker, PriceBlock, RailSection, RailShell, SourceLink as RailSourceLink, SourceList, Stat, n, pct, rowBtn,
+  CompanyList, Explorer, Headline, Kicker, MonthlyPriceBlock, useMonthlyPrice, RailSection, RailShell, SourceLink as RailSourceLink, SourceList, Stat, n, pct, rowBtn,
 } from "../commodity/RailKit";
 import ExportsBlock, { audBn, type Loadable } from "../commodity/ExportsBlock";
 import type { RailApi } from "../commodity/CommodityGlobe";
@@ -48,6 +48,7 @@ function ComexBlock({ state }: { state: Loadable<ComexCopperStocks> }) {
 type Tab = "mining" | "refining" | "sites";
 
 export default function CopperIntelPanel({ narrow, selected, focus, close, exportsState, comexState }: RailApi & { exportsState: Loadable<CommodityExports>; comexState: Loadable<ComexCopperStocks> }) {
+  const price = useMonthlyPrice("copper");
   const [tab, setTab] = useState<Tab>("mining");
   const colon = selected ? selected.indexOf(":") : -1;
   const kind = selected && colon > 0 ? selected.slice(0, colon) : null;
@@ -126,8 +127,8 @@ export default function CopperIntelPanel({ narrow, selected, focus, close, expor
     <RailShell id="copper-intel-content" label="Copper intelligence" kicker="P·03 / Copper intelligence" title="Mine → smelter → wire"
       narrow={narrow} selectedKey={selected} onBack={close} backLabel="Back to copper overview">
       {detail ? <section>{detail}</section> : <>
-        <PriceBlock symbol="COMEX:HG1!" kicker="Price · COMEX copper futures" label="COMEX copper futures (COMEX:HG1!), delayed" accent={CU} rgb="92,191,166"
-          note={`US dollars a pound, front month, delayed. USGS puts the 2025 COMEX average at a record US$${US_STOCKS.comexPriceUsdLb2025.toFixed(2)}/lb, up from US$${US_STOCKS.comexPriceUsdLb2024.toFixed(2)} in 2024. The LME price is licensed, so it isn't shown.`} />
+        <MonthlyPriceBlock data={price} kicker="Price · copper, LME monthly average" accent={CU} per="a tonne" decimals={0}
+          note={`The world benchmark, in US dollars a tonne. USGS puts the 2025 COMEX average at a record US$${US_STOCKS.comexPriceUsdLb2025.toFixed(2)}/lb, up from US$${US_STOCKS.comexPriceUsdLb2024.toFixed(2)} in 2024.`} />
 
         <RailSection label="COMEX warehouse stocks" kicker="COMEX warehouse stocks · CME, daily">
           <ComexBlock state={comexState} />

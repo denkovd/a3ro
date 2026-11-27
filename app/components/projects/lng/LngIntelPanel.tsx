@@ -4,7 +4,7 @@
    Everything else is reference data from lib/lng/reference.ts. */
 import { useState } from "react";
 import {
-  CompanyList, Explorer, Headline, Kicker, PriceBlock, RailSection, RailShell, SourceLink as RailSourceLink, SourceList, Stat, pct, rowBtn,
+  CompanyList, Explorer, Headline, Kicker, MonthlyPriceBlock, useMonthlyPrice, RailSection, RailShell, SourceLink as RailSourceLink, SourceList, Stat, pct, rowBtn,
 } from "../commodity/RailKit";
 import ExportsBlock, { type Loadable } from "../commodity/ExportsBlock";
 import type { RailApi } from "../commodity/CommodityGlobe";
@@ -41,6 +41,7 @@ function HormuzBox({ focus }: { focus?: (id: string) => void }) {
 type Tab = "plants" | "exporters" | "importers";
 
 export default function LngIntelPanel({ narrow, selected, focus, close, exportsState }: RailApi & { exportsState: Loadable<CommodityExports> }) {
+  const price = useMonthlyPrice("lng_japan");
   const [tab, setTab] = useState<Tab>("plants");
   const colon = selected ? selected.indexOf(":") : -1;
   const kind = selected && colon > 0 ? selected.slice(0, colon) : null;
@@ -117,8 +118,8 @@ export default function LngIntelPanel({ narrow, selected, focus, close, exportsS
     <RailShell id="lng-intel-content" label="LNG intelligence" kicker="P·03 / LNG intelligence" title="Gas field → plant → ship"
       narrow={narrow} selectedKey={selected} onBack={close} backLabel="Back to LNG overview">
       {detail ? <section>{detail}</section> : <>
-        <PriceBlock symbol="NYMEX:JKM1!" kicker="Price · JKM (Japan/Korea Marker) futures" label="JKM LNG futures (NYMEX:JKM1!), delayed" accent={LG} rgb="111,168,255"
-          note="The Asian spot LNG benchmark, US dollars per MMBtu, delayed. Most Australian LNG is sold on long-term contracts linked to oil prices, so spot moves reach export earnings gradually." />
+        <MonthlyPriceBlock data={price} kicker="Price · LNG imported by Japan" accent={LG} per="per MMBtu" decimals={2}
+          note={"What Japan paid for LNG, in US dollars per million British thermal units. Like most Australian LNG, much of it is bought on long-term contracts linked to oil prices, so it moves more slowly than the Asian spot price (JKM)."} />
 
         <RailSection label="2026 shock">
           <HormuzBox focus={focus} />

@@ -39,6 +39,49 @@ export function Headline({ value, sub, color }: { value: string; sub?: string; c
   return <><p className="mt-3 font-mono text-3xl tabular-nums" style={{ color }}>{value}</p>{sub ? <p className="mt-1 text-[11px] text-[var(--ink-3)]">{sub}</p> : null}</>;
 }
 
+interface MonthlyData { label: string; unit: string | null; points: { month: string; value: number }[]; summary: { latest: { month: string; value: number }; ytd: number | null; low5y: { month: string; value: number }; high5y: { month: string; value: number }; avg5y: number } | null }
+const monthName = (m: string) => new Date(`${m}-01T00:00:00Z`).toLocaleDateString("en-AU", { month: "short", year: "numeric", timeZone: "UTC" });
+
+/** Load a World Bank monthly price series (#126). Shared so a panel can use the latest price elsewhere. */
+export function useMonthlyPrice(series: "iron_ore" | "copper" | "lng_japan") {
+  const [d, setD] = useState<MonthlyData | null | "error">(null);
+  useEffect(() => {
+    let live = true;
+    fetch(`/api/commodities/monthly/${series}`).then((r) => (r.ok ? r.json() : Promise.reject(r.status))).then((j) => live && setD(j)).catch(() => live && setD("error"));
+    return () => { live = false; };
+  }, [series]);
+  return d;
+}
+
+/** Monthly average price from the World Bank (#126): last month, change this year, 5-year range and a small chart.
+    Used where TradingView's free widgets won't show the futures price. */
+export function MonthlyPriceBlock({ data, kicker, accent, decimals = 0, prefix = "US$", per, note }: { data: MonthlyData | null | "error"; kicker: string; accent: string; decimals?: number; prefix?: string; per: string; note: ReactNode }) {
+  const fmt = (v: number) => `${prefix}${v.toLocaleString("en-AU", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
+  const s = data && data !== "error" ? data.summary : null;
+  const pts = data && data !== "error" ? data.points : [];
+  const W = 280, H = 64, lo = pts.length ? Math.min(...pts.map((p) => p.value)) : 0, hi = pts.length ? Math.max(...pts.map((p) => p.value)) : 1, span = hi - lo || 1;
+  const x = (i: number) => (i / Math.max(pts.length - 1, 1)) * W, y = (v: number) => 4 + (1 - (v - lo) / span) * (H - 8);
+  return <RailSection label="Price" kicker={kicker}>
+    {data === null ? <p className="mt-2 text-[11px] text-[var(--ink-3)]">Loading…</p>
+      : data === "error" || !s ? <p className="mt-2 text-[11px] text-[var(--ink-3)]">The monthly price isn&rsquo;t available right now.</p>
+      : <>
+        <dl className="mt-2 grid grid-cols-3 gap-3">
+          <Stat label={`Average, ${monthName(s.latest.month)}`} value={fmt(s.latest.value)} sub={per} />
+          <Stat label={`Since Dec ${Number(s.latest.month.slice(0, 4)) - 1}`} value={s.ytd === null ? "—" : `${s.ytd >= 0 ? "+" : "−"}${Math.abs(s.ytd * 100).toFixed(1)}%`} />
+          <Stat label="5-year range" value={`${fmt(s.low5y.value)}–${fmt(s.high5y.value).replace(prefix, "")}`} sub={`average ${fmt(s.avg5y)}`} />
+        </dl>
+        <svg viewBox={`0 0 ${W} ${H + 12}`} className="mt-2 h-auto w-full" role="img" aria-label={`Monthly average price, ${monthName(pts[0].month)} to ${monthName(s.latest.month)}: low ${fmt(s.low5y.value)} in ${monthName(s.low5y.month)}, high ${fmt(s.high5y.value)} in ${monthName(s.high5y.month)}, now ${fmt(s.latest.value)}`}>
+          <line x1="0" x2={W} y1={y(s.avg5y)} y2={y(s.avg5y)} stroke="var(--line)" strokeDasharray="3 3" />
+          <polyline points={pts.map((p, i) => `${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(" ")} fill="none" stroke={accent} strokeWidth="1.5" />
+          <circle cx={x(pts.length - 1)} cy={y(s.latest.value)} r="2.5" fill={accent} />
+          <text x="0" y={H + 10} fontSize="8" fill="var(--ink-3)">{monthName(pts[0].month)}</text>
+          <text x={W} y={H + 10} fontSize="8" fill="var(--ink-3)" textAnchor="end">{monthName(s.latest.month)}</text>
+        </svg>
+      </>}
+    <p className="mt-1 text-[10px] leading-relaxed text-[var(--ink-3)]">{note} Monthly averages, not live prices. Source: <a className="underline" href="https://www.worldbank.org/en/research/commodity-markets" target="_blank" rel="noreferrer">World Bank Commodity Price Data (The Pink Sheet)</a>, CC BY 4.0. Dashed line: 5-year average.</p>
+  </RailSection>;
+}
+
 /** Delayed TradingView price, with the line under it saying what it is. `rgb` is "r,g,b". */
 export function PriceBlock({ symbol, kicker, label, note, accent, rgb }: { symbol: string; kicker: string; label: string; note: string; accent: string; rgb: string }) {
   return <RailSection label="Price" kicker={kicker}>
