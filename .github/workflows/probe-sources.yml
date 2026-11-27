@@ -1,0 +1,43 @@
+# Temporary (28 Nov): inspect APRA, AEMO and ASIC files and check the GDP per capita card (#88-#91). Delete after use.
+name: probe-sources
+on:
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - name: Probe
+        run: |
+          npm i --silent https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz >/dev/null 2>&1
+          cat > probe.mjs <<'JS'
+          import * as XLSX from "xlsx";
+          const UA = { "User-Agent": "Mozilla/5.0 (A3RO-Intelligence probe)" };
+          const get = async (u) => { const r = await fetch(u, { headers: UA }); console.log("GET", u, r.status, r.headers.get("content-type")); return r; };
+          // 1) GDP per capita on the live site
+          try { const r = await get("https://a3ro.com.au/api/australia-watch/latest"); const j = await r.json(); const s = JSON.stringify(j); const i = s.indexOf("gdp_per_capita"); console.log("gdp_per_capita at", i, s.slice(i, i + 900)); } catch (e) { console.log("site err", e.message); }
+          // 2) APRA property exposures: find xlsx link
+          const findLinks = async (page, re) => { const h = await (await get(page)).text(); const links = [...h.matchAll(/href="([^"]+)"/g)].map((m) => m[1]).filter((l) => re.test(l)); console.log("links", JSON.stringify(links.slice(0, 12))); return links; };
+          const showBook = (buf, label, maxSheets = 40) => { const wb = XLSX.read(buf); console.log(label, "sheets:", JSON.stringify(wb.SheetNames.slice(0, maxSheets))); return wb; };
+          const dump = (wb, name, rows = 14, cols = 14) => { const ws = wb.Sheets[name]; if (!ws) return console.log("no sheet", name); const a = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null }); console.log(`--- ${name} (${a.length} rows)`); for (const r of a.slice(0, rows)) console.log(JSON.stringify(r.slice(0, cols)).slice(0, 600)); console.log("... last:", JSON.stringify(a[a.length - 1]?.slice(0, cols)).slice(0, 400)); return a; };
+          try {
+            const links = await findLinks("https://www.apra.gov.au/quarterly-authorised-deposit-taking-institution-statistics", /property.*\.xlsx|xlsx/i);
+            const l = links.find((x) => /property/i.test(x)); if (l) { const url = l.startsWith("http") ? l : "https://www.apra.gov.au" + l; const buf = await (await get(url)).arrayBuffer(); const wb = showBook(buf, "APRA");
+              for (const n of wb.SheetNames.slice(0, 40)) { const ws = wb.Sheets[n]; const a = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null }); const hit = a.findIndex((r) => r.some((c) => typeof c === "string" && /non-performing|90 or more days|past due/i.test(c))); if (hit >= 0) console.log("APRA sheet", n, "row", hit, JSON.stringify(a[hit].slice(0, 6)).slice(0, 300)); }
+              const tab = wb.SheetNames.find((n) => /tab.*1a|1a/i.test(n)) ?? wb.SheetNames[2]; dump(wb, tab, 12, 8);
+            }
+          } catch (e) { console.log("apra err", e.message); }
+          // 3) AEMO monthly price and demand CSV
+          try { const r = await get("https://aemo.com.au/aemo/data/nem/priceanddemand/PRICE_AND_DEMAND_202610_NSW1.csv"); const t = await r.text(); console.log("AEMO bytes", t.length, "lines", t.split("\n").length); console.log(t.split("\n").slice(0, 4).join("\n")); } catch (e) { console.log("aemo err", e.message); }
+          // 4) ASIC series 1 & 2 workbook
+          try {
+            const links = await findLinks("https://asic.gov.au/regulatory-resources/find-a-document/statistics/insolvency-statistics/insolvency-statistics-series-1-companies-entering-external-administration/", /\.xlsx/i);
+            const l = links[0]; if (l) { const url = l.startsWith("http") ? l : "https://asic.gov.au" + l; const buf = await (await get(url)).arrayBuffer(); const wb = showBook(buf, "ASIC"); for (const n of wb.SheetNames.filter((n) => /industry|1\.3|table/i.test(n)).slice(0, 3)) dump(wb, n, 10, 10); }
+          } catch (e) { console.log("asic err", e.message); }
+          JS
+          node probe.mjs
