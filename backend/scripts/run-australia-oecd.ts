@@ -45,9 +45,14 @@ async function main(): Promise<void> {
   // OECD throttles requests that come close together with a bare 500, and a quick retry extends
   // the throttle (24 Nov: the first series worked, the next two, 3 s later, failed every retry).
   // So: a minute between series, retries after 1 and 2 minutes, and room for all of it.
-  const report = await runAustraliaWatchCycle(db, {
+  const oecd = await runAustraliaWatchCycle(db, {
     sources: ["oecd_sdmx"], fetchImpl: plainFetch, oecdSpacingMs: 60_000, oecdRetryDelaysMs: [60_000, 120_000], budgetMs: 16 * 60_000,
   });
+  // APRA (mortgage stress, #89) and AEMO (power prices, #90) ride along: bigger files than the Vercel cron
+  // should carry. AEMO_MONTHS backfills (e.g. 72 once); otherwise the last 3 months are refreshed.
+  const aemoMonths = Number(process.env.AEMO_MONTHS) > 0 ? Number(process.env.AEMO_MONTHS) : undefined;
+  const other = await runAustraliaWatchCycle(db, { sources: ["apra_xlsx", "aemo_csv"], aemoMonths, budgetMs: 15 * 60_000 });
+  const report = { startedAt: oecd.startedAt, results: { ...oecd.results, ...other.results } };
   const entries = Object.entries(report.results);
   const degraded = entries.filter(([, r]) => r.error).map(([indicator]) => indicator);
   const allFailed = entries.length === 0 || degraded.length === entries.length;

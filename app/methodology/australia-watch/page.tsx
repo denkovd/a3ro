@@ -12,6 +12,8 @@ export const metadata: Metadata = {
 function source(d: AustraliaIndicatorDef): string {
   if (d.source === "abs_sdmx") return `ABS (${d.dataflow.split(",")[1]})`;
   if (d.source === "rba_csv") return `RBA table ${rbaTables(d.rba).map((t) => t.toUpperCase()).join(", ")}`;
+  if (d.source === "apra_xlsx") return "APRA (property exposures)";
+  if (d.source === "aemo_csv") return "AEMO (NEM prices)";
   return "OECD";
 }
 const ROLE = { leading: "Leading", coincident: "Coincident", lagging: "Lagging" } as const;
@@ -23,11 +25,13 @@ export default function AustraliaWatchMethodology() {
     <p>Australia Watch tracks the Australian economy from official statistics: {primary.length} main series grouped by theme, each shown against its own history, plus the Australia Pulse, a summary of which way the readings are moving. It describes what the data says now. It doesn&rsquo;t forecast, and nothing on it is a recommendation.</p>
 
     <h2 id="sources">Where the data comes from</h2>
-    <p>Everything is free, public data, fetched straight from the publisher once a day at 1:15pm Sydney time (after the ABS&rsquo;s 11:30am releases):</p>
+    <p>Everything is free, public data, fetched straight from the publisher every day: ABS and RBA series at 1:15pm Sydney time (after the ABS&rsquo;s 11:30am releases), OECD, APRA and AEMO series by a separate job twice a day:</p>
     <ul>
       <li><strong>Australian Bureau of Statistics</strong> through its Data API: inflation, jobs, housing approvals, spending, trade, wages and national accounts.</li>
       <li><strong>Reserve Bank of Australia</strong> statistical tables: the cash rate, bond yields, credit growth, the Australian dollar and commodity prices.</li>
       <li><strong>OECD</strong>: composite leading indicators and confidence indexes.</li>
+      <li><strong>APRA</strong> quarterly property exposures statistics: housing loans in arrears and non-performing.</li>
+      <li><strong>AEMO</strong> National Electricity Market data: wholesale power prices.</li>
     </ul>
     <p>When a source fails, the last stored figures stay on the page and the card says the refresh failed; nothing is filled in or guessed. Release dates come from the ABS release calendar where it publishes one, otherwise from each series&rsquo; usual delay.</p>
 

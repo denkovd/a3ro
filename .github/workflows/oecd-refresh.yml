@@ -5,6 +5,8 @@
 # confidence are fetched here, a minute apart with long retry waits,
 # instead of in the Vercel australia-watch cron (02:15 UTC).
 # Monthly data: one run a day is plenty.
+# Also fetches APRA mortgage stress (#89) and AEMO power prices (#90);
+# run by hand with aemo_months (e.g. 72) to backfill power prices.
 #
 # Required repo secret: DATABASE_URL (pooled Supabase string).
 # ──────────────────────────────────────────────────────────────
@@ -15,7 +17,12 @@ on:
     - cron: "0 3 * * *"
     # A second try each day: OECD's throttling comes and goes, and the data is monthly.
     - cron: "0 15 * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      aemo_months:
+        description: "AEMO months to fetch (default 3; 72 to backfill)"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -27,7 +34,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     env:
       # GHA runners often pick the unreachable Supabase AAAA first.
       NODE_OPTIONS: --dns-result-order=ipv4first
@@ -44,7 +51,8 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
-      - name: Fetch OECD series
+      - name: Fetch OECD, APRA and AEMO series
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          AEMO_MONTHS: ${{ inputs.aemo_months }}
         run: npx tsx scripts/run-australia-oecd.ts

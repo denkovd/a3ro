@@ -1,7 +1,7 @@
 import type { AustraliaFrequency, AustraliaIndicator, AustraliaRelease, AustraliaReleaseSchedule } from "../australia/types";
 import { AUSTRALIA_INDICATORS, AUSTRALIA_REGISTRY, type AustraliaReleaseFamily } from "../australia/registry";
 
-export const ABS_RELEASE_PAGES: Record<Exclude<AustraliaReleaseFamily, "rba" | "oecd">, string> = {
+export const ABS_RELEASE_PAGES: Record<Exclude<AustraliaReleaseFamily, "rba" | "oecd" | "apra" | "aemo">, string> = {
   cpi: "https://www.abs.gov.au/statistics/economy/price-indexes-and-inflation/consumer-price-index-australia/latest-release",
   labour: "https://www.abs.gov.au/statistics/labour/employment-and-unemployment/labour-force-australia/latest-release",
   approvals: "https://www.abs.gov.au/statistics/industry/building-and-construction/building-approvals-australia/latest-release",
@@ -85,8 +85,10 @@ export function parseAbsReleasePage(html: string, frequency: AustraliaFrequency,
 /** The RBA publishes release rules rather than a dated calendar; freshness for RBA series uses the per-indicator lag. */
 export const RBA_RELEASE_PAGE = "https://www.rba.gov.au/schedules-events/frequency-statistical-releases.html";
 type AbsFamily = keyof typeof ABS_RELEASE_PAGES;
-const isAbsFamily = (f: AustraliaReleaseFamily): f is AbsFamily => f !== "rba" && f !== "oecd";
+const isAbsFamily = (f: AustraliaReleaseFamily): f is AbsFamily => f !== "rba" && f !== "oecd" && f !== "apra" && f !== "aemo";
 /** The OECD publishes CLI timing on its own pages rather than a machine-readable calendar. */
+const APRA_RELEASE_PAGE = "https://www.apra.gov.au/quarterly-authorised-deposit-taking-institution-statistics";
+const AEMO_RELEASE_PAGE = "https://aemo.com.au/energy-systems/electricity/national-electricity-market-nem/data-nem/aggregated-data";
 const OECD_RELEASE_PAGE = "https://www.oecd.org/en/data/indicators/composite-leading-indicator-cli.html";
 
 const unavailable = (sourceUrl: string): AustraliaReleaseSchedule => ({ sourceUrl, verifiedAt: null, latestReferencePeriod: null, latest: null, next: null, nextPublication: null, health: "unavailable" });
@@ -113,7 +115,7 @@ export async function fetchAustraliaReleaseSchedules(opts: { fetchImpl?: typeof 
   })));
   const parsed = new Map<string, AustraliaReleaseSchedule>();
   const scheduleFor = (family: AustraliaReleaseFamily, frequency: AustraliaFrequency): AustraliaReleaseSchedule => {
-    if (!isAbsFamily(family)) return unavailable(family === "oecd" ? OECD_RELEASE_PAGE : RBA_RELEASE_PAGE);
+    if (!isAbsFamily(family)) return unavailable(family === "oecd" ? OECD_RELEASE_PAGE : family === "apra" ? APRA_RELEASE_PAGE : family === "aemo" ? AEMO_RELEASE_PAGE : RBA_RELEASE_PAGE);
     const cacheKey = `${family}:${frequency}`;
     const cached = parsed.get(cacheKey);
     if (cached) return cached;

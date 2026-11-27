@@ -9,12 +9,12 @@
 export type AustraliaFrequency = "monthly" | "quarterly";
 export type AustraliaPillar = "stress" | "financial" | "housing" | "labour" | "demand" | "external" | "inflation" | "composite";
 export type AustraliaRole = "leading" | "coincident" | "lagging";
-export type AustraliaSourceKind = "abs_sdmx" | "rba_csv" | "oecd_sdmx";
+export type AustraliaSourceKind = "abs_sdmx" | "rba_csv" | "oecd_sdmx" | "apra_xlsx" | "aemo_csv";
 /** What the chart, z-score and direction are computed on. */
 export type AustraliaTransform = "level" | "yoy_from_level";
 /** Primary series appear in the main grid; comparison series sit lower on the page and are excluded from any summary. */
 export type AustraliaSection = "primary" | "comparison";
-export type AustraliaReleaseFamily = "cpi" | "labour" | "rba" | "approvals" | "job_vacancies" | "household_spending" | "trade" | "ppi" | "import_prices" | "wpi" | "lending" | "dwelling_values" | "national_accounts" | "oecd";
+export type AustraliaReleaseFamily = "cpi" | "labour" | "rba" | "approvals" | "job_vacancies" | "household_spending" | "trade" | "ppi" | "import_prices" | "wpi" | "lending" | "dwelling_values" | "national_accounts" | "oecd" | "apra" | "aemo";
 /** How the headline value is printed. */
 export type AustraliaDisplay = "percent" | "percentage_points" | "index" | "hours_millions" | "count" | "thousands" | "aud_millions" | "aud_thousands";
 
@@ -77,7 +77,11 @@ export interface AbsIndicatorDef extends AustraliaIndicatorBase { source: "abs_s
 export interface RbaIndicatorDef extends AustraliaIndicatorBase { source: "rba_csv"; rba: RbaSpec }
 /** OECD SDMX: same SDMX-CSV shape as the ABS. `dataflow` ends in "," to request the latest version. */
 export interface OecdIndicatorDef extends AustraliaIndicatorBase { source: "oecd_sdmx"; dataflow: string; key: string }
-export type AustraliaIndicatorDef = AbsIndicatorDef | RbaIndicatorDef | OecdIndicatorDef;
+/** APRA quarterly ADI property exposures workbook (#89): a row of Table 1b as a share of another row. */
+export interface ApraIndicatorDef extends AustraliaIndicatorBase { source: "apra_xlsx"; numerator: RegExp; denominator: RegExp }
+/** AEMO NEM price and demand files (#90): demand-weighted monthly average spot price across the five regions. */
+export interface AemoIndicatorDef extends AustraliaIndicatorBase { source: "aemo_csv" }
+export type AustraliaIndicatorDef = AbsIndicatorDef | RbaIndicatorDef | OecdIndicatorDef | ApraIndicatorDef | AemoIndicatorDef;
 
 export const RBA_TABLE_URL = (table: string) => `https://www.rba.gov.au/statistics/tables/csv/${table}-data.csv`;
 const F11 = "f1.1", F21 = "f2.1", F3 = "f3", F6 = "f6", F111 = "f11.1", I2 = "i2", D1 = "d1";
@@ -288,6 +292,37 @@ export const AUSTRALIA_REGISTRY = {
     note: "Output per person after inflation. Total GDP can grow while GDP per capita falls when population grows faster than the economy, so this shows whether the average Australian's share of output is rising or shrinking. Quarterly figures are dollars of output per person in that quarter (chain volume).",
   },
 
+  housing_npl_share: {
+    title: "Non-performing housing loans — share of all housing loans", label: "Mortgages not being repaid", shortLabel: "Non-performing mortgages",
+    subtitle: "Quarterly · banks and other lenders (ADIs) · APRA",
+    pillar: "stress", role: "lagging", section: "primary", order: 1510,
+    source: "apra_xlsx", numerator: /^non-performing loans$/i, denominator: /^total credit out?standing$/i,
+    frequency: "quarterly", adjustment: "Original", unit: "Percent", unitMultiplier: 0, transform: "level",
+    rollingPeriods: 40, baselineYears: 10, minimumBaseline: 12, releaseLagDays: 80, releaseFamily: "apra",
+    growthPolarity: 0, inflationPolarity: 0, display: "percent", decimals: 2,
+    note: "Housing loans 90 or more days behind, or unlikely to be repaid in full, as a share of all housing loans held by banks and other deposit-takers. It rises after rates go up and as unemployment rises, and confirms stress rather than predicting it. APRA's quarterly property exposures statistics; series from March 2019, when APRA's reporting changed.",
+  },
+  housing_arrears_share: {
+    title: "Housing loans 30–89 days past due — share of all housing loans", label: "Mortgages falling behind", shortLabel: "Mortgages 30–89 days late",
+    subtitle: "Quarterly · banks and other lenders (ADIs) · APRA",
+    pillar: "stress", role: "coincident", section: "primary", order: 1520,
+    source: "apra_xlsx", numerator: /^loans 30-89 days past due$/i, denominator: /^total credit out?standing$/i,
+    frequency: "quarterly", adjustment: "Original", unit: "Percent", unitMultiplier: 0, transform: "level",
+    rollingPeriods: 40, baselineYears: 10, minimumBaseline: 12, releaseLagDays: 80, releaseFamily: "apra",
+    growthPolarity: 0, inflationPolarity: 0, display: "percent", decimals: 2,
+    note: "Borrowers one to three months behind on their mortgage: the early stage of housing stress, before loans become non-performing. Not seasonally adjusted, so it tends to rise after Christmas.",
+  },
+  power_price_nem: {
+    title: "Wholesale electricity price — NEM monthly average", label: "Wholesale power price", shortLabel: "Power price",
+    subtitle: "Monthly · demand-weighted average of the five NEM regions · AEMO",
+    pillar: "stress", role: "coincident", section: "primary", order: 1530,
+    source: "aemo_csv",
+    frequency: "monthly", adjustment: "Original", unit: "AUD per MWh", unitMultiplier: 0, transform: "level",
+    rollingPeriods: 3, baselineYears: 5, minimumBaseline: 24, releaseLagDays: 2, releaseFamily: "aemo",
+    growthPolarity: 0, inflationPolarity: 0, display: "count", decimals: 0,
+    note: "The average spot price generators were paid in the National Electricity Market (Queensland, NSW and the ACT, Victoria, South Australia and Tasmania), weighted by demand. Wholesale costs are roughly a third of a household power bill and feed into retail prices with a lag, so a sustained rise points to higher bills and inflation later. Western Australia and the Northern Territory are not in the NEM. Prices are seasonal: higher in winter and in heatwaves.",
+  },
+
   // ── Financial conditions (RBA statistical tables) ──────────────────────────
   cash_rate_target: {
     title: "Cash rate target (monthly average)", label: "Cash rate target", shortLabel: "Cash rate",
@@ -453,6 +488,12 @@ export function absSpec(indicator: AustraliaIndicator): AbsIndicatorDef {
 export function oecdSpec(indicator: AustraliaIndicator): OecdIndicatorDef {
   const def: AustraliaIndicatorDef = AUSTRALIA_REGISTRY[indicator];
   if (def.source !== "oecd_sdmx") throw new Error(`${indicator} is not an OECD series`);
+  return def;
+}
+
+export function apraSpec(indicator: AustraliaIndicator): ApraIndicatorDef {
+  const def: AustraliaIndicatorDef = AUSTRALIA_REGISTRY[indicator];
+  if (def.source !== "apra_xlsx") throw new Error(`${indicator} is not an APRA series`);
   return def;
 }
 
