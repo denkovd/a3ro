@@ -6,7 +6,7 @@
      - dividend_signal_runs (AI Dividend sources)
    Cron run history lives in cronRunRepo.ts.
 ──────────────────────────────────────────────────────────────── */
-import { AUSTRALIA_REGISTRY, isAustraliaIndicator } from "../australia/registry";
+import { AUSTRALIA_REGISTRY, isAustraliaIndicator, type AustraliaIndicatorDef } from "../australia/registry";
 import { estimateFreshness } from "../australia/watch";
 import type { Queryable } from "./db";
 import { redactErrorMessage } from "./errorLogRepo";
@@ -46,8 +46,19 @@ export function ageFreshness(lastOkAt: string | null, now = new Date(), expected
  * Flags the newest change when it is far outside the series' usual moves:
  * more than `factor` times the median absolute change of the previous `window` changes.
  * Values are oldest first. Returns null when there's no jump or too little history.
+ * A series that moves in fixed steps (`step`, e.g. the cash rate's 0.25) is flat between decisions, so its median
+ * move is near zero and every decision would be flagged; it is flagged only for a move of more than two steps.
  */
-export function suddenJump(values: number[], window = 24, factor = 4): { change: number; typical: number } | null {
+export function suddenJump(
+  values: number[],
+  { window = 24, factor = 4, step }: { window?: number; factor?: number; step?: number } = {},
+): { change: number; typical: number; step?: number } | null {
+  if (step !== undefined && step > 0) {
+    if (values.length < 2) return null;
+    const last = values[values.length - 1] - values[values.length - 2];
+    // Small tolerance so a stored 0.5 made of float noise isn't read as more than two 0.25 steps.
+    return Math.abs(last) > 2 * step + 1e-9 ? { change: last, typical: step, step } : null;
+  }
   if (values.length < 8) return null;
   const changes = values.slice(1).map((v, i) => v - values[i]);
   const last = changes[changes.length - 1];
@@ -111,9 +122,12 @@ async function australiaHealth(db: Queryable, now: Date): Promise<{ series: Seri
       lastFetchAt: iso(run?.finished_at), lastFetchOk: run ? String(run.health) === "healthy" : null, error: clean(run?.error),
       note: `${def.frequency}, judged against an estimated ${def.releaseLagDays}-day release lag`,
     });
-    const jump = o ? suddenJump(o.values) : null;
+    const jump = o ? suddenJump(o.values, { step: (def as AustraliaIndicatorDef).stepSize }) : null;
+    const moved = jump ? `${latest} moved ${jump.change > 0 ? "+" : ""}${round(jump.change)}` : "";
     if (jump && latest) issues.push({ kind: "jump", where: `Australia Watch · ${def.label}`, at: null,
-      message: `${latest} moved ${jump.change > 0 ? "+" : ""}${round(jump.change)} vs a typical move of ${round(jump.typical)}. Check it's real before it feeds the Pulse.` });
+      message: `${jump.step !== undefined
+        ? `${moved}, more than two ${round(jump.step)} steps in one ${def.frequency === "quarterly" ? "quarter" : "month"}`
+        : `${moved} vs a typical move of ${round(jump.typical)}`}. Check it's real before it feeds the Pulse.` });
   }
   for (const g of groupRevisions(revisions.rows.map((r) => ({
     indicator: String(r.indicator), period: String(r.reference_period), from: Number(r.previous_value), to: Number(r.next_value), at: iso(r.detected_at) ?? "",

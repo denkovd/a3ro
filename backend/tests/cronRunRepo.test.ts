@@ -71,6 +71,18 @@ test("suddenJump flags only moves far outside the usual range", () => {
   assert.equal(suddenJump([5, 5, 5, 5, 5, 5, 5, 5, 9]), null, "flat series has no typical move to compare against");
 });
 
+test("suddenJump judges step series (cash rate) against the step, not the near-zero usual move", () => {
+  // RBA F1.1 monthly averages through 2026: a hike effective about 30 Sep shows as Sep +0.01, Oct +0.24.
+  const cash = [3.85, 3.85, 3.96, 4.10, 4.31, 4.35, 4.35, 4.35, 4.36, 4.60];
+  assert.ok(suddenJump(cash), "without a step the 25 bp hike is flagged (usual move ~0.005)");
+  assert.equal(suddenJump(cash, { step: 0.25 }), null, "one decision is normal");
+  assert.equal(suddenJump([...cash, 5.1], { step: 0.25 }), null, "two steps (50 bp) in a month is still normal");
+  const big = suddenJump([...cash, 5.35], { step: 0.25 });
+  assert.ok(big && Math.abs(big.change - 0.75) < 1e-9 && big.step === 0.25, "three steps in a month is flagged");
+  assert.ok(suddenJump([...cash, 3.6], { step: 0.25 }), "large cuts are flagged too");
+  assert.equal(suddenJump([4.6], { step: 0.25 }), null, "no change to judge yet");
+});
+
 test("revisions group per indicator per day, keeping the largest change", () => {
   const at = "2026-11-20T02:15:00.000Z";
   const g = groupRevisions([

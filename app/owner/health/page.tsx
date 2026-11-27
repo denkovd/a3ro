@@ -105,7 +105,7 @@ export default async function DataHealthPage() {
       </div>
     </OpsSection>
 
-    <OpsSection title="Data issues" note="Sudden jumps (newest change over 4× the series' usual move), revisions in the last 30 days, disabled sources, and cron errors from the error log in the last 7 days.">
+    <OpsSection title="Data issues" note="Sudden jumps (newest change over 4× the series' usual move; for the cash rate, a move of more than two 25 bp steps in a month), revisions in the last 30 days, disabled sources, and cron errors from the error log in the last 7 days.">
       <OpsTable cols={["Kind", "Where", "What", "When"]} rows={[
         ...health.issues.map((i) => [i.kind, <span key="w" className="font-sans">{i.where}</span>, <Wrap key="m">{i.message}</Wrap>, when(i.at)]),
         ...recentCronErrors.map((e) => ["fetch error", <span key="w" className="font-mono">{e.source}</span>, <Wrap key="m">{e.count > 1 ? `${e.message} (×${e.count})` : e.message}</Wrap>, when(e.lastSeen)]),

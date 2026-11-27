@@ -63,6 +63,10 @@ interface AustraliaIndicatorBase {
   inflationPolarity: 1 | -1 | 0;
   /** Shown as a tile on the landing card and Macro Horizon (kept to a handful). */
   summaryTile?: boolean;
+  /** The series moves in steps of this size (RBA decisions move the cash rate 0.25). Data health then treats a move of
+   *  up to two steps in one period as normal and flags only larger ones, instead of comparing against the usual
+   *  month-to-month move, which is near zero for a series that is flat between decisions. */
+  stepSize?: number;
   /** How the headline value is printed (default "percent"). */
   display?: AustraliaDisplay;
   decimals?: number;
@@ -292,7 +296,7 @@ export const AUSTRALIA_REGISTRY = {
     source: "rba_csv", rba: { kind: "series", ref: { table: F11, seriesId: "FIRMMCRT" } },
     frequency: "monthly", adjustment: "Original", unit: "Percent", unitMultiplier: null, transform: "level",
     rollingPeriods: 132, baselineYears: 10, minimumBaseline: 60, releaseLagDays: 5, releaseFamily: "rba",
-    summaryTile: true, growthPolarity: -1, inflationPolarity: -1, decimals: 2,
+    summaryTile: true, growthPolarity: -1, inflationPolarity: -1, decimals: 2, stepSize: 0.25,
     note: "Policy setting, not a forecast. A monthly average, so a mid-month change shows partly in that month.",
   },
   policy_expectations_3y_cash: {
