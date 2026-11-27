@@ -61,6 +61,10 @@ export interface CryptoSnapshot {
   baskets?: import("./baskets").BasketSnapshot[];
   /** Privacy top 10 (#87): GitHub commit activity per project id. Open data. */
   privacyDev?: Record<string, import("./privacy").PrivacyDev>;
+  /** Premium (market data): every protocol with a token, ranked by market cap against fees / revenue (#124). */
+  leaderboard?: import("./leaderboard").LeaderRow[];
+  /** Open data: the apps earning the most fees on Solana and on Bitcoin (#124). */
+  chainApps?: { solana: import("./leaderboard").ChainApp[]; bitcoin: import("./leaderboard").ChainApp[] };
 }
 
 type Json = unknown;

@@ -19,6 +19,7 @@ import { buildSnapshot, fetchInputs, nearMatches, type Fetcher } from "../src/cr
 import { fetchMarketInputs } from "../src/crypto/coingecko";
 import { BASKETS, buildBasket, fetchBasketInputs } from "../src/crypto/baskets";
 import { fetchPrivacyDev } from "../src/crypto/privacy";
+import { buildLeaderboard, chainApps, fetchLeaderboardInputs } from "../src/crypto/leaderboard";
 
 /** GitHub REST (public repos). The Action's GITHUB_TOKEN lifts the rate limit if present. */
 const ghGet = async (path: string) => {
@@ -48,6 +49,15 @@ async function main(): Promise<void> {
   const snap = buildSnapshot({ ...inputs, markets: market.markets, global: market.global, mcapCharts: market.mcapCharts }, new Date(), CRYPTO_PROJECTS, [...problems, ...market.problems, ...basketIn.problems]);
   snap.baskets = BASKETS.map((b) => buildBasket(b.key, b.label, basketIn.markets[b.key], basketIn.charts, market.mcapCharts.solana, market.mcapCharts.bitcoin, b.exclude, b.size))
     .filter((b): b is NonNullable<typeof b> => b !== null);
+  const lb = await fetchLeaderboardInputs(get);
+  snap.problems.push(...lb.problems);
+  snap.leaderboard = buildLeaderboard(inputs.feesList, lb.revenueList, lb.protocols, lb.lite, snap.projects);
+  snap.chainApps = { solana: chainApps(inputs.feesList, lb.revenueList, "solana"), bitcoin: chainApps(inputs.feesList, lb.revenueList, "bitcoin") };
+  const x = (v: number | null) => (v === null ? "—" : `${v.toFixed(1)}x`);
+  console.log(`Leaderboard (${snap.leaderboard.length}) by P/F: ${snap.leaderboard.slice(0, 20).map((r) => `${r.symbol ?? r.name} ${x(r.priceToFees)}`).join(" · ")}`);
+  console.log(`  by P/R: ${[...snap.leaderboard].filter((r) => r.priceToRevenue !== null).sort((a, b) => a.priceToRevenue! - b.priceToRevenue!).slice(0, 20).map((r) => `${r.symbol ?? r.name} ${x(r.priceToRevenue)}`).join(" · ")}`);
+  console.log(`Solana apps: ${snap.chainApps.solana.map((a) => `${a.name} ${fmt(a.fees30d)}`).join(" · ")}`);
+  console.log(`Bitcoin apps: ${snap.chainApps.bitcoin.map((a) => `${a.name} ${fmt(a.fees30d)}`).join(" · ")}`);
   const privacy = await fetchPrivacyDev(ghGet);
   snap.privacyDev = privacy.dev;
   snap.problems.push(...privacy.problems);

@@ -158,3 +158,35 @@ test("privacy dev activity: sums weeks and retries GitHub's 202", async () => {
   const miss = await fetchPrivacyDev(async () => ({ status: 404, body: null }), PRIVACY_PROJECTS.slice(0, 1), async () => {});
   assert.equal(miss.problems.length, 1);
 });
+
+import { buildLeaderboard, chainApps, chainTotal } from "../src/crypto/leaderboard";
+
+const FEES = { protocols: [
+  { defillamaId: "1", name: "Uniswap V3", parentProtocol: "parent#uniswap", protocolType: "protocol", category: "Dexs", total30d: 30e6, breakdown30d: { ethereum: { v3: 30e6 } } },
+  { defillamaId: "2", name: "Uniswap V2", parentProtocol: "parent#uniswap", protocolType: "protocol", category: "Dexs", total30d: 2e6, breakdown30d: { ethereum: { v2: 2e6 } } },
+  { defillamaId: "3", name: "pump.fun", parentProtocol: "parent#pump", protocolType: "protocol", category: "Launchpad", total30d: 40e6, breakdown30d: { solana: { a: 40e6 } } },
+  { defillamaId: "4", name: "Tether", protocolType: "protocol", category: "Stablecoin Issuer", total30d: 500e6, breakdown30d: { solana: { a: 50e6 } } },
+  { defillamaId: "5", name: "Tiny", protocolType: "protocol", category: "Dexs", total30d: 0.5e6 },
+  { defillamaId: "6", name: "Lido", protocolType: "protocol", category: "Liquid Staking", total30d: 50e6 },
+  { defillamaId: "7", name: "Ethereum", protocolType: "chain", category: "Chain", total30d: 20e6 },
+] };
+const REV = { protocols: [{ defillamaId: "1", total30d: 6e6 }, { defillamaId: "3", total30d: 28e6, breakdown30d: { solana: { a: 28e6 } } }, { defillamaId: "6", total30d: 5e4 }] };
+const PROTOCOLS = [{ id: "6", name: "Lido", symbol: "LDO", mcap: 200e6 }, { id: "5", name: "Tiny", symbol: "TNY", mcap: 900e6 }];
+const LITE = { parentProtocols: [{ id: "parent#uniswap", name: "Uniswap", symbol: "UNI", mcap: 3e9, gecko_id: "uniswap" }, { id: "parent#pump", name: "Pump", symbol: "PUMP", mcap: 950e6, gecko_id: "pump-fun" }] };
+
+test("leaderboard: groups by token, applies the floors, ranks best first", () => {
+  const rows = buildLeaderboard(FEES, REV, PROTOCOLS, LITE);
+  assert.deepEqual(rows.map((r) => r.symbol), ["LDO", "PUMP", "UNI"]);
+  const uni = rows.find((r) => r.symbol === "UNI")!;
+  assert.equal(uni.fees30d, 32e6);
+  assert.ok(Math.abs(uni.priceToFees - 3e9 / (32e6 * 365 / 30)) < 1e-9);
+  assert.equal(rows.find((r) => r.symbol === "LDO")!.priceToRevenue, null, "revenue under the floor");
+  assert.ok(rows.every((r) => r.name !== "Tether" && r.symbol !== "TNY"));
+});
+
+test("chain apps: per-chain fees, issuers left out", () => {
+  assert.equal(chainTotal(FEES.protocols[0] as never, "ethereum"), 30e6);
+  const sol = chainApps(FEES, REV, "solana");
+  assert.deepEqual(sol.map((a) => a.name), ["pump.fun"]);
+  assert.equal(sol[0].revenue30d, 28e6);
+});
