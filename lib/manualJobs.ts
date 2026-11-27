@@ -21,6 +21,18 @@ export interface ManualJob {
 
 export const MANUAL_JOBS: readonly ManualJob[] = [
   {
+    id: "crypto-solana-basket",
+    title: "Review the Solana basket's token list",
+    steps: [
+      "Open the Crypto page (Premium valuation section) and check the Solana top 10 members.",
+      "Add any new Solana-native token now in the top 10 by market cap (CoinGecko id) and drop dead ones; skip stablecoins, staked SOL and tokens that started on other chains.",
+      "Also check the 16 scorecard projects still match DefiLlama (the daily job's log lists any misses).",
+    ],
+    where: "backend/src/crypto/baskets.ts (SOLANA_NATIVE), backend/src/crypto/projects.ts",
+    everyMonths: 1,
+    lastCheckedInCode: "2026-11-27",
+  },
+  {
     id: "newsletter-signups",
     title: "Copy newsletter sign-ups into Loops",
     steps: [
