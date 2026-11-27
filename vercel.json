@@ -1,4 +1,5 @@
 {
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':(exclude)module5-scan-pipeline/data'",
   "crons": [
     { "path": "/api/cron/ingest", "schedule": "0 6 * * *" },
     { "path": "/api/cron/australia-watch", "schedule": "15 2 * * *" },
