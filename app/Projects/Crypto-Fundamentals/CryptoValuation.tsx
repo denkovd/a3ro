@@ -119,7 +119,7 @@ export default function CryptoValuation({ meta }: { meta: ValuationRowMeta[] }) 
       </div>
       {s.baskets?.length ? <div className="mt-4 flex flex-col gap-3">
         <h3 className="landing-kicker">High-beta baskets</h3>
-        <p className="max-w-3xl text-xs leading-relaxed text-[var(--ink-3)]">The ten largest tokens in each group, held in equal amounts, against SOL and BTC. Beta 2 means the basket has tended to move twice as far as the benchmark on the same day, both up and down; R² shows how much of its movement the benchmark explains. Stablecoins and staked or wrapped tokens are left out.</p>
+        <p className="max-w-3xl text-xs leading-relaxed text-[var(--ink-3)]">The ten largest Solana tokens and the five largest memecoins, each held in equal amounts, against SOL and BTC. The memecoin basket is a gauge of speculative appetite, not a trade idea: most memecoins lose almost all their value. Beta 2 means the basket has tended to move twice as far as the benchmark on the same day, both up and down; R² shows how much of its movement the benchmark explains. Stablecoins and staked or wrapped tokens are left out.</p>
         <div className="grid gap-4 md:grid-cols-2">{s.baskets.map((b) => <BasketCard key={b.key} b={b} />)}</div>
         <p className="text-[10px] text-[var(--ink-3)]">Still to come: how new memecoins perform over their first 40 days (needs launch-by-launch data).</p>
       </div> : null}

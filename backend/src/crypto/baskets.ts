@@ -133,8 +133,10 @@ export const SOLANA_NATIVE = [
 ];
 
 export const BASKETS = [
-  { key: "solana" as const, label: "Solana top 10", ids: SOLANA_NATIVE, category: null, exclude: ["solana"] },
-  { key: "memes" as const, label: "Memecoin top 10", ids: null, category: "meme-token", exclude: [] as string[] },
+  { key: "solana" as const, label: "Solana top 10", ids: SOLANA_NATIVE, category: null, exclude: ["solana"], size: 10 },
+  /** Kept small on purpose (Daniel, 27 Nov): memecoins are rarely a good trade, this is a sentiment gauge.
+      CoinDesk's CDMEME (50 coins) and MarketVector's MEMECOIN need a licence to show, so we build our own. */
+  { key: "memes" as const, label: "Memecoin top 5", ids: null, category: "meme-token", exclude: [] as string[], size: 5 },
 ];
 
 /** Category lists and a year of daily prices per member. Spaced for CoinGecko's public limits. */
@@ -153,7 +155,7 @@ export async function fetchBasketInputs(get: Fetcher, spacingMs = 7000): Promise
     const query = b.ids ? `ids=${b.ids.join(",")}` : `category=${b.category}`;
     markets[b.key] = await call(`${b.label} list`, `${GECKO}/coins/markets?vs_currency=usd&${query}&order=market_cap_desc&per_page=40&page=1`);
     const ids = (Array.isArray(markets[b.key]) ? markets[b.key] as Record<string, unknown>[] : [])
-      .filter((m) => isBasketCandidate(m, b.exclude)).sort((a, c) => (Number(c.market_cap) || 0) - (Number(a.market_cap) || 0)).slice(0, 10).map((m) => String(m.id));
+      .filter((m) => isBasketCandidate(m, b.exclude)).sort((a, c) => (Number(c.market_cap) || 0) - (Number(a.market_cap) || 0)).slice(0, b.size).map((m) => String(m.id));
     for (const id of ids) if (!charts[id]) charts[id] = await call(`${id} prices`, `${GECKO}/coins/${id}/market_chart?vs_currency=usd&days=365&interval=daily`);
   }
   return { markets, charts, problems };

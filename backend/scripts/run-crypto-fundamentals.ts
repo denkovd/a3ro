@@ -46,7 +46,7 @@ async function main(): Promise<void> {
   const market = await fetchMarketInputs(get);
   const basketIn = await fetchBasketInputs(get);
   const snap = buildSnapshot({ ...inputs, markets: market.markets, global: market.global, mcapCharts: market.mcapCharts }, new Date(), CRYPTO_PROJECTS, [...problems, ...market.problems, ...basketIn.problems]);
-  snap.baskets = BASKETS.map((b) => buildBasket(b.key, b.label, basketIn.markets[b.key], basketIn.charts, market.mcapCharts.solana, market.mcapCharts.bitcoin, b.exclude))
+  snap.baskets = BASKETS.map((b) => buildBasket(b.key, b.label, basketIn.markets[b.key], basketIn.charts, market.mcapCharts.solana, market.mcapCharts.bitcoin, b.exclude, b.size))
     .filter((b): b is NonNullable<typeof b> => b !== null);
   const privacy = await fetchPrivacyDev(ghGet);
   snap.privacyDev = privacy.dev;
