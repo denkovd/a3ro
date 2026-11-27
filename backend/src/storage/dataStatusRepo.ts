@@ -16,7 +16,7 @@ export const MODULE_DATA_JOBS: Readonly<Record<string, readonly string[]>> = {
   macro: ["macro"],
   regime: ["macro"],
   gold: ["ingest"],
-  btc: ["btc", "ingest"],
+  btc: ["btc"],
   crypto: ["crypto-fundamentals"],
 };
 

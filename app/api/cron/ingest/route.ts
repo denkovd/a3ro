@@ -29,7 +29,7 @@
 import {
   createDb, runIngestionCycle, runBaselineCycle, runGateSpreadCycle,
   runSeasonalCycle, runMacroCycle, runPositioningCycle, runScoreCycle,
-  runGoldCycle, runGoldFlowCycle, runBtcCycle, runBtcFlowCycle,
+  runGoldCycle, runGoldFlowCycle,
 } from "@a3ro/oil-backend";
 import type { MacroCycleReport } from "@a3ro/oil-backend";
 import { requireCronAuth } from "../../_lib/cronAuth";
@@ -40,7 +40,7 @@ export const runtime = "nodejs";
 // Never statically pre-render at build time — this route runs a full
 // ingestion against the live DB. Runtime-only (fixes build timeouts).
 export const dynamic = "force-dynamic";
-// The price cycle plus baselines/seasonal/macro/positioning/gold/btc/dividend
+// The price cycle plus baselines/seasonal/macro/positioning/gold/dividend
 // need a five-minute budget for the independent source cycles.
 export const maxDuration = 300;
 /** No step starts after this. */
@@ -124,8 +124,7 @@ export const GET = withErrorLog("cron:ingest", async function GET(request: Reque
     const scores = await step("scores", () => runScoreCycle(db));
     const gold = await step("gold", () => runGoldCycle(db, { macroPanel }));
     const goldFlow = await step("goldFlow", () => runGoldFlowCycle(db));
-    const btc = await step("btc", () => runBtcCycle(db));
-    const btcFlow = await step("btcFlow", () => runBtcFlowCycle(db));
+    // BTC (price snapshot and ETF/venue flows) runs in /api/cron/btc at 21:45 UTC (#122);
     // Australia Watch has its own cron and budget at 02:15 UTC.
     const dividend = await step("dividend", () => runDividendCycle(db));
 
@@ -139,8 +138,6 @@ export const GET = withErrorLog("cron:ingest", async function GET(request: Reque
       scores,
       gold,
       goldFlow,
-      btc,
-      btcFlow,
       dividend,
       timings,
       // Read by cron_runs (#47): a skipped step makes the run "degraded", not silently ok.
