@@ -1,0 +1,46 @@
+# ──────────────────────────────────────────────────────────────
+# World Bank Pink Sheet (roadmap #126). Monthly average prices for
+# iron ore, copper and LNG (Japan), CC BY 4.0. The World Bank posts
+# the update in the first few business days of each month, so this
+# runs on the 3rd, 6th and 10th (re-runs are harmless).
+#
+# Required repo secret: DATABASE_URL (pooled Supabase string).
+# ──────────────────────────────────────────────────────────────
+name: pink-sheet
+
+on:
+  schedule:
+    - cron: "20 3 3,6,10 * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pink-sheet
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NODE_OPTIONS: --dns-result-order=ipv4first
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Download the Pink Sheet and save the series
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PINK_SHEET_URL: ${{ vars.PINK_SHEET_URL }}
+        run: npx tsx scripts/run-pink-sheet.ts

@@ -28,6 +28,7 @@ export const CRON_JOBS: CronJob[] = (vercel.crons ?? []).map((c) => {
 export const GITHUB_JOBS: CronJob[] = [
   { job: "australia-oecd", path: ".github/workflows/oecd-refresh.yml", schedule: "0 3,15 * * *", everyHours: 12, label: "Twice daily, 03:00 and 15:00 UTC" },
   { job: "crypto-fundamentals", path: ".github/workflows/crypto-fundamentals.yml", schedule: "40 1 * * *", everyHours: 24, label: "Daily, 01:40 UTC" },
+  { job: "pink-sheet", path: ".github/workflows/pink-sheet.yml", schedule: "20 3 3,6,10 * *", everyHours: 24 * 35, label: "Monthly (3rd, 6th, 10th), 03:20 UTC" },
 ].map((j) => ({ ...j, label: `${j.label} · GitHub` }));
 
 /** Everything Data health checks: the Vercel crons, then the GitHub jobs. */
