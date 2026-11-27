@@ -61,7 +61,9 @@ export const MODULE_ACCESS: readonly ModuleAccess[] = [
   { id: "gold", label: "Gold", level: "premium", data: "market", pages: ["/Projects/Gold-Tracker"], apis: ["/api/gold"],
     preview: "Follows gold across its main trading hubs, with prices, COMEX vault stocks and the macro drivers behind the moves." },
   { id: "ops", label: "Admin tools", level: "admin", data: "open", pages: ["/owner"], apis: ["/api/owner"], hidden: true },
-  { id: "btc", label: "BTC", level: "premium", data: "market", pages: ["/Projects/BTC-Tracker"], apis: ["/api/btc"],
+  // The page stays open (roadmap #123) so free visitors get a free TradingView BTC chart; the globe and
+  // all its data come from /api/btc, which is Premium. TradingView widgets stay on public pages only (#37).
+  { id: "btc", label: "BTC", level: "premium", data: "market", pages: [], apis: ["/api/btc"],
     preview: "Follows bitcoin across major venues, with price, market structure and the macro backdrop in one view." },
   // The page stays open so free visitors see the next pivot (from the public /api/execute-peek, calendar only);
   // signals, the paper position and the track records come from /api/execute, which is Premium.

@@ -21,7 +21,7 @@ const access = load("lib/access.ts");
 test("roadmap #33 split: open-data modules public, market-data modules Premium", () => {
   for (const p of ["/Projects/Australia-Watch", "/Projects/AI-Dividend", "/Projects/Oil-Tracker", "/api/australia-watch/latest", "/api/dividend/latest", "/api/oil/corridors", "/api/macro/latest", "/", "/api/cron/bull"])
     assert.equal(access.gatedModuleForPath(p), null, p);
-  for (const p of ["/Projects/Bull-Market-Finder", "/Projects/Regime-Finder", "/Projects/Earnings-Beat", "/Projects/Regime-Shift", "/Projects/Gold-Tracker", "/Projects/BTC-Tracker", "/Projects/Gold-Tracker/"])
+  for (const p of ["/Projects/Bull-Market-Finder", "/Projects/Regime-Finder", "/Projects/Earnings-Beat", "/Projects/Regime-Shift", "/Projects/Gold-Tracker", "/Projects/Gold-Tracker/"])
     assert.equal(access.gatedModuleForPath(p)?.kind, "page", p);
   for (const p of ["/api/bull/latest", "/api/bull/asset", "/api/regime/latest", "/api/gold/loci/series", "/api/btc/markets", "/api/leaderboard/earnings-beats", "/api/watchlist/rankings"])
     assert.equal(access.gatedModuleForPath(p)?.kind, "api", p);
@@ -38,6 +38,11 @@ test("Execute: page and calendar peek are open, signals and records are Premium"
   }
   const matcher = readFileSync(path.resolve(root, "middleware.ts"), "utf8");
   assert.ok(matcher.includes('"/api/execute/:path*"'), "middleware must run on /api/execute");
+});
+
+test("BTC: page open for the free TradingView chart (#123), globe data Premium", () => {
+  assert.equal(access.gatedModuleForPath("/Projects/BTC-Tracker"), null);
+  for (const p of ["/api/btc/markets", "/api/btc/latest", "/api/btc/loci", "/api/btc/history"]) assert.equal(access.gatedModuleForPath(p)?.module.level, "premium", p);
 });
 
 test("admin check fails closed and ignores case and spacing", () => {

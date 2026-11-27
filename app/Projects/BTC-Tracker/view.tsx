@@ -17,6 +17,24 @@ import {
   type BTView,
 } from "../../components/projects/btcTrackerShared";
 import { DataAsOf } from "../../components/DataAsOf";
+import TradingViewWidget from "../../components/TradingViewWidget";
+import { LockIcon } from "../../components/LockIcon";
+
+/** Free visitors (#123): the TradingView chart, and what Premium adds. The globe's data is Premium-only. */
+function FreeBtcView() {
+  return <div className="absolute inset-x-0 bottom-0 top-12 flex flex-col gap-3 overflow-y-auto p-4 md:bottom-10 md:top-14 md:flex-row md:items-start md:p-6">
+    <div className="min-h-[420px] flex-1 rounded-sm border border-[var(--line)] bg-[rgba(8,9,9,0.6)] p-2">
+      <TradingViewWidget widget="advanced-chart" height={600} label="Bitcoin in US dollars (BITSTAMP:BTCUSD) chart"
+        config={{ symbol: "BITSTAMP:BTCUSD", interval: "D", style: "1", hide_side_toolbar: true, allow_symbol_change: false, details: false, calendar: false }} />
+    </div>
+    <aside className="flex shrink-0 flex-col gap-3 rounded-sm border border-[var(--line)] bg-[rgba(8,9,9,0.85)] p-5 md:w-[300px]">
+      <p className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em]" style={{ color: ORANGE_CSS }}><LockIcon title="Premium" /> BTC globe · Premium</p>
+      <p className="text-sm leading-relaxed text-[var(--ink-2)]">The chart is free. Premium adds the BTC globe: where bitcoin trades, how much the US spot ETFs hold and buy each day, where it&rsquo;s mined, and how bitcoin fits the macro backdrop.</p>
+      <a href="/private?module=btc&next=/Projects/BTC-Tracker" className="self-start rounded-sm border border-[var(--line-2)] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink)]">See Premium</a>
+      <p className="text-[11px] leading-relaxed text-[var(--ink-3)]">Free: bitcoin&rsquo;s fees and the apps built on it on the <a className="underline" href="/Projects/Crypto-Fundamentals?tab=btc">Crypto page</a>.</p>
+    </aside>
+  </div>;
+}
 
 const BtcTrackerCore = dynamic(
   () => import("../../components/projects/BtcTrackerCore"),
@@ -45,6 +63,16 @@ export default function BtcTrackerView() {
   const [coreReady, setCoreReady] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [leaving, setLeaving] = useState(false);
+  // Premium check (#123): the globe's data API answers 401/403 to free visitors. Anything else (even an
+  // outage) counts as Premium, so a database hiccup never locks a subscriber out.
+  const [access, setAccess] = useState<"checking" | "premium" | "free">("checking");
+  useEffect(() => {
+    let live = true;
+    fetch("/api/btc/markets", { cache: "no-store" })
+      .then((r) => live && setAccess(r.status === 401 || r.status === 403 ? "free" : "premium"))
+      .catch(() => live && setAccess("premium"));
+    return () => { live = false; };
+  }, []);
 
   useEffect(() => {
     setArrive(readArrival());
@@ -78,13 +106,15 @@ export default function BtcTrackerView() {
     >
       <div aria-hidden className="absolute inset-0" style={{ background: BT_ATMOSPHERE }} />
 
-      {mounted && arrive && showPreview && (
+      {mounted && access === "free" && <FreeBtcView />}
+
+      {mounted && access === "premium" && arrive && showPreview && (
         <div className="absolute inset-0">
           <BtcTrackerPreview initialView={arrive} />
         </div>
       )}
 
-      {mounted && (
+      {mounted && access === "premium" && (
         <motion.div
           className="absolute inset-x-0 bottom-0 top-12 md:bottom-10 md:top-14"
           initial={{ opacity: 0 }}

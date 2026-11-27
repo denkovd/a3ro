@@ -1,20 +1,16 @@
 "use client";
 /* ────────────────────────────────────────────────────────────────
-   BTC Tracker — weekly price chart, top-left, expandable.
+   BTC Tracker — price chart, top-left, expandable.
 
-   The overlay is the macro cycle's existing VAMS regime-affinity read
-   for BTC-USD (backend/src/macro/vams.ts, exposed via
-   /api/macro/latest → vamsReads) — the same volatility-adjusted
-   momentum signal and BULLISH/BEARISH/NEUTRAL palette used by
-   RiskMatrixPanel, not a new indicator invented for this chart. That
-   VAMS read is computed off daily market_bars sessions (63-session
-   window); the price series charted here is the tracker's own daily
-   Coinbase closes (btc_prices), bucketed into ISO weeks client-side
-   since neither store keeps a weekly aggregate.
+   The price is a TradingView widget (BITSTAMP:BTCUSD), which updates
+   through the day (#123; the page is public, so the widget terms in
+   #37 are met). The overlay is the macro cycle's VAMS regime-affinity
+   read for BTC-USD (backend/src/macro/vams.ts, via /api/macro/latest
+   → vamsReads), the same signal and palette as RiskMatrixPanel.
 ──────────────────────────────────────────────────────────────── */
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useBtcWeeklyHistory, type WeeklyBar } from "./btcHistory";
+import TradingViewWidget from "../../TradingViewWidget";
 import { useMacroSnapshot, MACRO_AMBER, MACRO_PINK, type VamsState } from "../macro/macroData";
 
 const STATE_COLOR: Record<VamsState, string> = {
@@ -36,53 +32,18 @@ const REGIME_LABEL: Record<string, string> = {
   DEFLATION: "Deflation",
 };
 
-function buildPath(bars: WeeklyBar[], w: number, h: number, pad = 4) {
-  const closes = bars.map((b) => b.close);
-  const min = Math.min(...closes);
-  const max = Math.max(...closes);
-  const span = max - min || 1;
-  const innerW = w - pad * 2;
-  const innerH = h - pad * 2;
-  const step = innerW / (bars.length - 1);
-  const pts = bars.map((b, i) => {
-    const x = pad + i * step;
-    const y = pad + innerH - ((b.close - min) / span) * innerH;
-    return [x, y] as const;
-  });
-  const line = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-  const floor = (h - pad).toFixed(1);
-  const area = `${line} L${pts[pts.length - 1][0].toFixed(1)},${floor} L${pts[0][0].toFixed(1)},${floor} Z`;
-  return { line, area };
-}
-
 const COLLAPSED_W = 220;
 const EXPANDED_W = 300;
-const PAD_X = 24; // px-3 both sides
 
 export default function BtcPriceChart() {
   const [expanded, setExpanded] = useState(false);
-  const { status, bars } = useBtcWeeklyHistory();
   const macro = useMacroSnapshot();
 
   const affinity = macro.vamsReads.find((r) => r.symbol === "BTC-USD") ?? null;
   const color = affinity ? STATE_COLOR[affinity.state] : "var(--ink-3)";
   const glyph = affinity ? STATE_GLYPH[affinity.state] : "—";
 
-  const view = useMemo(() => bars.slice(expanded ? -104 : -26), [bars, expanded]);
   const containerW = expanded ? EXPANDED_W : COLLAPSED_W;
-  const svgW = containerW - PAD_X;
-  const svgH = expanded ? 150 : 56;
-  const path = useMemo(
-    () => (view.length >= 2 ? buildPath(view, svgW, svgH) : null),
-    [view, svgW, svgH],
-  );
-
-  const latest = bars[bars.length - 1] ?? null;
-  const first = view[0] ?? null;
-  const periodChangePct =
-    latest && first && first.close !== 0
-      ? ((latest.close - first.close) / Math.abs(first.close)) * 100
-      : null;
 
   return (
     <div>
@@ -97,7 +58,7 @@ export default function BtcPriceChart() {
           className="flex w-full items-center justify-between gap-2 px-3 py-2"
         >
           <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--ink-2)]">
-            BTC · Weekly
+            BTC · Price
           </span>
           <span className="flex items-center gap-1.5 font-mono text-[10px]" style={{ color }}>
             {glyph}
@@ -105,42 +66,9 @@ export default function BtcPriceChart() {
           </span>
         </button>
 
-        <div className="px-3 pb-2.5">
-          {status === "loading" && (
-            <p className="py-3 text-center font-mono text-[9px] uppercase tracking-[0.18em] text-[var(--ink-3)]">
-              Loading…
-            </p>
-          )}
-          {status === "error" && (
-            <p className="py-3 text-center font-mono text-[9px] uppercase tracking-[0.18em] text-[var(--ink-3)]">
-              History unavailable
-            </p>
-          )}
-          {status === "live" && !path && (
-            <p className="py-3 text-center font-mono text-[9px] uppercase tracking-[0.18em] text-[var(--ink-3)]">
-              Awaiting enough weekly closes
-            </p>
-          )}
-          {status === "live" && path && (
-            <>
-              <svg width={svgW} height={svgH} className="block">
-                <path d={path.area} fill={color} opacity={0.14} />
-                <path d={path.line} fill="none" stroke={color} strokeWidth={1.4} />
-              </svg>
-              <div className="mt-1.5 flex items-baseline justify-between">
-                <span className="font-mono text-[11px] tabular-nums text-[var(--ink)]">
-                  ${Math.round(latest?.close ?? 0).toLocaleString("en-US")}
-                </span>
-                {periodChangePct !== null && (
-                  <span className="font-mono text-[9px] tabular-nums" style={{ color }}>
-                    {periodChangePct > 0 ? "+" : periodChangePct < 0 ? "−" : ""}
-                    {Math.abs(periodChangePct).toFixed(1)}%
-                  </span>
-                )}
-              </div>
-              <p className="mt-1 text-[9px] text-[var(--ink-3)]">Last daily close · {latest?.weekEnd}</p>
-            </>
-          )}
+        <div className="px-1 pb-1">
+          <TradingViewWidget key={expanded ? "wide" : "narrow"} widget="mini-symbol-overview" height={expanded ? 200 : 130} label="Bitcoin (BITSTAMP:BTCUSD)"
+            config={{ symbol: "BITSTAMP:BTCUSD", dateRange: expanded ? "12M" : "1M", trendLineColor: "#e0873a", underLineColor: "rgba(224,135,58,0.12)", underLineBottomColor: "rgba(224,135,58,0)" }} />
         </div>
 
         <AnimatePresence>
