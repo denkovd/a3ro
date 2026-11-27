@@ -134,7 +134,7 @@ export const PRIVACY_PROJECTS: PrivacyProject[] = [
     access: "Works with existing wallets and tokens; 'Private Proofs of Innocence' screens deposits against known illicit addresses. About $110M held (L2BEAT); record $117M of stablecoins moved in Sep 2026; $4.5B moved since 2021.",
     australia: "Uses ordinary tokens (ETH, USDC), so no privacy-coin listing needed.",
     summary: "The practical route to private stablecoins today: dollars stay ordinary USDC or DAI, only the history is hidden.",
-    repo: "Railgun-Privacy/engine",
+    repo: "Railgun-Community/engine",
     sources: [
       { label: "L2BEAT: Railgun", url: "https://l2beat.com/privacy/projects/railgun" },
       { label: "TechFlow / Alea Research: record stablecoin month", url: "https://www.techflowpost.com/en-US/article/35111" },
