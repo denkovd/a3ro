@@ -17,6 +17,8 @@ import {
   REACTOR_WORLD,
   SITES,
   SOURCES,
+  SPUT_HOLDINGS,
+  LB_U3O8_PER_TU,
   STAGE_EXPLAINER,
   STAGE_LABEL,
   STAGE_UNIT,
@@ -28,6 +30,33 @@ import type { ReactorMode, Selection } from "../UraniumTrackerCore";
 
 const URN = "#b8e278";
 const DEM = "#96c8e6";
+
+function fmtHalf(d: string) {
+  return new Date(`${d}T00:00:00Z`).toLocaleDateString("en-AU", { month: "short", year: "numeric", timeZone: "UTC" });
+}
+
+/** Sprott trust holdings from its filed reports: the biggest financial buyer of physical uranium. */
+function SputBox() {
+  const h = SPUT_HOLDINGS, last = h[h.length - 1], prev = h[h.length - 2];
+  const added = last.lb - prev.lb;
+  const mineLb = WORLD_MINE_OUTPUT_T[MINING_YEAR] * LB_U3O8_PER_TU;
+  const max = Math.max(...h.map((x) => x.lb)), min = Math.min(...h.map((x) => x.lb)) * 0.9;
+  return <>
+    <Kicker>Sprott trust holdings</Kicker>
+    <dl className="mt-2 grid grid-cols-2 gap-3">
+      <Stat label={`Held, ${fmtHalf(last.date)}`} value={`${(last.lb / 1e6).toFixed(1)}M lb`} sub={`about ${pct(last.lb / mineLb)} of a year's mine output`} />
+      <Stat label={`Added since ${fmtHalf(prev.date)}`} value={`${added >= 0 ? "+" : ""}${(added / 1e6).toFixed(1)}M lb`} sub={`about ${pct(added / mineLb)} of a year's mine output`} />
+    </dl>
+    <div className="mt-3 flex h-14 items-end gap-1" role="img" aria-label={`Pounds held at each half-year end, ${fmtHalf(h[0].date)} to ${fmtHalf(last.date)}`}>
+      {h.map((x) => <div key={x.date} className="flex h-full flex-1 flex-col justify-end" title={`${fmtHalf(x.date)}: ${n(x.lb)} lb`}>
+        <div className="w-full rounded-sm" style={{ height: `${Math.max(6, ((x.lb - min) / (max - min)) * 100)}%`, background: x === last ? URN : "rgba(184,226,120,0.35)" }} />
+      </div>)}
+    </div>
+    <div className="mt-1 flex justify-between font-mono text-[8px] text-[var(--ink-3)]"><span>{fmtHalf(h[0].date)}</span><span>{fmtHalf(last.date)}</span></div>
+    <p className="mt-2 text-[11px] leading-relaxed text-[var(--ink-2)]">The trust buys uranium with money raised by selling new units, so it buys most when its units trade at or above the value of what it holds. It has never sold any, so what it buys stays off the market. Figures are from its filed reports, every six months (June 2024 not added yet); <a href="https://sprott.com/investment-strategies/physical-commodity-funds/uranium/" target="_blank" rel="noreferrer" className="underline">Sprott&rsquo;s site</a> shows the daily count.</p>
+    <SourceLink id="sputReports" />
+  </>;
+}
 
 function SourceLink({ id }: { id: SourceId }) {
   return <RailSourceLink source={SOURCES[id]} accent={URN} />;
@@ -125,6 +154,8 @@ export default function UraniumIntelPanel({ narrow, selected, reactorMode, focus
         {detail ? <section>{detail}</section> : <>
           <PriceBlock symbol="TSX:U.UN" kicker="Price · Sprott Physical Uranium Trust" label="Sprott Physical Uranium Trust (TSX:U.UN) price, delayed" accent={URN} rgb="184,226,120"
             note="The trust holds physical uranium, so its unit price tracks spot. Delayed quote." />
+
+          <section aria-label="Sprott trust holdings" className="mt-3 border-b border-[var(--line)] pb-3"><SputBox /></section>
 
           <section aria-label="Supply and demand" className="mt-3 border-b border-[var(--line)] pb-3">
             <Kicker>Supply vs demand</Kicker>

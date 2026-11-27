@@ -33,6 +33,17 @@ export const MANUAL_JOBS: readonly ManualJob[] = [
     lastCheckedInCode: "2026-11-27",
   },
   {
+    id: "uranium-sput-holdings",
+    title: "Add Sprott uranium trust holdings from its latest report",
+    steps: [
+      "When Sprott Physical Uranium Trust files its annual report (by end of March) or interim report (by end of August), find 'The Trust held N pounds of physical uranium oxide as at …'.",
+      "Add the figure to SPUT_HOLDINGS in lib/uranium/fuelChain.ts and set sputReports.reviewed to today.",
+    ],
+    where: "lib/uranium/fuelChain.ts",
+    everyMonths: 6,
+    lastCheckedInCode: "2026-11-27",
+  },
+  {
     id: "crypto-privacy-review",
     title: "Review the privacy top 10",
     steps: [

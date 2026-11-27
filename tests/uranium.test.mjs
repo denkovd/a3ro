@@ -57,3 +57,13 @@ test("crypto fundamentals module is free and listed", () => {
   assert.equal(m.level, "public");
   assert.equal(access.canSeeRoute("/Projects/Crypto-Fundamentals", access.ANONYMOUS), true);
 });
+
+test("Sprott holdings: half-year ends, in date order, growing", () => {
+  const h = fc.SPUT_HOLDINGS;
+  assert.ok(h.length >= 6);
+  for (let i = 0; i < h.length; i++) {
+    assert.match(h[i].date, /-(06-30|12-31)$/);
+    if (i) { assert.ok(h[i].date > h[i - 1].date); assert.ok(h[i].lb >= h[i - 1].lb, "the trust never sells"); }
+  }
+  assert.ok(fc.SOURCES.sputReports.url.startsWith("https://"));
+});

@@ -733,7 +733,8 @@ export default function BullMarketFinderView() {
 
           {/* methodology footnote — swaps per strategy (spec §5) */}
           <p className="mt-10 max-w-2xl text-xs leading-relaxed text-[var(--ink-3)]">
-            {FOOTNOTE_BY_STRATEGY[strategy] ?? FOOTNOTE_BY_STRATEGY[DEFAULT_STRATEGY_ID]}
+            {FOOTNOTE_BY_STRATEGY[strategy] ?? FOOTNOTE_BY_STRATEGY[DEFAULT_STRATEGY_ID]}{" "}
+            <a href="/methodology/bull-market-finder" className="underline">How this works →</a>
           </p>
         </div>
       </div>

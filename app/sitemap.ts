@@ -3,6 +3,7 @@
 import type { MetadataRoute } from "next";
 import { MODULE_ACCESS } from "../lib/access";
 import { ASSETS, assetPath } from "../lib/assets";
+import { METHODOLOGY_PAGES } from "./methodology/pages";
 
 const SITE = "https://a3ro.com.au";
 
@@ -15,6 +16,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/calendar", changeFrequency: "daily", priority: 0.8 },
     { path: "/assets", changeFrequency: "weekly", priority: 0.8 },
     ...ASSETS.map((a) => ({ path: assetPath(a), changeFrequency: "weekly" as const, priority: 0.6 })),
+    { path: "/methodology", changeFrequency: "monthly", priority: 0.6 },
+    ...METHODOLOGY_PAGES.map((p) => ({ path: p.path, changeFrequency: "monthly" as const, priority: 0.6 })),
     { path: "/terms", changeFrequency: "monthly", priority: 0.2 },
     { path: "/privacy", changeFrequency: "monthly", priority: 0.2 },
   ];

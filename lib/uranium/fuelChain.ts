@@ -11,11 +11,17 @@
    Client-safe: pure data.
 ──────────────────────────────────────────────────────────────── */
 
-export type SourceId = "wnaMining" | "wnaConversion" | "wnaEnrichment" | "wnaFabrication" | "wnaReactors" | "gaUranium";
+export type SourceId = "wnaMining" | "wnaConversion" | "wnaEnrichment" | "wnaFabrication" | "wnaReactors" | "gaUranium" | "sputReports";
 
 export interface Source { label: string; url: string; reviewed: string; note?: string }
 
 export const SOURCES: Record<SourceId, Source> = {
+  sputReports: {
+    label: "Sprott Physical Uranium Trust: annual and interim reports (also on SEDAR+)",
+    url: "https://sprott.com/investment-strategies/physical-commodity-funds/uranium/financial-reports/",
+    reviewed: "2026-11-27",
+    note: "Pounds held at each half-year end, from the filed reports. Sprott's daily figures are on its site; its terms don't allow us to copy them.",
+  },
   wnaMining: {
     label: "World Nuclear Association: World Uranium Mining Production",
     url: "https://world-nuclear.org/information-library/nuclear-fuel-cycle/mining-of-uranium/world-uranium-mining-production",
@@ -270,3 +276,23 @@ export const COMPANIES: UraniumCompany[] = [
   { name: "Denison Mines", tv: "NYSE:DNN", role: "Developer: Wheeler River (Athabasca Basin, Canada)" },
   { name: "Global X Uranium ETF", tv: "AMEX:URA", role: "Fund holding uranium miners and nuclear suppliers", assetSlug: "ura" },
 ];
+
+/* ── Sprott Physical Uranium Trust holdings (roadmap #79) ──────────
+   Pounds of U3O8 held at each half-year end, from the trust's filed annual
+   and interim reports. Sprott publishes daily holdings on its website, but
+   its terms of use forbid scraping or republishing website content, so the
+   daily series is out until Sprott gives written permission. Add the next
+   figure when the report is filed (manual job "uranium-sput-holdings").
+   Jun 2024 is missing: the interim report wasn't checked. */
+export interface SputHolding { date: string; lb: number }
+export const SPUT_HOLDINGS: SputHolding[] = [
+  { date: "2022-12-31", lb: 59_269_000 },
+  { date: "2023-06-30", lb: 61_745_847 },
+  { date: "2023-12-31", lb: 63_161_826 },
+  { date: "2024-12-31", lb: 66_220_326 },
+  { date: "2025-06-30", lb: 67_670_326 },
+  { date: "2025-12-31", lb: 74_789_404 },
+  { date: "2026-06-30", lb: 81_447_348 },
+];
+/** Pounds of U3O8 per tonne of uranium (1 tU = 1.1792 t U3O8 = 2,599.8 lb). */
+export const LB_U3O8_PER_TU = 2599.8;
