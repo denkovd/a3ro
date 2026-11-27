@@ -29,3 +29,27 @@ test("AEMO: demand-weighted price and the months to fetch", () => {
   assert.deepEqual(recentMonths(new Date("2026-11-28T00:00:00Z"), 3), ["2026-09", "2026-10", "2026-11"]);
   assert.deepEqual(recentMonths(new Date("2026-12-02T00:00:00Z"), 2), ["2026-10", "2026-11"]);
 });
+
+import { asicByIndustry, asicObservations, asicTotals, findAsicWorkbookUrl } from "../src/sources/asic";
+
+function asicBook() {
+  const t1 = [[null, "Australian insolvency statistics"], [null, "Table 1"], [null, "Month", "FY26", "FY27", "Change"], [null, null, "No.", "No."],
+    [null, "Jul", 1362, 1213], [null, "Aug", 1090, 1808], [null, "Nov", 1071, null], [null, "Jan", 634, null]];
+  const t12 = [[null, "Table 1.2"], [null, "Period", "Period (calendar year)", "Period (quarter)", "Period (month)", "Accommodation and Food Services", "Construction"],
+    [null, "2026-2027", "2026", "September", "Jul", 40, 300], [null, "2026-2027", "2026", "September", "Aug", 45, 320], [null, "2026-2027", "2026", "September Total", null, 85, 620]];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(t1), "1");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(t12), "1.2");
+  return XLSX.read(XLSX.write(wb, { type: "buffer", bookType: "xlsx" }));
+}
+
+test("ASIC: workbook link, totals by financial year, industries by month", () => {
+  assert.equal(findAsicWorkbookUrl('<a href="https://download.asic.gov.au/media/x/asic-insolvency-statistics-series-1-and-series-2-published-23-november-2026.xlsx">'), "https://download.asic.gov.au/media/x/asic-insolvency-statistics-series-1-and-series-2-published-23-november-2026.xlsx");
+  const wb = asicBook();
+  const tot = asicTotals(wb);
+  assert.equal(tot.get("2025-07"), 1362); assert.equal(tot.get("2026-08"), 1808); assert.equal(tot.get("2026-01"), 634); assert.equal(tot.has("2026-11"), false);
+  const con = asicByIndustry(wb, /^construction$/i);
+  assert.deepEqual([...con.entries()], [["2026-07", 300], ["2026-08", 320]]);
+  const obs = asicObservations("company_insolvencies", wb, "u", "x", new Date("2026-08-15T00:00:00Z"));
+  assert.ok(obs.every((o) => o.referencePeriod < "2026-08"), "current month left out");
+});

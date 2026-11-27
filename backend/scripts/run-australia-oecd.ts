@@ -48,10 +48,10 @@ async function main(): Promise<void> {
   const oecd = await runAustraliaWatchCycle(db, {
     sources: ["oecd_sdmx"], fetchImpl: plainFetch, oecdSpacingMs: 60_000, oecdRetryDelaysMs: [60_000, 120_000], budgetMs: 16 * 60_000,
   });
-  // APRA (mortgage stress, #89) and AEMO (power prices, #90) ride along: bigger files than the Vercel cron
+  // APRA (mortgage stress, #89), AEMO (power prices, #90) and ASIC (insolvencies, #91) ride along: bigger files than the Vercel cron
   // should carry. AEMO_MONTHS backfills (e.g. 72 once); otherwise the last 3 months are refreshed.
   const aemoMonths = Number(process.env.AEMO_MONTHS) > 0 ? Number(process.env.AEMO_MONTHS) : undefined;
-  const other = await runAustraliaWatchCycle(db, { sources: ["apra_xlsx", "aemo_csv"], aemoMonths, budgetMs: 15 * 60_000 });
+  const other = await runAustraliaWatchCycle(db, { sources: ["apra_xlsx", "aemo_csv", "asic_xlsx"], aemoMonths, budgetMs: 15 * 60_000 });
   const report = { startedAt: oecd.startedAt, results: { ...oecd.results, ...other.results } };
   const entries = Object.entries(report.results);
   const degraded = entries.filter(([, r]) => r.error).map(([indicator]) => indicator);

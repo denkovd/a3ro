@@ -9,12 +9,12 @@
 export type AustraliaFrequency = "monthly" | "quarterly";
 export type AustraliaPillar = "stress" | "financial" | "housing" | "labour" | "demand" | "external" | "inflation" | "composite";
 export type AustraliaRole = "leading" | "coincident" | "lagging";
-export type AustraliaSourceKind = "abs_sdmx" | "rba_csv" | "oecd_sdmx" | "apra_xlsx" | "aemo_csv";
+export type AustraliaSourceKind = "abs_sdmx" | "rba_csv" | "oecd_sdmx" | "apra_xlsx" | "aemo_csv" | "asic_xlsx";
 /** What the chart, z-score and direction are computed on. */
 export type AustraliaTransform = "level" | "yoy_from_level";
 /** Primary series appear in the main grid; comparison series sit lower on the page and are excluded from any summary. */
 export type AustraliaSection = "primary" | "comparison";
-export type AustraliaReleaseFamily = "cpi" | "labour" | "rba" | "approvals" | "job_vacancies" | "household_spending" | "trade" | "ppi" | "import_prices" | "wpi" | "lending" | "dwelling_values" | "national_accounts" | "oecd" | "apra" | "aemo";
+export type AustraliaReleaseFamily = "cpi" | "labour" | "rba" | "approvals" | "job_vacancies" | "household_spending" | "trade" | "ppi" | "import_prices" | "wpi" | "lending" | "dwelling_values" | "national_accounts" | "oecd" | "apra" | "aemo" | "asic";
 /** How the headline value is printed. */
 export type AustraliaDisplay = "percent" | "percentage_points" | "index" | "hours_millions" | "count" | "thousands" | "aud_millions" | "aud_thousands";
 
@@ -81,7 +81,9 @@ export interface OecdIndicatorDef extends AustraliaIndicatorBase { source: "oecd
 export interface ApraIndicatorDef extends AustraliaIndicatorBase { source: "apra_xlsx"; numerator: RegExp; denominator: RegExp }
 /** AEMO NEM price and demand files (#90): demand-weighted monthly average spot price across the five regions. */
 export interface AemoIndicatorDef extends AustraliaIndicatorBase { source: "aemo_csv" }
-export type AustraliaIndicatorDef = AbsIndicatorDef | RbaIndicatorDef | OecdIndicatorDef | ApraIndicatorDef | AemoIndicatorDef;
+/** ASIC insolvency statistics (#91): Series 1 monthly, national total or one industry. */
+export interface AsicIndicatorDef extends AustraliaIndicatorBase { source: "asic_xlsx"; industry: RegExp | null }
+export type AustraliaIndicatorDef = AbsIndicatorDef | RbaIndicatorDef | OecdIndicatorDef | ApraIndicatorDef | AemoIndicatorDef | AsicIndicatorDef;
 
 export const RBA_TABLE_URL = (table: string) => `https://www.rba.gov.au/statistics/tables/csv/${table}-data.csv`;
 const F11 = "f1.1", F21 = "f2.1", F3 = "f3", F6 = "f6", F111 = "f11.1", I2 = "i2", D1 = "d1";
@@ -321,6 +323,37 @@ export const AUSTRALIA_REGISTRY = {
     rollingPeriods: 3, baselineYears: 5, minimumBaseline: 24, releaseLagDays: 2, releaseFamily: "aemo",
     growthPolarity: 0, inflationPolarity: 0, display: "count", decimals: 0,
     note: "The average spot price generators were paid in the National Electricity Market (Queensland, NSW and the ACT, Victoria, South Australia and Tasmania), weighted by demand. Wholesale costs are roughly a third of a household power bill and feed into retail prices with a lag, so a sustained rise points to higher bills and inflation later. Western Australia and the Northern Territory are not in the NEM. Prices are seasonal: higher in winter and in heatwaves.",
+  },
+
+  company_insolvencies: {
+    title: "Companies entering insolvency — annual change", label: "Company insolvencies", shortLabel: "Insolvencies",
+    subtitle: "Monthly · companies entering external administration for the first time · ASIC",
+    pillar: "stress", role: "coincident", section: "primary", order: 1540,
+    source: "asic_xlsx", industry: null,
+    frequency: "monthly", adjustment: "Original", unit: "Companies", unitMultiplier: 0, transform: "yoy_from_level",
+    rollingPeriods: 96, baselineYears: 5, minimumBaseline: 24, releaseLagDays: 14, releaseFamily: "asic",
+    growthPolarity: 0, inflationPolarity: 0, display: "count", decimals: 0,
+    note: "Companies going into liquidation, administration, restructuring or receivership for the first time each month. Charted as the change from the same month a year earlier, because insolvencies are seasonal (low in January). After COVID support ended, numbers climbed from record lows, partly as the tax office resumed chasing debts, so part of the rise is catch-up rather than new stress. Recent months are provisional.",
+  },
+  insolvencies_construction: {
+    title: "Construction companies entering insolvency — annual change", label: "Construction insolvencies", shortLabel: "Construction",
+    subtitle: "Monthly · construction industry · ASIC",
+    pillar: "stress", role: "coincident", section: "primary", order: 1550,
+    source: "asic_xlsx", industry: /^construction$/i,
+    frequency: "monthly", adjustment: "Original", unit: "Companies", unitMultiplier: 0, transform: "yoy_from_level",
+    rollingPeriods: 96, baselineYears: 5, minimumBaseline: 24, releaseLagDays: 14, releaseFamily: "asic",
+    growthPolarity: 0, inflationPolarity: 0, display: "count", decimals: 0,
+    note: "The industry with the most insolvencies: fixed-price contracts, rising material and labour costs and long payment chains make builders and subcontractors fragile. By-industry figures start in July 2021.",
+  },
+  insolvencies_hospitality: {
+    title: "Hospitality companies entering insolvency — annual change", label: "Hospitality insolvencies", shortLabel: "Hospitality",
+    subtitle: "Monthly · accommodation and food services · ASIC",
+    pillar: "stress", role: "coincident", section: "primary", order: 1560,
+    source: "asic_xlsx", industry: /^accommodation and food services$/i,
+    frequency: "monthly", adjustment: "Original", unit: "Companies", unitMultiplier: 0, transform: "yoy_from_level",
+    rollingPeriods: 96, baselineYears: 5, minimumBaseline: 24, releaseLagDays: 14, releaseFamily: "asic",
+    growthPolarity: 0, inflationPolarity: 0, display: "count", decimals: 0,
+    note: "Cafés, restaurants, pubs and hotels: thin margins and spending that households cut first, so this tends to show household belt-tightening early. By-industry figures start in July 2021.",
   },
 
   // ── Financial conditions (RBA statistical tables) ──────────────────────────

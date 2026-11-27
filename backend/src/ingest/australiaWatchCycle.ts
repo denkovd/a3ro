@@ -4,6 +4,7 @@ import { createRbaTableLoader, fetchRbaSeries } from "../sources/rba";
 import { fetchOecdSeries } from "../sources/oecd";
 import { apraObservations, createApraLoader } from "../sources/apra";
 import { fetchAemoSeries } from "../sources/aemo";
+import { asicObservations, createAsicLoader } from "../sources/asic";
 import { recordAustraliaFetchRun, upsertAustraliaObservations } from "../storage/australiaWatchRepo";
 import type { Queryable } from "../storage/db";
 
@@ -39,6 +40,7 @@ export async function runAustraliaWatchCycle(db: Queryable, opts: {
   // Several RBA indicators share a table (e.g. F2.1); each table is downloaded once per cycle.
   const loadRbaTable = createRbaTableLoader({ fetchImpl: opts.fetchImpl });
   const loadApra = createApraLoader(opts.fetchImpl);
+  const loadAsic = createAsicLoader(opts.fetchImpl);
   let oecdCalls = 0;
   for (const indicator of AUSTRALIA_INDICATORS) {
     if (opts.sources && !opts.sources.includes(AUSTRALIA_REGISTRY[indicator].source)) continue;
@@ -50,12 +52,14 @@ export async function runAustraliaWatchCycle(db: Queryable, opts: {
         ? await fetchRbaSeries(indicator, loadRbaTable, new Date(startedAt))
         : source === "apra_xlsx"
           ? await loadApra().then(({ table, url }) => apraObservations(indicator, table, url, startedAt))
+        : source === "asic_xlsx"
+          ? await loadAsic().then(({ wb, url }) => asicObservations(indicator, wb, url, startedAt, new Date(startedAt)))
         : source === "aemo_csv"
           ? await fetchAemoSeries(indicator, { fetchImpl: opts.fetchImpl, now: new Date(startedAt), months: opts.aemoMonths })
         : source === "oecd_sdmx"
           ? await fetchOecdSeries(indicator, { fetchImpl: opts.fetchImpl, now: new Date(startedAt), retryDelaysMs: opts.oecdRetryDelaysMs, deadlineMs, clock })
           : await fetchAbsSeries(indicator, { fetchImpl: opts.fetchImpl, now: new Date(startedAt) });
-      if (!rows.length) throw new Error(`${({ rba_csv: "RBA", oecd_sdmx: "OECD", apra_xlsx: "APRA", aemo_csv: "AEMO", abs_sdmx: "ABS" } as const)[source]} returned no valid observations`);
+      if (!rows.length) throw new Error(`${({ rba_csv: "RBA", oecd_sdmx: "OECD", apra_xlsx: "APRA", aemo_csv: "AEMO", asic_xlsx: "ASIC", abs_sdmx: "ABS" } as const)[source]} returned no valid observations`);
       const written = await upsertAustraliaObservations(db, rows);
       await recordAustraliaFetchRun(db, indicator, startedAt, "healthy", written, null);
       results[indicator] = { written };
