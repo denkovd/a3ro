@@ -127,8 +127,8 @@ export function buildLeaderboard(feesList: unknown, revenueList: unknown, protoc
 }
 
 /** The apps earning the most fees on one chain (DefiLlama chain key, e.g. "solana"). */
-export function chainApps(feesList: unknown, revenueList: unknown, chainKey: string, limit = 10): ChainApp[] {
-  return [...groupFees(feesList, revenueList, chainKey).values()]
+export function chainApps(feesList: unknown, revenueList: unknown, chainKey: string, limit = 10, minFees30d = 10_000): ChainApp[] {
+  return [...groupFees(feesList, revenueList, chainKey).values()].filter((g) => g.fees30d >= minFees30d)
     .sort((a, b) => b.fees30d - a.fees30d).slice(0, limit)
     .map((g) => ({ key: g.key, name: g.children.length > 1 && g.key.startsWith("parent#") ? parentName(g) : g.name, category: g.category, fees30d: g.fees30d, revenue30d: g.revenue30d }));
 }

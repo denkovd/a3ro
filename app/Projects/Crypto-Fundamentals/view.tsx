@@ -1,8 +1,11 @@
-/* Crypto fundamentals scorecard (roadmap #82). Server-rendered: tables and small SVG charts, no client JS. */
+/* Crypto fundamentals scorecard (roadmap #82). Server-rendered tables and small SVG charts; the tabs (#124)
+   are a thin client wrapper that only picks which server-rendered panel shows. */
 import { CRYPTO_GROUP_LABEL, CRYPTO_GROUP_ORDER, CRYPTO_PROJECTS, QUANT_NOTE, type CryptoSnapshot, type MonthPoint, type ProjectSnapshot } from "@a3ro/oil-backend";
 import { assetBySlug } from "../../../lib/assets";
 import CryptoValuation from "./CryptoValuation";
 import PrivacySection from "./PrivacySection";
+import CryptoTabs, { type CryptoTab } from "./CryptoTabs";
+import type { ChainApp } from "../../../backend/src/crypto/leaderboard";
 
 const ACCENT = "#9ab8ff";
 const LINE_COLOURS = ["#9ab8ff", "#b8e278", "#f0b35a", "#e58ad0", "#7fd6c2", "#d9d9d9"];
@@ -108,6 +111,82 @@ function change(pts: MonthPoint[]): number | null {
   return pts[pts.length - 1].value - pts[pts.length - 13].value;
 }
 
+const TABS: CryptoTab[] = [
+  { id: "overview", label: "Overview" },
+  { id: "income", label: "Income machines" },
+  { id: "solana", label: "Solana" },
+  { id: "btc", label: "BTC" },
+  { id: "privacy", label: "Privacy" },
+  { id: "infra", label: "RW infra" },
+  { id: "valuation", label: "Valuation", premium: true },
+];
+
+/** Fees, revenue, value locked and stablecoins for a set of tracked projects. */
+function ProjectTable({ ids, snap, showGroup = false }: { ids: string[]; snap: CryptoSnapshot; showGroup?: boolean }) {
+  const byId = new Map(snap.projects.map((p) => [p.id, p]));
+  const rows = ids.map((id) => ({ p: CRYPTO_PROJECTS.find((x) => x.id === id)!, s: byId.get(id) as ProjectSnapshot | undefined }))
+    .filter((r) => r.p).sort((a, b) => (b.s?.fees30d ?? -1) - (a.s?.fees30d ?? -1));
+  return <div className="overflow-x-auto">
+    <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+      <thead><tr className="border-b border-[var(--line)] text-xs text-[var(--ink-3)]">
+        {showGroup ? <th className="w-8 py-2 pr-2 font-normal">#</th> : null}
+        <th className="py-2 pr-3 font-normal">Project</th>
+        <th className="py-2 pr-3 text-right font-normal">Fees, 30 days</th>
+        <th className="py-2 pr-3 text-right font-normal">Revenue, 30 days</th>
+        <th className="py-2 pr-3 font-normal">Fees by month</th>
+        <th className="py-2 pr-3 text-right font-normal">Value locked</th>
+        <th className="py-2 pr-3 text-right font-normal">Stablecoins held</th>
+      </tr></thead>
+      <tbody>{rows.map(({ p, s }, i) => {
+        const asset = p.symbol !== "—" ? assetBySlug(`${p.symbol.toLowerCase()}-usd`) : null;
+        return <tr key={p.id} className="border-b border-[var(--line)] align-top">
+          {showGroup ? <td className="py-3 pr-2 font-mono text-xs text-[var(--ink-3)]">{i + 1}</td> : null}
+          <td className="py-3 pr-3">
+            <span className="font-medium">{p.name}</span> <span className="font-mono text-xs text-[var(--ink-3)]">{asset ? <a className="underline" href={`/assets/${asset.slug}`}>{p.symbol}</a> : p.symbol}</span>
+            {showGroup ? <span className="ml-2 rounded-sm border border-[var(--line)] px-1 py-0.5 text-[9px] text-[var(--ink-3)]">{CRYPTO_GROUP_LABEL[p.group]}</span> : null}
+            <span className="mt-0.5 block max-w-[260px] text-xs leading-relaxed text-[var(--ink-3)]">{p.role}</span>
+          </td>
+          <td className="py-3 pr-3 text-right font-mono">{money(s?.fees30d ?? null)}{s?.fees30d != null ? <span className="block text-[10px] text-[var(--ink-3)]">{money((s.fees30d * 365) / 30)} a year</span> : null}</td>
+          <td className="py-3 pr-3 text-right font-mono">{money(s?.revenue30d ?? null)}</td>
+          <td className="py-3 pr-3"><FeeBars pts={complete(s?.feesMonthly ?? [], snap.asOf)} /></td>
+          <td className="py-3 pr-3 text-right font-mono">{p.chain ? <>{money(s?.tvl ?? null)}<span className="block text-[10px] text-[var(--ink-3)]">{pct(s?.tvlShare ?? null)} of DeFi</span></> : <span className="text-[var(--ink-3)]">n/a</span>}</td>
+          <td className="py-3 pr-3 text-right font-mono">{p.chain && s?.stablecoins != null ? <>{money(s.stablecoins)}<span className="block text-[10px] text-[var(--ink-3)]">{pct(s.stablecoinShare)} of all</span></> : <span className="text-[var(--ink-3)]">{p.chain ? "none" : "n/a"}</span>}</td>
+        </tr>;
+      })}</tbody>
+    </table>
+  </div>;
+}
+
+/** The apps earning the most fees on one chain (open data). */
+function AppsTable({ apps, chain }: { apps: ChainApp[] | undefined; chain: string }) {
+  if (!apps?.length) return <p className="text-xs text-[var(--ink-3)]">The list of {chain} apps arrives with the next daily update.</p>;
+  return <div className="overflow-x-auto">
+    <table className="w-full min-w-[520px] border-collapse text-left text-sm">
+      <thead><tr className="border-b border-[var(--line)] text-xs text-[var(--ink-3)]">
+        <th className="w-8 py-2 pr-2 font-normal">#</th><th className="py-2 pr-3 font-normal">App</th><th className="py-2 pr-3 font-normal">Type</th>
+        <th className="py-2 pr-3 text-right font-normal">Fees on {chain}, 30 days</th><th className="py-2 pr-3 text-right font-normal">Revenue, 30 days</th>
+      </tr></thead>
+      <tbody>{apps.map((a, i) => <tr key={a.key} className="border-b border-[var(--line)]">
+        <td className="py-2 pr-2 font-mono text-xs text-[var(--ink-3)]">{i + 1}</td>
+        <td className="py-2 pr-3 font-medium">{a.name}</td>
+        <td className="py-2 pr-3 text-xs text-[var(--ink-3)]">{a.category ?? ""}</td>
+        <td className="py-2 pr-3 text-right font-mono">{money(a.fees30d)}</td>
+        <td className="py-2 pr-3 text-right font-mono text-[var(--ink-2)]">{money(a.revenue30d)}</td>
+      </tr>)}</tbody>
+    </table>
+  </div>;
+}
+
+function Section({ title, intro, children }: { title: string; intro?: React.ReactNode; children: React.ReactNode }) {
+  return <section aria-label={title} className="flex flex-col gap-3">
+    <h2 className="landing-kicker">{title}</h2>
+    {intro ? <p className="max-w-3xl text-xs leading-relaxed text-[var(--ink-3)]">{intro}</p> : null}
+    {children}
+  </section>;
+}
+
+const GoTab = ({ tab, children }: { tab: string; children: React.ReactNode }) => <a className="underline" href={`?tab=${tab}`}>{children}</a>;
+
 export default function CryptoFundamentalsView({ snap }: { snap: CryptoSnapshot | null }) {
   const byId = new Map((snap?.projects ?? []).map((p) => [p.id, p]));
   const chainSeries = CRYPTO_PROJECTS.filter((p) => p.chain && (byId.get(p.id)?.tvlShareMonthly.length ?? 0) > 1)
@@ -115,6 +194,52 @@ export default function CryptoFundamentalsView({ snap }: { snap: CryptoSnapshot 
     .sort((a, b) => b.now - a.now).slice(0, 6);
   const eth = byId.get("ethereum");
   const ethChange = eth ? change(eth.tvlShareMonthly) : null;
+  const ids = (groups: string[]) => CRYPTO_PROJECTS.filter((p) => groups.includes(p.group)).map((p) => p.id);
+  const empty = <p className="rounded-sm border border-[var(--line)] p-4 text-sm text-[var(--ink-2)]">The first daily snapshot hasn&rsquo;t been saved yet. Check back after the next update.</p>;
+
+  const panels: Record<string, React.ReactNode> = {
+    overview: !snap ? empty : <>
+      <dl className="grid grid-cols-2 gap-4 border-y border-[var(--line)] py-4 sm:grid-cols-4">
+        <div><dt className="text-xs text-[var(--ink-3)]">Value locked in DeFi</dt><dd className="mt-1 font-mono text-xl">{money(snap.totals.defiTvl)}</dd></div>
+        <div><dt className="text-xs text-[var(--ink-3)]">Stablecoins, all chains</dt><dd className="mt-1 font-mono text-xl">{money(snap.totals.stablecoins)}</dd></div>
+        <div><dt className="text-xs text-[var(--ink-3)]">Ethereum&rsquo;s share of DeFi</dt><dd className="mt-1 font-mono text-xl">{pct(eth?.tvlShare ?? null)}</dd>
+          {ethChange !== null ? <dd className="text-xs text-[var(--ink-3)]">{ethChange >= 0 ? "+" : "−"}{Math.abs(ethChange * 100).toFixed(1)} pts in 12 months</dd> : null}</div>
+        <div><dt className="text-xs text-[var(--ink-3)]">Projects tracked</dt><dd className="mt-1 font-mono text-xl">{CRYPTO_PROJECTS.length}</dd></div>
+      </dl>
+      {chainSeries.length ? <Section title="Share of DeFi value locked, by chain" intro="Each chain&rsquo;s share of all value locked in DeFi apps, at each month-end. A falling share means money and activity are moving elsewhere, even if the dollar amount grows.">
+        <div className="max-w-3xl overflow-x-auto"><div className="min-w-[560px]"><ShareChart series={chainSeries} /></div></div>
+      </Section> : null}
+      <StablecoinSection snap={snap} />
+    </>,
+    income: !snap ? empty : <Section title="Income machines: who earns the most" intro={<>Every project we track, ranked by what users paid it in the last 30 days. Fees show demand; revenue is the part the project or its token holders keep. For how much you pay for that income, see <GoTab tab="valuation">Valuation</GoTab>.</>}>
+      <ProjectTable ids={CRYPTO_PROJECTS.map((p) => p.id)} snap={snap} showGroup />
+    </Section>,
+    solana: !snap ? empty : <>
+      <Section title="Solana"><ProjectTable ids={["solana"]} snap={snap} /></Section>
+      <Section title="Top apps on Solana" intro="The apps earning the most fees on Solana in the last 30 days, from DefiLlama. Versions of one app are added together. Fees paid to the chain itself are in the row above.">
+        <AppsTable apps={snap.chainApps?.solana} chain="Solana" />
+      </Section>
+      <p className="text-xs text-[var(--ink-3)]">The Solana high-beta basket (the ten largest Solana tokens against SOL) is in <GoTab tab="valuation">Valuation</GoTab>.</p>
+    </>,
+    btc: !snap ? empty : <>
+      <Section title="Bitcoin" intro="Bitcoin earns its fees from people paying for block space. Revenue is zero by design: fees go to miners, and no company or token holder keeps them.">
+        <ProjectTable ids={ids(["index"])} snap={snap} />
+      </Section>
+      <Section title="Top apps on Bitcoin" intro="Apps earning fees on Bitcoin itself in the last 30 days, from DefiLlama. Most Bitcoin activity is plain transfers, so this list is small.">
+        <AppsTable apps={snap.chainApps?.bitcoin} chain="Bitcoin" />
+      </Section>
+      <p className="text-xs text-[var(--ink-3)]">Where bitcoin is mined, traded and held: the <a className="underline" href="/Projects/BTC-Tracker">BTC globe</a>. Private bitcoin tools are compared under <GoTab tab="privacy">Privacy</GoTab>.</p>
+    </>,
+    privacy: <>
+      {snap ? <Section title="Privacy coins: usage"><ProjectTable ids={ids(["privacy"])} snap={snap} /></Section> : null}
+      <PrivacySection dev={snap?.privacyDev} />
+    </>,
+    infra: !snap ? empty : <>
+      <Section title={CRYPTO_GROUP_LABEL.infrastructure} intro="Networks that pay people to run real-world equipment, such as wireless hotspots."><ProjectTable ids={ids(["infrastructure"])} snap={snap} /></Section>
+      <Section title={CRYPTO_GROUP_LABEL.tokenization} intro="The plumbing for putting real-world assets such as Treasuries and funds on-chain."><ProjectTable ids={ids(["tokenization"])} snap={snap} /></Section>
+    </>,
+    valuation: <CryptoValuation meta={CRYPTO_GROUP_ORDER.flatMap((g) => CRYPTO_PROJECTS.filter((p) => p.group === g && p.gecko).map((p) => ({ id: p.id, name: p.name, symbol: p.symbol, groupLabel: CRYPTO_GROUP_LABEL[g] })))} />,
+  };
 
   return <section className="mx-auto flex max-w-6xl flex-col gap-10 px-6 pb-20 pt-36 md:px-10">
     <header className="flex flex-col gap-3">
@@ -127,68 +252,13 @@ export default function CryptoFundamentalsView({ snap }: { snap: CryptoSnapshot 
       <p className="text-xs text-[var(--ink-3)]">{snap ? `Data as of ${snap.asOf} · ` : ""}Source: <a className="underline" href="https://defillama.com" target="_blank" rel="noreferrer">DefiLlama</a> (open data), updated daily. General information, not a recommendation.</p>
     </header>
 
-    {!snap ? <p className="rounded-sm border border-[var(--line)] p-4 text-sm text-[var(--ink-2)]">The first daily snapshot hasn&rsquo;t been saved yet. Check back after the next update.</p> : <>
-      <dl className="grid grid-cols-2 gap-4 border-y border-[var(--line)] py-4 sm:grid-cols-4">
-        <div><dt className="text-xs text-[var(--ink-3)]">Value locked in DeFi</dt><dd className="mt-1 font-mono text-xl">{money(snap.totals.defiTvl)}</dd></div>
-        <div><dt className="text-xs text-[var(--ink-3)]">Stablecoins, all chains</dt><dd className="mt-1 font-mono text-xl">{money(snap.totals.stablecoins)}</dd></div>
-        <div><dt className="text-xs text-[var(--ink-3)]">Ethereum&rsquo;s share of DeFi</dt><dd className="mt-1 font-mono text-xl">{pct(eth?.tvlShare ?? null)}</dd>
-          {ethChange !== null ? <dd className="text-xs text-[var(--ink-3)]">{ethChange >= 0 ? "+" : "−"}{Math.abs(ethChange * 100).toFixed(1)} pts in 12 months</dd> : null}</div>
-        <div><dt className="text-xs text-[var(--ink-3)]">Projects tracked</dt><dd className="mt-1 font-mono text-xl">{CRYPTO_PROJECTS.length}</dd></div>
-      </dl>
-
-      {chainSeries.length ? <section aria-label="Share of DeFi by chain" className="flex flex-col gap-2">
-        <h2 className="landing-kicker">Share of DeFi value locked, by chain</h2>
-        <p className="max-w-3xl text-xs text-[var(--ink-3)]">Each chain&rsquo;s share of all value locked in DeFi apps, at each month-end. A falling share means money and activity are moving elsewhere, even if the dollar amount grows.</p>
-        <div className="max-w-3xl overflow-x-auto"><div className="min-w-[560px]"><ShareChart series={chainSeries} /></div></div>
-      </section> : null}
-
-      <StablecoinSection snap={snap} />
-
-      {CRYPTO_GROUP_ORDER.map((group) => {
-        const rows = CRYPTO_PROJECTS.filter((p) => p.group === group)
-          .map((p) => ({ p, s: byId.get(p.id) as ProjectSnapshot | undefined }))
-          .sort((a, b) => (b.s?.fees30d ?? -1) - (a.s?.fees30d ?? -1));
-        return <section key={group} aria-label={CRYPTO_GROUP_LABEL[group]} className="flex flex-col gap-3">
-          <h2 className="landing-kicker">{CRYPTO_GROUP_LABEL[group]}</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-              <thead><tr className="border-b border-[var(--line)] text-xs text-[var(--ink-3)]">
-                <th className="py-2 pr-3 font-normal">Project</th>
-                <th className="py-2 pr-3 text-right font-normal">Fees, 30 days</th>
-                <th className="py-2 pr-3 text-right font-normal">Revenue, 30 days</th>
-                <th className="py-2 pr-3 font-normal">Fees by month</th>
-                <th className="py-2 pr-3 text-right font-normal">Value locked</th>
-                <th className="py-2 pr-3 text-right font-normal">Stablecoins held</th>
-              </tr></thead>
-              <tbody>{rows.map(({ p, s }) => {
-                const asset = p.symbol !== "—" ? assetBySlug(`${p.symbol.toLowerCase()}-usd`) : null;
-                return <tr key={p.id} className="border-b border-[var(--line)] align-top">
-                  <td className="py-3 pr-3">
-                    <span className="font-medium">{p.name}</span> <span className="font-mono text-xs text-[var(--ink-3)]">{asset ? <a className="underline" href={`/assets/${asset.slug}`}>{p.symbol}</a> : p.symbol}</span>
-                    <span className="mt-0.5 block max-w-[260px] text-xs leading-relaxed text-[var(--ink-3)]">{p.role}</span>
-                  </td>
-                  <td className="py-3 pr-3 text-right font-mono">{money(s?.fees30d ?? null)}{s?.fees30d != null ? <span className="block text-[10px] text-[var(--ink-3)]">{money((s.fees30d * 365) / 30)} a year</span> : null}</td>
-                  <td className="py-3 pr-3 text-right font-mono">{money(s?.revenue30d ?? null)}</td>
-                  <td className="py-3 pr-3"><FeeBars pts={complete(s?.feesMonthly ?? [], snap.asOf)} /></td>
-                  <td className="py-3 pr-3 text-right font-mono">{p.chain ? <>{money(s?.tvl ?? null)}<span className="block text-[10px] text-[var(--ink-3)]">{pct(s?.tvlShare ?? null)} of DeFi</span></> : <span className="text-[var(--ink-3)]">n/a</span>}</td>
-                  <td className="py-3 pr-3 text-right font-mono">{p.chain && s?.stablecoins != null ? <>{money(s.stablecoins)}<span className="block text-[10px] text-[var(--ink-3)]">{pct(s.stablecoinShare)} of all</span></> : <span className="text-[var(--ink-3)]">{p.chain ? "none" : "n/a"}</span>}</td>
-                </tr>;
-              })}</tbody>
-            </table>
-          </div>
-        </section>;
-      })}
-
-      <CryptoValuation meta={CRYPTO_GROUP_ORDER.flatMap((g) => CRYPTO_PROJECTS.filter((p) => p.group === g && p.gecko).map((p) => ({ id: p.id, name: p.name, symbol: p.symbol, groupLabel: CRYPTO_GROUP_LABEL[g] })))} />
-    </>}
-
-    <PrivacySection dev={snap?.privacyDev} />
+    <CryptoTabs tabs={TABS} panels={panels} />
 
     <section aria-label="How to read this" className="flex max-w-3xl flex-col gap-2 text-xs leading-relaxed text-[var(--ink-3)]">
       <h2 className="landing-kicker">How to read this</h2>
       <p><b className="text-[var(--ink-2)]">Fees</b>: everything users paid to use the network or app in the last 30 days (for a chain, its transaction fees). <b className="text-[var(--ink-2)]">Revenue</b>: the part the project or its token holders keep, for example fees burned or used for buybacks; fees paid out to miners or validators are not revenue. Both come from DefiLlama&rsquo;s daily figures.</p>
       <p><b className="text-[var(--ink-2)]">Value locked</b>: money deposited in DeFi apps on the chain. <b className="text-[var(--ink-2)]">Stablecoins held</b>: dollar stablecoins issued on the chain, a good guide to where real payments and trading happen.</p>
-      <p>Not yet included: active users, which aren&rsquo;t in DefiLlama&rsquo;s free data. {QUANT_NOTE} Valuation ratios use market caps, which are market data, so they are part of Premium.</p>
+      <p>Not yet included: active users, which aren&rsquo;t in DefiLlama&rsquo;s free data. {QUANT_NOTE} Valuation ratios use market caps, which are market data, so they are part of Premium. More terms in the <a className="underline" href="/methodology/glossary#price-to-fees">glossary</a>.</p>
       {snap?.problems.length ? <p>Missing this update: {snap.problems.join("; ")}.</p> : null}
     </section>
   </section>;

@@ -10,7 +10,8 @@ interface Row { id: string; mcap: number | null; fdv: number | null; fees30d: nu
 interface Bench { beta: number | null; correlation: number | null; r2: number | null }
 type Period = Record<"d30" | "d90" | "d365", number | null>;
 interface Basket { key: string; label: string; members: { id: string; symbol: string; name: string; mcap: number | null; return90d: number | null; betaToSol90d: number | null }[]; index: { t: number; v: number }[]; returns: { basket: Period; sol: Period; btc: Period }; vsSol: { d90: Bench; d365: Bench }; vsBtc: { d90: Bench; d365: Bench }; maxDrawdown365d: number | null }
-type State = { kind: "loading" } | { kind: "locked" } | { kind: "error" } | { kind: "ready"; asOf: string; cryptoMcap: number | null; stablecoins: number | null; projects: Row[]; baskets: Basket[] };
+interface Leader { key: string; name: string; symbol: string | null; category: string | null; chain: boolean; mcap: number; fees30d: number; revenue30d: number | null; priceToFees: number; priceToRevenue: number | null }
+type State = { kind: "loading" } | { kind: "locked" } | { kind: "error" } | { kind: "ready"; asOf: string; cryptoMcap: number | null; stablecoins: number | null; projects: Row[]; baskets: Basket[]; leaderboard?: Leader[] };
 
 const pc = (v: number | null) => (v == null ? "—" : `${v >= 0 ? "+" : "−"}${Math.abs(v * 100).toFixed(0)}%`);
 const n2 = (v: number | null) => (v == null ? "—" : v.toFixed(2));
@@ -60,6 +61,38 @@ function Trend({ pts }: { pts: MonthPoint[] }) {
   </svg>;
 }
 
+/** Every protocol with a token, best value first: market cap against a year of fees or of revenue (#124). */
+function Leaderboard({ rows }: { rows: Leader[] }) {
+  const [by, setBy] = useState<"fees" | "revenue">("fees");
+  const list = (by === "fees" ? [...rows].sort((a, b) => a.priceToFees - b.priceToFees)
+    : rows.filter((r) => r.priceToRevenue !== null).sort((a, b) => a.priceToRevenue! - b.priceToRevenue!)).slice(0, 20);
+  return <div className="flex flex-col gap-3">
+    <div className="flex flex-wrap items-end justify-between gap-3">
+      <div><h3 className="text-base font-medium">Best value for usage: top 20</h3>
+        <p className="mt-1 max-w-2xl text-xs leading-relaxed text-[var(--ink-3)]">Every protocol and chain DefiLlama tracks that has a token, cheapest first. Only those with at least $1M of fees in the last 30 days and a $100M market cap count. Stablecoin issuers are left out: they earn interest on reserves and have no token.</p></div>
+      <div role="group" aria-label="Rank by" className="flex gap-1 rounded-sm border border-[var(--line)] p-1">
+        {(["fees", "revenue"] as const).map((v) => <button key={v} type="button" aria-pressed={by === v} onClick={() => setBy(v)} className={`min-h-9 rounded-sm px-3 text-xs ${by === v ? "bg-[var(--depth-3)] text-[var(--ink)]" : "text-[var(--ink-2)]"}`}>{v === "fees" ? "Price ÷ fees" : "Price ÷ revenue"}</button>)}
+      </div>
+    </div>
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[640px] border-collapse text-left text-sm">
+        <thead><tr className="border-b border-[var(--line)] text-xs text-[var(--ink-3)]">
+          <th className="w-8 py-2 pr-2 font-normal">#</th><th className="py-2 pr-3 font-normal">Project</th><th className="py-2 pr-3 text-right font-normal">Market cap</th>
+          <th className="py-2 pr-3 text-right font-normal">{by === "fees" ? "Fees" : "Revenue"}, a year</th><th className="py-2 pr-3 text-right font-normal">{by === "fees" ? "Price ÷ fees" : "Price ÷ revenue"}</th>
+        </tr></thead>
+        <tbody>{list.map((r, i) => <tr key={r.key} className="border-b border-[var(--line)]">
+          <td className="py-2 pr-2 font-mono text-xs text-[var(--ink-3)]">{i + 1}</td>
+          <td className="py-2 pr-3"><span className="font-medium">{r.name}</span> {r.symbol ? <span className="font-mono text-xs text-[var(--ink-3)]">{r.symbol}</span> : null}<span className="block text-[10px] text-[var(--ink-3)]">{r.category ?? ""}</span></td>
+          <td className="py-2 pr-3 text-right font-mono">{money(r.mcap)}</td>
+          <td className="py-2 pr-3 text-right font-mono text-[var(--ink-2)]">{money(((by === "fees" ? r.fees30d : r.revenue30d ?? 0) * 365) / 30)}</td>
+          <td className="py-2 pr-3 text-right font-mono">{times(by === "fees" ? r.priceToFees : r.priceToRevenue)}</td>
+        </tr>)}</tbody>
+      </table>
+    </div>
+    <p className="text-[10px] leading-relaxed text-[var(--ink-3)]">Price ÷ fees can look cheap when most fees go to liquidity providers or stakers rather than the token, so check price ÷ revenue too. Versions of one protocol (Uniswap V2, V3, V4) are added together. Not a recommendation.</p>
+  </div>;
+}
+
 export default function CryptoValuation({ meta }: { meta: ValuationRowMeta[] }) {
   const [s, setS] = useState<State>({ kind: "loading" });
   useEffect(() => {
@@ -85,7 +118,7 @@ export default function CryptoValuation({ meta }: { meta: ValuationRowMeta[] }) 
       </div>
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[rgba(6,7,7,0.55)] p-4 text-center">
         <p className="inline-flex items-center gap-2 text-sm text-[var(--ink)]"><LockIcon title="Premium" /> Part of A3RO Premium</p>
-        <p className="max-w-md text-xs text-[var(--ink-2)]">Market cap against fees and revenue for every project, with 12 months of history, stablecoins&rsquo; share of the whole crypto market, and the Solana and memecoin high-beta baskets.</p>
+        <p className="max-w-md text-xs text-[var(--ink-2)]">A best-value leaderboard of every protocol with a token, market cap against fees and revenue for every project we track with 12 months of history, stablecoins&rsquo; share of the whole crypto market, and the Solana and memecoin high-beta baskets.</p>
         <a href="/private?module=crypto-valuation&next=/Projects/Crypto-Fundamentals" className="mt-1 rounded-sm border border-[var(--line-2)] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink)]">See Premium</a>
       </div>
     </div>
@@ -97,6 +130,8 @@ export default function CryptoValuation({ meta }: { meta: ValuationRowMeta[] }) 
         <div><dt className="text-xs text-[var(--ink-3)]">Stablecoins&rsquo; share of it</dt><dd className="mt-1 font-mono text-xl">{s.cryptoMcap && s.stablecoins ? `${((s.stablecoins / s.cryptoMcap) * 100).toFixed(1)}%` : "—"}</dd>
           <dd className="text-[10px] text-[var(--ink-3)]">Rising in a sell-off = money parked on the sidelines</dd></div>
       </dl>
+      {s.leaderboard?.length ? <Leaderboard rows={s.leaderboard} /> : null}
+      <h3 className="mt-4 text-base font-medium">The projects we track</h3>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] border-collapse text-left text-sm">
           <thead><tr className="border-b border-[var(--line)] text-xs text-[var(--ink-3)]">
@@ -121,7 +156,6 @@ export default function CryptoValuation({ meta }: { meta: ValuationRowMeta[] }) 
         <h3 className="landing-kicker">High-beta baskets</h3>
         <p className="max-w-3xl text-xs leading-relaxed text-[var(--ink-3)]">The ten largest Solana tokens and the five largest memecoins, each held in equal amounts, against SOL and BTC. The memecoin basket is a gauge of speculative appetite, not a trade idea: most memecoins lose almost all their value. Beta 2 means the basket has tended to move twice as far as the benchmark on the same day, both up and down; R² shows how much of its movement the benchmark explains. Stablecoins and staked or wrapped tokens are left out.</p>
         <div className="grid gap-4 md:grid-cols-2">{s.baskets.map((b) => <BasketCard key={b.key} b={b} />)}</div>
-        <p className="text-[10px] text-[var(--ink-3)]">Still to come: how new memecoins perform over their first 40 days (needs launch-by-launch data).</p>
       </div> : null}
       <p className="text-[10px] text-[var(--ink-3)]">Market caps and prices: <a className="underline" href="https://www.coingecko.com" target="_blank" rel="noreferrer">CoinGecko</a>, as of {s.asOf}. Fees and revenue: DefiLlama. A project with no revenue shows —. Compare within a group: a payments chain and a trading exchange earn in different ways. General information, not a recommendation.</p>
     </>}
