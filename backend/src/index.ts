@@ -362,6 +362,7 @@ export type { CryptoProject, CryptoGroup } from "./crypto/projects";
 export type { CryptoSnapshot, ProjectSnapshot, MonthPoint } from "./crypto/defillama";
 export { latestCryptoSnapshot } from "./storage/cryptoRepo";
 export { PRIVACY_PROJECTS, PRIVACY_REVIEWED } from "./crypto/privacy";
+export type { ExchangeReserve } from "./crypto/exchanges";
 export { PINK_SHEET_SOURCE, summarise as summarisePrices } from "./commodities/pinkSheet";
 export type { PinkSeriesId, PinkSeries, MonthlyPoint as PinkMonthlyPoint, PriceSummary } from "./commodities/pinkSheet";
 export { loadCommoditySeries } from "./storage/commodityMonthlyRepo";

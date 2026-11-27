@@ -38,7 +38,7 @@ export const MODULE_ACCESS: readonly ModuleAccess[] = [
   { id: "australia", label: "Australia Watch", level: "public", data: "open", pages: ["/Projects/Australia-Watch"], apis: ["/api/australia-watch"] },
   { id: "dividend", label: "AI Dividend", level: "public", data: "open", pages: ["/Projects/AI-Dividend"], apis: ["/api/dividend"] },
   { id: "commodity", label: "Commodity Watch (oil corridors)", level: "public", data: "open", pages: ["/Projects/Oil-Tracker"], apis: ["/api/oil"] },
-  { id: "crypto", label: "Crypto (usage scorecard)", level: "public", data: "open", pages: ["/Projects/Crypto-Fundamentals"], apis: ["/api/crypto/fundamentals"] },
+  { id: "crypto", label: "Crypto (usage scorecard)", level: "public", data: "open", pages: ["/Projects/Crypto-Fundamentals"], apis: ["/api/crypto/fundamentals", "/api/crypto/exchanges"] },
   // Market caps are market data (#18): the valuation ratios are Premium, served apart from the free scorecard.
   { id: "crypto-valuation", label: "Crypto valuation (market caps, ratios)", level: "premium", data: "market", pages: [], apis: ["/api/crypto/valuation"],
     preview: "On the Crypto page: each project's market cap against the fees users pay and the revenue it keeps (price-to-fees, price-to-revenue) with 12 months of history, stablecoins' share of the whole crypto market, and Solana and memecoin baskets measured against SOL and BTC." },

@@ -20,6 +20,7 @@ import { fetchMarketInputs } from "../src/crypto/coingecko";
 import { BASKETS, buildBasket, fetchBasketInputs } from "../src/crypto/baskets";
 import { fetchPrivacyDev } from "../src/crypto/privacy";
 import { buildLeaderboard, chainApps, fetchLeaderboardInputs } from "../src/crypto/leaderboard";
+import { buildExchangeReserves } from "../src/crypto/exchanges";
 
 /** GitHub REST (public repos). The Action's GITHUB_TOKEN lifts the rate limit if present. */
 const ghGet = async (path: string) => {
@@ -53,6 +54,8 @@ async function main(): Promise<void> {
   snap.problems.push(...lb.problems);
   snap.leaderboard = buildLeaderboard(inputs.feesList, lb.revenueList, lb.protocols, lb.lite, snap.projects);
   snap.chainApps = { solana: chainApps(inputs.feesList, lb.revenueList, "solana"), bitcoin: chainApps(inputs.feesList, lb.revenueList, "bitcoin") };
+  snap.exchanges = buildExchangeReserves(lb.protocols);
+  console.log(`Exchanges (clean assets): ${snap.exchanges.map((e) => `${e.name} ${fmt(e.clean)} (7d ${e.change7d?.toFixed(1) ?? "—"}%)`).join(" · ")}`);
   const x = (v: number | null) => (v === null ? "—" : `${v.toFixed(1)}x`);
   console.log(`Leaderboard (${snap.leaderboard.length}) by P/F: ${snap.leaderboard.slice(0, 20).map((r) => `${r.symbol ?? r.name} ${x(r.priceToFees)}`).join(" · ")}`);
   console.log(`  by P/R: ${[...snap.leaderboard].filter((r) => r.priceToRevenue !== null).sort((a, b) => a.priceToRevenue! - b.priceToRevenue!).slice(0, 20).map((r) => `${r.symbol ?? r.name} ${x(r.priceToRevenue)}`).join(" · ")}`);

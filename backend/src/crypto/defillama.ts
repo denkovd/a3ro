@@ -65,6 +65,8 @@ export interface CryptoSnapshot {
   leaderboard?: import("./leaderboard").LeaderRow[];
   /** Open data: the apps earning the most fees on Solana and on Bitcoin (#124). */
   chainApps?: { solana: import("./leaderboard").ChainApp[]; bitcoin: import("./leaderboard").ChainApp[] };
+  /** Open data: assets in exchanges' published wallets (#127). */
+  exchanges?: import("./exchanges").ExchangeReserve[];
 }
 
 type Json = unknown;

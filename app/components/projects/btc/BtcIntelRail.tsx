@@ -5,6 +5,31 @@ import { formatBtcPrice, formatPct } from "./btcData";
 import { findMetric, formatUsdMn, type BtcFlowData } from "./useBtcFlowData";
 import { freshness, formatTimestamp, sumSessions, venueInMode, type GlobeMode, type BtcMarket, type BtcMarketResponse } from "./marketData";
 import { VENUES, MINING_REGIONS, MINING_SOURCE, type Venue, type MiningRegion } from "./nodes";
+
+/** Exchange reserves (#127): assets in each exchange's published wallets, from DefiLlama (open data). */
+interface Reserve { name: string; clean: number; ownTokens: number; change7d: number | null }
+const RESERVE_NAME: Record<string, RegExp> = { binance: /^binance$/i, okx: /^okx$/i, bybit: /^bybit$/i, bitfinex: /^bitfinex$/i, coinbase: /^coinbase$/i };
+function useReserves() {
+  const [r, setR] = useState<{ asOf: string; exchanges: Reserve[] } | null>(null);
+  useEffect(() => {
+    let live = true;
+    fetch("/api/crypto/exchanges").then((x) => (x.ok ? x.json() : null)).then((j) => { if (live && j?.status === "ready") setR(j); }).catch(() => {});
+    return () => { live = false; };
+  }, []);
+  return r;
+}
+function ReserveLine({ venueId, reserves }: { venueId: string; reserves: { asOf: string; exchanges: Reserve[] } | null }) {
+  const re = RESERVE_NAME[venueId];
+  if (!re || !reserves) return null;
+  const e = reserves.exchanges.find((x) => re.test(x.name));
+  const bn = (v: number) => `$${(v / 1e9).toFixed(v >= 1e11 ? 0 : 1)}bn`;
+  return <div className="mt-3 border-t border-[var(--line)] pt-3">
+    <p className="font-mono text-[8px] uppercase tracking-[0.22em] text-[var(--ink-3)]">Reserves · published wallets</p>
+    {e ? <><p className="mt-1 font-mono text-lg">{bn(e.clean)}{e.change7d !== null ? <span className="ml-2 text-[10px] text-[var(--ink-3)]">{e.change7d >= 0 ? "+" : "−"}{Math.abs(e.change7d).toFixed(1)}% in 7 days</span> : null}</p>
+      <p className="mt-1 text-[10px] leading-relaxed text-[var(--ink-3)]">All assets in the wallets the exchange has published{e.ownTokens > 0 ? `, excluding its own token (${bn(e.ownTokens)})` : ""}. The change includes price moves, so it isn&rsquo;t net deposits. DefiLlama, {reserves.asOf}.</p></>
+      : <p className="mt-1 text-[10px] leading-relaxed text-[var(--ink-3)]">Not shown: this exchange hasn&rsquo;t published its wallet addresses, so its reserves can&rsquo;t be checked.</p>}
+  </div>;
+}
 import { FLOW_ROUTES } from "./flowRoutes";
 import { ORANGE_CSS } from "../btcTrackerShared";
 
@@ -88,6 +113,7 @@ export default function BtcIntelRail({ narrow, mode, selected, onVenue, onMining
   const contentRef = useRef<HTMLDivElement>(null);
   useEffect(() => { contentRef.current?.scrollTo({ top: 0 }); }, [selected, mode]);
   const venue = VENUES.find((v) => v.id === selected);
+  const reserves = useReserves();
   const mine = MINING_REGIONS.find((m) => `mine:${m.id}` === selected);
   const route = FLOW_ROUTES.find((r) => `route:${r.id}` === selected);
   const flow = findMetric(flows.metrics, "etf_us", "etf_flow_usd_mn");
@@ -121,6 +147,7 @@ export default function BtcIntelRail({ narrow, mode, selected, onVenue, onMining
           venue && (venue.id === "coinbase" || venue.id === "bybit") ?
             <p role="status" className="mt-3 text-xs leading-relaxed text-[var(--ink-2)]">{markets.loading ? "Loading public market data…" : markets.errors[venue.id] ?? "Market feed unavailable. Retrying automatically."}</p> :
             venue ? <p className="mt-3 text-xs leading-relaxed text-[var(--ink-2)]">{venue.note}</p> : null}
+        {venue ? <ReserveLine venueId={venue.id} reserves={reserves} /> : null}
         {mine && <><p className="mt-3 font-mono text-2xl">~{(mine.hashrateShare * 100).toFixed(0)}%</p><p className="mt-1 text-xs text-[var(--ink-3)]">Illustrative hashrate share · {mine.asOf}</p><p className="mt-3 text-xs leading-relaxed text-[var(--ink-2)]">{MINING_SOURCE}. This layer represents hashpower geography; it does not locate stored coins.</p></>}
         {route && <><p className="mt-3 text-xs leading-relaxed text-[var(--ink-2)]">A conceptual link between liquidity hubs. Direction and width do not measure observed Bitcoin transfers.</p><div className="mt-3 space-y-2">{route.gates.map((id) => { const v = VENUES.find((v) => v.id === id); return v ? <button key={id} type="button" className={rowButton} onClick={() => onVenue(v)}><span className="text-xs">{v.name}</span><span className={`ml-2 ${kicker}`}>{venueStatus(v, markets, flows)} ↗</span></button> : null; })}</div></>}
       </section> : <section aria-label={mode === "mining" ? "Mining geography" : "What changed"}>

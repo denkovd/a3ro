@@ -190,3 +190,14 @@ test("chain apps: per-chain fees, issuers left out", () => {
   assert.deepEqual(sol.map((a) => a.name), ["pump.fun"]);
   assert.equal(sol[0].revenue30d, 28e6);
 });
+
+import { buildExchangeReserves } from "../src/crypto/exchanges";
+
+test("exchange reserves: CEX only, own token left out, biggest first", () => {
+  const rows = buildExchangeReserves([
+    { name: "Binance CEX", slug: "binance-cex", category: "CEX", tvl: 120e9, change_7d: 1.7, chainTvls: { OwnTokens: { tvl: 9e9 } } },
+    { name: "OKX", slug: "okx", category: "CEX", tvl: 27e9, change_7d: 0.1 },
+    { name: "Aave V3", category: "Lending", tvl: 30e9 },
+  ]);
+  assert.deepEqual(rows.map((r) => [r.name, r.clean]), [["Binance", 111e9], ["OKX", 27e9]]);
+});

@@ -6,6 +6,7 @@ import CryptoValuation from "./CryptoValuation";
 import PrivacySection from "./PrivacySection";
 import CryptoTabs, { type CryptoTab } from "./CryptoTabs";
 import type { ChainApp } from "../../../backend/src/crypto/leaderboard";
+import type { ExchangeReserve } from "../../../backend/src/crypto/exchanges";
 
 const ACCENT = "#9ab8ff";
 const LINE_COLOURS = ["#9ab8ff", "#b8e278", "#f0b35a", "#e58ad0", "#7fd6c2", "#d9d9d9"];
@@ -157,6 +158,27 @@ function ProjectTable({ ids, snap, showGroup = false }: { ids: string[]; snap: C
   </div>;
 }
 
+/** Assets in exchanges' published wallets (#127, open data). */
+function ExchangeTable({ rows }: { rows: ExchangeReserve[] | undefined }) {
+  if (!rows?.length) return <p className="text-xs text-[var(--ink-3)]">Exchange reserves arrive with the next daily update.</p>;
+  const signed = (v: number | null) => (v === null ? "—" : `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`);
+  return <div className="overflow-x-auto">
+    <table className="w-full min-w-[560px] border-collapse text-left text-sm">
+      <thead><tr className="border-b border-[var(--line)] text-xs text-[var(--ink-3)]">
+        <th className="w-8 py-2 pr-2 font-normal">#</th><th className="py-2 pr-3 font-normal">Exchange</th>
+        <th className="py-2 pr-3 text-right font-normal">Assets, excluding own token</th><th className="py-2 pr-3 text-right font-normal">Own token</th><th className="py-2 pr-3 text-right font-normal">Change, 7 days</th>
+      </tr></thead>
+      <tbody>{rows.map((e, i) => <tr key={e.slug || e.name} className="border-b border-[var(--line)]">
+        <td className="py-2 pr-2 font-mono text-xs text-[var(--ink-3)]">{i + 1}</td>
+        <td className="py-2 pr-3 font-medium">{e.name}</td>
+        <td className="py-2 pr-3 text-right font-mono">{money(e.clean)}</td>
+        <td className="py-2 pr-3 text-right font-mono text-[var(--ink-3)]">{e.ownTokens > 0 ? money(e.ownTokens) : "—"}</td>
+        <td className="py-2 pr-3 text-right font-mono text-[var(--ink-2)]">{signed(e.change7d)}</td>
+      </tr>)}</tbody>
+    </table>
+  </div>;
+}
+
 /** The apps earning the most fees on one chain (open data). */
 function AppsTable({ apps, chain }: { apps: ChainApp[] | undefined; chain: string }) {
   if (!apps?.length) return <p className="text-xs text-[var(--ink-3)]">The list of {chain} apps arrives with the next daily update.</p>;
@@ -227,6 +249,9 @@ export default function CryptoFundamentalsView({ snap }: { snap: CryptoSnapshot 
       </Section>
       <Section title="Top apps on Bitcoin" intro="Apps earning fees on Bitcoin itself in the last 30 days, from DefiLlama. Most Bitcoin activity is plain transfers, so this list is small.">
         <AppsTable apps={snap.chainApps?.bitcoin} chain="Bitcoin" />
+      </Section>
+      <Section title="Exchange reserves" intro="What the biggest exchanges hold in the wallets they have published, from DefiLlama. The exchange's own token (such as Binance's BNB) is left out, because an exchange can create it and it would be hard to sell in a crisis. The 7-day change includes price moves, so it isn't a measure of money coming in or going out. Exchanges that don't publish their wallets, such as Coinbase, can't be shown.">
+        <ExchangeTable rows={snap.exchanges} />
       </Section>
       <p className="text-xs text-[var(--ink-3)]">Where bitcoin is mined, traded and held: the <a className="underline" href="/Projects/BTC-Tracker">BTC globe</a>. Private bitcoin tools are compared under <GoTab tab="privacy">Privacy</GoTab>.</p>
     </>,
