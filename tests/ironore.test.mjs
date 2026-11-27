@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 const ref = await import("../lib/ironore/reference.ts");
-const ex = await import("../lib/ironore/exports.ts");
+const ex = await import("../lib/commodity/absExports.ts");
 const access = await import("../lib/access.ts");
 
 const inRange = (lon, lat) => lon >= -180 && lon <= 180 && lat >= -90 && lat <= 90;
@@ -14,7 +14,7 @@ test("ids are unique and coordinates valid", () => {
     assert.equal(new Set(ids).size, ids.length);
     for (const x of list) assert.ok(inRange(x.lon, x.lat), x.id);
   }
-  for (const d of ex.DESTINATIONS) assert.ok(inRange(d.lon, d.lat), d.code);
+  for (const d of ref.DESTINATIONS) assert.ok(inRange(d.lon, d.lat), d.code);
 });
 
 test("every source is https and reviewed, and every reference points at one", () => {
@@ -45,7 +45,7 @@ const months = (n, from = [2024, 10]) => Array.from({ length: n }, (_, i) => {
 });
 
 test("ABS query asks for iron ore, every destination and WA", () => {
-  const url = ex.exportsUrl("2021-11");
+  const url = ex.exportsUrl(ref.IRON_ORE_EXPORTS, "2021-11");
   assert.match(url, /ABS,MERCH_EXP,1\.1\.0\/281\.TOT\+CHIN\+/);
   assert.match(url, /\.TOT\+5\.M\?startPeriod=2021-11&format=csv$/);
   assert.equal(ex.startPeriodFor(new Date("2026-11-27T00:00:00Z")), "2021-11");
@@ -60,7 +60,7 @@ test("parses A$ thousands into A$ millions and sums the last 12 months", () => {
     ["JAP", "TOT", p, 500_000],
     ["RKOR", "TOT", p, i === 23 ? "" : 400_000], // blank latest value skipped
   ]);
-  const s = ex.summarizeExports(ex.parseExportsCsv(csv(rows)), "u", "t");
+  const s = ex.summarizeExports(ref.IRON_ORE_EXPORTS, ex.parseExportsCsv(csv(rows)), "u", "t");
   assert.equal(s.latestPeriod, ps[23]);
   assert.equal(s.months.length, 24);
   assert.equal(s.months[0].totalAudM, 10_000);
@@ -70,20 +70,20 @@ test("parses A$ thousands into A$ millions and sums the last 12 months", () => {
   assert.equal(s.destinations[0].code, "CHIN");
   assert.ok(Math.abs(s.destinations[0].share - 96_000 / expected) < 1e-9);
   assert.equal(s.destinations.find((d) => d.code === "RKOR").latestAudM, null);
-  assert.ok(s.waShare > 0.98 && s.waShare < 1);
+  assert.ok(s.states[0].share > 0.98 && s.states[0].share < 1);
   assert.ok(s.otherLast12AudM > 0);
 });
 
 test("refuses empty or short answers", () => {
   assert.throws(() => ex.parseExportsCsv("NoRecordsFound"));
-  assert.throws(() => ex.summarizeExports(ex.parseExportsCsv(csv(months(6).map((p) => ["TOT", "TOT", p, 1]))), "u", "t"), /12 months/);
+  assert.throws(() => ex.summarizeExports(ref.IRON_ORE_EXPORTS, ex.parseExportsCsv(csv(months(6).map((p) => ["TOT", "TOT", p, 1]))), "u", "t"), /12 months/);
   assert.throws(() => ex.parseExportsCsv("A,B\n1,2"), /missing required columns/);
 });
 
 test("labelled cells (CODE: Label) are read by their code", () => {
   const text = ["DATAFLOW,COMMODITY_SITC: Commodity,COUNTRY_DEST: Country,STATE_ORIGIN: State,FREQ: Frequency,TIME_PERIOD: Time,OBS_VALUE,UNIT_MULT: Unit multiplier",
     ...months(12).map((p) => `ABS:MERCH_EXP(1.1.0),281: Iron ore,TOT: Total,TOT: Total,M: Monthly,${p},5000000,3: Thousands`)].join("\n");
-  const s = ex.summarizeExports(ex.parseExportsCsv(text), "u", "t");
+  const s = ex.summarizeExports(ref.IRON_ORE_EXPORTS, ex.parseExportsCsv(text), "u", "t");
   assert.equal(s.last12AudM, 60_000);
 });
 

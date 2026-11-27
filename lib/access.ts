@@ -42,6 +42,8 @@ export const MODULE_ACCESS: readonly ModuleAccess[] = [
   { id: "uranium", label: "Commodity Watch (uranium fuel chain)", level: "public", data: "open", pages: ["/Projects/Uranium-Tracker"], apis: [] },
   // ABS exports (CC BY), USGS and WA Government reference figures; the price is a TradingView widget (#55).
   { id: "ironore", label: "Commodity Watch (iron ore)", level: "public", data: "open", pages: ["/Projects/Iron-Ore-Tracker"], apis: ["/api/ironore"] },
+  // ABS exports, CME warehouse stock counts (no prices) and USGS reference figures; price is a TradingView widget (#56).
+  { id: "copper", label: "Commodity Watch (copper)", level: "public", data: "open", pages: ["/Projects/Copper-Tracker"], apis: ["/api/copper"] },
   { id: "macro", label: "Macro view", level: "public", data: "open", pages: [], apis: ["/api/macro", "/api/capital"] },
   { id: "trend", label: "Bull Market Finder", level: "premium", data: "market", pages: ["/Projects/Bull-Market-Finder", "/Projects/Regime-Finder"], apis: ["/api/bull"],
     preview: "Finds the assets that have just turned bullish on both daily and weekly closes, ranked by how recent and how strong the turn is, with a chart and profile for each." },

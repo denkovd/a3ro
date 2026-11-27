@@ -11,12 +11,14 @@ import { GOLD_CSS, GT_ROUTE } from "../goldTrackerShared";
 import { ORANGE_CSS, BT_ROUTE } from "../btcTrackerShared";
 import { URANIUM_CSS, UT_ROUTE } from "../uraniumTrackerShared";
 import { IRON_CSS, IT_ROUTE } from "../ironOreTrackerShared";
+import { COPPER_CSS, CT_ROUTE } from "../copperTrackerShared";
 
-export type CommodityId = "oil" | "gold" | "btc" | "uranium" | "ironore";
+export type CommodityId = "oil" | "gold" | "btc" | "uranium" | "ironore" | "copper";
 
 export const COMMODITY_TABS: readonly { id: CommodityId; label: string; title: string; route: string; color: string; premium: boolean }[] = [
   { id: "oil", label: "Oil", title: "Oil Tracker", route: OT_ROUTE, color: AMBER_CSS, premium: false },
   { id: "ironore", label: "Iron ore", title: "Iron Ore Tracker", route: IT_ROUTE, color: IRON_CSS, premium: false },
+  { id: "copper", label: "Copper", title: "Copper Tracker", route: CT_ROUTE, color: COPPER_CSS, premium: false },
   { id: "uranium", label: "Uranium", title: "Uranium Tracker", route: UT_ROUTE, color: URANIUM_CSS, premium: false },
   { id: "gold", label: "Gold", title: "Gold Tracker", route: GT_ROUTE, color: GOLD_CSS, premium: true },
   { id: "btc", label: "BTC", title: "BTC Tracker", route: BT_ROUTE, color: ORANGE_CSS, premium: true },
