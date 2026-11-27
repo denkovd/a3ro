@@ -5,7 +5,7 @@
 ──────────────────────────────────────────────────────────────── */
 
 import type { CoinMarket, CompanyMetrics, CompanyProfile, EarningsQuarter } from "../profiles/sources";
-import { Queryable } from "./db";
+import { dateOnly, Queryable } from "./db";
 
 export interface AssetProfileRow {
   symbol: string;
@@ -130,7 +130,7 @@ export async function setNextEarnings(
 }
 
 const toDate = (v: unknown): string | null =>
-  v == null ? null : v instanceof Date ? v.toISOString().slice(0, 10) : String(v).slice(0, 10);
+  v == null ? null : dateOnly(v);
 const toIso = (v: unknown): string | null =>
   v == null ? null : v instanceof Date ? v.toISOString() : String(v);
 const toNum = (v: unknown): number | null => {

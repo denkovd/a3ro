@@ -11,7 +11,7 @@ import {
   BullTransition,
   RollEvent,
 } from "../bull/types";
-import { Queryable } from "./db";
+import { dateOnly, Queryable } from "./db";
 
 export type BarSeries = "raw" | "adj";
 
@@ -60,7 +60,7 @@ export async function loadBars(
     [symbol, series],
   );
   return res.rows.map((r) => ({
-    date: r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date).slice(0, 10),
+    date: dateOnly(r.date),
     open: Number(r.open), high: Number(r.high),
     low: Number(r.low), close: Number(r.close),
   }));
@@ -79,7 +79,7 @@ export async function loadBarsSince(
     [symbol, series, fromDate],
   );
   return res.rows.map((r) => ({
-    date: r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date).slice(0, 10),
+    date: dateOnly(r.date),
     open: Number(r.open), high: Number(r.high),
     low: Number(r.low), close: Number(r.close),
   }));
@@ -111,7 +111,7 @@ export async function latestBarDate(
   );
   const d = res.rows[0]?.d;
   if (d == null) return null;
-  return d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10);
+  return dateOnly(d);
 }
 
 /** Additive back-shift of every 'adj' bar strictly before rollDate.
@@ -332,7 +332,7 @@ export interface BullSnapshotRow {
 }
 
 const toDateStr = (v: unknown): string | null =>
-  v == null ? null : v instanceof Date ? v.toISOString().slice(0, 10) : String(v).slice(0, 10);
+  v == null ? null : dateOnly(v);
 const toNum = (v: unknown): number | null => {
   if (v == null) return null;
   const n = Number(v);

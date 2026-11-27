@@ -26,6 +26,9 @@ import { detectRescale } from "../src/bull/rescale";
 import { BULL_UNIVERSE } from "../src/bull/universe";
 import { AdapterHealthEntry } from "../src/bull/types";
 
+/** Share of shared dates that must disagree before a symbol counts as rescaled. */
+const MIN_SHARE = 0.05;
+
 function arg(name: string): string | null {
   const i = process.argv.indexOf(name);
   return i === -1 ? null : process.argv[i + 1] ?? null;
@@ -58,7 +61,9 @@ async function main(): Promise<void> {
       const { bars } = await fetchBarsWithFallback(entry, "5y", runDate, registry);
       if (!bars) { failed.push(entry.symbol); continue; }
       const check = detectRescale(stored, bars);
-      if (!check.rescaled) continue;
+      // Over 5 years a few odd source ticks (FX especially) are normal; a split or spin-off
+      // puts every bar before it on another scale, so require a real share of dates to disagree.
+      if (!check.rescaled || check.mismatches < check.compared * MIN_SHARE) continue;
       found.push(entry.symbol);
       console.log(`${entry.symbol.padEnd(10)} ${check.mismatches}/${check.compared} dates off, stored/fresh ratio ≈ ${check.ratio?.toFixed(3)}`);
       if (apply && await replaceHistory(db, entry, runDate, registry, health, (m) => console.log(`  ${m}`), check.ratio)) {
