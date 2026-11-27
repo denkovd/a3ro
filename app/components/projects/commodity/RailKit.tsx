@@ -82,6 +82,22 @@ export function MonthlyPriceBlock({ data, kicker, accent, decimals = 0, prefix =
   </RailSection>;
 }
 
+/** What a price move means for Australia's export earnings (#126 stage 3): volume × move, plus the official forecast. */
+export function ExportImpactBlock({ impact, price, decimals = 0, reviewed }: {
+  impact: import("../../../../lib/commodity/exportImpact").ExportImpact; price: number | null; decimals?: number; reviewed: string;
+}) {
+  const usdBn = (impact.volumePerYear * impact.step) / 1e9;
+  const fmt = (v: number) => `US$${v.toLocaleString("en-AU", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
+  const gap = price !== null && impact.reqPrice ? price - impact.reqPrice.value : null;
+  return <RailSection label="What it means for Australia" kicker="What the price means for Australia">
+    <p className="mt-2 font-mono text-lg text-[var(--ink)]">±US${usdBn.toFixed(1)}bn a year</p>
+    <p className="text-[10px] text-[var(--ink-3)]">in export earnings for each {impact.stepLabel} the price moves, if it lasts (about A${(usdBn / 0.65).toFixed(1)}bn at 65 US cents)</p>
+    {gap !== null && impact.reqPrice ? <p className="mt-2 text-[11px] leading-relaxed text-[var(--ink-2)]">Last month&rsquo;s average was {fmt(Math.abs(gap))} {gap >= 0 ? "above" : "below"} {impact.reqPrice.label} of {fmt(impact.reqPrice.value)}: worth roughly {gap >= 0 ? "+" : "−"}US${Math.abs((gap * impact.volumePerYear) / 1e9).toFixed(1)}bn a year if it held.</p> : null}
+    <p className="mt-2 text-[11px] leading-relaxed text-[var(--ink-2)]">{impact.reqEarnings}</p>
+    <p className="mt-2 text-[9px] leading-relaxed text-[var(--ink-3)]">Based on {impact.volumeLabel}. {impact.caveat} A rule of thumb, not a forecast. Checked {reviewed}. Sources: {impact.sources.map((s, i) => <span key={s.url}>{i ? "; " : ""}<a className="underline" href={s.url} target="_blank" rel="noreferrer">{s.label}</a></span>)}.</p>
+  </RailSection>;
+}
+
 /** Delayed TradingView price, with the line under it saying what it is. `rgb` is "r,g,b". */
 export function PriceBlock({ symbol, kicker, label, note, accent, rgb }: { symbol: string; kicker: string; label: string; note: string; accent: string; rgb: string }) {
   return <RailSection label="Price" kicker={kicker}>

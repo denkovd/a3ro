@@ -44,6 +44,17 @@ export const MANUAL_JOBS: readonly ManualJob[] = [
     lastCheckedInCode: "2026-11-27",
   },
   {
+    id: "export-impact-review",
+    title: "Update copper and LNG export figures from the latest Resources and Energy Quarterly",
+    steps: [
+      "Open the latest REQ (March, June, September, December). Copy the copper export volume and price assumption for the current financial year, and the copper and LNG export earnings forecasts, into lib/commodity/exportImpact.ts.",
+      "Update the LNG export volume from the latest WA LNG profile (12-month total) and set EXPORT_IMPACT_REVIEWED to today.",
+    ],
+    where: "lib/commodity/exportImpact.ts",
+    everyMonths: 3,
+    lastCheckedInCode: "2026-11-28",
+  },
+  {
     id: "pink-sheet-url",
     title: "Check the World Bank Pink Sheet download link for the new year",
     steps: [

@@ -5,7 +5,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  CompanyList, Explorer, Headline, Kicker, MonthlyPriceBlock, useMonthlyPrice, RailSection, RailShell, SourceLink as RailSourceLink, SourceList, Stat, n, pct, rowBtn,
+  CompanyList, Explorer, Headline, Kicker, MonthlyPriceBlock, useMonthlyPrice, ExportImpactBlock, RailSection, RailShell, SourceLink as RailSourceLink, SourceList, Stat, n, pct, rowBtn,
 } from "../commodity/RailKit";
 import ExportsBlock, { audBn, type Loadable } from "../commodity/ExportsBlock";
 import type { RailApi } from "../commodity/CommodityGlobe";
@@ -15,6 +15,7 @@ import {
   WORLD_MINE_KT, WORLD_REFINED_KT, type SourceId,
 } from "../../../../lib/copper/reference";
 import { periodLabel, type CommodityExports } from "../../../../lib/commodity/absExports";
+import { COPPER_IMPACT, EXPORT_IMPACT_REVIEWED } from "../../../../lib/commodity/exportImpact";
 import { SHORT_TON_TONNES, type ComexCopperStocks } from "../../../../lib/copper/comexStocks";
 
 const CU = COPPER_CSS;
@@ -129,6 +130,7 @@ export default function CopperIntelPanel({ narrow, selected, focus, close, expor
       {detail ? <section>{detail}</section> : <>
         <MonthlyPriceBlock data={price} kicker="Price · copper, LME monthly average" accent={CU} per="a tonne" decimals={0}
           note={`The world benchmark, in US dollars a tonne. USGS puts the 2025 COMEX average at a record US$${US_STOCKS.comexPriceUsdLb2025.toFixed(2)}/lb, up from US$${US_STOCKS.comexPriceUsdLb2024.toFixed(2)} in 2024.`} />
+        <ExportImpactBlock impact={COPPER_IMPACT} price={price && price !== "error" ? price.summary?.latest.value ?? null : null} decimals={0} reviewed={EXPORT_IMPACT_REVIEWED} />
 
         <RailSection label="COMEX warehouse stocks" kicker="COMEX warehouse stocks · CME, daily">
           <ComexBlock state={comexState} />

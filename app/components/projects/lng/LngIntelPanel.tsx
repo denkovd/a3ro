@@ -4,7 +4,7 @@
    Everything else is reference data from lib/lng/reference.ts. */
 import { useState } from "react";
 import {
-  CompanyList, Explorer, Headline, Kicker, MonthlyPriceBlock, useMonthlyPrice, RailSection, RailShell, SourceLink as RailSourceLink, SourceList, Stat, pct, rowBtn,
+  CompanyList, Explorer, Headline, Kicker, MonthlyPriceBlock, useMonthlyPrice, ExportImpactBlock, RailSection, RailShell, SourceLink as RailSourceLink, SourceList, Stat, pct, rowBtn,
 } from "../commodity/RailKit";
 import ExportsBlock, { type Loadable } from "../commodity/ExportsBlock";
 import type { RailApi } from "../commodity/CommodityGlobe";
@@ -12,6 +12,7 @@ import { BUYER_CSS, LNG_CSS } from "../lngTrackerShared";
 import {
   COMPANIES, DESTINATIONS, DESTINATION_PERIOD, DESTINATION_TOTAL_MT, EXPORTERS, HORMUZ, IMPORTERS, OUTLOOK, PILBARA_LNG_MT, PLANTS, SOURCES, TOP3_SHARE, TRADE_YEAR, WORLD_TRADE_MT, type SourceId,
 } from "../../../../lib/lng/reference";
+import { LNG_IMPACT, EXPORT_IMPACT_REVIEWED } from "../../../../lib/commodity/exportImpact";
 import type { CommodityExports } from "../../../../lib/commodity/absExports";
 
 const LG = LNG_CSS;
@@ -120,6 +121,7 @@ export default function LngIntelPanel({ narrow, selected, focus, close, exportsS
       {detail ? <section>{detail}</section> : <>
         <MonthlyPriceBlock data={price} kicker="Price · LNG imported by Japan" accent={LG} per="per MMBtu" decimals={2}
           note={"What Japan paid for LNG, in US dollars per million British thermal units. Like most Australian LNG, much of it is bought on long-term contracts linked to oil prices, so it moves more slowly than the Asian spot price (JKM)."} />
+        <ExportImpactBlock impact={LNG_IMPACT} price={price && price !== "error" ? price.summary?.latest.value ?? null : null} decimals={2} reviewed={EXPORT_IMPACT_REVIEWED} />
 
         <RailSection label="2026 shock">
           <HormuzBox focus={focus} />
