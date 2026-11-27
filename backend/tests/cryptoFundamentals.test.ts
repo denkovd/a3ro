@@ -71,3 +71,38 @@ describe("crypto fundamentals: snapshot", () => {
     for (const p of CRYPTO_PROJECTS) { assert.ok(p.fees.length > 0, p.id); assert.ok(p.role, p.id); }
   });
 });
+
+describe("crypto valuation and stablecoins (#83, #84)", () => {
+  test("value N days ago picks the nearest earlier point, null when far off", async () => {
+    const { valueDaysAgo } = await import("../src/crypto/defillama");
+    const pts = dailyPoints(days(400, (i) => i));
+    assert.equal(valueDaysAgo(pts, 30), 369);
+    assert.equal(valueDaysAgo(pts, 365), 34);
+    assert.equal(valueDaysAgo(dailyPoints(days(10, () => 1)), 30), null);
+  });
+  test("monthly ratio: month-end level ÷ (month's flow × 12), complete months only", async () => {
+    const { monthlyRatio } = await import("../src/crypto/defillama");
+    const r = monthlyRatio([{ month: "2026-01", value: 1200 }, { month: "2026-02", value: 2400 }, { month: "2026-03", value: 9 }], [{ month: "2026-01", value: 10 }, { month: "2026-02", value: 10 }, { month: "2026-03", value: 1 }], "2026-03");
+    assert.deepEqual(r, [{ month: "2026-01", value: 10 }, { month: "2026-02", value: 20 }]);
+  });
+  test("snapshot: market cap ÷ yearly fees and revenue; stablecoin totals; crypto market cap", () => {
+    const solana = CRYPTO_PROJECTS.find((p) => p.id === "solana")!;
+    const snap = buildSnapshot({
+      chains: [{ name: "Solana", tvl: 10 }], stableChains: [], feesList: { protocols: [{ name: "Solana", slug: "solana" }] },
+      defiTvlHistory: [], chainTvlHistory: {}, stableHistory: {},
+      feesHistory: { solana: { totalDataChart: days(60, () => 1) } }, revenueHistory: { solana: { totalDataChart: days(60, () => 0.5) } },
+      stablecoinsAll: days(400, (i) => i).map(([t, v]) => ({ date: t, totalCirculatingUSD: { peggedUSD: v } })),
+      markets: [{ id: "solana", market_cap: 365, fully_diluted_valuation: 400 }],
+      global: { data: { total_market_cap: { usd: 3650 } } },
+      mcapCharts: { solana: { market_caps: days(60, () => 365).map(([t, v]) => [t * 1000, v]) } },
+    }, new Date("2026-03-01T00:00:00Z"), [solana]);
+    const s = snap.projects[0];
+    assert.equal(s.mcap, 365);
+    assert.equal(s.fdv, 400);
+    assert.equal(s.priceToFees, 365 / 365);   // 30 days of 1/day → 365 a year
+    assert.equal(s.priceToRevenue, 365 / 182.5);
+    assert.ok(s.priceToFeesMonthly.length >= 1);
+    assert.equal(snap.totals.cryptoMcap, 3650);
+    assert.equal(snap.totals.stablecoins30dAgo, 369);
+  });
+});

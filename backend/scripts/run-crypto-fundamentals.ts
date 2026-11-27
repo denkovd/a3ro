@@ -16,6 +16,7 @@ if (!dry) ensureDatabaseUrl();
 
 import { CRYPTO_PROJECTS } from "../src/crypto/projects";
 import { buildSnapshot, fetchInputs, nearMatches, type Fetcher } from "../src/crypto/defillama";
+import { fetchMarketInputs } from "../src/crypto/coingecko";
 
 const get: Fetcher = async (url) => {
   const ctl = new AbortController();
@@ -32,12 +33,13 @@ const fmt = (v: number | null) => (v === null ? "—" : `$${(v / 1e6).toFixed(1)
 async function main(): Promise<void> {
   const started = new Date();
   const { inputs, problems } = await fetchInputs(get);
-  const snap = buildSnapshot(inputs, new Date(), CRYPTO_PROJECTS, problems);
+  const market = await fetchMarketInputs(get);
+  const snap = buildSnapshot({ ...inputs, markets: market.markets, global: market.global, mcapCharts: market.mcapCharts }, new Date(), CRYPTO_PROJECTS, [...problems, ...market.problems]);
 
-  console.log(`DeFi TVL ${fmt(snap.totals.defiTvl)} · stablecoins ${fmt(snap.totals.stablecoins)}`);
+  console.log(`DeFi TVL ${fmt(snap.totals.defiTvl)} · stablecoins ${fmt(snap.totals.stablecoins)} (30d ago ${fmt(snap.totals.stablecoins30dAgo)}, 1y ago ${fmt(snap.totals.stablecoins365dAgo)}) · crypto mcap ${fmt(snap.totals.cryptoMcap)}`);
   for (const p of snap.projects) {
     const def = CRYPTO_PROJECTS.find((x) => x.id === p.id)!;
-    console.log(`${def.name.padEnd(12)} fees "${p.feesName ?? "-"}" (${p.feesSlug ?? "-"}) 30d ${fmt(p.fees30d)} rev ${fmt(p.revenue30d)} · TVL ${fmt(p.tvl)} share ${p.tvlShare === null ? "—" : (p.tvlShare * 100).toFixed(1) + "%"} · stables ${fmt(p.stablecoins)} · months ${p.feesMonthly.length}/${p.tvlShareMonthly.length}/${p.stablecoinsMonthly.length}`);
+    console.log(`${def.name.padEnd(12)} fees "${p.feesName ?? "-"}" (${p.feesSlug ?? "-"}) 30d ${fmt(p.fees30d)} rev ${fmt(p.revenue30d)} · TVL ${fmt(p.tvl)} share ${p.tvlShare === null ? "—" : (p.tvlShare * 100).toFixed(1) + "%"} · stables ${fmt(p.stablecoins)} · months ${p.feesMonthly.length}/${p.tvlShareMonthly.length}/${p.stablecoinsMonthly.length} · mcap ${fmt(p.mcap)} P/F ${p.priceToFees?.toFixed(0) ?? "—"} P/R ${p.priceToRevenue?.toFixed(0) ?? "—"} (${p.priceToFeesMonthly.length} months)`);
     if (!p.feesName) console.log(`   near matches: ${nearMatches(def, inputs.feesList).join(" | ") || "none"}`);
   }
   for (const pr of snap.problems) console.log(`PROBLEM ${pr}`);

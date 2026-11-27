@@ -1,6 +1,7 @@
 /* Crypto fundamentals scorecard (roadmap #82). Server-rendered: tables and small SVG charts, no client JS. */
 import { CRYPTO_GROUP_LABEL, CRYPTO_GROUP_ORDER, CRYPTO_PROJECTS, QUANT_NOTE, type CryptoSnapshot, type MonthPoint, type ProjectSnapshot } from "@a3ro/oil-backend";
 import { assetBySlug } from "../../../lib/assets";
+import CryptoValuation from "./CryptoValuation";
 
 const ACCENT = "#9ab8ff";
 const LINE_COLOURS = ["#9ab8ff", "#b8e278", "#f0b35a", "#e58ad0", "#7fd6c2", "#d9d9d9"];
@@ -60,6 +61,47 @@ function labelPositions<L extends { end: MonthPoint }>(labels: L[], y: (v: numbe
   return placed;
 }
 
+function StablecoinSection({ snap }: { snap: CryptoSnapshot }) {
+  const t = snap.totals;
+  const now = t.stablecoins;
+  const g = (then: number | null | undefined) => (now && then ? now / then - 1 : null);
+  const g30 = g(t.stablecoins30dAgo), g365 = g(t.stablecoins365dAgo);
+  const months = complete(t.stablecoinsMonthly ?? [], snap.asOf).slice(-13);
+  const byChain = CRYPTO_PROJECTS.filter((p) => p.chain).map((p) => ({ name: p.name, v: snap.projects.find((x) => x.id === p.id)?.stablecoins ?? 0 })).filter((c) => c.v > 0).sort((a, b) => b.v - a.v);
+  const shown = byChain.slice(0, 6), other = now ? now - shown.reduce((a, c) => a + c.v, 0) : 0;
+  const rows = [...shown, ...(other > 0 ? [{ name: "Other chains", v: other }] : [])];
+  const signed = (v: number | null) => (v === null ? "—" : `${v >= 0 ? "+" : "−"}${Math.abs(v * 100).toFixed(1)}%`);
+  const max = months.length ? Math.max(...months.map((m) => m.value)) : 0;
+  return <section aria-label="Stablecoins" className="flex flex-col gap-3">
+    <h2 className="landing-kicker">Stablecoins: the dollars in crypto</h2>
+    <p className="max-w-3xl text-xs leading-relaxed text-[var(--ink-3)]">Dollar stablecoins are the cash of crypto. Growing supply means fresh money is coming in; where they sit shows which chains people actually pay and trade on.</p>
+    <dl className="grid grid-cols-3 gap-4">
+      <div><dt className="text-xs text-[var(--ink-3)]">Supply now</dt><dd className="mt-1 font-mono text-xl">{money(now)}</dd></div>
+      <div><dt className="text-xs text-[var(--ink-3)]">Change, 30 days</dt><dd className="mt-1 font-mono text-xl">{signed(g30)}</dd></div>
+      <div><dt className="text-xs text-[var(--ink-3)]">Change, 12 months</dt><dd className="mt-1 font-mono text-xl">{signed(g365)}</dd></div>
+    </dl>
+    <div className="grid gap-6 md:grid-cols-2">
+      {months.length > 1 ? <div>
+        <p className="text-[10px] text-[var(--ink-3)]">Total supply at each month-end</p>
+        <svg viewBox="0 0 320 90" className="mt-1 h-auto w-full max-w-md" role="img" aria-label={`Stablecoin supply by month, ${monthLabel(months[0].month)} to ${monthLabel(months[months.length - 1].month)}`}>
+          {months.map((m, i) => { const bw = 320 / months.length, h = max ? (m.value / max) * 74 : 0; return <g key={m.month}>
+            <rect x={i * bw + 1} y={78 - h} width={bw - 3} height={h} fill={ACCENT} fillOpacity={i === months.length - 1 ? 0.9 : 0.4}><title>{`${monthLabel(m.month)}: ${money(m.value)}`}</title></rect>
+            {i === 0 || i === months.length - 1 ? <text x={i * bw + bw / 2} y="89" textAnchor="middle" fontSize="8" fill="var(--ink-3)">{monthLabel(m.month)}</text> : null}
+          </g>; })}
+        </svg>
+      </div> : null}
+      <div>
+        <p className="text-[10px] text-[var(--ink-3)]">Where they sit</p>
+        <ul className="mt-2 flex flex-col gap-1.5">{rows.map((c) => <li key={c.name} className="grid grid-cols-[110px_1fr_70px] items-center gap-2 text-xs">
+          <span className="text-[var(--ink-2)]">{c.name}</span>
+          <span className="h-1.5 rounded-sm bg-[var(--line)]"><span className="block h-1.5 rounded-sm" style={{ width: `${now ? (c.v / now) * 100 : 0}%`, background: ACCENT }} /></span>
+          <span className="text-right font-mono">{now ? `${((c.v / now) * 100).toFixed(1)}%` : "—"}</span>
+        </li>)}</ul>
+      </div>
+    </div>
+  </section>;
+}
+
 function change(pts: MonthPoint[]): number | null {
   if (pts.length < 13) return null;
   return pts[pts.length - 1].value - pts[pts.length - 13].value;
@@ -99,6 +141,8 @@ export default function CryptoFundamentalsView({ snap }: { snap: CryptoSnapshot 
         <div className="max-w-3xl overflow-x-auto"><div className="min-w-[560px]"><ShareChart series={chainSeries} /></div></div>
       </section> : null}
 
+      <StablecoinSection snap={snap} />
+
       {CRYPTO_GROUP_ORDER.map((group) => {
         const rows = CRYPTO_PROJECTS.filter((p) => p.group === group)
           .map((p) => ({ p, s: byId.get(p.id) as ProjectSnapshot | undefined }))
@@ -133,13 +177,15 @@ export default function CryptoFundamentalsView({ snap }: { snap: CryptoSnapshot 
           </div>
         </section>;
       })}
+
+      <CryptoValuation meta={CRYPTO_GROUP_ORDER.flatMap((g) => CRYPTO_PROJECTS.filter((p) => p.group === g && p.gecko).map((p) => ({ id: p.id, name: p.name, symbol: p.symbol, groupLabel: CRYPTO_GROUP_LABEL[g] })))} />
     </>}
 
     <section aria-label="How to read this" className="flex max-w-3xl flex-col gap-2 text-xs leading-relaxed text-[var(--ink-3)]">
       <h2 className="landing-kicker">How to read this</h2>
       <p><b className="text-[var(--ink-2)]">Fees</b>: everything users paid to use the network or app in the last 30 days (for a chain, its transaction fees). <b className="text-[var(--ink-2)]">Revenue</b>: the part the project or its token holders keep, for example fees burned or used for buybacks; fees paid out to miners or validators are not revenue. Both come from DefiLlama&rsquo;s daily figures.</p>
       <p><b className="text-[var(--ink-2)]">Value locked</b>: money deposited in DeFi apps on the chain. <b className="text-[var(--ink-2)]">Stablecoins held</b>: dollar stablecoins issued on the chain, a good guide to where real payments and trading happen.</p>
-      <p>Not yet included: active users and developer activity, which aren&rsquo;t in DefiLlama&rsquo;s free data. {QUANT_NOTE} Valuation ratios (price against fees and revenue) are next on the roadmap.</p>
+      <p>Not yet included: active users and developer activity, which aren&rsquo;t in DefiLlama&rsquo;s free data. {QUANT_NOTE} Valuation ratios use market caps, which are market data, so they are part of Premium.</p>
       {snap?.problems.length ? <p>Missing this update: {snap.problems.join("; ")}.</p> : null}
     </section>
   </section>;
