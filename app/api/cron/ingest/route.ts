@@ -6,8 +6,12 @@
 
    Order (oil path first so slower downstream feeds cannot consume
    the function budget before oil scores land):
-     price → corridors → baselines → seasonal → macro →
+     price → baselines → seasonal → macro →
      positioning → scores → gold (last; not required for oil scores).
+   Corridors (EIA physical, PortWatch, MPA, China) run only in
+   /api/cron/oil, beside prices on their own 300 s budget. Running them
+   here too doubled the calls to rate-limited PortWatch and EIA, and the
+   step was cut off at 90 s, starving goldFlow/btc/dividend (26 Nov).
    Scores also have a dedicated cron at /api/cron/scores (06:10 UTC)
    as a second line of defence. Each cycle is isolated so a failure
    in one can NEVER take down price ingestion or any other cycle.
@@ -23,7 +27,7 @@
 ──────────────────────────────────────────────────────────────── */
 
 import {
-  createDb, runIngestionCycle, runCorridorCycle, runBaselineCycle, runGateSpreadCycle,
+  createDb, runIngestionCycle, runBaselineCycle, runGateSpreadCycle,
   runSeasonalCycle, runMacroCycle, runPositioningCycle, runScoreCycle,
   runGoldCycle, runGoldFlowCycle, runBtcCycle, runBtcFlowCycle,
 } from "@a3ro/oil-backend";
@@ -36,7 +40,7 @@ export const runtime = "nodejs";
 // Never statically pre-render at build time — this route runs a full
 // ingestion against the live DB. Runtime-only (fixes build timeouts).
 export const dynamic = "force-dynamic";
-// Price + corridor cycles plus baselines/seasonal/macro/positioning
+// The price cycle plus baselines/seasonal/macro/positioning/gold/btc/dividend
 // need a five-minute budget for the independent source cycles.
 export const maxDuration = 300;
 /** No step starts after this. */
@@ -104,7 +108,6 @@ export const GET = withErrorLog("cron:ingest", async function GET(request: Reque
     // Each later step is isolated: one failure can never fail price ingestion or another step.
     // Gate baselines, weekly spreads and seasonal norms self-guard on freshness (~monthly), so
     // most days they are cheap reads.
-    const corridors = await step("corridors", () => runCorridorCycle(db));
     const baselines = await step("baselines", () => runBaselineCycle(db));
     const gateSpreads = await step("gateSpreads", () => runGateSpreadCycle(db));
     const seasonal = await step("seasonal", () => runSeasonalCycle(db));
@@ -128,7 +131,6 @@ export const GET = withErrorLog("cron:ingest", async function GET(request: Reque
 
     return Response.json({
       ...report,
-      corridors,
       baselines,
       gateSpreads,
       seasonal,

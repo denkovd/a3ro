@@ -47,7 +47,7 @@
 import { SourceErrorKind } from "../core/types";
 import { CorridorMetricRecord } from "../core/corridorTypes";
 import { CorridorBaseSource, CorridorSourceDescriptor } from "./CorridorSource";
-import { fetchPublicEiaSeries } from "./eiaPublic";
+import { fetchPublicEiaSeries, withPublicEiaFallback } from "./eiaPublic";
 
 const BASE_URL = "https://api.eia.gov/v2/";
 const ROUTE = "petroleum/pri/spt";
@@ -156,10 +156,13 @@ export class EiaSpotProductsSource extends CorridorBaseSource {
   }
 
   private async request(cfg: EiaSpotSeriesConfig): Promise<EiaSpotRow[]> {
-    if (!this.apiKey) {
-      const start = new Date(Date.now() - LOOKBACK_DAYS * 86_400_000).toISOString().slice(0,10);
-      return fetchPublicEiaSeries(cfg.seriesId, "daily", start);
-    }
+    const start = new Date(Date.now() - LOOKBACK_DAYS * 86_400_000).toISOString().slice(0,10);
+    const download = () => fetchPublicEiaSeries(cfg.seriesId, "daily", start);
+    if (!this.apiKey) return download();
+    return withPublicEiaFallback(() => this.requestApi(cfg), download);
+  }
+
+  private async requestApi(cfg: EiaSpotSeriesConfig): Promise<EiaSpotRow[]> {
     const url = this.buildUrl(cfg);
     const body = await this.getJson<EiaSpotResponse>(url, {
       classifyHttpError: (status, text) => this.classify403(status, text),

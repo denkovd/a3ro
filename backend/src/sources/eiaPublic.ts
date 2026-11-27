@@ -32,3 +32,20 @@ export async function fetchPublicEiaSeries(series: string, frequency: "daily" | 
   if (!rows.length) throw new SourceError("eia-public", "no_data", "EIA public download has no observations in the requested period");
   return rows;
 }
+
+/** Runs an EIA API call; when the API itself is unavailable (timeout, network error, 5xx) reads the
+ * same series from EIA's public download instead, which is served from a different host. Auth,
+ * throttling and payload errors still surface, and if the download also fails the API error is kept.
+ * On 26 Nov 2026 every api.eia.gov call in the oil cron timed out at 15 s. */
+export async function withPublicEiaFallback<T>(api: () => Promise<T>, fallback: () => Promise<T>): Promise<T> {
+  try {
+    return await api();
+  } catch (error) {
+    if (!(error instanceof SourceError) || (error.kind !== "network" && error.kind !== "upstream_error")) throw error;
+    try {
+      return await fallback();
+    } catch {
+      throw error;
+    }
+  }
+}

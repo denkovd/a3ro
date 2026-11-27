@@ -48,7 +48,7 @@ export default async function DataHealthPage() {
   const latestBy = new Map((runs?.latest ?? []).map((r) => [r.job, r]));
   const jobs = SCHEDULED_JOBS.map((j) => {
     const last = latestBy.get(j.job) ?? null;
-    return { ...j, last, overdue: runs !== null && cronOverdue(last?.startedAt ?? null, j.everyHours, now) };
+    return { ...j, last, overdue: runs !== null && cronOverdue(last?.startedAt ?? null, j.everyHours, now, j.addedOn) };
   });
   const failedJobs = jobs.filter((j) => j.last?.status === "failed").length;
   const overdueJobs = jobs.filter((j) => j.overdue).length;

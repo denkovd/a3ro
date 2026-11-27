@@ -8,21 +8,33 @@
 import { CorridorId, CorridorMetricLatest, CorridorMetricRecord } from "../core/corridorTypes";
 import { Queryable } from "./db";
 
+const UPSERT_CHUNK = 500;
+
 /**
  * Upsert normalized corridor metric records, keyed on
  * (corridor, metric, period_date). Returns rows written.
+ * Set-based: one round trip per 500 records rather than one per record, since the
+ * cron region is far from the database.
  */
 export async function insertCorridorMetrics(
   db: Queryable,
   records: CorridorMetricRecord[],
 ): Promise<number> {
+  // One statement cannot update the same key twice; keep the last record per key, as the per-row loop did.
+  const unique = [...new Map(records.map((r) => [`${r.corridor}\u0000${r.metric}\u0000${r.periodDate}`, r])).values()];
   let written = 0;
-  for (const r of records) {
+  for (let i = 0; i < unique.length; i += UPSERT_CHUNK) {
+    const chunk = unique.slice(i, i + UPSERT_CHUNK);
     const res = await db.query(
       `insert into corridor_metrics
          (corridor, metric, period_date, value, unit, source_id, confidence,
           observed_at, fetched_at, raw_value, raw_unit, meta, updated_at)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12, now())
+       select corridor, metric, period_date, value, unit, source_id, confidence,
+              observed_at, fetched_at, raw_value, raw_unit, meta::jsonb, now()
+       from unnest($1::text[], $2::text[], $3::date[], $4::double precision[], $5::text[], $6::text[], $7::text[],
+                   $8::timestamptz[], $9::timestamptz[], $10::double precision[], $11::text[], $12::text[])
+         as t(corridor, metric, period_date, value, unit, source_id, confidence,
+              observed_at, fetched_at, raw_value, raw_unit, meta)
        on conflict (corridor, metric, period_date) do update
          set value = excluded.value,
              unit = excluded.unit,
@@ -35,9 +47,11 @@ export async function insertCorridorMetrics(
              meta = excluded.meta,
              updated_at = now()`,
       [
-        r.corridor, r.metric, r.periodDate, r.value, r.unit, r.source, r.confidence,
-        r.observedAt, r.fetchedAt, r.raw.value, r.raw.unit,
-        r.meta ? JSON.stringify(r.meta) : null,
+        chunk.map((r) => r.corridor), chunk.map((r) => r.metric), chunk.map((r) => r.periodDate),
+        chunk.map((r) => r.value), chunk.map((r) => r.unit), chunk.map((r) => r.source),
+        chunk.map((r) => r.confidence), chunk.map((r) => r.observedAt), chunk.map((r) => r.fetchedAt),
+        chunk.map((r) => r.raw.value), chunk.map((r) => r.raw.unit),
+        chunk.map((r) => (r.meta ? JSON.stringify(r.meta) : null)),
       ],
     );
     written += res.rowCount ?? 0;

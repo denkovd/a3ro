@@ -42,7 +42,7 @@ function makeRecord(overrides: Partial<CorridorMetricRecord> = {}): CorridorMetr
 describe("corridorRepo", () => {
   test("insertCorridorMetrics upserts n records and returns the written count", async () => {
     const db = new StubDb();
-    db.responses = [{ rows: [], rowCount: 1 }, { rows: [], rowCount: 1 }];
+    db.responses = [{ rows: [], rowCount: 2 }];
 
     const records = [
       makeRecord({ periodDate: "2024-01-19", value: 4.1235 }),
@@ -54,7 +54,23 @@ describe("corridorRepo", () => {
     const written = await insertCorridorMetrics(db, records);
 
     assert.equal(written, 2);
-    assert.equal(db.calls.length, 2);
+    // one set-based statement, not one per record
+    assert.equal(db.calls.length, 1);
+    assert.deepEqual(db.calls[0].params[2], ["2024-01-19", "2024-01-12"]);
+  });
+
+  test("insertCorridorMetrics keeps the last record per key and chunks at 500", async () => {
+    const db = new StubDb();
+    const dupes = [makeRecord({ value: 1 }), makeRecord({ value: 2 })];
+    await insertCorridorMetrics(db, dupes);
+    assert.equal(db.calls.length, 1);
+    assert.deepEqual(db.calls[0].params[3], [2]);
+
+    const many = Array.from({ length: 1001 }, (_, i) =>
+      makeRecord({ periodDate: new Date(Date.UTC(2000, 0, 1 + i)).toISOString().slice(0, 10) }));
+    const db2 = new StubDb();
+    await insertCorridorMetrics(db2, many);
+    assert.deepEqual(db2.calls.map((c) => (c.params[0] as unknown[]).length), [500, 500, 1]);
   });
 
   test("insertCorridorMetrics passes params in column order", async () => {
@@ -67,9 +83,11 @@ describe("corridorRepo", () => {
     const call = db.calls[0];
     assert.match(call.text, /insert into corridor_metrics/i);
     assert.match(call.text, /on conflict \(corridor, metric, period_date\) do update/i);
+    assert.match(call.text, /unnest\(/i);
 
     // column order: corridor, metric, period_date, value, unit, source_id,
     // confidence, observed_at, fetched_at, raw_value, raw_unit, meta
+    // one array per column, one entry per record
     assert.deepEqual(call.params, [
       record.corridor,
       record.metric,
@@ -83,7 +101,7 @@ describe("corridorRepo", () => {
       record.raw.value,
       record.raw.unit,
       JSON.stringify(record.meta),
-    ]);
+    ].map((v) => [v]));
   });
 
   test("insertCorridorMetrics stores null meta as null (no meta on the record)", async () => {
@@ -94,7 +112,7 @@ describe("corridorRepo", () => {
     await insertCorridorMetrics(db, [record]);
 
     const call = db.calls[0];
-    assert.equal(call.params[call.params.length - 1], null);
+    assert.deepEqual(call.params[call.params.length - 1], [null]);
   });
 
   test("insertCorridorMetrics returns 0 when nothing is written", async () => {

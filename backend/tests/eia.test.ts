@@ -174,6 +174,33 @@ describe("EiaSource", () => {
     } finally { teardownTest(); }
   });
 
+  test("API outage (5xx) falls back to the official public workbook downloads", async () => {
+    setupTest();
+    try {
+      const urls: string[] = [];
+      global.fetch = async url => {
+        urls.push(String(url));
+        return String(url).startsWith("https://api.eia.gov/") ? new Response("upstream down", { status: 503 }) : publicEiaFixture(String(url));
+      };
+      const source = new EiaSource();
+      const records = await source.fetchLatest(["WTI", "BRENT"]);
+      assert.equal(records.length, 2);
+      assert.ok(urls.some(url => url.startsWith("https://api.eia.gov/")));
+      assert.ok(urls.some(url => url.startsWith("https://www.eia.gov/dnav/pet/hist_xls/")));
+    } finally { teardownTest(); }
+  });
+
+  test("API auth failure does not fall back and surfaces the auth error", async () => {
+    setupTest();
+    try {
+      const urls: string[] = [];
+      global.fetch = async url => { urls.push(String(url)); return new Response("invalid api_key", { status: 401 }); };
+      const source = new EiaSource();
+      await assert.rejects(() => source.fetchLatest(["WTI", "BRENT"]), (e: unknown) => e instanceof SourceError && e.kind === "auth");
+      assert.ok(urls.every(url => url.startsWith("https://api.eia.gov/")));
+    } finally { teardownTest(); }
+  });
+
   test("HTTP 403 with rate limit text throws rate_limited SourceError", async () => {
     setupTest();
     try {

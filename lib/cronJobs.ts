@@ -1,7 +1,7 @@
 // Scheduled jobs (vercel.json crons), with how often each is expected to run, for the Ops data health tab (#47).
 import vercel from "../vercel.json";
 
-export interface CronJob { job: string; path: string; schedule: string; everyHours: number; label: string }
+export interface CronJob { job: string; path: string; schedule: string; everyHours: number; label: string; addedOn?: string }
 
 /** Only the shapes vercel.json uses: daily ("m h * * *") and weekly ("m h * * d"). Anything else counts as daily. */
 export function cronInterval(schedule: string): { everyHours: number; label: string } {
@@ -15,9 +15,14 @@ export function cronInterval(schedule: string): { everyHours: number; label: str
   return { everyHours: 24, label: `Daily${at}` };
 }
 
-export const CRON_JOBS: CronJob[] = (vercel.crons ?? []).map((c) => ({
-  job: c.path.replace(/^\/api\/cron\//, ""), path: c.path, schedule: c.schedule, ...cronInterval(c.schedule),
-}));
+/** When recently added jobs were scheduled (YYYY-MM-DD). One that has never run isn't overdue until 1.5 intervals
+ *  after this, so a new weekly job doesn't show as overdue before its first run. Older jobs can be left out. */
+const ADDED_ON: Record<string, string> = { newsletter: "2026-11-26", "newsletter-late": "2026-11-26" };
+
+export const CRON_JOBS: CronJob[] = (vercel.crons ?? []).map((c) => {
+  const job = c.path.replace(/^\/api\/cron\//, "");
+  return { job, path: c.path, schedule: c.schedule, ...cronInterval(c.schedule), ...(ADDED_ON[job] ? { addedOn: ADDED_ON[job] } : {}) };
+});
 
 /** Jobs scheduled in GitHub Actions that record their runs in cron_runs too (not re-runnable from Ops). */
 export const GITHUB_JOBS: CronJob[] = [
@@ -29,7 +34,8 @@ export const GITHUB_JOBS: CronJob[] = [
 export const SCHEDULED_JOBS: CronJob[] = [...CRON_JOBS, ...GITHUB_JOBS];
 
 /** A run is overdue once 1.5 intervals have passed without one (allows for Vercel's cron jitter). */
-export function cronOverdue(lastStartedAt: string | null, everyHours: number, now = new Date()): boolean {
-  if (!lastStartedAt) return true;
-  return now.getTime() - Date.parse(lastStartedAt) > everyHours * 1.5 * 3_600_000;
+export function cronOverdue(lastStartedAt: string | null, everyHours: number, now = new Date(), addedOn?: string): boolean {
+  const since = lastStartedAt ?? addedOn;
+  if (!since) return true;
+  return now.getTime() - Date.parse(since) > everyHours * 1.5 * 3_600_000;
 }

@@ -6,14 +6,14 @@ import { CorridorMetricRecord } from "../src/core/corridorTypes";
 import { SourceError } from "../src/core/types";
 import { QueryResultLike, Queryable } from "../src/storage/db";
 
-/** Stub Queryable that just counts inserts (one row written per query call,
- *  mirroring how insertCorridorMetrics calls db.query once per record). */
+/** Stub Queryable that counts inserts: insertCorridorMetrics sends one batched statement
+ *  whose first parameter is the array of corridors, one entry per row written. */
 class StubDb implements Queryable {
   queries: { text: string; params: unknown[] }[] = [];
 
   async query(text: string, params: unknown[] = []): Promise<QueryResultLike> {
     this.queries.push({ text, params });
-    return { rows: [], rowCount: 1 };
+    return { rows: [], rowCount: Array.isArray(params[0]) ? params[0].length : 1 };
   }
 }
 
@@ -80,8 +80,9 @@ describe("runCorridorCycle", () => {
     assert.equal(entry.records, 2);
     assert.equal(entry.error, undefined);
 
-    // insertCorridorMetrics calls db.query once per record
-    assert.equal(db.queries.length, 2);
+    // both records go in one batched statement
+    assert.equal(db.queries.length, 1);
+    assert.equal((db.queries[0].params[0] as unknown[]).length, 2);
   });
 
   test("SourceError(rate_limited) source: report shows ok:false with rate_limited: prefix", async () => {
@@ -115,8 +116,9 @@ describe("runCorridorCycle", () => {
     assert.equal(flaky.ok, false);
     assert.ok(flaky.error!.startsWith("rate_limited:"));
 
-    // healthy source's 2 records were still upserted despite the other source failing
-    assert.equal(db.queries.length, 2);
+    // healthy source's 2 records were still upserted (one statement) despite the other source failing
+    assert.equal(db.queries.length, 1);
+    assert.equal((db.queries[0].params[0] as unknown[]).length, 2);
   });
 
   test("unknown throw (not a SourceError) is wrapped as bad_payload", async () => {
