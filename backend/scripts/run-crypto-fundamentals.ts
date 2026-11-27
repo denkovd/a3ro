@@ -17,6 +17,7 @@ if (!dry) ensureDatabaseUrl();
 import { CRYPTO_PROJECTS } from "../src/crypto/projects";
 import { buildSnapshot, fetchInputs, nearMatches, type Fetcher } from "../src/crypto/defillama";
 import { fetchMarketInputs } from "../src/crypto/coingecko";
+import { BASKETS, buildBasket, fetchBasketInputs } from "../src/crypto/baskets";
 
 const get: Fetcher = async (url) => {
   const ctl = new AbortController();
@@ -34,7 +35,14 @@ async function main(): Promise<void> {
   const started = new Date();
   const { inputs, problems } = await fetchInputs(get);
   const market = await fetchMarketInputs(get);
-  const snap = buildSnapshot({ ...inputs, markets: market.markets, global: market.global, mcapCharts: market.mcapCharts }, new Date(), CRYPTO_PROJECTS, [...problems, ...market.problems]);
+  const basketIn = await fetchBasketInputs(get);
+  const snap = buildSnapshot({ ...inputs, markets: market.markets, global: market.global, mcapCharts: market.mcapCharts }, new Date(), CRYPTO_PROJECTS, [...problems, ...market.problems, ...basketIn.problems]);
+  snap.baskets = BASKETS.map((b) => buildBasket(b.key, b.label, basketIn.markets[b.key], basketIn.charts, market.mcapCharts.solana, market.mcapCharts.bitcoin, b.exclude))
+    .filter((b): b is NonNullable<typeof b> => b !== null);
+  for (const b of snap.baskets) {
+    const pc = (v: number | null) => (v === null ? "—" : `${(v * 100).toFixed(0)}%`);
+    console.log(`${b.label}: ${b.members.map((m) => m.symbol).join(" ")} · 90d ${pc(b.returns.basket.d90)} vs SOL ${pc(b.returns.sol.d90)} BTC ${pc(b.returns.btc.d90)} · beta to SOL 90d ${b.vsSol.d90.beta?.toFixed(2) ?? "—"} (R² ${b.vsSol.d90.r2?.toFixed(2) ?? "—"}) · to BTC ${b.vsBtc.d90.beta?.toFixed(2) ?? "—"} · max DD ${pc(b.maxDrawdown365d)}`);
+  }
 
   console.log(`DeFi TVL ${fmt(snap.totals.defiTvl)} · stablecoins ${fmt(snap.totals.stablecoins)} (30d ago ${fmt(snap.totals.stablecoins30dAgo)}, 1y ago ${fmt(snap.totals.stablecoins365dAgo)}) · crypto mcap ${fmt(snap.totals.cryptoMcap)}`);
   for (const p of snap.projects) {

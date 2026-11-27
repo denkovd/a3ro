@@ -41,7 +41,7 @@ export const MODULE_ACCESS: readonly ModuleAccess[] = [
   { id: "crypto", label: "Crypto (usage scorecard)", level: "public", data: "open", pages: ["/Projects/Crypto-Fundamentals"], apis: ["/api/crypto/fundamentals"] },
   // Market caps are market data (#18): the valuation ratios are Premium, served apart from the free scorecard.
   { id: "crypto-valuation", label: "Crypto valuation (market caps, ratios)", level: "premium", data: "market", pages: [], apis: ["/api/crypto/valuation"],
-    preview: "On the Crypto page: each project's market cap against the fees users pay and the revenue it keeps (price-to-fees, price-to-revenue) with 12 months of history, and stablecoins' share of the whole crypto market." },
+    preview: "On the Crypto page: each project's market cap against the fees users pay and the revenue it keeps (price-to-fees, price-to-revenue) with 12 months of history, stablecoins' share of the whole crypto market, and Solana and memecoin baskets measured against SOL and BTC." },
   { id: "uranium", label: "Commodity Watch (uranium fuel chain)", level: "public", data: "open", pages: ["/Projects/Uranium-Tracker"], apis: [] },
   // ABS exports (CC BY), USGS and WA Government reference figures; the price is a TradingView widget (#55).
   { id: "ironore", label: "Commodity Watch (iron ore)", level: "public", data: "open", pages: ["/Projects/Iron-Ore-Tracker"], apis: ["/api/ironore"] },

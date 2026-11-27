@@ -7,7 +7,42 @@ import { LockIcon } from "../../components/LockIcon";
 export interface ValuationRowMeta { id: string; name: string; symbol: string; groupLabel: string }
 interface MonthPoint { month: string; value: number }
 interface Row { id: string; mcap: number | null; fdv: number | null; fees30d: number | null; revenue30d: number | null; priceToFees: number | null; priceToRevenue: number | null; priceToFeesMonthly: MonthPoint[]; priceToRevenueMonthly: MonthPoint[] }
-type State = { kind: "loading" } | { kind: "locked" } | { kind: "error" } | { kind: "ready"; asOf: string; cryptoMcap: number | null; stablecoins: number | null; projects: Row[] };
+interface Bench { beta: number | null; correlation: number | null; r2: number | null }
+type Period = Record<"d30" | "d90" | "d365", number | null>;
+interface Basket { key: string; label: string; members: { id: string; symbol: string; name: string; mcap: number | null; return90d: number | null; betaToSol90d: number | null }[]; index: { t: number; v: number }[]; returns: { basket: Period; sol: Period; btc: Period }; vsSol: { d90: Bench; d365: Bench }; vsBtc: { d90: Bench; d365: Bench }; maxDrawdown365d: number | null }
+type State = { kind: "loading" } | { kind: "locked" } | { kind: "error" } | { kind: "ready"; asOf: string; cryptoMcap: number | null; stablecoins: number | null; projects: Row[]; baskets: Basket[] };
+
+const pc = (v: number | null) => (v == null ? "—" : `${v >= 0 ? "+" : "−"}${Math.abs(v * 100).toFixed(0)}%`);
+const n2 = (v: number | null) => (v == null ? "—" : v.toFixed(2));
+
+function IndexLine({ pts }: { pts: { t: number; v: number }[] }) {
+  if (pts.length < 3) return null;
+  const W = 320, H = 90, lo = Math.min(...pts.map((p) => p.v)), hi = Math.max(...pts.map((p) => p.v)), span = hi - lo || 1;
+  const x = (i: number) => (i / (pts.length - 1)) * (W - 40), y = (v: number) => 6 + (1 - (v - lo) / span) * (H - 18);
+  const end = pts[pts.length - 1].v;
+  return <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full max-w-sm" role="img" aria-label={`Basket index over 12 months, started at 100, now ${end.toFixed(0)}`}>
+    <line x1="0" x2={W - 40} y1={y(100)} y2={y(100)} stroke="var(--line)" strokeDasharray="3 3" />
+    <polyline points={pts.map((p, i) => `${x(i)},${y(p.v)}`).join(" ")} fill="none" stroke={end >= 100 ? "#b8e278" : "#f0b35a"} strokeWidth="1.5" />
+    <text x={W - 36} y={y(end) + 3} fontSize="10" fill="var(--ink-2)">{end.toFixed(0)}</text>
+    <text x="0" y={H - 1} fontSize="8" fill="var(--ink-3)">12 months ago = 100</text>
+  </svg>;
+}
+
+function BasketCard({ b }: { b: Basket }) {
+  return <div className="flex flex-col gap-3 rounded-sm border border-[var(--line)] p-4">
+    <div className="flex items-baseline justify-between gap-3"><h3 className="text-sm font-medium">{b.label}</h3><span className="text-[10px] text-[var(--ink-3)]">equal weight · daily</span></div>
+    <IndexLine pts={b.index} />
+    <table className="w-full text-right font-mono text-xs"><thead><tr className="text-[10px] text-[var(--ink-3)]"><th className="text-left font-normal" /><th className="font-normal">30 d</th><th className="font-normal">90 d</th><th className="font-normal">1 yr</th></tr></thead>
+      <tbody>{([["Basket", b.returns.basket], ["SOL", b.returns.sol], ["BTC", b.returns.btc]] as const).map(([k, r]) => <tr key={k}><td className="text-left text-[var(--ink-2)]">{k}</td><td>{pc(r.d30)}</td><td>{pc(r.d90)}</td><td>{pc(r.d365)}</td></tr>)}</tbody></table>
+    <table className="w-full text-right font-mono text-xs"><thead><tr className="text-[10px] text-[var(--ink-3)]"><th className="text-left font-normal">Against</th><th className="font-normal">Beta 90 d</th><th className="font-normal">Beta 1 yr</th><th className="font-normal">Corr.</th><th className="font-normal">R²</th></tr></thead>
+      <tbody>{([["SOL", b.vsSol], ["BTC", b.vsBtc]] as const).map(([k, v]) => <tr key={k}><td className="text-left text-[var(--ink-2)]">{k}</td><td>{n2(v.d90.beta)}</td><td>{n2(v.d365.beta)}</td><td>{n2(v.d365.correlation)}</td><td>{n2(v.d365.r2)}</td></tr>)}</tbody></table>
+    <p className="text-[10px] text-[var(--ink-3)]">Worst fall from a high, last 12 months: <span className="font-mono text-[var(--ink-2)]">{pc(b.maxDrawdown365d)}</span></p>
+    <details><summary className="cursor-pointer text-[10px] text-[var(--ink-3)]">Members ({b.members.length})</summary>
+      <ul className="mt-2 grid grid-cols-[1fr_auto_auto] gap-x-3 gap-y-1 font-mono text-[11px]">{b.members.map((m) => <li key={m.id} className="contents"><span className="truncate font-sans text-[var(--ink-2)]">{m.name} <span className="text-[var(--ink-3)]">{m.symbol}</span></span><span className="text-right">{pc(m.return90d)}</span><span className="text-right text-[var(--ink-3)]">β {n2(m.betaToSol90d)}</span></li>)}</ul>
+      <p className="mt-1 text-[10px] text-[var(--ink-3)]">90-day return and beta to SOL.</p>
+    </details>
+  </div>;
+}
 
 const money = (v: number | null) => v == null ? "—" : v >= 1e12 ? `$${(v / 1e12).toFixed(2)}tn` : v >= 1e9 ? `$${(v / 1e9).toFixed(v >= 1e11 ? 0 : 1)}bn` : v >= 1e6 ? `$${(v / 1e6).toFixed(1)}m` : `$${(v / 1e3).toFixed(0)}k`;
 const times = (v: number | null) => v == null ? "—" : v >= 10000 ? ">10,000×" : v >= 100 ? `${Math.round(v).toLocaleString("en-AU")}×` : `${v.toFixed(1)}×`;
@@ -50,7 +85,7 @@ export default function CryptoValuation({ meta }: { meta: ValuationRowMeta[] }) 
       </div>
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[rgba(6,7,7,0.55)] p-4 text-center">
         <p className="inline-flex items-center gap-2 text-sm text-[var(--ink)]"><LockIcon title="Premium" /> Part of A3RO Premium</p>
-        <p className="max-w-md text-xs text-[var(--ink-2)]">Market cap against fees and revenue for every project, with 12 months of history, plus stablecoins&rsquo; share of the whole crypto market.</p>
+        <p className="max-w-md text-xs text-[var(--ink-2)]">Market cap against fees and revenue for every project, with 12 months of history, stablecoins&rsquo; share of the whole crypto market, and the Solana and memecoin high-beta baskets.</p>
         <a href="/private?module=crypto-valuation&next=/Projects/Crypto-Fundamentals" className="mt-1 rounded-sm border border-[var(--line-2)] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink)]">See Premium</a>
       </div>
     </div>
@@ -82,7 +117,13 @@ export default function CryptoValuation({ meta }: { meta: ValuationRowMeta[] }) 
           })}</tbody>
         </table>
       </div>
-      <p className="text-[10px] text-[var(--ink-3)]">Market caps: <a className="underline" href="https://www.coingecko.com" target="_blank" rel="noreferrer">CoinGecko</a>, as of {s.asOf}. Fees and revenue: DefiLlama. A project with no revenue shows —. Compare within a group: a payments chain and a trading exchange earn in different ways. General information, not a recommendation.</p>
+      {s.baskets?.length ? <div className="mt-4 flex flex-col gap-3">
+        <h3 className="landing-kicker">High-beta baskets</h3>
+        <p className="max-w-3xl text-xs leading-relaxed text-[var(--ink-3)]">The ten largest tokens in each group, held in equal amounts, against SOL and BTC. Beta 2 means the basket has tended to move twice as far as the benchmark on the same day, both up and down; R² shows how much of its movement the benchmark explains. Stablecoins and staked or wrapped tokens are left out.</p>
+        <div className="grid gap-4 md:grid-cols-2">{s.baskets.map((b) => <BasketCard key={b.key} b={b} />)}</div>
+        <p className="text-[10px] text-[var(--ink-3)]">Still to come: how new memecoins perform over their first 40 days (needs launch-by-launch data).</p>
+      </div> : null}
+      <p className="text-[10px] text-[var(--ink-3)]">Market caps and prices: <a className="underline" href="https://www.coingecko.com" target="_blank" rel="noreferrer">CoinGecko</a>, as of {s.asOf}. Fees and revenue: DefiLlama. A project with no revenue shows —. Compare within a group: a payments chain and a trading exchange earn in different ways. General information, not a recommendation.</p>
     </>}
   </section>;
 }

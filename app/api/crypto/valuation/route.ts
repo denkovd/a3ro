@@ -17,6 +17,7 @@ export async function GET() {
         priceToFees: p.priceToFees ?? null, priceToRevenue: p.priceToRevenue ?? null,
         priceToFeesMonthly: p.priceToFeesMonthly ?? [], priceToRevenueMonthly: p.priceToRevenueMonthly ?? [],
       })),
+      baskets: snap.baskets ?? [],
     }, { headers: PRIVATE });
   } catch {
     return NextResponse.json({ status: "unavailable" }, { status: 503, headers: PRIVATE });

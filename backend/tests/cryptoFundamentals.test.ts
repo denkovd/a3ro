@@ -106,3 +106,29 @@ describe("crypto valuation and stablecoins (#83, #84)", () => {
     assert.equal(snap.totals.stablecoins30dAgo, 369);
   });
 });
+
+describe("crypto baskets (#85, #86)", () => {
+  test("candidates skip stablecoins, staked/wrapped tokens and the benchmark", async () => {
+    const { isBasketCandidate } = await import("../src/crypto/baskets");
+    assert.equal(isBasketCandidate({ id: "jupiter", symbol: "JUP", name: "Jupiter" }, ["solana"]), true);
+    assert.equal(isBasketCandidate({ id: "solana", symbol: "SOL", name: "Solana" }, ["solana"]), false);
+    assert.equal(isBasketCandidate({ id: "usd-coin", symbol: "USDC", name: "USDC" }, []), false);
+    assert.equal(isBasketCandidate({ id: "jito-staked-sol", symbol: "JITOSOL", name: "Jito Staked SOL" }, []), false);
+    assert.equal(isBasketCandidate({ id: "wrapped-bitcoin", symbol: "WBTC", name: "Wrapped Bitcoin" }, []), false);
+  });
+  test("regression: a basket that moves 2× the benchmark has beta 2, correlation 1", async () => {
+    const { regress } = await import("../src/crypto/baskets");
+    const x = new Map<number, number>(), y = new Map<number, number>();
+    for (let i = 1; i <= 100; i++) { const r = Math.sin(i) / 50; x.set(i * DAY, r); y.set(i * DAY, 2 * r); }
+    const s = regress(y, x, 100 * DAY, 90);
+    assert.ok(Math.abs(s.beta! - 2) < 1e-9); assert.ok(Math.abs(s.correlation! - 1) < 1e-9);
+  });
+  test("equal weight averages members' daily returns; period return compounds; drawdown from peak", async () => {
+    const { equalWeightReturns, periodReturn, maxDrawdown } = await import("../src/crypto/baskets");
+    const a = new Map([[DAY, 0.1], [2 * DAY, 0.1], [3 * DAY, 0.1]]), b = new Map([[DAY, -0.1], [2 * DAY, 0.1], [3 * DAY, 0.3]]), c = new Map([[DAY, 0], [2 * DAY, 0.1], [3 * DAY, 0.2]]);
+    const r = equalWeightReturns([a, b, c]);
+    assert.ok(Math.abs(r.get(DAY)! - 0) < 1e-12); assert.ok(Math.abs(r.get(3 * DAY)! - 0.2) < 1e-12);
+    assert.ok(Math.abs(periodReturn(new Map([[DAY, Math.log(1.1)], [2 * DAY, Math.log(1.1)]]), 2 * DAY, 2)! - 0.21) < 1e-12);
+    assert.equal(maxDrawdown([100, 120, 90, 130]), 90 / 120 - 1);
+  });
+});
