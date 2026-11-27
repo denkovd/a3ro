@@ -21,6 +21,18 @@ export interface ManualJob {
 
 export const MANUAL_JOBS: readonly ManualJob[] = [
   {
+    id: "newsletter-consensus",
+    title: "Update the newsletter's US and Australia consensus",
+    steps: [
+      "After each Fed Summary of Economic Projections (Mar, Jun, Sep, Dec) and RBA Statement on Monetary Policy (Feb, May, Aug, Nov), read where the projections put growth and inflation.",
+      "Pick the quadrant (Goldilocks, Reflation, Inflation, Deflation) each implies and save it in Admin → Newsletter → Consensus with the release date.",
+      "Regenerate the coming issue so both weather tables use it.",
+    ],
+    where: "Admin → Newsletter (newsletter_settings: us_consensus, au_consensus)",
+    everyMonths: 3,
+    lastCheckedInCode: "2026-11-27",
+  },
+  {
     id: "crypto-solana-basket",
     title: "Review the Solana basket's token list",
     steps: [

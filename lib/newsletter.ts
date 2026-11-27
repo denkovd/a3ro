@@ -9,5 +9,6 @@ export function newsletterEnv(): { env: SendEnv } | { missing: string } {
   if (!resend) return { missing: "RESEND_API_KEY" };
   const secret = unsubscribeSecret();
   if (!secret) return { missing: "NEWSLETTER_SECRET (or CRON_SECRET)" };
-  return { env: { resend, siteUrl: SITE_URL, secret } };
+  const ownerEmails = (process.env.OWNER_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+  return { env: { resend, siteUrl: SITE_URL, secret, ownerEmails } };
 }

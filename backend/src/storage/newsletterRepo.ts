@@ -19,6 +19,12 @@ export interface NewsletterIssue {
   sentCount: number;
   failedCount: number;
   lastError: string | null;
+  /** Premium edition (v2, migration 035). Null on older issues: Premium readers then get the free edition. */
+  subjectPremium: string | null;
+  htmlPremium: string | null;
+  textPremium: string | null;
+  editorial: Record<string, unknown>;
+  data: Record<string, unknown>;
 }
 
 const iso = (v: unknown) => (v == null ? null : new Date(v instanceof Date ? v.getTime() : String(v)).toISOString());
@@ -33,6 +39,11 @@ function toIssue(r: Record<string, unknown>): NewsletterIssue {
     approvedAt: iso(r.approved_at), approvedBy: r.approved_by == null ? null : String(r.approved_by),
     sentAt: iso(r.sent_at), sentCount: Number(r.sent_count ?? 0), failedCount: Number(r.failed_count ?? 0),
     lastError: r.last_error == null ? null : String(r.last_error),
+    subjectPremium: r.subject_premium == null ? null : String(r.subject_premium),
+    htmlPremium: r.html_premium == null ? null : String(r.html_premium),
+    textPremium: r.text_premium == null ? null : String(r.text_premium),
+    editorial: (r.editorial && typeof r.editorial === "object" ? r.editorial : {}) as Record<string, unknown>,
+    data: (r.data && typeof r.data === "object" ? r.data : {}) as Record<string, unknown>,
   };
 }
 
@@ -41,17 +52,25 @@ function toIssue(r: Record<string, unknown>): NewsletterIssue {
  * (and puts an approved one back to draft, since its content changed); refuses
  * once sending has started. Returns null when refused.
  */
-export async function saveDraftIssue(
-  db: Queryable, issue: { issueDate: string; subject: string; html: string; text: string; data: unknown },
-): Promise<NewsletterIssue | null> {
+export interface IssueContent {
+  issueDate: string; subject: string; html: string; text: string; data: unknown;
+  premium?: { subject: string; html: string; text: string } | null;
+  editorial?: unknown;
+}
+
+export async function saveDraftIssue(db: Queryable, issue: IssueContent): Promise<NewsletterIssue | null> {
   const res = await db.query(
-    `insert into newsletter_issues (issue_date, subject, html, text_body, data)
-     values ($1, $2, $3, $4, $5)
+    `insert into newsletter_issues (issue_date, subject, html, text_body, data, subject_premium, html_premium, text_premium, editorial)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, coalesce($9::jsonb, '{}'::jsonb))
      on conflict (issue_date) do update set subject = excluded.subject, html = excluded.html, text_body = excluded.text_body,
-       data = excluded.data, status = 'draft', approved_at = null, approved_by = null, updated_at = now()
+       data = excluded.data, subject_premium = excluded.subject_premium, html_premium = excluded.html_premium, text_premium = excluded.text_premium,
+       editorial = coalesce($9::jsonb, newsletter_issues.editorial),
+       status = 'draft', approved_at = null, approved_by = null, updated_at = now()
      where newsletter_issues.status in ('draft', 'approved')
      returning *`,
-    [issue.issueDate, issue.subject, issue.html, issue.text, JSON.stringify(issue.data)],
+    [issue.issueDate, issue.subject, issue.html, issue.text, JSON.stringify(issue.data),
+      issue.premium?.subject ?? null, issue.premium?.html ?? null, issue.premium?.text ?? null,
+      issue.editorial === undefined ? null : JSON.stringify(issue.editorial)],
   );
   return res.rows[0] ? toIssue(res.rows[0]) : null;
 }
@@ -149,4 +168,80 @@ export async function unsubscribeEmail(db: Queryable, email: string, source = "l
 /** Signing up again (a newsletter box or the Account page) lifts an earlier unsubscribe. */
 export async function clearUnsubscribe(db: Queryable, email: string): Promise<void> {
   await db.query(`delete from newsletter_unsubscribes where email = $1`, [normalizeEmail(email)]).catch(() => undefined);
+}
+
+/** Emails that get the Premium edition: accounts with Premium, plus the admins listed in OWNER_EMAILS. */
+export async function premiumEmails(db: Queryable, ownerEmails: string[] = []): Promise<Set<string>> {
+  const res = await db.query(
+    `select lower(au.email) as email from user_access a join auth.users au on au.id = a.user_id where a.premium = true and au.email is not null`,
+  ).catch(() => ({ rows: [] as Record<string, unknown>[] }));
+  return new Set([...res.rows.map((r) => String(r.email)), ...ownerEmails.map(normalizeEmail)]);
+}
+
+/* ── settings (consensus quadrants) ─────────────────────────────── */
+
+export async function getSetting<T>(db: Queryable, key: string): Promise<T | null> {
+  const res = await db.query(`select value from newsletter_settings where key = $1`, [key]);
+  return res.rows[0] ? (res.rows[0].value as T) : null;
+}
+
+export async function setSetting(db: Queryable, key: string, value: unknown, by: string): Promise<void> {
+  await db.query(
+    `insert into newsletter_settings (key, value, updated_by, updated_at) values ($1, $2, $3, now())
+     on conflict (key) do update set value = excluded.value, updated_by = excluded.updated_by, updated_at = now()`,
+    [key, JSON.stringify(value), by],
+  );
+}
+
+/* ── red flags (ongoing commodity disturbances) ─────────────────── */
+
+export interface RedFlag { id: number; commodity: string; title: string; detail: string; source: "auto" | "manual"; since: string; active: boolean; resolvedAt: string | null }
+
+const toFlag = (r: Record<string, unknown>): RedFlag => ({
+  id: Number(r.id), commodity: String(r.commodity), title: String(r.title), detail: String(r.detail ?? ""),
+  source: String(r.source) === "auto" ? "auto" : "manual", since: day(r.since), active: r.active === true, resolvedAt: iso(r.resolved_at),
+});
+
+export async function activeRedFlags(db: Queryable): Promise<RedFlag[]> {
+  const res = await db.query(`select * from newsletter_red_flags where active order by since asc, id asc`);
+  return res.rows.map(toFlag);
+}
+
+export async function listRedFlags(db: Queryable, limit = 30): Promise<RedFlag[]> {
+  const res = await db.query(`select * from newsletter_red_flags order by active desc, coalesce(resolved_at, created_at) desc limit $1`, [limit]);
+  return res.rows.map(toFlag);
+}
+
+export async function addRedFlag(db: Queryable, flag: { commodity: string; title: string; detail: string; since?: string | null }, by: string): Promise<void> {
+  await db.query(
+    `insert into newsletter_red_flags (commodity, title, detail, source, since, updated_by) values ($1, $2, $3, 'manual', coalesce($4::date, current_date), $5)`,
+    [flag.commodity, flag.title, flag.detail, flag.since || null, by],
+  );
+}
+
+export async function setRedFlagActive(db: Queryable, id: number, active: boolean, by: string): Promise<boolean> {
+  const res = await db.query(
+    `update newsletter_red_flags set active = $2, resolved_at = case when $2 then null else now() end, updated_by = $3 where id = $1`,
+    [id, active, by],
+  );
+  return (res.rowCount ?? 0) > 0;
+}
+
+/**
+ * Auto flags follow the data: raised (or refreshed) while their condition holds, removed once it
+ * clears. One the owner resolved stays resolved while the condition holds, then is removed when it clears.
+ */
+export async function syncAutoRedFlags(db: Queryable, flags: { autoKey: string; commodity: string; title: string; detail: string }[]): Promise<void> {
+  for (const f of flags) {
+    await db.query(
+      `insert into newsletter_red_flags (commodity, title, detail, source, auto_key, updated_by) values ($1, $2, $3, 'auto', $4, 'auto')
+       on conflict (auto_key) do update set title = excluded.title, detail = excluded.detail
+       where newsletter_red_flags.source = 'auto'`,
+      [f.commodity, f.title, f.detail, f.autoKey],
+    );
+  }
+  await db.query(
+    `delete from newsletter_red_flags where source = 'auto' and auto_key is not null and not (auto_key = any($1))`,
+    [flags.map((f) => f.autoKey)],
+  );
 }

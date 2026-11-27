@@ -52,10 +52,10 @@ const DATA: IssueData = {
     crudeStocks: { value: 417.8, change: 3.4, date: "2026-11-13" }, wti: { value: 71.25, change: -1.1, date: "2026-11-17" } },
 };
 
-test("renderIssue: three sections, warning, unsubscribe placeholder, escaped text", () => {
+test("renderIssue: weather, warning, unsubscribe placeholder, escaped text", () => {
   const r = renderIssue({ ...DATA, macro: { ...DATA.macro!, headline: "Growth <firm> & steady" } });
-  assert.match(r.subject, /^A3RO weekly · 30 November 2026 · ☀️ Sunny$/);
-  for (const part of ["Australia Pulse", "US macro weather", "Oil flows", "Strait of Hormuz: 41.3 a day (+6%)", "417.8 million barrels, +3.4 million", GENERAL_ADVICE_WARNING]) {
+  assert.match(r.subject, /^A3RO weekly · 30 November 2026 · 🇺🇸 ☀️ Sunny$/);
+  for (const part of ["Macro weather", "US: ☀️ Sunny", GENERAL_ADVICE_WARNING]) {
     assert.ok(r.text.toLowerCase().includes(part.toLowerCase()), `text has ${part}`);
   }
   assert.ok(r.html.includes("Growth &lt;firm&gt; &amp; steady"));
@@ -66,7 +66,7 @@ test("renderIssue: three sections, warning, unsubscribe placeholder, escaped tex
 test("renderIssue: missing sections are left out, not shown empty", () => {
   const r = renderIssue({ ...DATA, pulse: null, macro: null, oil: null });
   assert.equal(r.subject, "A3RO weekly · 30 November 2026");
-  assert.ok(r.text.includes("No fresh readings this week."));
+  assert.ok(!/MACRO WEATHER|WHAT'S FLIPPED|EXECUTE/i.test(r.text));
 });
 
 const ENV: SendEnv = { resend: { apiKey: "re_test", from: "A3RO <newsletter@a3ro.com.au>" }, siteUrl: "https://a3ro.com.au", secret: "s3cret" };
@@ -82,8 +82,9 @@ test("personalise: each copy gets its own unsubscribe link, also as List-Unsubsc
 
 /* ── sending through a fake DB and a fake Resend ── */
 
-function sendHarness(recipients: string[], status = "approved", failOnBatch = -1) {
+function sendHarness(recipients: string[], status = "approved", failOnBatch = -1, premiumUsers: string[] = []) {
   const issue = { id: 1, issue_date: "2026-11-30", subject: "S", html: `<a href="${UNSUBSCRIBE_PLACEHOLDER}">u</a>`, text_body: "t",
+    subject_premium: premiumUsers.length ? "SP" : null, html_premium: premiumUsers.length ? `P <a href="${UNSUBSCRIBE_PLACEHOLDER}">u</a>` : null, text_premium: premiumUsers.length ? "tp" : null,
     status, created_at: "2026-11-26T00:00:00Z", updated_at: "2026-11-26T00:00:00Z", sent_count: 0, failed_count: 0 };
   const sent = new Set<string>();
   const db: Queryable = {
@@ -93,6 +94,7 @@ function sendHarness(recipients: string[], status = "approved", failOnBatch = -1
         if (issue.status !== "approved") return { rows: [], rowCount: 0 };
         issue.status = "sending"; return { rows: [], rowCount: 1 };
       }
+      if (text.includes("from user_access a join auth.users")) return { rows: premiumUsers.map((email) => ({ email })) };
       if (text.includes("from leads l")) return { rows: recipients.filter((e) => !sent.has(e)).map((email) => ({ email })) };
       if (text.startsWith("insert into newsletter_sends")) {
         for (let i = 1; i < params.length; i += 3) sent.add(String(params[i]));
@@ -104,11 +106,11 @@ function sendHarness(recipients: string[], status = "approved", failOnBatch = -1
       return { rows: [], rowCount: 0 };
     },
   };
-  const batches: { to: string[]; key: string | null; listUnsub: string | undefined }[] = [];
+  const batches: { to: string[]; key: string | null; listUnsub: string | undefined; subjects: string[] }[] = [];
   const fetchImpl = (async (_url: string, init: RequestInit) => {
-    const body = JSON.parse(String(init.body)) as { to: string[]; headers?: Record<string, string> }[];
-    if (batches.length === failOnBatch) { batches.push({ to: [], key: null, listUnsub: undefined }); return new Response(JSON.stringify({ message: "rate limited" }), { status: 429 }); }
-    batches.push({ to: body.flatMap((b) => b.to), key: (init.headers as Record<string, string>)["Idempotency-Key"] ?? null, listUnsub: body[0]?.headers?.["List-Unsubscribe"] });
+    const body = JSON.parse(String(init.body)) as { to: string[]; subject: string; headers?: Record<string, string> }[];
+    if (batches.length === failOnBatch) { batches.push({ to: [], key: null, listUnsub: undefined, subjects: [] }); return new Response(JSON.stringify({ message: "rate limited" }), { status: 429 }); }
+    batches.push({ to: body.flatMap((b) => b.to), key: (init.headers as Record<string, string>)["Idempotency-Key"] ?? null, listUnsub: body[0]?.headers?.["List-Unsubscribe"], subjects: body.map((b) => b.subject) });
     return new Response(JSON.stringify({ data: body.map((_, i) => ({ id: `re_${batches.length}_${i}` })) }), { status: 200 });
   }) as unknown as typeof fetch;
   return { db, issue, sent, batches, env: { ...ENV, resend: { ...ENV.resend, fetchImpl } } };
@@ -151,4 +153,13 @@ test("send: a failed batch stops the run, and the next run sends only to who's l
   assert.equal(second.status, "sent");
   assert.equal(second.sent, 50);
   assert.equal(h.sent.size, 150);
+});
+
+test("send: Premium readers and owners get the Premium edition, everyone else the free one", async () => {
+  const h = sendHarness(["free@x.com", "paid@x.com", "owner@x.com"], "approved", -1, ["paid@x.com"]);
+  h.env.ownerEmails = ["Owner@x.com"];
+  const report = await sendDueIssue(h.db, h.env, { now: MONDAY_6PM });
+  assert.equal(report.status, "sent");
+  const bySubject = Object.fromEntries(h.batches[0].to.map((to, i) => [to, h.batches[0].subjects[i]]));
+  assert.deepEqual(bySubject, { "free@x.com": "S", "paid@x.com": "SP", "owner@x.com": "SP" });
 });
