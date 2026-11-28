@@ -60,6 +60,7 @@ import AssetDrawer from "../../components/projects/bull/AssetDrawer";
 import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
 import { track } from "../../components/track";
 import { DataAsOf } from "../../components/DataAsOf";
+import ModuleIntro from "../../components/ModuleIntro";
 
 const ATMOSPHERE =
   "radial-gradient(90% 110% at 50% 65%, #0c1018 0%, var(--depth-1) 55%, #070808 100%)";
@@ -418,6 +419,7 @@ export default function BullMarketFinderView() {
                     : "Connecting…"}
             </p>
           </div>
+          <ModuleIntro module="bull" accent={BULL_ACCENT} />
 
           {/* transitions rail — what just turned */}
           {live && newlyBullishTransitions.length > 0 && (

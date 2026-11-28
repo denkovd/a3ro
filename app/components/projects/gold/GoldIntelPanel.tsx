@@ -8,6 +8,7 @@ import { formatPrice, formatPct, type GoldSnapshot } from "./goldData";
 import { findMetric, formatTonnes, formatToz, formatFlowT, type GoldFlowData, type GoldFlowMetric } from "./useGoldFlowData";
 import { mineReading, reportStatus, sourceLabel } from "./dataQuality";
 import GoldHistoryChart from "./GoldHistoryChart";
+import ModuleIntro from "../../ModuleIntro";
 
 const GOLD = "#dcc689";
 const KINDS = { central_bank: "Official reserves", etf: "Gold ETFs", warehouse: "Warehouse stocks", vault_hub: "Bullion hub" };
@@ -129,6 +130,7 @@ export default function GoldIntelPanel({ narrow, selectedHolder, selectedMine, s
           {related.length ? <div className="mt-4 border-t border-[var(--line)] pt-3"><h5 className="font-mono text-[9px] uppercase tracking-[0.18em] text-[var(--ink-3)]">Related illustrative connections</h5>{related.map((r) => <button type="button" key={r.id} onClick={() => focusRoute(r)} className="mt-2 block w-full rounded-sm border border-[var(--line)] px-3 py-2 text-left text-[11px] text-[var(--ink-2)] hover:bg-[var(--depth-2)]">{r.name} ↗</button>)}</div> : null}
           <p className="mt-4 border-t border-[var(--line)] pt-3 text-[10px] text-[var(--ink-3)]">Locations represent economic hubs, rather than vault coordinates.</p>
         </section> : <>
+          <ModuleIntro module="gold" accent={GOLD} compact />
           <section aria-label="Gold market overview" className="border-b border-[var(--line)] pb-3">
             <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-[var(--ink-3)]">Spot · XAU · {price.price.currency} / {price.price.unit}</p>
             <p className="mt-1 font-mono text-3xl tabular-nums text-[var(--ink)]">{formatPrice(price.price.value)}</p>

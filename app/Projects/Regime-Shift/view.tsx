@@ -44,6 +44,7 @@ import { LiquidityPanel, CostOfCapitalPanel } from "../../components/projects/ma
 import AllocationPanel from "../../components/projects/macro/AllocationPanel";
 import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
 import { macroFreshness, formatMacroUpdated, formatMacroPeriod } from "../../components/projects/macro/macroFreshness";
+import ModuleIntro from "../../components/ModuleIntro";
 
 const BacktestPanel = dynamic(() => import("../../components/projects/macro/BacktestPanel"), {
   loading: () => <p role="status" className="mt-6 text-sm text-[var(--ink-2)]">Opening research laboratory…</p>,
@@ -155,6 +156,7 @@ export default function RegimeShiftView() {
             GRID, which regime cross-asset markets are actually pricing, and whether the six macro cycles
             support that regime continuing. Free-tier FRED and market data. Not investment advice.
           </p>
+          <ModuleIntro module="regime" accent={MACRO_ACCENT} />
           {live && (
             <div className="mt-4 text-[12px] leading-relaxed text-[var(--ink-3)]" role="status">
               <p>{formatMacroUpdated(snap.computedAt)} · Checks for updates every 5 minutes.</p>

@@ -28,6 +28,7 @@ import {
 } from "../../components/projects/earnings/earningsData";
 import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
 import { DataAsOf } from "../../components/DataAsOf";
+import ModuleIntro from "../../components/ModuleIntro";
 
 const ATMOSPHERE =
   "radial-gradient(90% 110% at 50% 65%, #100c18 0%, var(--depth-1) 55%, #070808 100%)";
@@ -177,6 +178,7 @@ export default function EarningsBeatView() {
                     : "Connecting…"}
             </p>
           </div>
+          <ModuleIntro module="earnings" accent={BEAT_ACCENT} />
 
           <section aria-labelledby="earnings-seasons-title" className="mt-7 rounded-sm hairline bg-[var(--depth-1)] px-5 py-4">
             <div className="flex flex-wrap items-baseline justify-between gap-2">

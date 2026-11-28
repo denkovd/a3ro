@@ -116,7 +116,7 @@ export default function LngIntelPanel({ narrow, selected, focus, close, exportsS
   const plantsRanked = [...PLANTS].sort((a, b) => b.mtpa - a.mtpa);
 
   return (
-    <RailShell id="lng-intel-content" label="LNG intelligence" kicker="P·03 / LNG intelligence" title="Gas field → plant → ship"
+    <RailShell id="lng-intel-content" intro={{ module: "lng", accent: LG }} label="LNG intelligence" kicker="P·03 / LNG intelligence" title="Gas field → plant → ship"
       narrow={narrow} selectedKey={selected} onBack={close} backLabel="Back to LNG overview">
       {detail ? <section>{detail}</section> : <>
         <MonthlyPriceBlock data={price} kicker="Price · LNG imported by Japan" accent={LG} per="per MMBtu" decimals={2}

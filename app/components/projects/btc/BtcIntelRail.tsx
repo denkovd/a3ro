@@ -32,6 +32,7 @@ function ReserveLine({ venueId, reserves }: { venueId: string; reserves: { asOf:
 }
 import { FLOW_ROUTES } from "./flowRoutes";
 import { ORANGE_CSS } from "../btcTrackerShared";
+import ModuleIntro from "../../ModuleIntro";
 
 type Markets = BtcMarketResponse & { loading: boolean; now: number };
 const kicker = "font-mono text-[9px] uppercase tracking-[0.16em] text-[var(--ink-3)]";
@@ -150,12 +151,12 @@ export default function BtcIntelRail({ narrow, mode, selected, onVenue, onMining
         {venue ? <ReserveLine venueId={venue.id} reserves={reserves} /> : null}
         {mine && <><p className="mt-3 font-mono text-2xl">~{(mine.hashrateShare * 100).toFixed(0)}%</p><p className="mt-1 text-xs text-[var(--ink-3)]">Illustrative hashrate share · {mine.asOf}</p><p className="mt-3 text-xs leading-relaxed text-[var(--ink-2)]">{MINING_SOURCE}. This layer represents hashpower geography; it does not locate stored coins.</p></>}
         {route && <><p className="mt-3 text-xs leading-relaxed text-[var(--ink-2)]">A conceptual link between liquidity hubs. Direction and width do not measure observed Bitcoin transfers.</p><div className="mt-3 space-y-2">{route.gates.map((id) => { const v = VENUES.find((v) => v.id === id); return v ? <button key={id} type="button" className={rowButton} onClick={() => onVenue(v)}><span className="text-xs">{v.name}</span><span className={`ml-2 ${kicker}`}>{venueStatus(v, markets, flows)} ↗</span></button> : null; })}</div></>}
-      </section> : <section aria-label={mode === "mining" ? "Mining geography" : "What changed"}>
+      </section> : <><ModuleIntro module="btc" accent={ORANGE_CSS} compact /><section aria-label={mode === "mining" ? "Mining geography" : "What changed"}>
         <h3 className={kicker}>{mode === "mining" ? "Mining geography" : "What changed"}</h3>
         <p className="mt-1 text-[10px] text-[var(--ink-3)]">{mode === "mining" ? "Illustrative country shares · 2024 reference" : mode === "etfs" ? "Latest reported daily flow" : mode === "spot" ? "Latest 24h spot move" : mode === "derivatives" ? "Current perpetual funding" : "Latest daily flow, 24h move and current funding"}</p>
         <div className="mt-3 space-y-2">{modeUpdates.map((item) => <button key={item.id} type="button" className={rowButton} onClick={() => onVenue(VENUES.find((v) => v.id === item.id)!)}><p className="font-mono text-[11px]" style={{ color: ORANGE_CSS }}>{item.text}</p><p className={`mt-1 ${kicker}`}>{item.detail} ↗</p></button>)}</div>
         {!modeUpdates.length && <p role="status" className="mt-3 text-xs text-[var(--ink-2)]">{mode === "mining" ? "Select a region to explore the reference geography. Country shares are illustrative, not live telemetry." : markets.loading || flows.status === "loading" ? "Loading market observations…" : "Market feeds are unavailable. Explore the venue directory below; feeds retry automatically."}</p>}
-      </section>}
+      </section></>}
       <section className="mt-5 border-t border-[var(--line)] pt-3" aria-label="Location directory">
         <label className={kicker} htmlFor="btc-venue-search">{mode === "mining" ? "Mining regions" : "Venue directory"}</label>
         <input id="btc-venue-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search locations…" className="mt-2 w-full rounded-sm border border-[var(--line)] bg-transparent px-2 py-2 text-xs outline-none focus:border-[#e0873a]" />

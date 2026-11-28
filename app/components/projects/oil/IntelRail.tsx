@@ -10,6 +10,8 @@ import { PRODUCERS } from "../producers";
 import type { Refinery } from "./refineries";
 import type { RefineryFeed } from "./useRefineries";
 import RefineryWatchlist from "./RefineryWatchlist";
+import ModuleIntro from "../../ModuleIntro";
+import { AMBER_CSS } from "../oilTrackerShared";
 import { RAIL_WIDTH_PX, type FocusTarget, type OilIntelligence } from "./types";
 
 export default function IntelRail({ intel, metrics, physicalFailed, refineries, refineryFeed, focusKey, hasFocus, focusSlot, onFocus, onSelectCorridor, onCloseFocus, backLabel, onBack, collapsed = false, onToggleCollapsed, variant = "desktop" }: {
@@ -38,6 +40,7 @@ export default function IntelRail({ intel, metrics, physicalFailed, refineries, 
     </div>
     {!folded && <div key={focusKey} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-1" aria-live="polite">
       {hasFocus ? focusSlot : <div className="space-y-6">
+        <ModuleIntro module="oil" accent={AMBER_CSS} compact />
         {/* signal first: departures from the norm, then other corridors, then reference readings */}
         <GateSignals compact={variant === "mobile"} gates={intel.gates} others={intel.corridors.filter(c => c.status !== "live")} refineries={refineries}
           loading={metrics === null && !physicalFailed} failed={physicalFailed} onFocus={onFocus} onSelectCorridor={onSelectCorridor} />

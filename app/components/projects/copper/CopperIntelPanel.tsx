@@ -126,7 +126,7 @@ export default function CopperIntelPanel({ narrow, selected, focus, close, expor
   const top3 = miningRanked.slice(0, 3);
 
   return (
-    <RailShell id="copper-intel-content" label="Copper intelligence" kicker="P·03 / Copper intelligence" title="Mine → smelter → wire"
+    <RailShell id="copper-intel-content" intro={{ module: "copper", accent: CU }} label="Copper intelligence" kicker="P·03 / Copper intelligence" title="Mine → smelter → wire"
       narrow={narrow} selectedKey={selected} onBack={close} backLabel="Back to copper overview">
       {detail ? <section>{detail}</section> : <>
         <MonthlyPriceBlock data={price} kicker="Price · copper, LME monthly average" accent={CU} per="a tonne" decimals={0}

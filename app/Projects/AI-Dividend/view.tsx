@@ -15,6 +15,7 @@ import type { DividendRead } from "../../../backend/src/dividend/types";
 import SiteFooter from "../../components/SiteFooter";
 import NewsletterSignup from "../../components/NewsletterSignup";
 import { DataAsOf } from "../../components/DataAsOf";
+import ModuleIntro from "../../components/ModuleIntro";
 
 const SOURCE_LABELS = { bls: "Bureau of Labor Statistics", bea: "Bureau of Economic Analysis", dfa: "Federal Reserve" };
 const COLORS = ["#8b9dff", "#d4a157", "#5fc9a4"];
@@ -119,6 +120,7 @@ export default function AIDividendView() {
       <div className="flex flex-wrap items-center justify-between gap-4"><p className="font-mono text-[10px] uppercase tracking-[.26em] text-[var(--ink-2)]">Experiment · 2026–{DIVIDEND_OUTLOOK_END_YEAR}<DataAsOf module="dividend" /></p><span className="border border-[var(--line-2)] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.15em]" style={{ color: DIVIDEND_ACCENT }}>Build {DIVIDEND_CURRENT_STEP} of 5 · Outlook to {DIVIDEND_OUTLOOK_END_YEAR} live</span></div>
       <h1 className="mt-5 text-4xl font-medium tracking-tight md:text-6xl">Where is the AI dividend going?</h1>
       <p className="mt-5 max-w-3xl text-base leading-8 text-[var(--ink-2)]">AI capability is rising fast. This module tracks how much of it turns into real output, who captures the value, and what physical limits could stop it. Every figure comes from published data. Stages without data yet say so.</p>
+      <ModuleIntro module="dividend" accent={DIVIDEND_ACCENT} />
 
       <nav aria-label="Measurement chain" className="mt-10"><ol className="grid grid-cols-2 gap-px border border-[var(--line)] bg-[var(--line)] sm:grid-cols-3 lg:grid-cols-6">{DIVIDEND_STAGES.map((item, index) => <li key={item.id} className="bg-[var(--depth-0)]"><button type="button" aria-pressed={view === item.id} onClick={() => setView(item.id)} className={`flex h-full min-h-24 w-full flex-col justify-between gap-3 p-4 text-left transition-colors ${view === item.id ? "bg-[var(--depth-3)]" : "hover:bg-[var(--depth-1)]"}`}><span className="font-mono text-[10px] text-[var(--ink-2)]">{String(index + 1).padStart(2, "0")}{index < DIVIDEND_STAGES.length - 1 ? " →" : ""}</span><span className="text-sm">{item.title}</span><StatusChip stage={item} /></button></li>)}</ol></nav>
 
