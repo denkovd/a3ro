@@ -149,7 +149,7 @@ export default function UraniumIntelPanel({ narrow, selected, reactorMode, focus
   })();
 
   return (
-    <RailShell id="uranium-intel-content" label="Uranium intelligence" kicker="P·03 / Uranium intelligence" title="Mine → plant → reactor"
+    <RailShell id="uranium-intel-content" intro={{ module: "uranium", accent: URN }} label="Uranium intelligence" kicker="P·03 / Uranium intelligence" title="Mine → plant → reactor"
       narrow={narrow} selectedKey={key} onBack={closePanel} backLabel="Back to uranium overview">
         {detail ? <section>{detail}</section> : <>
           <PriceBlock symbol="TSX:U.UN" kicker="Price · Sprott Physical Uranium Trust" label="Sprott Physical Uranium Trust (TSX:U.UN) price, delayed" accent={URN} rgb="184,226,120"

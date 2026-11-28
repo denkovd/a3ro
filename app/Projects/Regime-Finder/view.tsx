@@ -27,6 +27,7 @@ import {
   type RegimeGroupKey,
 } from "../../components/projects/regime/regimeData";
 import { DataAsOf } from "../../components/DataAsOf";
+import ModuleIntro from "../../components/ModuleIntro";
 
 const ATMOSPHERE =
   "radial-gradient(90% 110% at 50% 65%, #0d1512 0%, var(--depth-1) 55%, #070808 100%)";
@@ -177,6 +178,7 @@ export default function RegimeFinderView() {
                     : "Connecting…"}
             </p>
           </div>
+          <ModuleIntro module="bull-macro" accent={REGIME_ACCENT} />
 
           {/* summary strip */}
           {live && (

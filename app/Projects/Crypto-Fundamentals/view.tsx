@@ -7,6 +7,7 @@ import PrivacySection from "./PrivacySection";
 import CryptoTabs, { type CryptoTab } from "./CryptoTabs";
 import type { ChainApp } from "../../../backend/src/crypto/leaderboard";
 import type { ExchangeReserve } from "../../../backend/src/crypto/exchanges";
+import ModuleIntro from "../../components/ModuleIntro";
 
 const ACCENT = "#9ab8ff";
 const LINE_COLOURS = ["#9ab8ff", "#b8e278", "#f0b35a", "#e58ad0", "#7fd6c2", "#d9d9d9"];
@@ -275,6 +276,7 @@ export default function CryptoFundamentalsView({ snap }: { snap: CryptoSnapshot 
         stablecoin dollars live on it. Price is left out on purpose. A token can rise with no one using the network; these numbers show who is.
       </p>
       <p className="text-xs text-[var(--ink-3)]">{snap ? `Data as of ${snap.asOf} · ` : ""}Source: <a className="underline" href="https://defillama.com" target="_blank" rel="noreferrer">DefiLlama</a> (open data), updated daily. General information, not a recommendation.</p>
+      <ModuleIntro module="crypto" accent={ACCENT} />
     </header>
 
     <CryptoTabs tabs={TABS} panels={panels} />

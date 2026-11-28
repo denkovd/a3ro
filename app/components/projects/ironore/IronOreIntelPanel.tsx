@@ -140,7 +140,7 @@ export default function IronOreIntelPanel({ narrow, selected, focus, close, expo
   const price = useMonthlyPrice("iron_ore");
 
   return (
-    <RailShell id="ironore-intel-content" label="Iron ore intelligence" kicker="P·03 / Iron ore intelligence" title="Pit → port → steel mill"
+    <RailShell id="ironore-intel-content" intro={{ module: "ironore", accent: IRN }} label="Iron ore intelligence" kicker="P·03 / Iron ore intelligence" title="Pit → port → steel mill"
       narrow={narrow} selectedKey={selected} onBack={close} backLabel="Back to iron ore overview">
       {detail ? <section>{detail}</section> : <>
         <MonthlyPriceBlock data={price} kicker="Price · 62% Fe fines, CFR China" accent={IRN} per="a dry tonne"

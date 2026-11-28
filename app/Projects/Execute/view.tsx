@@ -7,6 +7,7 @@ import ModuleSwitcher from "../../components/projects/ModuleSwitcher";
 import { useViewer } from "../../components/useViewer";
 import { ago, countdown, formatPct, formatZ, leanWord, sydneyLabel } from "../../../backend/src/execute/format";
 import { EXECUTE_Z_THRESHOLD, type ExecuteChecklist, type ExecuteEvent, type ExecutePayload, type ExecutePeekPayload, type ExecuteRecord, type ExecuteTrade, type ExecuteUpcoming } from "../../../backend/src/execute/types";
+import ModuleIntro, { SectionHint } from "../../components/ModuleIntro";
 
 const ACCENT = "#d4a157";
 const SHORT = "#ef5350";
@@ -190,8 +191,9 @@ export default function ExecuteView() {
       <h1 className="mt-5 text-4xl font-medium tracking-tight md:text-6xl">Fading the move into the Fed and CPI.</h1>
       <p className="mt-5 max-w-3xl text-base leading-8 text-[var(--ink-2)]">Before each FOMC decision and CPI release, BTC often runs hard one way. When the 7-day run-in is large for BTC's recent volatility (|z| ≥ {EXECUTE_Z_THRESHOLD}), this strategy fades it 24 hours before the release. The rules are fixed, and every trade is recorded. Expect 1–3 trades a month and some months with none. Losing streaks of 2–3 trades are normal.</p>
       <p className="mt-4 max-w-3xl border-l-2 border-amber-300/50 pl-4 text-xs leading-6 text-[var(--ink-2)]">Educational research and general information only, not financial advice. It doesn't consider your objectives, finances or needs. Backtests are hypothetical, and paper trades are simulated. Past results don't predict future ones, and leveraged crypto trading can lose more than you expect.</p>
+      <ModuleIntro module="execute" accent={ACCENT} />
 
-      <section className="mt-12" aria-label="Upcoming pivots"><h2 className="mb-5 text-2xl">Upcoming pivots</h2>
+      <section className="mt-12" aria-label="Upcoming pivots"><h2 className="text-2xl">Upcoming pivots</h2><div className="mb-5"><SectionHint module="execute" section="pivots" /></div>
         {events.length === 0 && peekFailed && !data
           ? <div className="flex flex-wrap items-center justify-between gap-4 border border-amber-300/30 p-4 text-sm text-amber-200" role="alert"><p>The event calendar couldn&apos;t be loaded.</p><button type="button" onClick={load} className="min-h-10 underline">Try again</button></div>
           : events.length === 0 && !peek && !data ? <p className="text-sm text-[var(--ink-2)]">Loading calendar…</p>
@@ -201,17 +203,17 @@ export default function ExecuteView() {
 
       {gate === "error" && <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border border-amber-300/30 p-4 text-sm text-amber-200" role="alert"><p>Signals and the track record couldn't be loaded.</p><button type="button" onClick={load} className="min-h-10 underline">Try again</button></div>}
 
-      <section className="mt-14" aria-label="Signal"><h2 className="mb-5 text-2xl">Signal</h2>
+      <section className="mt-14" aria-label="Signal"><h2 className="text-2xl">Signal</h2><div className="mb-5"><SectionHint module="execute" section="signal" /></div>
         {locked ? <Locked gate={gate} what="The live z-reading and lean for each upcoming event, when it arms, and the context checklist." />
           : signals.length ? <div className="grid gap-4 lg:grid-cols-2">{signals.map(item => <SignalCard key={item.id} item={item} now={now} />)}</div>
           : gate === "open" ? <p className="text-sm text-[var(--ink-2)]">No event in the next 14 days.</p> : null}
       </section>
 
-      <section className="mt-14" aria-label="Paper position"><h2 className="mb-5 text-2xl">Paper position</h2>
+      <section className="mt-14" aria-label="Paper position"><h2 className="text-2xl">Paper position</h2><div className="mb-5"><SectionHint module="execute" section="position" /></div>
         {locked ? <Locked gate={gate} what="The open paper trade: entries, stop and first target." /> : gate === "open" && <OpenPosition trade={data?.openTrade ?? null} />}
       </section>
 
-      <section className="mt-14" aria-label="Track record"><div className="mb-5 flex flex-wrap items-center justify-between gap-3"><h2 className="text-2xl">Track record</h2>
+      <section className="mt-14" aria-label="Track record"><div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-2xl">Track record</h2><SectionHint module="execute" section="record" /></div>
         {!locked && <div className="flex gap-1">{([["paper", "Forward paper"], ["backtest", "Backtest (hypothetical)"]] as const).map(([k, label]) => <button key={k} type="button" aria-pressed={tab === k} onClick={() => setTab(k)} className={`min-h-10 px-3 text-xs ${tab === k ? "bg-[var(--depth-3)]" : "text-[var(--ink-2)]"}`}>{label}</button>)}</div>}</div>
         {locked ? <Locked gate={gate} what="The forward paper record and the hypothetical backtest: equity curve, stats, results by year and every trade." /> : data && <Record record={data[tab]} kind={tab} />}
       </section>
@@ -220,6 +222,7 @@ export default function ExecuteView() {
 
       <section className="mt-14 border-t border-[var(--line)] pt-8 text-xs leading-6 text-[var(--ink-2)]" aria-label="Rules">
         <h2 className="text-base text-[var(--ink)]">The rules (v1.1, fixed)</h2>
+        <SectionHint module="execute" section="rules" />
         <ul className="mt-3 max-w-3xl space-y-1">
           <li>— Events: FOMC decisions and CPI releases. A setup arms on the hourly bar that closes 24h before the release.</li>
           <li>— Narrative: BTC's 7-day log move divided by its normal 7-day swing, measured over the 30 days before the run-in. At +{EXECUTE_Z_THRESHOLD} or more, short. At −{EXECUTE_Z_THRESHOLD} or less, long.</li>

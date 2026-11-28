@@ -7,7 +7,11 @@
    and LNG use these so the sections look and behave alike.
 ──────────────────────────────────────────────────────────────── */
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import ModuleIntro, { RailHint } from "../../ModuleIntro";
+
+/** Which module's intro copy (#118) the sections inside a RailShell read their hints from. */
+const RailModule = createContext<string | null>(null);
 import TradingViewWidget from "../../TradingViewWidget";
 
 export interface RailSource { label: string; url: string; reviewed: string }
@@ -30,6 +34,7 @@ export function SourceLink({ source, accent }: { source: RailSource; accent: str
 export function RailSection({ label, kicker, last, children }: { label: string; kicker?: ReactNode; last?: boolean; children: ReactNode }) {
   return <section aria-label={label} className={`mt-3 first:mt-0 ${last ? "" : "border-b border-[var(--line)] pb-3"}`}>
     {kicker ? <Kicker>{kicker}</Kicker> : null}
+    <RailHint module={useContext(RailModule)} label={label} />
     {children}
   </section>;
 }
@@ -150,7 +155,7 @@ export function Explorer<T extends string>({ tabs, current, onTab, accentFor, ch
  * The rail itself: a fixed column on desktop, a bottom sheet that can be hidden on phones.
  * `selectedKey` changes scroll the content back to the top and re-open the sheet.
  */
-export function RailShell({ id, label, kicker, title, narrow, selectedKey, onBack, backLabel, children }: {
+export function RailShell({ id, label, kicker, title, narrow, selectedKey, onBack, backLabel, intro, children }: {
   id: string;
   label: string;
   kicker: string;
@@ -159,6 +164,8 @@ export function RailShell({ id, label, kicker, title, narrow, selectedKey, onBac
   selectedKey: string | null;
   onBack: () => void;
   backLabel: string;
+  /** Newcomer intro (#118) shown above the overview, and the module whose section hints apply. */
+  intro?: { module: string; accent: string };
   children: ReactNode;
 }) {
   const key = selectedKey ?? "overview";
@@ -174,7 +181,8 @@ export function RailShell({ id, label, kicker, title, narrow, selectedKey, onBac
         {narrow ? <button type="button" aria-expanded={mobileOpen} aria-controls={id} onClick={() => setCollapsedFor(mobileOpen ? key : null)} className="px-2 py-2 text-[11px] text-[var(--ink-2)]">{mobileOpen ? "Hide" : "Show"}</button> : null}
       </div>
       <div id={id} ref={contentRef} hidden={narrow && !mobileOpen} className="min-h-0 overflow-y-auto overscroll-contain px-4 py-3">
-        {children}
+        {intro && !selectedKey ? <ModuleIntro module={intro.module} accent={intro.accent} compact /> : null}
+        <RailModule.Provider value={intro?.module ?? null}>{children}</RailModule.Provider>
       </div>
     </aside>
   );
