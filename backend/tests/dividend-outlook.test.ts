@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { OUTLOOK_END, PREDICTIONS, SCENARIOS, buildOutlook, lean, passThrough, project, scorePredictions, signposts, type OutlookInputs } from "../src/dividend/outlook/outlook";
+import { OUTLOOK_END, PACE_METRICS, PREDICTIONS, projectAtPace, SCENARIOS, buildOutlook, lean, passThrough, project, scorePredictions, signposts, type OutlookInputs } from "../src/dividend/outlook/outlook";
 
 /** Quarterly index from 2016-Q4, growing `pre`% a year to 2022-Q4 and `post`% after. */
 function quarters(pre: number, post: number, last = "2026-Q3") {
@@ -104,7 +104,8 @@ describe("Prediction ledger", () => {
     const btos = now.find(item => item.id === "2026-11-btos")!;
     assert.equal(btos.status, "pending");
     assert.deepEqual(btos.reading, { value: 24.2, asOf: "2026-10" });
-    assert.equal(btos.onTrack, false);
+    // Three months is too little history to judge a pace call.
+    assert.equal(btos.onTrack, null);
     const later = scorePredictions(inputs({ adoption: { monthly: [...months("2027-05", [29, 31, 33]).map(point => ({ period: point.period, use: point.value }))], changeSixMonths: 5 } }));
     const resolved = later.find(item => item.id === "2026-11-btos")!;
     assert.equal(resolved.status, "hit");
@@ -128,5 +129,24 @@ describe("Prediction ledger", () => {
     assert.equal(outlook.scenarios.length, 3);
     assert.ok(outlook.scenarios.every(item => item.projection));
     assert.equal(outlook.predictions.length, PREDICTIONS.length);
+  });
+
+  test("rising measures are judged on pace, not on today's level", () => {
+    assert.ok(PACE_METRICS.has("business_ai_use") && PACE_METRICS.has("frontier_capability"));
+    // 12 months rising 1 point a month: 25 in Nov 2026 reaches 32 by Jun 2027.
+    const use = months("2025-11", [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]);
+    assert.equal(projectAtPace(use, "2027-06"), 32);
+    assert.equal(projectAtPace(use.slice(-3), "2027-06"), null);
+    const read = scorePredictions(inputs({ adoption: { monthly: use.map(point => ({ period: point.period, use: point.value })), changeSixMonths: 6 } })).find(item => item.id === "2026-11-btos")!;
+    assert.equal(read.status, "pending");
+    assert.equal(read.onTrack, true);
+    assert.equal(read.projected, 32);
+    const flat = scorePredictions(inputs({ adoption: { monthly: months("2025-11", Array(13).fill(25)).map(point => ({ period: point.period, use: point.value })), changeSixMonths: 0 } })).find(item => item.id === "2026-11-btos")!;
+    assert.equal(flat.onTrack, false);
+  });
+
+  test("level calls keep comparing the latest reading", () => {
+    const read = scorePredictions(inputs()).find(item => item.id === "2026-11-capex")!;
+    assert.equal(read.projected, null);
   });
 });
