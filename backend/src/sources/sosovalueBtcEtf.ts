@@ -6,7 +6,8 @@
      body: { "type": "us-btc-spot" }
      → { code: 0, data: [{ date, totalNetInflow, totalValueTraded,
                             totalNetAssets, cumNetInflow }, ...] }
-     Keyless, ~300 daily rows (confirmed live 2026-07-23), USD units.
+     x-soso-api-key: <SOSOVALUE_API_KEY>   (keyless until Nov 2026; now 403 without a key)
+     ~300 daily rows (confirmed live 2026-07-23), USD units.
 
    Chosen over Farside Investors' public page (farside.co.uk/btc) after
    that page turned out to sit behind a Cloudflare bot challenge:
@@ -76,7 +77,12 @@ export function parseSosoValueFlows(body: SosoValueResponse): SosoValueFlowRow[]
  *  getJsonForSource helper (GET-only, used by every other keyless
  *  source in this codebase) doesn't support — so this fetches directly,
  *  mirroring comexGoldStocks.ts's manual AbortController pattern. */
-export async function fetchSosoValueBtcFlows(): Promise<SosoValueFlowRow[]> {
+export async function fetchSosoValueBtcFlows(apiKey = process.env.SOSOVALUE_API_KEY ?? ""): Promise<SosoValueFlowRow[]> {
+  // SoSoValue stopped serving this endpoint keyless (HTTP 403 since Nov 2026): it now needs an
+  // x-soso-api-key header. Apply for a key at https://sosovalue.com/developer/dashboard.
+  if (!apiKey) {
+    throw new SourceError(SOURCE_ID, "auth", "SOSOVALUE_API_KEY is not set (SoSoValue now requires an API key: sosovalue.com/developer/dashboard)");
+  }
   const timeoutMs = 20_000;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -85,7 +91,7 @@ export async function fetchSosoValueBtcFlows(): Promise<SosoValueFlowRow[]> {
     res = await fetch(API_URL, {
       method: "POST",
       signal: controller.signal,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-soso-api-key": apiKey },
       body: JSON.stringify({ type: "us-btc-spot" }),
     });
   } catch (cause) {
@@ -107,7 +113,8 @@ export async function fetchSosoValueBtcFlows(): Promise<SosoValueFlowRow[]> {
           : res.status >= 500
             ? "upstream_error"
             : "bad_payload";
-    throw new SourceError(SOURCE_ID, kind, `HTTP ${res.status} fetching SoSoValue BTC ETF flows`, {
+    const hint = kind === "auth" ? " (check SOSOVALUE_API_KEY is approved on the SoSoValue developer dashboard)" : "";
+    throw new SourceError(SOURCE_ID, kind, `HTTP ${res.status} fetching SoSoValue BTC ETF flows${hint}`, {
       status: res.status,
     });
   }
