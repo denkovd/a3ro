@@ -15,6 +15,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/markets", changeFrequency: "daily", priority: 0.8 },
     { path: "/calendar", changeFrequency: "daily", priority: 0.8 },
     { path: "/assets", changeFrequency: "weekly", priority: 0.8 },
+    { path: "/track-record", changeFrequency: "daily", priority: 0.7 },
     ...ASSETS.map((a) => ({ path: assetPath(a), changeFrequency: "weekly" as const, priority: 0.6 })),
     { path: "/methodology", changeFrequency: "monthly", priority: 0.6 },
     ...METHODOLOGY_PAGES.map((p) => ({ path: p.path, changeFrequency: "monthly" as const, priority: 0.6 })),

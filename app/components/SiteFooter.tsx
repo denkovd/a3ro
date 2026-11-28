@@ -15,6 +15,7 @@ export default function SiteFooter() {
         Data: Australian Bureau of Statistics (CC BY 4.0), Reserve Bank of Australia, OECD, U.S. Energy Information Administration, FRED® (Federal Reserve Bank of St. Louis), IMF PortWatch and other sources named on each page. Sources are not responsible for how A3RO uses their data.
       </p>
       <nav aria-label="Legal" className="flex flex-wrap gap-5 font-mono text-[11px] text-[var(--ink-3)]">
+        <a href="/track-record" className="hover:text-[var(--ink)]">Track record</a>
         <a href="/terms" className="hover:text-[var(--ink)]">Terms of use</a>
         <a href="/privacy" className="hover:text-[var(--ink)]">Privacy</a>
         <a href="mailto:a3ro.helpdesk@gmail.com" className="hover:text-[var(--ink)]">a3ro.helpdesk@gmail.com</a>

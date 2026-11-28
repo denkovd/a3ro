@@ -1,4 +1,4 @@
-import { createDb, logOpenDataSignals, runMacroCycle } from "@a3ro/oil-backend";
+import { createDb, logOpenDataSignals, runMacroCycle, scoreSignalLog } from "@a3ro/oil-backend";
 import { requireCronAuth } from "../../_lib/cronAuth";
 import { withErrorLog } from "../../_lib/errorLog";
 
@@ -10,7 +10,8 @@ export const maxDuration = 300;
  * Independent daily refresh: other ingestion feeds cannot exhaust its budget.
  * Afterwards it logs the open-data signals for the public track record (#11). It runs
  * after the Australia Watch (02:15) and OECD (03:00) refreshes, so both reads are
- * the day's latest. Signal logging is best-effort and never changes the status code.
+ * the day's latest. Then it scores any calls now 1, 3 or 6 months old (#11).
+ * Logging and scoring are best-effort and never change the status code.
  */
 export const GET = withErrorLog("cron:macro", async function GET(request: Request) {
   const unauthorized = requireCronAuth(request);
@@ -33,5 +34,6 @@ export const GET = withErrorLog("cron:macro", async function GET(request: Reques
   } catch (error) {
     body.signals = [{ signal: "track-record", ok: false, error: error instanceof Error ? error.message : String(error) }];
   }
+  if (db) body.trackRecord = await scoreSignalLog(db);
   return Response.json(body, { status });
 });
