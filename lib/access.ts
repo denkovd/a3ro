@@ -65,9 +65,8 @@ export const MODULE_ACCESS: readonly ModuleAccess[] = [
   // all its data come from /api/btc, which is Premium. TradingView widgets stay on public pages only (#37).
   { id: "btc", label: "BTC", level: "premium", data: "market", pages: [], apis: ["/api/btc"],
     preview: "Follows bitcoin across major venues, with price, market structure and the macro backdrop in one view." },
-  // The page stays open so free visitors see the next pivot (from the public /api/execute-peek, calendar only);
-  // signals, the paper position and the track records come from /api/execute, which is Premium.
-  { id: "execute", label: "Execute", level: "premium", data: "market", pages: [], apis: ["/api/execute"],
+  // Locked like the other Premium modules (28 Nov): free visitors get the Premium page with the preview below.
+  { id: "execute", label: "Execute", level: "premium", data: "market", pages: ["/Projects/Execute"], apis: ["/api/execute"],
     preview: "Tracks a rules-based BTC strategy around FOMC and CPI releases: the live signal before each event, a forward paper-trade record and the hypothetical backtest." },
 ];
 

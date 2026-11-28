@@ -29,8 +29,10 @@ test("roadmap #33 split: open-data modules public, market-data modules Premium",
   for (const m of access.MODULE_ACCESS) assert.ok(m.level === "public" ? m.data === "open" : true, `${m.id}: market data must not be public`);
 });
 
-test("Execute: page and calendar peek are open, signals and records are Premium", () => {
-  for (const p of ["/Projects/Execute", "/api/execute-peek"]) assert.equal(access.gatedModuleForPath(p), null, p);
+test("Execute: the page, signals and records are Premium; the calendar peek stays open", () => {
+  assert.equal(access.gatedModuleForPath("/Projects/Execute")?.kind, "page");
+  assert.equal(access.gatedModuleForPath("/Projects/Execute")?.module.level, "premium");
+  assert.equal(access.gatedModuleForPath("/api/execute-peek"), null);
   for (const p of ["/api/execute", "/api/execute/"]) {
     const gated = access.gatedModuleForPath(p);
     assert.equal(gated?.kind, "api", p);
@@ -38,6 +40,7 @@ test("Execute: page and calendar peek are open, signals and records are Premium"
   }
   const matcher = readFileSync(path.resolve(root, "middleware.ts"), "utf8");
   assert.ok(matcher.includes('"/api/execute/:path*"'), "middleware must run on /api/execute");
+  assert.ok(matcher.includes('"/Projects/Execute/:path*"'), "middleware must run on the Execute page");
 });
 
 test("BTC: page open for the free TradingView chart (#123), globe data Premium", () => {
