@@ -2,13 +2,14 @@
 // keep the consensus and red flags current, preview both editions, send a test to yourself, approve it.
 // The Monday 6pm (Sydney) cron sends only an approved issue: Premium readers get the Premium edition.
 import {
-  createDb, getNewsletterSetting, missingLabels, listIssues, listRedFlags, pendingRecipients, upcomingIssueDate,
+  createDb, editorialBrief, getNewsletterSetting, missingLabels, listIssues, listRedFlags, pendingRecipients, upcomingIssueDate,
   type Consensus, type IssueData, type NewsletterIssue, type RedFlag,
 } from "@a3ro/oil-backend";
 import { requireOwner } from "../../../lib/ownerGuard";
 import { newsletterEnv } from "../../../lib/newsletter";
 import { OpsPage, OpsSection, OpsTable } from "../ui";
 import NewsletterActions from "./NewsletterActions";
+import CopyForClaude from "./CopyForClaude";
 import EditorialForm, { type EditorialValue } from "./EditorialForm";
 import { ConsensusForm, RedFlagsForm } from "./SettingsForms";
 
@@ -36,6 +37,7 @@ export default async function NewsletterPage() {
   const data = (current?.data ?? null) as IssueData | null;
   const excluded = data?.premium?.leaderboard?.excluded ?? [];
   const missing = data ? missingLabels(data) : [];
+  const hasClaudeKey = Boolean(process.env.ANTHROPIC_API_KEY);
   const editable = current ? current.status === "draft" || current.status === "approved" : false;
 
   return <OpsPage title="Newsletter" intro="The weekly issue in two editions. Free: big news, flip counts, US and Australia weather, commodities and red flags, Execute (only in an event week), what\u2019s coming and A3RO updates, from open data. Premium adds the flip pattern and tables and the YTD leaderboard. Generate, draft the editorial with Claude and edit it, check both previews, send yourself a test, then approve. Only an approved issue goes out, Monday 6pm Sydney. Any edit or regenerate puts it back to draft.">
@@ -50,8 +52,8 @@ export default async function NewsletterPage() {
               {current.lastError ? <p role="alert" className="text-xs text-[#e5484d]">Last send error: {current.lastError}</p> : null}
               <p className="text-sm">Subject: {current.subject}</p>
               {current.subjectPremium ? <p className="text-sm">Premium subject: {current.subjectPremium}</p> : null}
-              {current.status === "draft" && missing.length ? <p className="text-xs text-[#b38f00]">✍️ Still to write before approving: {missing.join(", ")}. Generating uses data only; Claude runs only when you press &ldquo;Draft editorial with Claude&rdquo;.</p> : null}
-              <NewsletterActions id={current.id} actions={current.status === "draft" ? ["generate", "draft-editorial", "test", "approve"] : current.status === "approved" ? ["test", "unapprove", "generate"] : ["test"]} />
+              {current.status === "draft" && missing.length ? <p className="text-xs text-[#b38f00]">✍️ Still to write before approving: {missing.join(", ")}. Generating uses data only.{hasClaudeKey ? <> Claude runs only when you press &ldquo;Draft editorial with Claude&rdquo;.</> : <> Use &ldquo;Copy data for Claude&rdquo; below and paste the reply into the Editorial boxes.</>}</p> : null}
+              <NewsletterActions id={current.id} actions={current.status === "draft" ? ["generate", ...(hasClaudeKey ? ["draft-editorial" as const] : []), "test", "approve"] : current.status === "approved" ? ["test", "unapprove", "generate"] : ["test"]} />
               <div className="grid gap-4 xl:grid-cols-2">
                 <div className="flex flex-col gap-1"><p className="text-xs text-[var(--ink-2)]">Free edition</p>
                   <iframe title="Free edition preview" srcDoc={current.html} sandbox="" className="h-[820px] w-full rounded-sm border border-[var(--line)] bg-white" /></div>
@@ -63,7 +65,8 @@ export default async function NewsletterPage() {
             </div>
             : <NewsletterActions actions={["generate"]} />}
         </OpsSection>
-        {current && editable ? <OpsSection title="Editorial" note="Claude drafts from a web search and this week's data; you check and edit every line. Saving re-renders both editions.">
+        {current && editable ? <OpsSection title="Editorial" note={hasClaudeKey ? "Claude drafts from a web search and this week's data; you check and edit every line. Saving re-renders both editions." : "Paste in what Claude drafts in chat; you check and edit every line. Saving re-renders both editions."}>
+          {data ? <CopyForClaude text={editorialBrief(data)} /> : null}
           <EditorialForm key={current.updatedAt} id={current.id} value={(current.editorial ?? {}) as EditorialValue} premium={Boolean(current.htmlPremium)} />
         </OpsSection> : null}
         <OpsSection title="Consensus" note="The third view in each weather table. Update after each Fed SEP and RBA Statement on Monetary Policy, then regenerate.">

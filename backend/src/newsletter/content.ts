@@ -275,6 +275,25 @@ export function editorialContext(d: IssueData): string {
   return lines.join("\n") || "(no data)";
 }
 
+/** Everything a Claude chat needs to draft the editorial by hand: the issue's data and the reply format the Admin form takes. */
+export function editorialBrief(d: IssueData): string {
+  return [
+    `A3RO weekly newsletter — editorial brief for the issue of ${d.issueDate} (sent Monday 6pm Sydney; covers the 7 days before).`,
+    "",
+    "Please draft the five editorial pieces. Search the web for the week's news and next week's earnings; use only numbers from your searches or the data below; paraphrase, no quotes; general information only, not advice.",
+    "",
+    "THIS WEEK'S A3RO DATA",
+    editorialContext(d),
+    "",
+    "REPLY FORMAT (one block per Admin box)",
+    "1. This week in one line — one sentence, at most 30 words.",
+    "2. Big news this week — headline; 2–3 sentence story; one 'why it matters' sentence tied to the A3RO data; up to 3 one-sentence briefs.",
+    d.premium?.flips ? "3. Pattern of the week (Premium) — 2–3 sentences on what the flips above say together." : "3. Pattern of the week — not needed this week (no Premium data).",
+    "4. Earnings next week — one line per reporting day in the 7 days after the send, Sydney date first, e.g. 'Thu 4 Dec · US after close: Salesforce (CRM), CrowdStrike (CRWD)'; large US and ASX 200 names; confirmed dates only; at most 7 lines.",
+    "5. A3RO updates — Shipped (≤4), Fixed (≤3), Next (≤2), from the commits at github.com/denkovd/a3ro over the last 7 days; what a user would notice, ≤20 words each.",
+  ].join("\n");
+}
+
 /* ── rendering ─────────────────────────────────────────────────── */
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");

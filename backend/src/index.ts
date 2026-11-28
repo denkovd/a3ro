@@ -129,7 +129,7 @@ export type { SignalReading, SignalLogResult } from "./trackRecord/signalLog";
 export { generateIssue, saveEditorial, sendTestIssue, sendDueIssue, personalise } from "./newsletter/send";
 export { draftEditorial, fetchRecentCommits, DEFAULT_MODEL as NEWSLETTER_DEFAULT_MODEL } from "./newsletter/editorial";
 export type { Editorial, BigNews, Updates } from "./newsletter/editorial";
-export { editorialContext, missingEditorial, missingLabels, PLACEHOLDER_MARK } from "./newsletter/content";
+export { editorialBrief, editorialContext, missingEditorial, missingLabels, PLACEHOLDER_MARK } from "./newsletter/content";
 export { SLOT_LABEL as EDITORIAL_SLOT_LABEL } from "./newsletter/editorial";
 export type { EditorialSlot } from "./newsletter/editorial";
 export type { IssueData, IssueExtras, Consensus } from "./newsletter/content";

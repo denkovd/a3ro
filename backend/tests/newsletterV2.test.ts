@@ -253,3 +253,10 @@ test("since last issue: weather change line under Macro weather", () => {
   const same = renderIssue({ ...BASE, sinceLast: { issueDate: "2026-11-23", us: { emoji: "☀️", label: "Sunny" }, au: null } } as IssueData);
   assert.ok(same.text.includes("🇺🇸 unchanged at ☀️ Sunny"));
 });
+
+test("editorial brief: data plus the five-box reply format, for drafting in chat", async () => {
+  const { editorialBrief } = await import("../src/newsletter/content");
+  const b = editorialBrief(BASE);
+  assert.ok(b.includes("issue of 2026-11-30") && b.includes("Trend Finder flips") && b.includes("Red flag: Oil: Hormuz disruption"));
+  for (const k of ["1. This week in one line", "2. Big news", "3. Pattern of the week (Premium)", "4. Earnings next week", "5. A3RO updates"]) assert.ok(b.includes(k), k);
+});
