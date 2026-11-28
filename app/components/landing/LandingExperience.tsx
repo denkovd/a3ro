@@ -29,7 +29,6 @@ const MODULES: readonly StageModule[] = [
   { name: "Trend Finder", category: "Find the shift", description: "See which assets have turned bullish on both daily and weekly closes. Explore the market by recency and strength.", href: "/Projects/Bull-Market-Finder", Component: BullFinder },
   { name: "Regime", category: "Read the backdrop", description: "Put the market in context. Track the growth and inflation conditions shaping the current US regime.", href: "/Projects/Regime-Shift", Component: Regime },
   { name: "Earnings Beat", category: "Follow the catalysts", description: "Follow earnings surprises and the signals surrounding them, with a focused view of company results.", href: "/Projects/Earnings-Beat", Component: Earnings },
-  // The page is open (free visitors get the next pivot); its signal and record are Premium inside it.
   { name: "Execute", category: "Time the pivots", description: "Follow a fixed BTC rule set around Fed decisions and CPI releases: the next pivot, the live signal and a forward paper record.", href: "/Projects/Execute", Component: Execute },
 ];
 

@@ -8,6 +8,9 @@ import CryptoTabs, { type CryptoTab } from "./CryptoTabs";
 import type { ChainApp } from "../../../backend/src/crypto/leaderboard";
 import type { ExchangeReserve } from "../../../backend/src/crypto/exchanges";
 
+/** TradingView chart for a project's token (symbols in backend/src/crypto/projects.ts). Linking out only (#37). */
+const tradingViewUrl = (symbol: string) => `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(symbol)}`;
+
 const ACCENT = "#9ab8ff";
 const LINE_COLOURS = ["#9ab8ff", "#b8e278", "#f0b35a", "#e58ad0", "#7fd6c2", "#d9d9d9"];
 
@@ -143,7 +146,9 @@ function ProjectTable({ ids, snap, showGroup = false }: { ids: string[]; snap: C
         return <tr key={p.id} className="border-b border-[var(--line)] align-top">
           {showGroup ? <td className="py-3 pr-2 font-mono text-xs text-[var(--ink-3)]">{i + 1}</td> : null}
           <td className="py-3 pr-3">
-            <span className="font-medium">{p.name}</span> <span className="font-mono text-xs text-[var(--ink-3)]">{asset ? <a className="underline" href={`/assets/${asset.slug}`}>{p.symbol}</a> : p.symbol}</span>
+            {p.tv
+              ? <a className="font-medium underline decoration-[var(--line-2)] underline-offset-4 hover:decoration-current" href={tradingViewUrl(p.tv)} target="_blank" rel="noopener noreferrer" data-track-outbound="tradingview" title={`${p.name} chart on TradingView (opens in a new tab)`}>{p.name}<span aria-hidden className="ml-0.5 text-[10px] text-[var(--ink-3)]">↗</span><span className="sr-only"> (TradingView chart, opens in a new tab)</span></a>
+              : <span className="font-medium">{p.name}</span>} <span className="font-mono text-xs text-[var(--ink-3)]">{asset ? <a className="underline" href={`/assets/${asset.slug}`}>{p.symbol}</a> : p.symbol}</span>
             {showGroup ? <span className="ml-2 rounded-sm border border-[var(--line)] px-1 py-0.5 text-[9px] text-[var(--ink-3)]">{CRYPTO_GROUP_LABEL[p.group]}</span> : null}
             <span className="mt-0.5 block max-w-[260px] text-xs leading-relaxed text-[var(--ink-3)]">{p.role}</span>
           </td>
