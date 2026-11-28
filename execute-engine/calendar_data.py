@@ -1,7 +1,7 @@
 """FOMC decision days (2:00pm New York) and CPI release days (8:30am New York).
 
-2023+ is copied verbatim from pine/a3ro_execute_v1_1.pine; 2022 comes from the original
-backtest.py so the backtest covers Jan 2022 – now. The live engine reads the calendar from
+Must match the FOMC_DATES and CPI_DATES lists in pine/a3ro_execute_v1_1.pine exactly
+(test_engine.py checks this); both start in Jan 2022, the backtest start. The live engine reads the calendar from
 Supabase `execute_events` (seeded from this file); update both each January and whenever the
 Fed or BLS revise dates.
 Sources: federalreserve.gov/monetarypolicy/fomccalendars.htm · bls.gov/schedule/news_release/cpi.htm

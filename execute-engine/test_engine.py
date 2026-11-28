@@ -92,3 +92,13 @@ def test_parity_with_published_backtest():
     s = sim.summary()
     assert (s["trades"], s["net_pct"], s["profit_factor"]) == (27, 38.36, 2.09)
     assert s["max_dd_pct"] == pytest.approx(-8.35, abs=0.01)     # published as −8.4%
+
+def test_pine_calendar_matches_python():
+    """The Pine script and the Python engine trade the same FOMC and CPI dates (from Jan 2022)."""
+    import re
+    pine = open(os.path.join(os.path.dirname(__file__), "pine", "a3ro_execute_v1_1.pine"), encoding="utf-8").read()
+    for name, src in (("FOMC_DATES", calendar_data.FOMC), ("CPI_DATES", calendar_data.CPI)):
+        dates = re.search(name + r' = "([^"]+)"', pine).group(1).split(",")
+        assert dates == calendar_data.days(src), name
+    assert 'timestamp("01 Jan 2022 00:00 +0000"), "Backtest start"' in pine
+    assert execute_engine.BACKTEST_START == pd.Timestamp("2022-01-01T00:00:00Z")
