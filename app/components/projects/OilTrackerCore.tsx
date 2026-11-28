@@ -20,6 +20,7 @@ import {
   flowHealth,
   type OTView, type Rot,
 } from "./oilTrackerShared";
+import { drawBorders } from "./globeBorders";
 import { FLOW_ROUTES, GATE_EIA_EST_MBD, type FlowTier } from "./flowRoutes";
 import { PRODUCERS, PRODUCERS_SOURCE, type Producer, type ProducerLayerMode } from "./producers";
 import CorridorSpark from "./CorridorSpark";
@@ -859,6 +860,8 @@ export default function OilTrackerCore({
         ctx.fillStyle = DOT(a);
         ctx.fillRect(sx - ds / 2, sy - ds / 2, ds, ds);
       }
+      // Globe 2.0 (#101): country borders and coastlines over the land dots.
+      drawBorders(ctx, rot, cx, cy, R, s.zoom, { coast: INK(0.2), border: INK(0.14) }, undefined);
 
       /* rim */
       ctx.strokeStyle = INK(0.1);

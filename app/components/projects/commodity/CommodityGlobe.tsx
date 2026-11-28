@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { DOT, INK, getDots, rotator, slerp, vec, type OTView, type Rot } from "../oilTrackerShared";
+import { drawBorders } from "../globeBorders";
 import GlobeEventCards, { type GlobeEvent, type GlobeEventsApi } from "../GlobeEventCards";
 
 export type GlobeGlyph = "circle" | "square" | "triangle" | "diamond";
@@ -369,6 +370,8 @@ export default function CommodityGlobe({
         ctx.fillStyle = DOT(0.18 + 0.6 * Math.pow(o[2], 1.6));
         ctx.fillRect(sx - ds / 2, sy - ds / 2, ds, ds);
       }
+      // Globe 2.0 (#101): country borders and coastlines over the land dots.
+      drawBorders(ctx, rot, cx, cy, R, s.zoom, { coast: INK(0.2), border: INK(0.14) }, () => redrawRef.current());
       ctx.strokeStyle = INK(0.1);
       ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke();
 
