@@ -12,8 +12,9 @@ const STATUS: Record<GaugeStatus, { label: string; color: string; meaning: strin
   no_data: { label: "Not scored", color: "var(--ink-3)", meaning: "no data yet" },
 };
 const SERIES_COLORS = ["#8b9dff", "#5fc9a4"];
+const SOURCE_NAMES: Record<string, string> = { eia: "EIA electricity", fred: "FRED commodity prices", datacentres: "Epoch data centres", drought: "US Drought Monitor" };
 
-function useConstraints() {
+export function useConstraints() {
   const [data, setData] = useState<ConstraintsSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +82,7 @@ export default function ConstraintsPanel() {
       {(["tight", "watch", "easy", "no_data"] as const).map(key => <span key={key} className="text-sm"><span className="font-mono text-lg tabular-nums" style={{ color: STATUS[key].color }}>{key === "no_data" ? summary.noData : summary[key]}</span> <span className="text-[var(--ink-2)]">{STATUS[key].label.toLowerCase()}</span></span>)}
       <span className="text-xs text-[var(--ink-2)] md:ml-auto">{scored ? `${summary.tight} of ${scored} scored constraints are a headwind for the AI build-out right now.` : "No constraint data loaded yet. Sources refresh daily."}</span>
     </div>
+    {data.sources?.some(source => !source.loaded) && <p className="mt-3 text-xs leading-6 text-[var(--ink-2)]">Sources not loaded yet: {data.sources.filter(source => !source.loaded).map(source => `${SOURCE_NAMES[source.source] ?? source.source} (${source.checkedAt ? `last check ${source.checkedAt.slice(0, 10)} ${source.health === "healthy" ? "succeeded" : "failed"}` : "not checked yet"})`).join(", ")}. They refresh daily.</p>}
     <div className="mt-5 grid items-start gap-4 lg:grid-cols-2">{data.gauges.map(gauge => <GaugeCard key={gauge.id} gauge={gauge} />)}</div>
     <p className="mt-5 max-w-3xl text-xs leading-6 text-[var(--ink-2)]">Each gauge reads pressure on the AI build-out: easy means it isn’t holding the build-out back, tight means it is likely to slow it down or make it cost more. A tight gauge is often good news for someone: open “Rule, who gains and history” on each card. Thresholds are ours and written out so they can be argued with.</p>
   </div>;

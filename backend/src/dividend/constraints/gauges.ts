@@ -1,4 +1,4 @@
-import type { DataCentresPayload, DroughtPayload, EiaPayload, FredPayload, SignalDatasets } from "../signals/types";
+import { CONSTRAINT_SOURCES, type DataCentresPayload, type DroughtPayload, type EiaPayload, type FredPayload, type SignalDatasets, type SignalSource } from "../signals/types";
 import type { ValueChainSnapshot } from "../valueChain/types";
 
 /**
@@ -197,9 +197,11 @@ export interface ConstraintsSnapshot {
   generatedAt: string;
   gauges: Gauge[];
   summary: { tight: number; watch: number; easy: number; noData: number };
+  /** Last check per constraint source, so an empty gauge says whether its source was never checked or failed. */
+  sources: { source: SignalSource; health: "healthy" | "unavailable"; checkedAt: string | null; loaded: boolean }[];
 }
 
-export function buildConstraintsSnapshot(datasets: SignalDatasets, previousCentres: SignalDatasets["datacentres"] | undefined, valueChain: ValueChainSnapshot | null, now = new Date()): ConstraintsSnapshot {
+export function buildConstraintsSnapshot(datasets: SignalDatasets, previousCentres: SignalDatasets["datacentres"] | undefined, valueChain: ValueChainSnapshot | null, now = new Date(), states: { source: SignalSource; health: "healthy" | "unavailable"; checkedAt: string | null }[] = []): ConstraintsSnapshot {
   const fred = datasets.fred?.payload as FredPayload | undefined;
   const gauges = [
     powerDemandGauge(datasets.eia?.payload),
@@ -212,5 +214,9 @@ export function buildConstraintsSnapshot(datasets: SignalDatasets, previousCentr
     computeGauge(),
   ];
   const count = (status: GaugeStatus) => gauges.filter(gauge => gauge.status === status).length;
-  return { version: 1, generatedAt: now.toISOString(), gauges, summary: { tight: count("tight"), watch: count("watch"), easy: count("easy"), noData: count("no_data") } };
+  const sources = CONSTRAINT_SOURCES.map(source => {
+    const state = states.find(item => item.source === source);
+    return { source, health: state?.health ?? "unavailable" as const, checkedAt: state?.checkedAt ?? null, loaded: Boolean(datasets[source]) };
+  });
+  return { version: 1, generatedAt: now.toISOString(), gauges, summary: { tight: count("tight"), watch: count("watch"), easy: count("easy"), noData: count("no_data") }, sources };
 }

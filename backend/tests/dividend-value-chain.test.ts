@@ -1,7 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { VALUE_CHAIN_COMPANIES } from "../src/dividend/valueChain/companies";
-import { buildValueChainSnapshot, cleanFacts, latestTtm, layerTotals, metricFromFacts, readCompany, ttmAt } from "../src/dividend/valueChain/metrics";
+import { buildValueChainSnapshot, cleanFacts, joinRenamedConcepts, latestTtm, layerTotals, metricFromFacts, readCompany, ttmAt } from "../src/dividend/valueChain/metrics";
 import { fetchValueChain, parseCompanyFacts, secUserAgent } from "../src/dividend/valueChain/sec";
 import { runValueChainCycle } from "../src/ingest/valueChainCycle";
 import { getStoredValueChain, valueChainContentHash } from "../src/storage/valueChainRepo";
@@ -84,6 +84,29 @@ describe("Trailing-12-month figures from SEC year-to-date reporting", () => {
     const larger = metricFromFacts({ Revenues: { units: { USD: doubled } }, RevenueFromContractWithCustomerExcludingAssessedTax: { units: { USD: calendar } } }, "revenue");
     assert.equal(larger?.current.concept, "Revenues");
     assert.equal(larger?.current.value, 240);
+  });
+});
+
+describe("Renamed XBRL concepts", () => {
+  // Old concept: FY2024, FY2025 and 2025 YTD. New concept from 2026: 2026 YTD plus the 2025 comparative.
+  const older = [fact("2024-01-01", "2024-12-31", 80, "10-K"), fact("2024-01-01", "2024-09-30", 55), fact("2025-01-01", "2025-09-30", 70), fact("2025-01-01", "2025-12-31", 100, "10-K", "2026-02-10")];
+  const renamed = [fact("2026-01-01", "2026-09-30", 90, "10-Q", "2026-10-30"), fact("2025-01-01", "2025-09-30", 70, "10-Q", "2026-10-30")];
+  const split = [fact("2026-01-01", "2026-09-30", 60, "10-Q", "2026-10-30"), fact("2025-01-01", "2025-09-30", 45, "10-Q", "2026-10-30")];
+
+  test("a rename is joined when both concepts report the same shared period", () => {
+    const joined = joinRenamedConcepts(renamed, older)!;
+    assert.equal(ttmAt(joined, "2026-09-30")?.value, 100 + 90 - 70);
+    const result = metricFromFacts({ PaymentsToAcquireProductiveAssets: { units: { USD: older } }, PaymentsToAcquirePropertyPlantAndEquipment: { units: { USD: renamed } } }, "capex")!;
+    assert.equal(result.current.end, "2026-09-30");
+    assert.equal(result.current.value, 120);
+    assert.match(result.current.concept, /joined with earlier PaymentsToAcquireProductiveAssets/);
+  });
+
+  test("a concept covering a different scope is never joined", () => {
+    assert.equal(joinRenamedConcepts(split, older), null);
+    assert.equal(joinRenamedConcepts([fact("2026-01-01", "2026-09-30", 90)], older), null);
+    const result = metricFromFacts({ PaymentsToAcquireProductiveAssets: { units: { USD: older } }, PaymentsToAcquirePropertyPlantAndEquipment: { units: { USD: split } } }, "capex")!;
+    assert.equal(result.current.end, "2025-12-31");
   });
 });
 

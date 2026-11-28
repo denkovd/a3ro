@@ -70,13 +70,40 @@ export function latestTtm(facts: DurationFact[], concept: string): { current: Tt
   return null;
 }
 
-/** Pick the concept with the most recent TTM; on a tie, the largest value. */
-export function metricFromFacts(usGaap: Record<string, { units?: { USD?: unknown } }> | undefined, metric: FinancialMetric) {
-  let best: ReturnType<typeof latestTtm> = null;
-  for (const concept of METRIC_CONCEPTS[metric]) {
-    const result = latestTtm(cleanFacts(usGaap?.[concept]?.units?.USD), concept);
-    if (!result) continue;
-    if (!best || result.current.end > best.current.end || (result.current.end === best.current.end && result.current.value > best.current.value)) best = result;
+/**
+ * Companies sometimes move a line to a different XBRL concept part-way through
+ * a year (Arista's capex moved from PaymentsToAcquireProductiveAssets to
+ * PaymentsToAcquirePropertyPlantAndEquipment in 2026), which leaves neither
+ * concept with a complete trailing 12 months. Two concepts are joined only if
+ * they report the same value (within 0.5%) for at least one shared period, so
+ * a concept that covers a different scope is never mixed in.
+ */
+export function joinRenamedConcepts(newer: DurationFact[], older: DurationFact[]): DurationFact[] | null {
+  const olderByPeriod = new Map(older.map(fact => [fact.start + "|" + fact.end, fact.val]));
+  const shared = newer.filter(fact => olderByPeriod.has(fact.start + "|" + fact.end));
+  if (!shared.length) return null;
+  const same = shared.every(fact => { const other = olderByPeriod.get(fact.start + "|" + fact.end)!; return Math.abs(fact.val - other) <= 0.005 * Math.max(Math.abs(fact.val), Math.abs(other), 1); });
+  if (!same) return null;
+  const merged = new Map(older.map(fact => [fact.start + "|" + fact.end, fact]));
+  for (const fact of newer) merged.set(fact.start + "|" + fact.end, fact);
+  return [...merged.values()];
+}
+
+type TtmResult = ReturnType<typeof latestTtm>;
+const better = (a: TtmResult, b: TtmResult): TtmResult => !b ? a : !a ? b : b.current.end > a.current.end || (b.current.end === a.current.end && b.current.value > a.current.value) ? b : a;
+
+/** Pick the concept with the most recent TTM; on a tie, the largest value. Falls back to joining a renamed concept. */
+export function metricFromFacts(usGaap: Record<string, { units?: { USD?: unknown } }> | undefined, metric: FinancialMetric): TtmResult {
+  const facts = METRIC_CONCEPTS[metric].map(concept => ({ concept, facts: cleanFacts(usGaap?.[concept]?.units?.USD) })).filter(item => item.facts.length);
+  let best: TtmResult = null;
+  for (const item of facts) best = better(best, latestTtm(item.facts, item.concept));
+  const newestEnd = facts.flatMap(item => item.facts.map(fact => fact.end)).sort().at(-1);
+  if (newestEnd && (!best || best.current.end < newestEnd)) {
+    for (const newer of facts) for (const older of facts) {
+      if (newer === older) continue;
+      const joined = joinRenamedConcepts(newer.facts, older.facts);
+      if (joined) best = better(best, latestTtm(joined, `${newer.concept} (joined with earlier ${older.concept})`));
+    }
   }
   return best;
 }

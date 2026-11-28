@@ -7,6 +7,7 @@ import DividendChart, { type DividendChartSeries } from "../../components/projec
 import AustraliaBaseline from "../../components/projects/dividend/AustraliaBaseline";
 import ValueChainPanel from "../../components/projects/dividend/ValueChainPanel";
 import ConstraintsPanel from "../../components/projects/dividend/ConstraintsPanel";
+import OutlookPanel from "../../components/projects/dividend/OutlookPanel";
 import { AdoptionPanel, CapabilityPanel, ConversionPanel, EntryLevelPanel, useSignals } from "../../components/projects/dividend/SignalsPanels";
 import { DIVIDEND_ACCENT, dividendChange, dividendNumber, useDividendBaseline } from "../../components/projects/dividend/dividendData";
 import { DIVIDEND_BUILD_STEPS, DIVIDEND_CURRENT_STEP, DIVIDEND_OUTLOOK_END_YEAR, DIVIDEND_STAGES, nextStageStep, stageStatus, type DividendBuildStep, type DividendStage, type DividendStageId } from "../../../backend/src/dividend/framework";
@@ -40,6 +41,7 @@ function SourceDetails({ indicator }: { indicator: DividendRead }) {
     <summary className="cursor-pointer">Definition, source and observation values</summary>
     <p className="mt-3">{indicator.population}. {indicator.basis}. {indicator.adjustment}.</p>
     <p className="mt-2">{indicator.note}</p>
+    {indicator.changeEstimated && <p className="mt-2">The source published no figure for {indicator.changeFromPeriod}, so the one-year change uses the average of the months either side.</p>}
     <p className="mt-2">Source: {SOURCE_LABELS[indicator.source]} · {indicator.sourceSeries}</p>
     <p>Last verified: {indicator.verifiedAt ? new Date(indicator.verifiedAt).toISOString().replace("T", " ").slice(0, 16) + " UTC" : "Unavailable"}. Publication date: {indicator.publicationDate ?? "Not supplied by this download"}.</p>
     {indicator.latest?.status && <p>Source status: {indicator.latest.status}.</p>}
@@ -78,7 +80,7 @@ function Tile({ label, value, detail, meta }: { label: string; value: string; de
 }
 
 function indicatorMeta(indicator: DividendRead | undefined): string {
-  return `${indicator?.latest?.period ?? "No observation"} · ${indicator?.freshness ?? "unavailable"} · ${indicator?.sourceHealth ?? "unavailable"} source`;
+  return `${indicator?.changeEstimated ? "Year-earlier month estimated (not published) · " : ""}${indicator?.latest?.period ?? "No observation"} · ${indicator?.freshness ?? "unavailable"} · ${indicator?.sourceHealth ?? "unavailable"} source`;
 }
 
 function Inspector({ readings, keys, years }: { readings: DividendRead[]; keys: string[]; years: number }) {
@@ -114,7 +116,7 @@ export default function AIDividendView() {
       <div className="flex h-14 items-center px-6 md:px-10"><div className="flex min-w-0 items-center gap-3 md:gap-4"><Link href="/#modules" className="sweep shrink-0 font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-2)] transition-colors duration-[var(--dur-micro)] hover:text-[var(--ink)]">← Index</Link><ModuleSwitcher current="dividend" /><span aria-hidden className="text-[var(--ink-3)]">/</span><p className="truncate font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--ink-3)]">A3RO Intelligence — AI Dividend</p></div></div>
     </header>
     <div className="mx-auto max-w-7xl px-5 py-9 md:px-10 md:py-14">
-      <div className="flex flex-wrap items-center justify-between gap-4"><p className="font-mono text-[10px] uppercase tracking-[.26em] text-[var(--ink-2)]">Experiment · 2026–{DIVIDEND_OUTLOOK_END_YEAR}<DataAsOf module="dividend" /></p><span className="border border-[var(--line-2)] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.15em]" style={{ color: DIVIDEND_ACCENT }}>Build {DIVIDEND_CURRENT_STEP} of 5 · Constraint gauges live</span></div>
+      <div className="flex flex-wrap items-center justify-between gap-4"><p className="font-mono text-[10px] uppercase tracking-[.26em] text-[var(--ink-2)]">Experiment · 2026–{DIVIDEND_OUTLOOK_END_YEAR}<DataAsOf module="dividend" /></p><span className="border border-[var(--line-2)] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.15em]" style={{ color: DIVIDEND_ACCENT }}>Build {DIVIDEND_CURRENT_STEP} of 5 · Outlook to {DIVIDEND_OUTLOOK_END_YEAR} live</span></div>
       <h1 className="mt-5 text-4xl font-medium tracking-tight md:text-6xl">Where is the AI dividend going?</h1>
       <p className="mt-5 max-w-3xl text-base leading-8 text-[var(--ink-2)]">AI capability is rising fast. This module tracks how much of it turns into real output, who captures the value, and what physical limits could stop it. Every figure comes from published data. Stages without data yet say so.</p>
 
@@ -155,6 +157,8 @@ export default function AIDividendView() {
           {stage.id === "capability" && <CapabilityPanel state={signals} />}
 
           {stage.id === "adoption" && <AdoptionPanel state={signals} />}
+
+          {stage.id === "outlook" && <OutlookPanel readings={readings} signals={signals} />}
 
           {stage.id === "productivity" && (!snapshot ? awaiting : <>
             <ConversionPanel state={signals} productivity={find("productivity")} />

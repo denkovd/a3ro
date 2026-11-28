@@ -37,10 +37,7 @@ adopters, workers & households.
    See below.
 4. **Constraint gauges** — done. See below. Replaces the proxy flags in
    `stress.ts` (still in the repo, unwired; remove in step 5).
-5. **Outlook to 2031**: three scenarios (dividend arrives, infrastructure
-   bubble deflates, gains pool upstream), five or fewer drivers tied to stages
-   1–5, replacing the 16-slider model in `scenarios.ts`. Generalise
-   `ledger.ts` from one metric to the stage outputs.
+5. **Outlook to 2031** — done. See below.
 
 ## Step 1 — what changed
 
@@ -185,3 +182,59 @@ note on who gains when it's tight.
 - Drought Monitor: URL and field names taken from public code using it;
   not called from here. The parser accepts either field-name case and both date
   formats, and the fetch fails if fewer than 40 states return.
+
+## Step 5 — what changed
+
+The Outlook stage answers "what could the economy look like by 2031?" in three
+parts, all computed in the browser from the four live snapshots
+(`backend/src/dividend/outlook/outlook.ts`). No new endpoint, table or cron.
+
+1. **Signposts.** Seven readings, each with a written rule saying which
+   scenario it supports: capability gain, adoption pace, conversion gap, wage
+   pass-through (vs the pre-pandemic share), the entry-level postings gap,
+   where profit pools (infrastructure margin vs lab losses) and financing
+   (capex vs operating cash flow). The "lean" is a count, not a probability.
+2. **Scenarios to 2031.** Each sets two numbers, productivity growth above the
+   pre-pandemic trend and the share of it reaching real hourly pay, and
+   compounds today's readings to 2031-Q4. A "try your own" pair of sliders
+   uses the same maths.
+
+   | Scenario | Over trend | Share to pay |
+   |---|---|---|
+   | The dividend arrives | +1.0 pts/yr | 75% |
+   | The build-out deflates | 0.0 | 65% |
+   | Gains pool upstream | +0.8 | 35% |
+3. **Prediction ledger.** Seven dated calls in `PREDICTIONS`, scored on the
+   first reading at or after their date. Committed to git so the history proves
+   when they were made: add new calls with a new date, never edit old ones.
+
+Removed: `scenarios.ts`, `stress.ts`, `ledger.ts` and their tests (the old
+16-slider 2046 model, proxy stress flags and browser-only ledger).
+
+### Live reading on 19 Nov 2026
+
+With production data the signposts lean **gains pool upstream** (6 of 7):
+productivity is +0.69 pts/yr over trend, but only 0.58 of it reaches pay (0.74
+before the pandemic); the exposed-vs-hands-on postings gap widened by 14
+points; infrastructure margins are ~55% while the labs lose money. Financing
+(95% of cash flow on capex) is the one signpost pointing to a deflating
+build-out.
+
+### Known gaps found while checking production
+
+Fixed in code:
+- Monthly annual change: a missing year-earlier month (Oct 2025, shutdown) is
+  now interpolated from its neighbours and labelled as estimated.
+- Renamed XBRL capex concepts are joined when their shared periods agree within
+  0.5% (fixes ANET). EQIX split its capex into two concepts, so the join refuses.
+- The constraints API now reports which sources have never loaded.
+- The baseline archive failure now logs the database error code.
+
+Still open (needs data or ops, not code):
+- Constraint sources (EIA, FRED, data centres, drought) not loaded in production:
+  run `npm --prefix backend run run:signals -- --constraints --archive` or check
+  the `/api/cron/dividend-constraints` cron.
+- Baseline archive `unavailable`: the `horizon_*` tables are likely missing;
+  apply `20261018031814_macro_horizon_baseline.sql`.
+- Genuine SEC gaps: DLR filings end March 2026 (stale), FCX capex ends March
+  2026, EQIX capex split, ETN reports no operating income.

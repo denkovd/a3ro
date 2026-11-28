@@ -45,6 +45,8 @@ export interface DividendRead extends DividendIndicator {
   latest: DividendPoint | null;
   annualChange: number | null;
   changeFromPeriod: string | null;
+  /** True when the year-earlier value was missing in the source and estimated from the months either side. */
+  changeEstimated?: boolean;
   freshness: DividendFreshness;
   verifiedAt: string | null;
   publicationDate: string | null;
