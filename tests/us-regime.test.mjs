@@ -112,15 +112,15 @@ test("the dedicated cron requires auth and exposes failed cycles as failures", a
   const { GET } = await load("app/api/cron/macro/route.ts", {
     "../../_lib/cronAuth": auth,
     "../../_lib/errorLog": errorLog,
-    "@a3ro/oil-backend": { createDb: async () => ({}), runMacroCycle: async () => { calls++; return report; }, logOpenDataSignals: async () => [] },
+    "@a3ro/oil-backend": { createDb: async () => ({}), runMacroCycle: async () => { calls++; return report; }, logOpenDataSignals: async () => [], scoreSignalLog: async () => ({ scored: 0, rows: 0, errors: [] }) },
   });
   assert.equal((await GET(new Request("http://localhost/api/cron/macro"))).status, 401);
   assert.equal(calls, 0);
   const request = () => new Request("http://localhost/api/cron/macro", { headers: { Authorization: "Bearer regime-test" } });
   const success = await GET(request());
   assert.equal(success.status, 200);
-  // The track-record log (#11) rides along after the refresh and never changes the status.
-  assert.deepEqual(await success.json(), { written: 1, quadrant: "REFLATION", signals: [] });
+  // The track-record log and scoring (#11) ride along after the refresh and never change the status.
+  assert.deepEqual(await success.json(), { written: 1, quadrant: "REFLATION", signals: [], trackRecord: { scored: 0, rows: 0, errors: [] } });
   report = { written: 0, error: "FRED unavailable" };
   assert.equal((await GET(request())).status, 503);
   report = { written: 0 };

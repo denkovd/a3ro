@@ -34,6 +34,10 @@ export const GET = withErrorLog("cron:macro", async function GET(request: Reques
   } catch (error) {
     body.signals = [{ signal: "track-record", ok: false, error: error instanceof Error ? error.message : String(error) }];
   }
-  if (db) body.trackRecord = await scoreSignalLog(db);
+  if (db) try {
+    body.trackRecord = await scoreSignalLog(db);
+  } catch (error) {
+    body.trackRecord = { scored: 0, rows: 0, errors: [error instanceof Error ? error.message : String(error)] };
+  }
   return Response.json(body, { status });
 });
