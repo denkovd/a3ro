@@ -339,3 +339,8 @@ body {
 .stage-list .stage-page { display: grid; grid-template-columns: 1fr; height: auto; min-height: 100svh; padding: 48px 24px; gap: 28px; }
 .stage-list .stage-preview { height: 70svh; min-height: 420px; }
 @media (min-width: 768px) { .stage-list .stage-page { grid-template-columns: minmax(240px, .6fr) minmax(0, 1.6fr); padding: 56px max(40px, 5vw); } .stage-list .stage-preview { height: auto; min-height: 520px; } }
+
+/* Globe event cards (#95): the red ring around an event's place breathes. */
+@keyframes globe-event-pulse { 0% { transform: scale(0.7); opacity: 0.9; } 70% { transform: scale(1.9); opacity: 0; } 100% { transform: scale(1.9); opacity: 0; } }
+.globe-event-pulse { transform-box: fill-box; transform-origin: center; animation: globe-event-pulse 2.2s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) { .globe-event-pulse { animation: none; opacity: 0.6; } }

@@ -154,8 +154,8 @@ export default function CopperIntelPanel({ narrow, selected, focus, close, expor
 
         <RailSection label="Disruptions" kicker="Supply disruptions">
           <ul className="mt-1 divide-y divide-[var(--line)]">
-            {["grasberg", "cobre-panama", "mount-isa"].map((id) => { const s = SITES.find((x) => x.id === id)!; return <li key={id}><button type="button" onClick={() => focus(`site:${id}`)} className={rowBtn}>
-              <span><span className="block text-[11px] text-[var(--ink)]">{s.name}</span><span className="text-[9px] text-[var(--ink-3)]">{id === "grasberg" ? "Mud rush Sept 2025; full capacity early 2028" : id === "cobre-panama" ? "Idle since late 2023; restart under discussion" : "Mines closed 2025; smelter supported to end 2028"}</span></span>
+            {SITES.filter((s) => s.disruption).map((s) => { const id = s.id; return <li key={id}><button type="button" onClick={() => focus(`site:${id}`)} className={rowBtn}>
+              <span><span className="block text-[11px] text-[var(--ink)]">{s.name}</span><span className="text-[9px] text-[var(--ink-3)]">{s.disruption!.summary}</span></span>
               <span className="font-mono text-[10px]" style={{ color: CU }}>↗</span></button></li>; })}
           </ul>
         </RailSection>

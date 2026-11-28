@@ -144,6 +144,8 @@ export interface Site {
   kind: "mine" | "smelter";
   note?: string;
   source?: SourceId;
+  /** A current disruption: shown as a red event card on the globe (#95) and in the rail's Disruptions list. */
+  disruption?: { kicker: string; summary: string; stats: readonly { label: string; value: string }[] };
 }
 
 export const SITES: readonly Site[] = [
@@ -156,12 +158,16 @@ export const SITES: readonly Site[] = [
   { id: "antamina", name: "Antamina", lon: -77.05, lat: -9.54, owner: "BHP, Glencore, Teck, Mitsubishi", country: "peru", kind: "mine" },
   { id: "las-bambas", name: "Las Bambas", lon: -72.33, lat: -14.1, owner: "MMG", country: "peru", kind: "mine" },
   { id: "grasberg", name: "Grasberg", lon: 137.11, lat: -4.05, owner: "Freeport-McMoRan, Indonesian state (MIND ID)", country: "indonesia", kind: "mine",
-    note: "A mud rush on 8 September 2025 killed seven workers and stopped the Block Cave, Grasberg's main underground mine. Freeport now expects full capacity in early 2028.", source: "grasberg" },
+    note: "A mud rush on 8 September 2025 killed seven workers and stopped the Block Cave, Grasberg's main underground mine. Freeport now expects full capacity in early 2028.", source: "grasberg",
+    disruption: { kicker: "Mine halted", summary: "Mud rush Sept 2025; full capacity early 2028",
+      stats: [{ label: "Since", value: "8 Sep 2025" }, { label: "Stopped", value: "Block Cave" }, { label: "Full output", value: "Early 2028" }] } },
   { id: "kamoa-kakula", name: "Kamoa-Kakula", lon: 25.85, lat: -10.77, owner: "Ivanhoe Mines, Zijin Mining", country: "drc", kind: "mine" },
   { id: "tenke", name: "Tenke Fungurume", lon: 26.1, lat: -10.6, owner: "CMOC", country: "drc", kind: "mine" },
   { id: "kansanshi", name: "Kansanshi", lon: 26.43, lat: -12.1, owner: "First Quantum", country: "zambia", kind: "mine" },
   { id: "cobre-panama", name: "Cobre Panamá", lon: -80.65, lat: 8.84, owner: "First Quantum", country: "panama", kind: "mine",
-    note: "Idle since late 2023, when Panama's Supreme Court struck down its contract. Only stockpiled ore was being processed in 2026; in September 2026 a government commission was reported to recommend a restart through a state partnership.", source: "cobrePanama" },
+    note: "Idle since late 2023, when Panama's Supreme Court struck down its contract. Only stockpiled ore was being processed in 2026; in September 2026 a government commission was reported to recommend a restart through a state partnership.", source: "cobrePanama",
+    disruption: { kicker: "Mine idle", summary: "Idle since late 2023; restart under discussion",
+      stats: [{ label: "Idle since", value: "Late 2023" }, { label: "Why", value: "Contract struck down" }, { label: "Restart", value: "Under review" }] } },
   { id: "oyu-tolgoi", name: "Oyu Tolgoi", lon: 106.85, lat: 43.0, owner: "Rio Tinto, Mongolian government", country: "mongolia", kind: "mine" },
   { id: "morenci", name: "Morenci", lon: -109.35, lat: 33.08, owner: "Freeport-McMoRan", country: "united-states", kind: "mine" },
   { id: "bingham", name: "Bingham Canyon", lon: -112.15, lat: 40.52, owner: "Rio Tinto (Kennecott)", country: "united-states", kind: "mine" },
@@ -173,7 +179,9 @@ export const SITES: readonly Site[] = [
   { id: "cadia", name: "Cadia", lon: 148.99, lat: -33.47, owner: "Newmont", country: "australia", kind: "mine", note: "Gold and copper." },
   { id: "northparkes", name: "Northparkes", lon: 148.0, lat: -32.92, owner: "Evolution Mining (80%)", country: "australia", kind: "mine" },
   { id: "mount-isa", name: "Mount Isa smelter", lon: 139.49, lat: -20.73, owner: "Glencore", country: "australia", kind: "smelter",
-    note: "Glencore's underground copper mines here closed in July 2025, so the smelter now runs on concentrate bought from other north-west Queensland mines. Governments put in A$600 million in October 2025 to keep it and the Townsville refinery running to the end of 2028.", source: "mountIsa" },
+    note: "Glencore's underground copper mines here closed in July 2025, so the smelter now runs on concentrate bought from other north-west Queensland mines. Governments put in A$600 million in October 2025 to keep it and the Townsville refinery running to the end of 2028.", source: "mountIsa",
+    disruption: { kicker: "Mines closed", summary: "Mines closed 2025; smelter supported to end 2028",
+      stats: [{ label: "Mines shut", value: "Jul 2025" }, { label: "Support", value: "A$600m" }, { label: "Runs to", value: "End 2028" }] } },
   { id: "townsville", name: "Townsville refinery", lon: 146.82, lat: -19.27, owner: "Glencore", country: "australia", kind: "smelter", note: "Refines Mount Isa's copper anode into cathode. Covered by the same support package to the end of 2028.", source: "mountIsa" },
 ];
 

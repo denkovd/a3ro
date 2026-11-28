@@ -20,10 +20,13 @@ import {
   flowHealth,
   type OTView, type Rot,
 } from "./oilTrackerShared";
+import { drawBorders } from "./globeBorders";
 import { FLOW_ROUTES, GATE_EIA_EST_MBD, type FlowTier } from "./flowRoutes";
 import { PRODUCERS, PRODUCERS_SOURCE, type Producer, type ProducerLayerMode } from "./producers";
 import CorridorSpark from "./CorridorSpark";
 import AlertsFeed from "./AlertsFeed";
+import GlobeEventCards, { type GlobeEventsApi } from "./GlobeEventCards";
+import { oilEvents } from "./oil/oilEvents";
 import { formatPctSigned, formatUsdBbl, formatUtcDateTime, formatUtcTime, isUtcToday } from "./oilFormat";
 import useRefineries from "./oil/useRefineries";
 import useOilIntelligence from "./oil/useOilIntelligence";
@@ -116,6 +119,16 @@ const TICKS: { label: string; lon: number; lat: number; gate?: CorridorId }[] = 
    TICKS entries above and hormuz/singapore, which are HOTSPOTS rather
    than ticks but still appear as route gates (Section §4c route card:
    "HORMUZ 14.3/D · SUEZ 41/D"). */
+/** Where each gate's red event card anchors (#95), and what opens on "Read more". */
+const GATE_PLACES: Record<string, { lon: number; lat: number; title: string; focusId: string }> = {
+  hormuz: { lon: 56.5, lat: 26.6, title: "Strait of Hormuz", focusId: "hormuz" },
+  singapore: { lon: 104.2, lat: 1.1, title: "Singapore Strait", focusId: "sg" },
+  bab_el_mandeb: { lon: 43.4, lat: 12.6, title: "Bab el-Mandeb", focusId: "gate:bab_el_mandeb" },
+  suez: { lon: 32.4, lat: 30.0, title: "Suez Canal", focusId: "gate:suez" },
+  cape: { lon: 19, lat: -35, title: "Cape of Good Hope", focusId: "gate:cape" },
+  panama: { lon: -79.5, lat: 9, title: "Panama Canal", focusId: "gate:panama" },
+};
+
 const GATE_LABEL: Partial<Record<CorridorId, string>> = {
   hormuz: "HORMUZ",
   singapore: "SINGAPORE",
@@ -339,6 +352,8 @@ export default function OilTrackerCore({
   const refineriesRef = useRef(refineries);
   refineriesRef.current = refineries;
   const graph = useOilGraph(refineries);
+  const eventsApi = useRef<GlobeEventsApi | null>(null);
+  const events = useMemo(() => oilEvents(refineries, intel.gates, GATE_PLACES), [refineries, intel.gates]);
   const [filter, setFilterState] = useState<RefineryFilter>(EMPTY_FILTER);
   const [trail, setTrail] = useState<string[]>([]);
   const filterIds = useMemo(() => filterRefineries(graph, filter, r => refineryCondition(r).status), [graph, filter]);
@@ -845,6 +860,8 @@ export default function OilTrackerCore({
         ctx.fillStyle = DOT(a);
         ctx.fillRect(sx - ds / 2, sy - ds / 2, ds, ds);
       }
+      // Globe 2.0 (#101): country borders and coastlines over the land dots.
+      drawBorders(ctx, rot, cx, cy, R, s.zoom, { coast: INK(0.2), border: INK(0.14) }, undefined);
 
       /* rim */
       ctx.strokeStyle = INK(0.1);
@@ -1329,6 +1346,16 @@ export default function OilTrackerCore({
         }
         ctx.textAlign = "left";
       }
+
+      // Red event cards (#95) follow their places.
+      eventsApi.current?.place({
+        project: (lon, lat) => {
+          const p = project(rot, vec(lon, lat), cx, cy, R);
+          const a = ramp(1900, 700);
+          return a < 1 ? { ...p, z: p.z * a } : p;
+        },
+        cx, cy, R, areaW: w, h, narrow: narrowRef.current, selected: selectedRef.current,
+      });
     };
 
     /* ── per-frame simulation ── */
@@ -2043,6 +2070,7 @@ export default function OilTrackerCore({
           aria-label="Interactive oil globe. Drag to rotate, scroll to zoom, select a refinery, producer, route or gate for intelligence."
           role="img"
         />
+        <GlobeEventCards events={events} apiRef={eventsApi} onReadMore={(id) => { focusByIdRef.current(id); }} />
 
         {/* asset search + filters — top-left map chrome; shell header owns the brand */}
         <div className={`absolute z-30 ${narrow ? "left-3 right-16 top-3" : "left-5 top-4"}`}>

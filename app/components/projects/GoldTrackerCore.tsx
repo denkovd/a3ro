@@ -22,6 +22,7 @@ import {
   type GTView,
   type Rot,
 } from "./goldTrackerShared";
+import { drawBorders } from "./globeBorders";
 import { FLOW_ROUTES, TERTIARY_PTS, type FlowTier, type FlowRoute } from "./gold/flowRoutes";
 import {
   HOLDERS,
@@ -486,6 +487,8 @@ export default function GoldTrackerCore({
         ctx.fillStyle = DOT(a);
         ctx.fillRect(sx - ds / 2, sy - ds / 2, ds, ds);
       }
+      // Globe 2.0 (#101): country borders and coastlines over the land dots.
+      drawBorders(ctx, rot, cx, cy, R, s.zoom, { coast: INK(0.2), border: INK(0.14) }, () => redrawRef.current());
 
       ctx.strokeStyle = INK(0.1);
       ctx.lineWidth = 1;
