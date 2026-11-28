@@ -188,7 +188,7 @@ export default function CommodityGlobe({
     hasMoved.current = true;
     sim.current.lastInteract = performance.now();
     const [lon, lat] = layer.kind === "flow" && it.to ? it.to : [it.lon, it.lat];
-    tweenTo({ lon, lat: clamp(lat, -48, 52), zoom: Math.max(sim.current.zoom, layer.kind === "pin" ? Math.min(maxZoom, pinZoom) : 1.2) });
+    tweenTo({ lon, lat: clamp(lat, -72, 72), zoom: Math.max(sim.current.zoom, layer.kind === "pin" ? Math.min(maxZoom, pinZoom) : 1.2) });
   }, [findItem, tweenTo, maxZoom, pinZoom]);
 
   const close = useCallback(() => {

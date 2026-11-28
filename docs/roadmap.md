@@ -1,5 +1,7 @@
 # A3RO Oil Tracker — Roadmap
 
+> **Archived (28 Nov 2026):** this is the July 2026 oil-tracker roadmap. The live roadmap is `docs/A3RO Roadmap To-Do.xlsx`.
+
 Status date: 2026-07-05. Everything below is free-tier data unless marked PRO.
 
 ## Shipped

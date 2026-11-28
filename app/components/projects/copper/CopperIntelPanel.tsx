@@ -16,7 +16,8 @@ import {
 } from "../../../../lib/copper/reference";
 import { periodLabel, type CommodityExports } from "../../../../lib/commodity/absExports";
 import { COPPER_IMPACT, EXPORT_IMPACT_REVIEWED } from "../../../../lib/commodity/exportImpact";
-import { SHORT_TON_TONNES, type ComexCopperStocks } from "../../../../lib/copper/comexStocks";
+import { SHORT_TON_TONNES } from "../../../../lib/copper/units";
+import type { ComexCopperStocks } from "../../../../lib/copper/comexStocks";
 
 const CU = COPPER_CSS;
 const DEM = DEMAND_CSS;

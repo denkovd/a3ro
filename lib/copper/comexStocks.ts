@@ -13,7 +13,7 @@
 import * as XLSX from "xlsx";
 
 export const COPPER_STOCKS_URL = "https://www.cmegroup.com/delivery_reports/Copper_Stocks.xls";
-export const SHORT_TON_TONNES = 0.90718474;
+export { SHORT_TON_TONNES } from "./units";
 
 export interface ComexCopperStocks {
   reportDate: string | null;

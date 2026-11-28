@@ -194,7 +194,7 @@ export async function gatherIssueData(db: Queryable, issueDate: string, now = ne
   const [obs, macro, oilRead, usConsensus, auConsensus, premium, usEvents, upcoming, paper] = await Promise.all([
     getAustraliaObservations(db).catch(() => null),
     getLatestMacroSnapshot(db).catch(() => null),
-    gatherOil(db).catch(() => ({ oil: null, chokepoints: [] as ChokepointRead[] })),
+    gatherOil(db).then((r) => ({ ...r, ok: true }), () => ({ oil: null, chokepoints: [] as ChokepointRead[], ok: false })),
     getSetting<Consensus>(db, "us_consensus").catch(() => null),
     getSetting<Consensus>(db, "au_consensus").catch(() => null),
     gatherPremium(db).catch(() => null),
@@ -245,7 +245,8 @@ export async function gatherIssueData(db: Queryable, issueDate: string, now = ne
     chokepoints: oilRead.chokepoints, crudeStocks: oilRead.oil?.crudeStocks ?? null, wti: oilRead.oil?.wti ?? null,
     copperStocks: extras.copperStocks ?? null, exports: exportsRead, previousExportPeriods: extras.previousExportPeriods ?? {},
   });
-  await syncAutoRedFlags(db, autoRedFlags(oilRead.chokepoints)).catch(() => undefined);
+  // Only when the corridor read worked: an empty list from a failed read would clear every ongoing auto flag.
+  if (oilRead.ok) await syncAutoRedFlags(db, autoRedFlags(oilRead.chokepoints)).catch(() => undefined);
   const redFlags = await activeRedFlags(db).catch(() => []);
   const commodity = { brief, redFlags: redFlags.map((f) => ({ commodity: f.commodity, title: f.title, detail: f.detail, since: f.since })),
     exportPeriods: Object.fromEntries(exportsRead.map((e) => [e.id, e.latestPeriod])) };

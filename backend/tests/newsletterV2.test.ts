@@ -260,3 +260,18 @@ test("editorial brief: data plus the five-box reply format, for drafting in chat
   assert.ok(b.includes("issue of 2026-11-30") && b.includes("Trend Finder flips") && b.includes("Red flag: Oil: Hormuz disruption"));
   for (const k of ["1. This week in one line", "2. Big news", "3. Pattern of the week (Premium)", "4. Earnings next week", "5. A3RO updates"]) assert.ok(b.includes(k), k);
 });
+
+test("red flags: a failed corridor read leaves the auto flags alone", async () => {
+  const { gatherIssueData } = await import("../src/newsletter/content");
+  const sql: string[] = [];
+  const db = {
+    async query(text: string) {
+      sql.push(text);
+      if (text.includes("corridor_metrics")) throw new Error("corridor read failed");
+      return { rows: [] };
+    },
+  };
+  await gatherIssueData(db as never, "2026-11-30", new Date("2026-11-28T00:00:00Z"));
+  assert.ok(sql.some((s) => s.includes("corridor_metrics")), "corridor read attempted");
+  assert.ok(!sql.some((s) => /delete from newsletter_red_flags/.test(s)), "auto flags not cleared");
+});

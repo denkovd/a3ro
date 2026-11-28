@@ -3,11 +3,13 @@
 
      cd backend && npx tsx scripts/run-btc-flow.ts
 
-   Requires migration 019_btc.sql applied first.
+   Requires migration 019_btc.sql applied first, and SOSOVALUE_API_KEY
+   in the environment or the repo-root .env.local.
 ──────────────────────────────────────────────────────────────── */
 
-import { ensureDatabaseUrl } from "./loadEnv";
+import { ensureDatabaseUrl, ensureEnvVar } from "./loadEnv";
 ensureDatabaseUrl();
+ensureEnvVar("SOSOVALUE_API_KEY");
 
 import { createDb } from "../src/storage/db";
 import { runBtcFlowCycle } from "../src/ingest/btcFlowCycle";
