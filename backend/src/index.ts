@@ -126,6 +126,8 @@ export { getDataStatus, moduleStatusFromJobs, MODULE_DATA_JOBS } from "./storage
 export type { DataStatus, ModuleDataStatus } from "./storage/dataStatusRepo";
 export { logOpenDataSignals, decideLog, pulseReading, macroReadings } from "./trackRecord/signalLog";
 export type { SignalReading, SignalLogResult } from "./trackRecord/signalLog";
+export { scoreSignalLog, getSignalLog, hitRates, callFor, addMonths, HORIZONS, SIGNALS } from "./trackRecord/scoring";
+export type { LogRow, Outcome, HitRate, HorizonKey, ScoreResult } from "./trackRecord/scoring";
 export { generateIssue, saveEditorial, sendTestIssue, sendDueIssue, personalise } from "./newsletter/send";
 export { draftEditorial, fetchRecentCommits, DEFAULT_MODEL as NEWSLETTER_DEFAULT_MODEL } from "./newsletter/editorial";
 export type { Editorial, BigNews, Updates } from "./newsletter/editorial";
