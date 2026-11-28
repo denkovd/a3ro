@@ -8,6 +8,7 @@
 ──────────────────────────────────────────────────────────────── */
 import { useMemo } from "react";
 import CommodityGlobe, { type GlobeLayer, type GlobePalette, type GlobePreset } from "./commodity/CommodityGlobe";
+import type { GlobeEvent } from "./GlobeEventCards";
 import LngIntelPanel from "./lng/LngIntelPanel";
 import { useJson } from "./commodity/ExportsBlock";
 import { BUYER, BUYER_CSS, HOME, LG, LG_HI, LNG_CSS } from "./lngTrackerShared";
@@ -15,6 +16,16 @@ import { DESTINATIONS, DESTINATION_PERIOD, DESTINATION_TOTAL_MT, EXPORTERS, FLOW
 import type { CommodityExports } from "../../../lib/commodity/absExports";
 
 const PALETTE: GlobePalette = { supply: LG, supplyHi: LG_HI, supplyCss: LNG_CSS, demand: BUYER, demandCss: BUYER_CSS, supplyRgb: "111,168,255" };
+
+/** Red events (#95): the Hormuz restriction. */
+const EVENTS: GlobeEvent[] = [{
+  id: "hormuz", lon: HORMUZ.lon, lat: HORMUZ.lat, kicker: "Strait restricted", title: "Strait of Hormuz", focusId: "hormuz",
+  stats: [
+    { label: "Since", value: HORMUZ.closedSince.replace(/ (\d{4})$/, " $1").replace("February", "Feb") },
+    { label: "LNG cut off", value: `~${Math.round(HORMUZ.supplyShare * 100)}% of world` },
+    { label: "As of", value: HORMUZ.asOf },
+  ],
+}];
 
 const PRESETS: GlobePreset[] = [
   { name: "Overview", layers: ["exporters", "importers", "flows"], view: { lon: HOME.lon, lat: HOME.lat, zoom: 0.95 } },
@@ -76,6 +87,7 @@ export default function LngTrackerCore({ onExit, onReady, className = "" }: { on
       ariaLabel="LNG globe: exporters and importers, Australia's LNG plants, the Strait of Hormuz and Australia's export flows"
       hint="Drag · scroll to zoom · select a country, plant, flow or the strait"
       hover={hover}
+      events={EVENTS}
       onExit={onExit}
       onReady={onReady}
       renderRail={(api) => <LngIntelPanel {...api} exportsState={exportsState} />}

@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { DOT, INK, getDots, rotator, slerp, vec, type OTView, type Rot } from "../oilTrackerShared";
+import GlobeEventCards, { type GlobeEvent, type GlobeEventsApi } from "../GlobeEventCards";
 
 export type GlobeGlyph = "circle" | "square" | "triangle" | "diamond";
 export type GlobeTone = "supply" | "demand";
@@ -112,6 +113,7 @@ export default function CommodityGlobe({
   onReady,
   maxZoom = 2.6,
   pinZoom = 2.2,
+  events = [],
   className = "",
 }: {
   layers: readonly GlobeLayer[];
@@ -128,6 +130,8 @@ export default function CommodityGlobe({
   maxZoom?: number;
   /** Zoom to use when a pin is selected (clustered pins need more). */
   pinZoom?: number;
+  /** Red events (#95): floating cards linked to their place on the globe. */
+  events?: readonly GlobeEvent[];
   className?: string;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -158,6 +162,7 @@ export default function CommodityGlobe({
   const reducedRef = useRef(false);
   const lastPointerRef = useRef({ x: 0, y: 0 });
   const readyFired = useRef(false);
+  const eventsApi = useRef<GlobeEventsApi | null>(null);
   narrowRef.current = narrow;
   activeRef.current = active;
   layersRef.current = layers;
@@ -463,6 +468,16 @@ export default function CommodityGlobe({
         }
       }
 
+      // Event cards follow their places; they appear with the pins.
+      if (eventsApi.current) {
+        const evA = ramp(1100, 800);
+        eventsApi.current.place({
+          project: (lon, lat) => { const p = project(rot, lon, lat, cx, cy, R); return evA < 1 ? { ...p, z: p.z * evA } : p; },
+          cx, cy, R, areaW: narrowRef.current ? w : Math.max(240, w - 388), h, narrow: narrowRef.current, selected: selectedRef.current,
+        });
+        if (evA < 1) animating = true;
+      }
+
       if (!readyFired.current && ramp(0, 650) > 0.5) { readyFired.current = true; onReady?.(); }
       return animating;
     };
@@ -600,6 +615,8 @@ export default function CommodityGlobe({
           aria-label={ariaLabel}
         />
       </div>
+
+      <GlobeEventCards events={events} apiRef={eventsApi} onReadMore={focus} />
 
       <AnimatePresence>
         {card && (

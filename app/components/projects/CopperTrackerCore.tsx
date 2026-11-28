@@ -9,6 +9,7 @@
 ──────────────────────────────────────────────────────────────── */
 import { useMemo } from "react";
 import CommodityGlobe, { type GlobeLayer, type GlobePalette, type GlobePreset } from "./commodity/CommodityGlobe";
+import type { GlobeEvent } from "./GlobeEventCards";
 import CopperIntelPanel from "./copper/CopperIntelPanel";
 import { audBn, useJson } from "./commodity/ExportsBlock";
 import { COPPER_CSS, CU, CU_HI, DEMAND, DEMAND_CSS, HOME } from "./copperTrackerShared";
@@ -25,6 +26,11 @@ const PRESETS: GlobePreset[] = [
   { name: "Australia", layers: ["mines", "smelters", "flows"], view: { lon: 140, lat: -27, zoom: 2.6 } },
   { name: "Exports", layers: ["flows", "refining"], view: { lon: 125, lat: 10, zoom: 1.1 } },
 ];
+
+/** Red events (#95): every site with a current disruption. */
+const EVENTS: GlobeEvent[] = SITES.filter((s) => s.disruption).map((s) => ({
+  id: s.id, lon: s.lon, lat: s.lat, kicker: s.disruption!.kicker, title: s.name, stats: s.disruption!.stats, focusId: `site:${s.id}`,
+}));
 
 const kt = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(1)} Mt` : `${Math.round(v)} kt`);
 
@@ -88,6 +94,7 @@ export default function CopperTrackerCore({ onExit, onReady, className = "" }: {
       ariaLabel="Copper globe: mine and refined output by country, major mines, Australian smelters and Australia's export flows"
       hint="Drag · scroll to zoom · select a country, mine, smelter or flow"
       hover={hover}
+      events={EVENTS}
       onExit={onExit}
       onReady={onReady}
       renderRail={(api) => <CopperIntelPanel {...api} exportsState={exportsState} comexState={comexState} />}
