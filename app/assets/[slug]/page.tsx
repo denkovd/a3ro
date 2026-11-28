@@ -5,12 +5,12 @@ import { notFound } from "next/navigation";
 import { Nav } from "../../components/Chrome";
 import SiteFooter from "../../components/SiteFooter";
 import NewsletterSignup from "../../components/NewsletterSignup";
-import { LockIcon } from "../../components/LockIcon";
 import { ASSETS, KIND_LABEL, assetBySlug, assetPath, searchIndex, tradingViewUrl, type AssetEntry } from "../../../lib/assets";
 import { ASSET_NOTES } from "../../../lib/assetNotes";
 import { marketIndexUrl } from "../../../lib/marketLinks";
 import AssetSearch from "../AssetSearch";
 import { AssetWidgets } from "./AssetView";
+import { AssetTrend } from "./AssetTrend";
 
 export const dynamicParams = false;
 export function generateStaticParams() {
@@ -64,14 +64,7 @@ export default async function AssetPage({ params }: { params: Promise<{ slug: st
         </> : null}
       </section> : null}
 
-      {asset.trendSymbol ? <a href="/Projects/Bull-Market-Finder" className="flex max-w-3xl flex-col gap-2 rounded-sm border border-[var(--line)] p-5 hover:border-[var(--line-2)]">
-        <span className="landing-kicker"><LockIcon /> Premium · Trend Finder</span>
-        <span className="text-lg font-medium">Has {asset.ticker} turned bullish?</span>
-        <span className="text-sm leading-relaxed text-[var(--ink-2)]">
-          Trend Finder tracks {asset.name} on daily and weekly closes: whether it has turned, when it flipped and how strong the turn is, ranked against {ASSETS.filter((a) => a.trendSymbol).length}+ other assets.
-        </span>
-        <span className="text-sm text-[var(--acid)]">Unlock with Premium →</span>
-      </a> : null}
+      {asset.trendSymbol ? <AssetTrend ticker={asset.ticker} name={asset.name} trendSymbol={asset.trendSymbol} universe={ASSETS.filter((a) => a.trendSymbol).length} /> : null}
 
       <section className="flex flex-col gap-3">
         <h2 className="landing-kicker">More on {asset.ticker}</h2>
