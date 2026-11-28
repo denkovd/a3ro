@@ -1,9 +1,10 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { postNewsletter } from "./post";
 
-type Action = "generate" | "test" | "approve" | "unapprove";
-const LABEL: Record<Action, string> = { generate: "Generate this week's issue", test: "Send test to me", approve: "Approve for Monday 6pm", unapprove: "Back to draft" };
+type Action = "generate" | "draft-editorial" | "test" | "approve" | "unapprove";
+const LABEL: Record<Action, string> = { generate: "Generate this week's issue", "draft-editorial": "Draft editorial with Claude", test: "Send test to me (Free + Premium)", approve: "Approve for Monday 6pm", unapprove: "Back to draft" };
 
 /** Buttons for one issue (or just Generate when there is none). Each one posts to /api/owner/newsletter. */
 export default function NewsletterActions({ id, actions }: { id?: number; actions: Action[] }) {
@@ -15,10 +16,8 @@ export default function NewsletterActions({ id, actions }: { id?: number; action
     setBusy(action);
     setNote(null);
     try {
-      const res = await fetch("/api/owner/newsletter", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, id }) });
-      const body = await res.json().catch(() => ({})) as { error?: string; to?: string };
-      if (!res.ok) throw new Error(body.error ?? `Failed (${res.status})`);
-      setNote({ ok: true, text: action === "test" ? `Test sent to ${body.to}.` : action === "generate" ? "Draft ready." : "Saved." });
+      const body = await postNewsletter({ action, id });
+      setNote({ ok: true, text: action === "test" ? `Two tests sent to ${body.to}.` : body.note ?? (action === "generate" ? "Draft ready." : "Saved.") });
       router.refresh();
     } catch (e) {
       setNote({ ok: false, text: e instanceof Error ? e.message : "Failed" });

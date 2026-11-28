@@ -126,7 +126,17 @@ export { getDataStatus, moduleStatusFromJobs, MODULE_DATA_JOBS } from "./storage
 export type { DataStatus, ModuleDataStatus } from "./storage/dataStatusRepo";
 export { logOpenDataSignals, decideLog, pulseReading, macroReadings } from "./trackRecord/signalLog";
 export type { SignalReading, SignalLogResult } from "./trackRecord/signalLog";
-export { generateIssue, sendTestIssue, sendDueIssue, personalise } from "./newsletter/send";
+export { generateIssue, saveEditorial, sendTestIssue, sendDueIssue, personalise } from "./newsletter/send";
+export { draftEditorial, fetchRecentCommits, DEFAULT_MODEL as NEWSLETTER_DEFAULT_MODEL } from "./newsletter/editorial";
+export type { Editorial, BigNews, Updates } from "./newsletter/editorial";
+export { editorialBrief, editorialContext, missingEditorial, missingLabels, PLACEHOLDER_MARK } from "./newsletter/content";
+export { SLOT_LABEL as EDITORIAL_SLOT_LABEL } from "./newsletter/editorial";
+export type { EditorialSlot } from "./newsletter/editorial";
+export type { IssueData, IssueExtras, Consensus } from "./newsletter/content";
+export type { ExportRead, CopperStocksRead } from "./newsletter/commodity";
+export type { ScheduleEntry } from "./newsletter/coming";
+export { listRedFlags, addRedFlag, setRedFlagActive, getSetting as getNewsletterSetting, setSetting as setNewsletterSetting } from "./storage/newsletterRepo";
+export type { RedFlag } from "./storage/newsletterRepo";
 export type { SendEnv, SendReport } from "./newsletter/send";
 export { listIssues, getIssue, setApproved, pendingRecipients, unsubscribeEmail } from "./storage/newsletterRepo";
 export type { NewsletterIssue, IssueStatus } from "./storage/newsletterRepo";
