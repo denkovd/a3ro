@@ -43,6 +43,10 @@ export interface ResearchDataset {
   benchmarkGeneratedAt?: string;
   vams21Signals?: DailyVamsSignal[];
   vams21GeneratedAt?: string;
+  /** Daily 63-observation signals. Not in the published file; the internal regime lab
+   *  loads them from backend/.backtest-cache/lab-trends.json (npm run backtest:trends). */
+  vams63Signals?: DailyVamsSignal[];
+  vams63GeneratedAt?: string;
   sources: string[];
   warnings: string[];
 }

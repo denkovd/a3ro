@@ -10,7 +10,12 @@
  * `tranches` splits the book into N equal sub-accounts that each rebalance on
  * their own session inside the month/quarter (0, spacing, 2×spacing, … sessions
  * after the period's first session). One tranche is the original single-day
- * behaviour, arithmetic included. */
+ * behaviour, arithmetic included.
+ *
+ * Research-only options (the internal regime lab): `cashMode: "treasury-bills"` makes idle cash
+ * earn adjusted BIL returns from `benchmarkPrices.bills` and charges trading costs on the cash leg;
+ * `costBpsByAsset` sets one-way costs per asset; `rebalance: "weekly"` trades on the first session
+ * of each ISO week. Omitted, the simulator behaves exactly as before. */
 import { computeAllocation, SLEEVES, weightOf, type Allocation, type AllocationInput,
   type AllocationSettings, type SleeveKey } from "./allocation";
 export const DEFAULT_COST_BPS = 10;
@@ -22,12 +27,15 @@ export type BenchmarkAssetKey = SleeveKey | "bonds" | "bills" | "shortTreasury" 
   "apple" | "microsoft" | "amazon" | "alphabet" | "meta" | "costco" | "texasPacific" | "nasdaq" | "semiconductors";
 export type BenchmarkPriceSeries = Partial<Record<BenchmarkAssetKey, PricePoint[]>>;
 export type BenchmarkWeights = Partial<Record<BenchmarkAssetKey, number>>;
+export type CashMode = "fixed" | "treasury-bills";
 export interface BacktestStep {
   date: string; endDate: string; regime: Allocation["regime"]; rebalanced: boolean;
-  reason: "monthly" | "quarterly" | "regime-change" | "signal-change" | "tranche" | "hold";
+  reason: "monthly" | "weekly" | "quarterly" | "regime-change" | "signal-change" | "tranche" | "hold";
   allocation: Allocation; periodReturn: number; turnover: number; equity: number;
   /** Risk-free return over this holding period, used for excess-return metrics. */
   riskFreeReturn: number;
+  /** Return earned by idle cash over this holding period, before trading costs. */
+  cashReturn: number;
   benchmarkEquity: Record<string, number>;
   benchmarkReturns: Record<string, number>;
   benchmarkTurnover: Record<string, number>;
@@ -53,12 +61,16 @@ export interface BacktestResult {
 }
 export interface BacktestOptions {
   costBps?: number;
+  /** Research: one-way cost overrides per asset (and the cash leg in treasury-bills mode); others use costBps. */
+  costBpsByAsset?: Partial<Record<BenchmarkAssetKey | "cash", number>>;
+  /** Research: "treasury-bills" accrues cash on benchmarkPrices.bills (strict) and charges costs on the cash leg. */
+  cashMode?: CashMode;
   /** Retained for CLI compatibility. Annualisation now uses actual dates. */
   stepsPerYear?: number;
   benchmarks?: Record<string, BenchmarkWeights>;
   benchmarkPrices?: BenchmarkPriceSeries;
   settings?: AllocationSettings;
-  rebalance?: "monthly" | "monthly-regime" | "monthly-signal" | "quarterly" | "regime" | "signal";
+  rebalance?: "monthly" | "weekly" | "monthly-regime" | "monthly-signal" | "quarterly" | "regime" | "signal";
   /** Disclosed constant annual cash assumption. Ignored for accrual when `cashPrices` is set. */
   cashRate?: number;
   /** Total-return price series that uninvested cash earns (e.g. adjusted BIL closes). */
@@ -78,6 +90,8 @@ export const DEFAULT_BENCHMARKS: Record<string, Partial<Record<SleeveKey, number
   "static 60/30/10": { stocks: 0.6, gold: 0.3, bitcoin: 0.1 },
 };
 const ms = (date: string) => Date.parse(`${date}T00:00:00Z`);
+/** Monday of the ISO week containing `date`. */
+const weekOf = (date: string) => { const d = new Date(ms(date)); d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7); return d.toISOString().slice(0, 10); };
 const round = (n: number) => Math.round(n * 1e8) / 1e8;
 export function backtestPrice(bars: PricePoint[] | undefined, date: string, strict: boolean): number | null {
   if (!bars?.length) return null;
@@ -128,7 +142,13 @@ interface Tranche { held: Weights; cash: number; share: number }
 export function runAllocationBacktest(inputs: AllocationInput[], prices: PriceSeries, opts: BacktestOptions = {}): BacktestResult {
   const costBps = opts.costBps ?? DEFAULT_COST_BPS, cashRate = opts.cashRate ?? 0;
   if (!Number.isFinite(costBps) || costBps < 0 || costBps > 1000 ||
-      !Number.isFinite(cashRate) || cashRate < 0 || cashRate > 0.25) throw new Error("Invalid trading cost or cash rate.");
+      !Number.isFinite(cashRate) || cashRate < 0 || cashRate > 0.25 ||
+      Object.values(opts.costBpsByAsset ?? {}).some(n => !Number.isFinite(n) || n < 0 || n > 1000)) throw new Error("Invalid trading cost or cash rate.");
+  const cashMode = opts.cashMode ?? "fixed", billsCash = cashMode === "treasury-bills";
+  if (cashMode !== "fixed" && !billsCash) throw new Error("Invalid cash return mode.");
+  // Default path keeps the original arithmetic (traded × costBps / 10000) so results stay bit-identical.
+  const assetCosts = billsCash || opts.costBpsByAsset !== undefined;
+  const cost = (asset: BenchmarkAssetKey | "cash", traded: number) => traded * (opts.costBpsByAsset?.[asset] ?? costBps) / 10000;
   const cadence = opts.rebalance ?? "monthly-regime";
   const trancheCount = opts.tranches ?? 1, spacing = opts.trancheSpacing ?? DEFAULT_TRANCHE_SPACING;
   if (!Number.isInteger(trancheCount) || trancheCount < 1 || !Number.isInteger(spacing) || spacing < 1 ||
@@ -139,7 +159,8 @@ export function runAllocationBacktest(inputs: AllocationInput[], prices: PriceSe
     if (!Number.isFinite(ms(inputs[i].date)) || (i > 0 && inputs[i].date <= inputs[i - 1].date))
       throw new Error("Backtest dates must be valid and strictly ascending.");
   }
-  const riskFreePrices = opts.riskFreePrices ?? opts.cashPrices;
+  const billPrices = opts.benchmarkPrices?.bills;
+  const riskFreePrices = opts.riskFreePrices ?? (billsCash ? billPrices : opts.cashPrices);
   for (const bars of [...Object.values({ ...prices, ...opts.benchmarkPrices }), opts.cashPrices, riskFreePrices]) {
     if (bars?.some((b, i) => !Number.isFinite(ms(b.date)) || (i > 0 && b.date <= bars[i - 1].date)))
       throw new Error("Price dates must be valid and strictly ascending.");
@@ -172,10 +193,11 @@ export function runAllocationBacktest(inputs: AllocationInput[], prices: PriceSe
     const input = inputs[i], next = inputs[i + 1];
     const target = computeAllocation(input, opts.settings);
     const month = i === 0 || input.date.slice(0, 7) !== inputs[i - 1].date.slice(0, 7);
+    const newWeek = i === 0 || weekOf(input.date) !== weekOf(inputs[i - 1].date);
     const quarter = i === 0 || Math.floor((Number(input.date.slice(5, 7)) - 1) / 3) !== Math.floor((Number(inputs[i - 1].date.slice(5, 7)) - 1) / 3) || input.date.slice(0, 4) !== inputs[i - 1].date.slice(0, 4);
     const changed = i > 0 && previousRegime !== target.regime;
     const signalChanged = i > 0 && SLEEVES.some(s => !input.unavailable?.includes(s.key) && input.states[s.key] !== inputs[i - 1].states[s.key]);
-    const scheduled = cadence === "quarterly" ? quarter : cadence !== "regime" && cadence !== "signal" && month;
+    const scheduled = cadence === "weekly" ? newWeek : cadence === "quarterly" ? quarter : cadence !== "regime" && cadence !== "signal" && month;
     const signalCadence = cadence === "monthly-signal" || cadence === "signal";
     sessionInPeriod = i === 0 || scheduled ? 0 : sessionInPeriod + 1;
     // Single tranche: the original calendar + event rule. Several tranches: every tranche buys
@@ -187,13 +209,19 @@ export function runAllocationBacktest(inputs: AllocationInput[], prices: PriceSe
     const rebalanced = trades.some(Boolean);
     const reason: BacktestStep["reason"] = trancheCount > 1
       ? (i === 0 || trades[0] ? (cadence === "quarterly" ? "quarterly" : "monthly") : rebalanced ? "tranche" : "hold")
-      : cadence === "signal" && rebalanced ? "signal-change" : scheduled || i === 0 ? (cadence === "quarterly" ? "quarterly" : "monthly") : rebalanced ? (signalCadence ? "signal-change" : "regime-change") : "hold";
-    const tradedBy = tranches.map(() => 0);
+      : cadence === "signal" && rebalanced ? "signal-change" : scheduled || i === 0 ? (cadence === "weekly" ? "weekly" : cadence === "quarterly" ? "quarterly" : "monthly") : rebalanced ? (signalCadence ? "signal-change" : "regime-change") : "hold";
+    const tradedBy = tranches.map(() => 0), costBy = tranches.map(() => 0);
     tranches.forEach((t, k) => {
       if (!trades[k]) return;
-      for (const s of SLEEVES) { const w = weightOf(target, s.key); tradedBy[k] += Math.abs(w - t.held[s.key]); t.held[s.key] = w; }
+      for (const s of SLEEVES) {
+        const w = weightOf(target, s.key), traded = Math.abs(w - t.held[s.key]);
+        tradedBy[k] += traded; if (assetCosts) costBy[k] += cost(s.key, traded); t.held[s.key] = w;
+      }
+      // Bills cash: opening capital is uninvested, so buying the first bill position costs money too.
+      if (billsCash) { const traded = Math.abs(target.cash - (i === 0 ? 0 : t.cash)); tradedBy[k] += traded; costBy[k] += cost("cash", traded); }
       t.cash = target.cash;
     });
+    if (!assetCosts) tradedBy.forEach((traded, k) => { costBy[k] = traded * costBps / 10000; });
     // Book-level weights are the equity-weighted average of the tranches.
     const held = emptyWeights();
     let heldCash = 0, turnover = 0;
@@ -214,11 +242,17 @@ export function runAllocationBacktest(inputs: AllocationInput[], prices: PriceSe
         throw new Error(`Missing or stale ${sleeve?.label ?? asset} price for ${input.date} → ${next.date}.`);
       rs[asset] = a !== null && b !== null ? b / a - 1 : 0;
     }
-    const cashReturn = opts.cashPrices
+    let cashReturn: number;
+    if (billsCash) {
+      const a = backtestPrice(billPrices, input.date, true), b = backtestPrice(billPrices, next.date, true);
+      if (a === null || b === null)
+        throw new Error(`Historical Treasury-bill cash needs BIL prices for ${input.date} → ${next.date}. Choose dates within BIL coverage or select a fixed annual cash rate.`);
+      cashReturn = b / a - 1;
+    } else cashReturn = opts.cashPrices
       ? seriesReturn(opts.cashPrices, input.date, next.date, "cash (Treasury bill)")
       : (1 + cashRate) ** ((ms(next.date) - ms(input.date)) / (365.25 * 86400000)) - 1;
     const riskFreeReturn = riskFreePrices
-      ? (riskFreePrices === opts.cashPrices ? cashReturn : seriesReturn(riskFreePrices, input.date, next.date, "risk-free (Treasury bill)"))
+      ? (riskFreePrices === opts.cashPrices || (billsCash && riskFreePrices === billPrices) ? cashReturn : seriesReturn(riskFreePrices, input.date, next.date, "risk-free (Treasury bill)"))
       : cashReturn;
     let net = 0;
     const grown = tranches.map(t => {
@@ -226,7 +260,7 @@ export function runAllocationBacktest(inputs: AllocationInput[], prices: PriceSe
       return { gross, net: 0 };
     });
     tranches.forEach((t, k) => {
-      grown[k].net = (1 - tradedBy[k] * costBps / 10000) * (1 + grown[k].gross) - 1;
+      grown[k].net = (1 - costBy[k]) * (1 + grown[k].gross) - 1;
       net += t.share * grown[k].net;
     });
     equity *= 1 + net;
@@ -240,29 +274,37 @@ export function runAllocationBacktest(inputs: AllocationInput[], prices: PriceSe
     const benchmarkTurnover: Record<string, number> = {}, benchmarkInvested: Record<string, number> = {};
     for (const [name, map] of Object.entries(benchmarks)) {
       // Buy-and-hold for single assets; mixed static targets rebalance monthly.
-      let weights = benchHeld[name], traded = 0;
-      if (i > 0 && month && Object.values(map).filter(w => w > 0).length > 1) {
-        for (const asset of assets) traded += Math.abs((map[asset] ?? 0) - (weights[asset] ?? 0));
+      let weights = benchHeld[name], traded = 0, benchmarkCost = 0;
+      const previousCash = 1 - Object.values(weights).reduce((a, b) => a + b, 0);
+      const targetCash = 1 - Object.values(map).reduce((a, b) => a + b, 0);
+      const monthlyRebalance = i > 0 && month && Object.values(map).filter(w => w > 0).length + (billsCash && targetCash > 1e-9 ? 1 : 0) > 1;
+      if (monthlyRebalance) {
+        for (const asset of assets) { const amount = Math.abs((map[asset] ?? 0) - (weights[asset] ?? 0)); traded += amount; if (assetCosts) benchmarkCost += cost(asset, amount); }
         weights = { ...map };
       }
-      if (i === 0) traded = Object.values(weights).reduce((a, b) => a + b, 0);
+      if (i === 0) {
+        traded = Object.values(weights).reduce((a, b) => a + b, 0);
+        if (assetCosts) benchmarkCost = Object.entries(weights).reduce((sum, [asset, w]) => sum + cost(asset as BenchmarkAssetKey, w ?? 0), 0);
+      }
       const cash = 1 - Object.values(weights).reduce((a, b) => a + b, 0);
+      if (billsCash && (i === 0 || monthlyRebalance)) { const amount = Math.abs(cash - (i === 0 ? 0 : previousCash)); traded += amount; benchmarkCost += cost("cash", amount); }
+      if (!assetCosts) benchmarkCost = traded * costBps / 10000;
       benchmarkTurnover[name] = traded;
       benchmarkInvested[name] = 1 - cash;
       const br = assets.reduce((sum, asset) => sum + (weights[asset] ?? 0) * (rs[asset] ?? 0), cash * cashReturn);
-      const netBenchmark = (1 - traded * costBps / 10000) * (1 + br) - 1;
+      const netBenchmark = (1 - benchmarkCost) * (1 + br) - 1;
       benchEquity[name] *= 1 + netBenchmark;
       benchmarkReturns[name] = netBenchmark;
       benchHeld[name] = Object.fromEntries(assets.map(asset => [asset, (weights[asset] ?? 0) * (1 + (rs[asset] ?? 0)) / (1 + br)])) as BenchmarkWeights;
       stepBench[name] = benchEquity[name];
     }
     steps.push({ date: input.date, endDate: next.date, regime: target.regime, rebalanced, reason,
-      allocation, periodReturn: net, turnover, equity, riskFreeReturn,
+      allocation, periodReturn: net, turnover, equity, riskFreeReturn, cashReturn,
       benchmarkEquity: stepBench, benchmarkReturns, benchmarkTurnover, benchmarkInvested });
     previousRegime = target.regime;
   }
   return { steps, metrics: summarizeBacktest(steps),
     benchmarks: Object.fromEntries(Object.keys(benchmarks).map(name => [name, summarizeBacktest(steps, name)])), missingSleeves,
-    cashSource: opts.cashPrices ? "series" : "constant", riskFreeSource: riskFreePrices ? "series" : "cash-rate",
+    cashSource: opts.cashPrices || billsCash ? "series" : "constant", riskFreeSource: riskFreePrices ? "series" : "cash-rate",
     tranches: trancheCount };
 }

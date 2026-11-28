@@ -77,6 +77,8 @@
     "backtest:history": "tsx scripts/build-backtest-history.ts",
     "backtest:benchmarks": "tsx scripts/refresh-backtest-benchmarks.ts",
     "backtest:vams21": "tsx scripts/refresh-backtest-vams21.ts",
+    "backtest:trends": "tsx scripts/refresh-backtest-trends.ts",
+    "backtest:internal": "tsx scripts/internal-regime-report.ts",
     "run:earnings-weekly": "tsx scripts/run-earnings-weekly.ts",
     "backfill:earnings": "tsx scripts/run-earnings-backfill.ts",
     "test": "tsx --test tests/**/*.test.ts"

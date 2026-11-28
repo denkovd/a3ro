@@ -39,6 +39,9 @@ import { VamsState } from "./vams";
 
 export type Quadrant = Exclude<MacroQuadrant, "PENDING">;
 export type SleeveKey = "stocks" | "gold" | "bitcoin";
+/** "macro" is the live rule (regime × trend × cycle drag). "trend" is research-only: each asset's
+ *  own trend sizes it (bullish full cap, neutral half, bearish or no signal zero), no regime or cycles. */
+export type AllocationModel = "trend" | "macro";
 
 export interface Sleeve {
   key: SleeveKey;
@@ -111,6 +114,8 @@ export const MAX_CYCLE_DRAG = 0.5;
 
 /** Versioned research settings. Passing these never changes the live defaults. */
 export interface AllocationSettings {
+  /** Omitted = "macro", the live rule. "trend" is used by the internal regime lab only. */
+  model?: AllocationModel;
   caps: Record<SleeveKey, number>;
   regimeScores: Record<SleeveKey, Record<Quadrant, number>>;
   vamsMultipliers: Record<VamsState, number>;
@@ -128,9 +133,28 @@ export const BASELINE_SETTINGS: AllocationSettings = {
   trendTimedSleeves: [...TREND_TIMED_SLEEVES],
 };
 
+/**
+ * Research-only asset-trend rule (the internal regime lab's "Asset trend only" baseline).
+ * NOT the live allocation: BASELINE_SETTINGS stays the approved macro rule. Every sleeve,
+ * gold included, is timed on its own trend: bullish 100% of cap, neutral 50%, bearish or
+ * pending 0%. No regime scores and no cycle drag.
+ */
+export const TREND_SETTINGS: AllocationSettings = {
+  model: "trend",
+  caps: { stocks: 0.6, gold: 0.3, bitcoin: 0.1 },
+  regimeScores: {
+    stocks: { GOLDILOCKS: 1, REFLATION: 1, INFLATION: 1, DEFLATION: 1 },
+    gold: { GOLDILOCKS: 1, REFLATION: 1, INFLATION: 1, DEFLATION: 1 },
+    bitcoin: { GOLDILOCKS: 1, REFLATION: 1, INFLATION: 1, DEFLATION: 1 },
+  },
+  vamsMultipliers: { BULLISH: 1, NEUTRAL: 0.5, BEARISH: 0, PENDING: 0 },
+  cycleDrag: 0,
+  trendTimedSleeves: ["stocks", "gold", "bitcoin"],
+};
+
 export function validateAllocationSettings(settings: AllocationSettings): void {
   const fraction = (n: number) => Number.isFinite(n) && n >= 0 && n <= 1;
-  if (!fraction(settings.cycleDrag) ||
+  if ((settings.model !== undefined && settings.model !== "trend" && settings.model !== "macro") || !fraction(settings.cycleDrag) ||
       SLEEVES.some(s => !fraction(settings.caps[s.key])) ||
       Object.values(settings.caps).reduce((a, b) => a + b, 0) > 1 + 1e-9 ||
       Object.values(settings.vamsMultipliers).some(n => !fraction(n)) ||
@@ -160,6 +184,8 @@ export interface AllocationInput {
 }
 
 export interface SleeveWeight {
+  /** Set only for the research trend rule; live (macro) weights omit it. */
+  model?: AllocationModel;
   key: SleeveKey;
   weight: number;
   cap: number;
@@ -202,22 +228,27 @@ export function computeAllocation(input: AllocationInput, settings?: AllocationS
   const unavailable = new Set(input.unavailable ?? []);
   const headwinds = Math.max(0, Math.min(6, input.headwinds));
 
+  // Research trend rule: each asset's own trend sizes it; no regime read is needed.
+  const trendModel = settings?.model === "trend";
   const weights: SleeveWeight[] = SLEEVES.map((s) => {
     const state = input.states[s.key] ?? "PENDING";
     const available = !unavailable.has(s.key);
     const cap = settings?.caps[s.key] ?? s.cap;
-    const regimeScore = regime ? (settings?.regimeScores ?? SLEEVE_REGIME_SCORE)[s.key][regime] : 0;
-    const vamsMultiplier = (settings?.trendTimedSleeves ?? TREND_TIMED_SLEEVES).includes(s.key)
-      ? (settings?.vamsMultipliers ?? VAMS_MULTIPLIER)[state]
-      : 1;
-    const cycleDrag = RISK_SLEEVES.includes(s.key)
+    const regimeScore = trendModel ? 1 : regime ? (settings?.regimeScores ?? SLEEVE_REGIME_SCORE)[s.key][regime] : 0;
+    const vamsMultiplier = trendModel
+      ? (state === "PENDING" ? 0 : settings!.vamsMultipliers[state])
+      : (settings?.trendTimedSleeves ?? TREND_TIMED_SLEEVES).includes(s.key)
+        ? (settings?.vamsMultipliers ?? VAMS_MULTIPLIER)[state]
+        : 1;
+    const cycleDrag = !trendModel && RISK_SLEEVES.includes(s.key)
       ? 1 - (headwinds / 6) * (settings?.cycleDrag ?? MAX_CYCLE_DRAG)
       : 1;
 
     const weight =
-      !available || !regime ? 0 : Math.min(cap, round4(cap * regimeScore * vamsMultiplier * cycleDrag));
+      !available || (!trendModel && !regime) ? 0 : Math.min(cap, round4(cap * regimeScore * vamsMultiplier * cycleDrag));
 
     return {
+      ...(trendModel ? { model: "trend" as const } : {}),
       key: s.key,
       weight,
       cap,

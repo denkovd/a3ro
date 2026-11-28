@@ -1,0 +1,20 @@
+{
+  "name": "Weekly observation · one review confirmation",
+  "description": "Observe the existing signals at the first equity session each week and act on one observation. Compare with the three-consecutive-week reference, retaining the 63-observation trend, dates, mapping and costs.",
+  "config": {
+    "from": "2022-01-01",
+    "to": "2026-10-12",
+    "split": "2024-01-01",
+    "trendWindow": 63,
+    "confirmationWeeks": 1,
+    "headwindLimit": 4,
+    "horizon": 21,
+    "phaseBasis": "market",
+    "costs": { "stocks": 10, "gold": 10, "bitcoin": 25, "cash": 5 },
+    "favourable": {
+      "stocks": ["GOLDILOCKS", "REFLATION"],
+      "gold": ["GOLDILOCKS", "DEFLATION"],
+      "bitcoin": ["GOLDILOCKS", "REFLATION"]
+    }
+  }
+}
