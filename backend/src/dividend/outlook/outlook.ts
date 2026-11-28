@@ -241,7 +241,37 @@ export interface PredictionRead extends Prediction {
   status: "hit" | "miss" | "pending";
   /** For pending calls: the latest reading and whether it is currently on the right side of the line. */
   reading: { value: number; asOf: string } | null;
+  /**
+   * For pending calls. Level calls ("still above X"): is the latest reading past the line?
+   * Pace calls (a rising measure that must reach X): does its recent pace reach the line by the date?
+   */
   onTrack: boolean | null;
+  /** Pace calls only: the value the last 12 months' pace reaches by the settle date. */
+  projected: number | null;
+}
+
+/**
+ * Measures that rise over time, so a call on them asks whether they will get
+ * there, not whether they are there yet. These are judged on pace. The rest
+ * are "will it still be true" calls and are judged on the latest reading.
+ */
+export const PACE_METRICS: ReadonlySet<PredictionMetric> = new Set(["business_ai_use", "frontier_capability"]);
+const PACE_WINDOW = 12;
+
+const periodIndex = (period: string) => /^\d{4}-Q[1-4]$/.test(period)
+  ? Number(period.slice(0, 4)) * 12 + (Number(period.slice(-1)) - 1) * 3 + 2
+  : Number(period.slice(0, 4)) * 12 + Number(period.slice(5, 7)) - 1;
+
+/** Straight-line pace over the last 12 months, carried forward to `target`. Null if under 6 months of history. */
+export function projectAtPace(series: Point[], target: string): number | null {
+  const latest = series.at(-1);
+  if (!latest) return null;
+  const end = periodIndex(latest.period);
+  const start = [...series].reverse().find(point => end - periodIndex(point.period) >= PACE_WINDOW)
+    ?? series.find(point => end - periodIndex(point.period) >= 6);
+  if (!start) return null;
+  const perMonth = (latest.value - start.value) / (end - periodIndex(start.period));
+  return latest.value + perMonth * Math.max(0, periodIndex(target) - end);
 }
 
 const monthOf = (period: string) => period.slice(0, 7);
@@ -269,8 +299,10 @@ export function scorePredictions(inputs: OutlookInputs, predictions = PREDICTION
     const passes = (value: number) => prediction.comparator === ">=" ? value >= prediction.threshold : value <= prediction.threshold;
     const resolved = series.find(point => point.period >= prediction.resolvesAt);
     const latest = series.at(-1) ?? null;
-    if (resolved) return { ...prediction, status: passes(resolved.value) ? "hit" : "miss", reading: { value: resolved.value, asOf: resolved.period }, onTrack: null };
-    return { ...prediction, status: "pending", reading: latest ? { value: latest.value, asOf: latest.period } : null, onTrack: latest ? passes(latest.value) : null };
+    if (resolved) return { ...prediction, status: passes(resolved.value) ? "hit" : "miss", reading: { value: resolved.value, asOf: resolved.period }, onTrack: null, projected: null };
+    const projected = PACE_METRICS.has(prediction.metric) ? projectAtPace(series, prediction.resolvesAt) : null;
+    const onTrack = !latest ? null : PACE_METRICS.has(prediction.metric) ? (projected === null ? null : passes(projected)) : passes(latest.value);
+    return { ...prediction, status: "pending", reading: latest ? { value: latest.value, asOf: latest.period } : null, onTrack, projected };
   });
 }
 
